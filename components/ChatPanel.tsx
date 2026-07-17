@@ -72,41 +72,43 @@ export default function ChatPanel({ resumes, onAgentUpdateResumes }: ChatPanelPr
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
             </h3>
-            <div className="relative">
-              <select
-                id="model-selector"
-                value={model}
-                onChange={handleModelChange}
-                className="text-xs text-zinc-400 bg-zinc-900/80 border border-zinc-800 rounded-md appearance-none cursor-pointer hover:text-zinc-200 hover:border-zinc-700 focus:outline-none focus:text-zinc-200 focus:border-emerald-500/50 px-2 py-1 pr-6 transition-colors"
-              >
-                <optgroup label="Gemini" className="bg-zinc-900">
-                  {MODELS.filter(m => m.provider === 'Gemini').map(m => (
-                    <option key={m.id} value={m.id}>{m.label}</option>
-                  ))}
-                </optgroup>
-                <optgroup label="Gemma 4" className="bg-zinc-900">
-                  {MODELS.filter(m => m.provider === 'Gemma 4').map(m => (
-                    <option key={m.id} value={m.id}>{m.label}</option>
-                  ))}
-                </optgroup>
-              </select>
-              <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
-            </div>
-            {currentModelThinkingConfig && (
-              <div className="relative ml-1.5">
+            <div className="flex flex-row gap-1.5">
+              <div className="relative">
                 <select
-                  id="thinking-level-selector"
-                  value={thinkingLevel}
-                  onChange={handleThinkingLevelChange}
+                  id="model-selector"
+                  value={model}
+                  onChange={handleModelChange}
                   className="text-xs text-zinc-400 bg-zinc-900/80 border border-zinc-800 rounded-md appearance-none cursor-pointer hover:text-zinc-200 hover:border-zinc-700 focus:outline-none focus:text-zinc-200 focus:border-emerald-500/50 px-2 py-1 pr-6 transition-colors"
                 >
-                  {currentModelThinkingConfig.levels.map(level => (
-                    <option key={level} value={level}>{THINKING_LEVEL_LABELS[level]}</option>
-                  ))}
+                  <optgroup label="Gemini" className="bg-zinc-900">
+                    {MODELS.filter(m => m.provider === 'Gemini').map(m => (
+                      <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Gemma 4" className="bg-zinc-900">
+                    {MODELS.filter(m => m.provider === 'Gemma 4').map(m => (
+                      <option key={m.id} value={m.id}>{m.label}</option>
+                    ))}
+                  </optgroup>
                 </select>
                 <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
               </div>
-            )}
+              {currentModelThinkingConfig && (
+                <div className="relative">
+                  <select
+                    id="thinking-level-selector"
+                    value={thinkingLevel}
+                    onChange={handleThinkingLevelChange}
+                    className="text-xs text-zinc-400 bg-zinc-900/80 border border-zinc-800 rounded-md appearance-none cursor-pointer hover:text-zinc-200 hover:border-zinc-700 focus:outline-none focus:text-zinc-200 focus:border-emerald-500/50 px-2 py-1 pr-6 transition-colors"
+                  >
+                    {currentModelThinkingConfig.levels.map(level => (
+                      <option key={level} value={level}>{THINKING_LEVEL_LABELS[level]}</option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
