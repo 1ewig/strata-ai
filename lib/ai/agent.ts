@@ -50,6 +50,28 @@ function mapMessagesToContents(messages: ChatMessage[]): any[] {
   return contents;
 }
 
+function summarizeToolCalls(calls: ToolCall[]): string {
+  const lines: string[] = [];
+  for (const tc of calls) {
+    if (tc.name === 'addTask' && tc.result?.status === 'success') {
+      lines.push(`Created task "${tc.result.task.title}" with ${tc.result.task.steps.length} steps.`);
+    } else if (tc.name === 'addStep' && tc.result?.status === 'success') {
+      lines.push(`Added step "${tc.result.step.title}".`);
+    } else if (tc.name === 'updateTask' && tc.result?.status === 'success') {
+      lines.push(`Updated task "${tc.result.task.title}".`);
+    } else if (tc.name === 'updateStep' && tc.result?.status === 'success') {
+      lines.push(`Updated step "${tc.result.step.title}".`);
+    } else if (tc.name === 'deleteTask' && tc.result?.status === 'success') {
+      lines.push(tc.result.message);
+    } else if (tc.name === 'deleteStep' && tc.result?.status === 'success') {
+      lines.push(tc.result.message);
+    } else if (tc.name === 'listTasks') {
+      lines.push('Retrieved the current task list.');
+    }
+  }
+  return lines.length > 0 ? lines.join(' ') : 'Done.';
+}
+
 export async function runAgentChat(
   messages: ChatMessage[],
   tasks: Task[],
@@ -82,14 +104,12 @@ export async function runAgentChat(
     let aggregatedCandidateContent: any = null;
 
     for await (const chunk of stream) {
-      if (chunk.functionCalls && chunk.functionCalls.length > 0) {
+      const hasFunctionCalls = chunk.functionCalls && chunk.functionCalls.length > 0;
+      if (hasFunctionCalls) {
         aggregatedFunctionCalls = chunk.functionCalls;
-      }
-      if (chunk.text) {
+      } else if (chunk.text) {
         textChunks.push(chunk.text);
-        if (!aggregatedFunctionCalls) {
-          onStream?.(chunk.text);
-        }
+        onStream?.(chunk.text);
       }
       if (chunk.candidates?.[0]?.content && !aggregatedCandidateContent) {
         aggregatedCandidateContent = chunk.candidates[0].content;
@@ -148,6 +168,11 @@ export async function runAgentChat(
       finalModelResponse = textChunks.join('');
       break;
     }
+  }
+
+  if (!finalModelResponse && toolCallsExecuted.length > 0) {
+    finalModelResponse = summarizeToolCalls(toolCallsExecuted);
+    onStream?.(finalModelResponse);
   }
 
   return {
