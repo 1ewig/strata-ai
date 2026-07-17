@@ -2,12 +2,12 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { BrainCircuit, ListTodo } from 'lucide-react';
-import { useTasks } from '@/contexts/TaskContext';
+import { BrainCircuit, FileText } from 'lucide-react';
+import { useResumes } from '@/contexts/ResumeContext';
 import ChatPanel from '@/components/ChatPanel';
 
 export default function Home() {
-  const { tasks, handleAgentUpdateTasks } = useTasks();
+  const { resumes, handleAgentUpdateResumes } = useResumes();
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
@@ -18,22 +18,22 @@ export default function Home() {
             <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)]">
               <BrainCircuit className="w-5 h-5 text-zinc-950" />
             </div>
-            <h1 className="text-base font-bold tracking-tight text-zinc-100">TaskFlow</h1>
-            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-500">PLAYGROUND</span>
+            <h1 className="text-base font-bold tracking-tight text-zinc-100">ResumeFlow</h1>
+            <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-500">TAILOR</span>
           </div>
           <Link
-            href="/tasks"
+            href="/resumes"
             className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-all"
           >
-            <ListTodo className="w-3.5 h-3.5" />
-            Tasks & Steps
+            <FileText className="w-3.5 h-3.5" />
+            Resumes
           </Link>
         </div>
       </header>
 
       <div className="flex-1 flex items-center justify-center p-4 sm:p-6">
         <div className="w-full max-w-2xl h-[calc(100vh-8rem)]">
-          <ChatPanel tasks={tasks} onAgentUpdateTasks={handleAgentUpdateTasks} />
+          <ChatPanel resumes={resumes} onAgentUpdateResumes={handleAgentUpdateResumes} />
         </div>
       </div>
 

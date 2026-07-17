@@ -1,31 +1,33 @@
 import { getGeminiClient } from "./client";
 import { ALL_TOOLS, executeTool } from "./tools";
-import { Task, ChatMessage, ToolCall } from "../schemas";
+import { Resume, ChatMessage, ToolCall } from "../schemas";
 
-function buildSystemInstruction(tasks: Task[]): string {
-  const tasksJson = JSON.stringify(tasks.map(t => ({
-    id: t.id,
-    title: t.title,
-    description: t.description,
-    steps: t.steps.map(s => ({
+function buildSystemInstruction(resumes: Resume[]): string {
+  const resumesJson = JSON.stringify(resumes.map(r => ({
+    id: r.id,
+    title: r.title,
+    sections: r.sections.map(s => ({
       id: s.id,
+      type: s.type,
       title: s.title,
-      completed: s.completed
+      content: s.content,
+      order: s.order,
     }))
   })));
 
-  return `You are TaskFlow, a friendly, detail-oriented, and highly structured AI productivity planner and task breakdown expert.
-Your job is to help users manage their task breakdowns, convert massive intimidating goals into tiny, bite-sized, and highly actionable checklists, and organize their schedule.
+  return `You are ResumeFlow, a precise and professional AI resume tailoring expert.
+Your job is to help users parse, organize, and polish their resumes section by section.
 
-The user's existing tasks and their step-by-step breakdowns are currently:
-${tasksJson}
+The user's current resumes and their sections are:
+${resumesJson}
 
 Key directives:
-1. When a user describes a goal, task, or project (e.g., 'Learn to play tennis', 'Clean my messy room', 'Deploy a web app'), you MUST automatically think of 3 to 6 logical, sequentially structured steps. Then, call 'addTask' with the title, description, and the array of step titles as the 'steps' argument. This instantly populates the task breakdown!
-2. Always use the actual tools to add, modify, or delete tasks/steps. Do not pretend to make changes—call the correct function tool!
-3. If the user wants to add a step to an existing task, call 'addStep' using the correct taskId.
-4. If they request to change a task or step title, or mark steps completed/incomplete, use 'updateTask' or 'updateStep' with the corresponding IDs from the task list.
-5. Be encouraging, clear, and focused on helping them defeat procrastination. Keep your conversational replies friendly, brief, and highly actionable.`;
+1. When a user pastes raw resume text, call 'addResume' with the title, the full raw text, and an array of parsed sections. Identify standard sections (Professional Summary, Experience, Education, Skills, Projects, Certifications, Languages) and extract each one with its full content.
+2. When a user asks to rewrite or improve a specific section, call 'updateSection' with the resumeId and sectionId. ONLY update the requested section — never touch other sections.
+3. Use 'addSection' to append new sections the user wants to add.
+4. Use 'deleteSection' to remove sections the user wants to remove.
+5. Always use the actual tools to make changes. Do not pretend — call the correct function tool.
+6. Be encouraging, editorial, and focused on making the resume more impactful and ATS-friendly. Keep your conversational replies brief and actionable.`;
 }
 
 function mapMessagesToContents(messages: ChatMessage[]): any[] {
@@ -53,20 +55,16 @@ function mapMessagesToContents(messages: ChatMessage[]): any[] {
 function summarizeToolCalls(calls: ToolCall[]): string {
   const lines: string[] = [];
   for (const tc of calls) {
-    if (tc.name === 'addTask' && tc.result?.status === 'success') {
-      lines.push(`Created task "${tc.result.task.title}" with ${tc.result.task.steps.length} steps.`);
-    } else if (tc.name === 'addStep' && tc.result?.status === 'success') {
-      lines.push(`Added step "${tc.result.step.title}".`);
-    } else if (tc.name === 'updateTask' && tc.result?.status === 'success') {
-      lines.push(`Updated task "${tc.result.task.title}".`);
-    } else if (tc.name === 'updateStep' && tc.result?.status === 'success') {
-      lines.push(`Updated step "${tc.result.step.title}".`);
-    } else if (tc.name === 'deleteTask' && tc.result?.status === 'success') {
+    if (tc.name === 'addResume' && tc.result?.status === 'success') {
+      lines.push(`Created resume "${tc.result.resume.title}" with ${tc.result.resume.sections.length} sections.`);
+    } else if (tc.name === 'updateSection' && tc.result?.status === 'success') {
+      lines.push(`Updated section "${tc.result.section.title}".`);
+    } else if (tc.name === 'addSection' && tc.result?.status === 'success') {
+      lines.push(`Added section "${tc.result.section.title}".`);
+    } else if (tc.name === 'deleteSection' && tc.result?.status === 'success') {
       lines.push(tc.result.message);
-    } else if (tc.name === 'deleteStep' && tc.result?.status === 'success') {
-      lines.push(tc.result.message);
-    } else if (tc.name === 'listTasks') {
-      lines.push('Retrieved the current task list.');
+    } else if (tc.name === 'getResume') {
+      lines.push('Retrieved the resume data.');
     }
   }
   return lines.length > 0 ? lines.join(' ') : 'Done.';
@@ -74,17 +72,17 @@ function summarizeToolCalls(calls: ToolCall[]): string {
 
 export async function runAgentChat(
   messages: ChatMessage[],
-  tasks: Task[],
+  resumes: Resume[],
   model?: string,
   onStream?: (chunk: string) => void
-): Promise<{ content: string; tasks: Task[]; toolCalls: ToolCall[] }> {
+): Promise<{ content: string; resumes: Resume[]; toolCalls: ToolCall[] }> {
   const ai = getGeminiClient();
-  const systemInstruction = buildSystemInstruction(tasks);
+  const systemInstruction = buildSystemInstruction(resumes);
   const contents = mapMessagesToContents(messages);
 
   const modelName = model || process.env.NEXT_PUBLIC_GEMINI_MODEL || "gemini-3.1-flash-lite";
 
-  let currentTasks = [...tasks];
+  let currentResumes = [...resumes];
   const toolCallsExecuted: ToolCall[] = [];
   let loopCount = 0;
   let finalModelResponse = "";
@@ -123,9 +121,9 @@ export async function runAgentChat(
       for (const call of aggregatedFunctionCalls) {
         if (!call.name) continue;
 
-        const { result, updatedTasks, updated } = executeTool(call.name, call.args, currentTasks);
+        const { result, updatedResumes, updated } = executeTool(call.name, call.args, currentResumes);
         if (updated) {
-          currentTasks = updatedTasks;
+          currentResumes = updatedResumes;
         }
 
         toolCallsExecuted.push({
@@ -177,7 +175,7 @@ export async function runAgentChat(
 
   return {
     content: finalModelResponse,
-    tasks: currentTasks,
+    resumes: currentResumes,
     toolCalls: toolCallsExecuted
   };
 }

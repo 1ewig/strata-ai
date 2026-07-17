@@ -1,20 +1,17 @@
 'use client';
 
 import { motion } from 'motion/react';
-import { ChevronRight, Play, Trash2 } from 'lucide-react';
-import { Task } from '@/lib/schemas';
-import ProgressBar from '@/components/ui/ProgressBar';
+import { ChevronRight, FileText, Trash2 } from 'lucide-react';
+import { Resume } from '@/lib/schemas';
 
-interface TaskCardProps {
-  task: Task;
+interface ResumeCardProps {
+  resume: Resume;
   onClick: () => void;
   onDelete: (id: string) => void;
 }
 
-export default function TaskCard({ task, onClick, onDelete }: TaskCardProps) {
-  const completedCount = task.steps.filter(s => s.completed).length;
-  const totalCount = task.steps.length;
-  const progressPercentage = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+export default function ResumeCard({ resume, onClick, onDelete }: ResumeCardProps) {
+  const sectionCount = resume.sections.length;
 
   return (
     <motion.div
@@ -29,36 +26,37 @@ export default function TaskCard({ task, onClick, onDelete }: TaskCardProps) {
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-grow">
           <h3 className="text-base font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors truncate">
-            {task.title}
+            {resume.title}
           </h3>
-          {task.description && (
-            <p className="text-xs text-zinc-400 mt-1 line-clamp-2 pr-6">
-              {task.description}
-            </p>
-          )}
+          <p className="text-xs text-zinc-500 mt-1">
+            Updated {new Date(resume.updatedAt).toLocaleDateString()}
+          </p>
         </div>
-
         <ChevronRight className="w-5 h-5 text-zinc-600 group-hover:text-emerald-400 group-hover:translate-x-1 transition-all flex-shrink-0" />
       </div>
 
       <div className="mt-4 pt-4 border-t border-zinc-800/40">
-        <div className="flex items-center justify-between text-xs text-zinc-400 mb-1.5">
-          <span className="flex items-center gap-1.5">
-            <Play className="w-3 h-3 text-emerald-500 fill-emerald-500/10" />
-            <span>{completedCount} of {totalCount} breakdown steps complete</span>
-          </span>
-          <span className="font-bold text-emerald-400">{progressPercentage}%</span>
+        <div className="flex items-center gap-2 text-xs text-zinc-400">
+          <FileText className="w-3.5 h-3.5 text-emerald-500" />
+          <span>{sectionCount} section{sectionCount !== 1 ? 's' : ''}</span>
+          {resume.sections.length > 0 && (
+            <>
+              <span className="text-zinc-700">·</span>
+              <span className="truncate max-w-[200px]">
+                {resume.sections.map(s => s.type).join(', ')}
+              </span>
+            </>
+          )}
         </div>
-        <ProgressBar value={progressPercentage} />
       </div>
 
       <button
         onClick={(e) => {
           e.stopPropagation();
-          onDelete(task.id);
+          onDelete(resume.id);
         }}
         className="absolute top-4 right-10 opacity-0 group-hover:opacity-100 focus:opacity-100 text-zinc-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition-all"
-        title="Delete project"
+        title="Delete resume"
       >
         <Trash2 className="w-4.5 h-4.5" />
       </button>

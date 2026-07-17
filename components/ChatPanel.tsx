@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Trash, ChevronDown } from 'lucide-react';
-import { Task } from '@/lib/schemas';
+import { Resume } from '@/lib/schemas';
 import { useChat } from '@/hooks/useChat';
 import { MODELS, getInitialModel, saveModelPreference } from '@/lib/models';
 import ChatBubble from '@/components/chat/ChatBubble';
@@ -11,18 +11,18 @@ import ChatInput from '@/components/chat/ChatInput';
 import SuggestionChips from '@/components/chat/SuggestionChips';
 
 const QUICK_SUGGESTIONS = [
-  { label: "Break down launching a podcast", text: "Break down the process of planning and launching a new podcast." },
-  { label: "Steps to plan a weekend trip", text: "Help me break down planning a weekend mountain trip into actionable steps." },
-  { label: "Create a study plan for French", text: "I want to start learning French. Give me a 5-step beginner breakdown." },
-  { label: "Design a bedroom cleaning plan", text: "Break down a deep-cleaning routine for my bedroom so it isn't overwhelming." },
+  { label: "Rewrite my summary section", text: "Help me rewrite my professional summary to be more impactful." },
+  { label: "Make my experience ATS-friendly", text: "Review my experience section and suggest ATS-optimized bullet points." },
+  { label: "Add a skills section", text: "Create a skills section based on my experience." },
+  { label: "Tailor for a specific job", text: "Help me tailor my resume for a Senior Software Engineer role." },
 ];
 
 interface ChatPanelProps {
-  tasks: Task[];
-  onAgentUpdateTasks: (newTasks: Task[]) => void;
+  resumes: Resume[];
+  onAgentUpdateResumes: (newResumes: Resume[]) => void;
 }
 
-export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps) {
+export default function ChatPanel({ resumes, onAgentUpdateResumes }: ChatPanelProps) {
   const [model, setModel] = useState(getInitialModel);
 
   const {
@@ -35,7 +35,7 @@ export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps)
     handleSubmit,
     handleClearChat,
     handleSendMessage,
-  } = useChat(tasks, onAgentUpdateTasks, model);
+  } = useChat(resumes, onAgentUpdateResumes, model);
 
   const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
@@ -53,7 +53,7 @@ export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps)
           </div>
           <div>
             <h3 id="chat-header-title" className="text-sm font-semibold text-zinc-100 flex items-center gap-1.5">
-              TaskFlow AI Planner
+              ResumeFlow AI
               <span id="chat-online-dot" className="flex h-2 w-2 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -115,7 +115,7 @@ export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps)
             </div>
             <div className="flex flex-col gap-1.5 max-w-[85%]">
               <div id="chat-loading-bubble" className="bg-zinc-900 border border-zinc-800/80 rounded-2xl rounded-tl-none px-4 py-2.5 flex items-center gap-2">
-                <span className="text-sm text-zinc-400">Planning & executing tasks</span>
+                <span className="text-sm text-zinc-400">Reviewing your resume</span>
                 <span className="flex gap-1">
                   <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                   <span className="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />

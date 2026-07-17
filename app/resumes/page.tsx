@@ -2,20 +2,18 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { BrainCircuit, MessageSquare, ListTodo } from 'lucide-react';
-import { useTasks } from '@/contexts/TaskContext';
-import StatsHeader from '@/components/ui/StatsHeader';
-import TaskList from '@/components/TaskList';
+import { BrainCircuit, MessageSquare } from 'lucide-react';
+import { useResumes } from '@/contexts/ResumeContext';
+import ResumeList from '@/components/resumes/ResumeList';
 
-export default function TasksPage() {
+export default function ResumesPage() {
   const {
-    tasks,
-    handleAddTask,
-    handleDeleteTask,
-    activeTasksCount,
-    totalStepsCount,
-    completedStepsCount,
-  } = useTasks();
+    resumes,
+    handleAddResume,
+    handleDeleteResume,
+    resumeCount,
+    totalSections,
+  } = useResumes();
 
   return (
     <main className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
@@ -29,19 +27,18 @@ export default function TasksPage() {
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight text-zinc-100 flex items-center gap-1.5">
-                TaskFlow
-                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-500">PLANNER</span>
+                ResumeFlow
+                <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-500">TAILOR</span>
               </h1>
-              <p className="text-[10px] text-zinc-400">AI Task Breakdown & Project Organizer</p>
+              <p className="text-[10px] text-zinc-400">AI Resume Parsing & Section Editor</p>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-            <StatsHeader
-              activeTasksCount={activeTasksCount}
-              completedStepsCount={completedStepsCount}
-              totalStepsCount={totalStepsCount}
-            />
+            <div className="hidden md:flex items-center gap-2 text-xs text-zinc-400">
+              <span>Resumes: <strong className="text-zinc-200">{resumeCount}</strong></span>
+              <span className="border-l border-zinc-900 pl-4">Sections: <strong className="text-zinc-200">{totalSections}</strong></span>
+            </div>
             <Link
               href="/"
               className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-zinc-200 px-3 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-all"
@@ -55,17 +52,17 @@ export default function TasksPage() {
       </header>
 
       <div className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col justify-stretch">
-        <TaskList
-          tasks={tasks}
-          onAddTask={handleAddTask}
-          onDeleteTask={handleDeleteTask}
+        <ResumeList
+          resumes={resumes}
+          onAddResume={handleAddResume}
+          onDeleteResume={handleDeleteResume}
         />
       </div>
 
       <footer className="border-t border-zinc-900 py-4 bg-zinc-950/40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-xs text-zinc-600">
-            TaskFlow © 2026 • Visualizing massive ambitions as simple sequential steps.
+            ResumeFlow © 2026 • Parse, polish, and tailor your resume with AI precision.
           </p>
         </div>
       </footer>

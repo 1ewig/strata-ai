@@ -1,4 +1,4 @@
-import { Task } from './schemas';
+import { Resume } from './schemas';
 
 export function toSlug(title: string): string {
   return title
@@ -8,11 +8,11 @@ export function toSlug(title: string): string {
     || 'untitled';
 }
 
-export function generateUniqueSlug(title: string, existingTasks: Task[]): string {
+export function generateUniqueSlug(title: string, existingResumes: Resume[]): string {
   const baseSlug = toSlug(title);
   let slug = baseSlug;
   let counter = 1;
-  while (existingTasks.some(t => t.slug === slug)) {
+  while (existingResumes.some(r => r.slug === slug)) {
     slug = `${baseSlug}-${counter}`;
     counter++;
   }

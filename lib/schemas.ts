@@ -1,23 +1,25 @@
 import { z } from "zod";
 
-export const TaskStepSchema = z.object({
-  id: z.string().uuid(),
+export const ResumeSectionSchema = z.object({
+  id: z.string(),
+  type: z.string(),
   title: z.string(),
-  completed: z.boolean().default(false),
-  createdAt: z.string(),
+  content: z.string(),
+  order: z.number(),
 });
 
-export const TaskSchema = z.object({
+export const ResumeSchema = z.object({
   id: z.string(),
   slug: z.string(),
   title: z.string(),
-  description: z.string().optional(),
-  steps: z.array(TaskStepSchema).default([]),
+  rawText: z.string(),
+  sections: z.array(ResumeSectionSchema).default([]),
   createdAt: z.string(),
+  updatedAt: z.string(),
 });
 
-export type TaskStep = z.infer<typeof TaskStepSchema>;
-export type Task = z.infer<typeof TaskSchema>;
+export type ResumeSection = z.infer<typeof ResumeSectionSchema>;
+export type Resume = z.infer<typeof ResumeSchema>;
 
 export const ToolCallSchema = z.object({
   name: z.string(),

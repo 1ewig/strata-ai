@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { runAgentChat } from "@/lib/ai/agent";
-import { TaskSchema } from "@/lib/schemas";
+import { ResumeSchema } from "@/lib/schemas";
 
 const IncomingMessageSchema = z.object({
   role: z.enum(["user", "model"]),
@@ -10,7 +10,7 @@ const IncomingMessageSchema = z.object({
 
 const bodySchema = z.object({
   messages: z.array(IncomingMessageSchema),
-  tasks: z.array(TaskSchema),
+  resumes: z.array(ResumeSchema),
   model: z.string().optional(),
 });
 
@@ -26,7 +26,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { tasks, model } = parsed.data;
+    const { resumes, model } = parsed.data;
     const messages = parsed.data.messages as any[];
 
     const encoder = new TextEncoder();
@@ -37,17 +37,17 @@ export async function POST(req: Request) {
         };
 
         try {
-          const result = await runAgentChat(messages, tasks, model, (chunk) => {
+          const result = await runAgentChat(messages, resumes, model, (chunk) => {
             sendEvent("text_chunk", chunk);
           });
 
           sendEvent("done", {
-            tasks: result.tasks,
+            resumes: result.resumes,
             toolCalls: result.toolCalls,
           });
         } catch (error: any) {
           console.error("Error in agent API route:", error);
-          sendEvent("error", { message: error.message || "An error occurred inside the AI Task Agent." });
+          sendEvent("error", { message: error.message || "An error occurred inside the ResumeFlow AI agent." });
         } finally {
           controller.close();
         }

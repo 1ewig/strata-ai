@@ -1,17 +1,17 @@
 import type {Metadata} from 'next';
 import './globals.css';
-import {TaskProvider} from '@/contexts/TaskContext';
+import {ResumeProvider} from '@/contexts/ResumeContext';
 
 export const metadata: Metadata = {
-  title: 'My Google AI Studio App',
-  description: 'My Google AI Studio App',
+  title: 'ResumeFlow - AI Resume Tailoring Agent',
+  description: 'Parse, organize, and polish your resume with AI',
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {
   return (
     <html lang="en">
       <body suppressHydrationWarning>
-        <TaskProvider>{children}</TaskProvider>
+        <ResumeProvider>{children}</ResumeProvider>
       </body>
     </html>
   );

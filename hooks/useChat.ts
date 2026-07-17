@@ -1,12 +1,14 @@
 'use client';
 
 import { useState, useRef, useEffect } from "react";
-import { ChatMessage, Task } from "@/lib/schemas";
+import { ChatMessage, Resume } from "@/lib/schemas";
 import { generateId } from "@/lib/id";
 
+const CHAT_STORAGE_KEY = "resumeflow_chat_history";
+
 export function useChat(
-  tasks: Task[],
-  onAgentUpdateTasks: (newTasks: Task[]) => void,
+  resumes: Resume[],
+  onAgentUpdateResumes: (newResumes: Resume[]) => void,
   model: string
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -14,11 +16,10 @@ export function useChat(
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const tasksRef = useRef(tasks);
+  const resumesRef = useRef(resumes);
 
   useEffect(() => {
-    const key = `taskflow_chat_history`;
-    const stored = localStorage.getItem(key);
+    const stored = localStorage.getItem(CHAT_STORAGE_KEY);
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
@@ -32,23 +33,23 @@ export function useChat(
       const welcomeMessage: ChatMessage = {
         id: 'welcome',
         role: 'model',
-        content: "Hi! I'm **TaskFlow**, your personal AI productivity coach and task breakdown assistant. 🚀\n\nTell me any big goal, project, or chore you're working on (e.g., *'Plan my move to a new apartment'*, *'Build a React website'*, or *'Learn Portuguese'*), and I will instantly break it down into manageable, bite-sized steps for you!",
+        content: "Hi! I'm **ResumeFlow**, your AI resume tailoring assistant. 📝\n\nPaste your resume text and I'll help you parse it into sections, rewrite specific parts, or tailor it for a job application. Try saying: *'Parse my resume'* or *'Rewrite my summary section'*.",
         timestamp: new Date().toISOString(),
       };
       setTimeout(() => {
         setMessages([welcomeMessage]);
       }, 0);
-      localStorage.setItem(key, JSON.stringify([welcomeMessage]));
+      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([welcomeMessage]));
     }
   }, []);
 
   useEffect(() => {
-    tasksRef.current = tasks;
-  }, [tasks]);
+    resumesRef.current = resumes;
+  }, [resumes]);
 
   const saveChatHistory = (updatedMessages: ChatMessage[]) => {
     setMessages(updatedMessages);
-    localStorage.setItem(`taskflow_chat_history`, JSON.stringify(updatedMessages));
+    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(updatedMessages));
   };
 
   const scrollToBottom = () => {
@@ -84,7 +85,7 @@ export function useChat(
             content: m.content,
             toolCalls: m.toolCalls,
           })),
-          tasks: tasksRef.current,
+          resumes: resumesRef.current,
           model,
         }),
       });
@@ -100,7 +101,7 @@ export function useChat(
         const decoder = new TextDecoder();
         let buffer = '';
         let accumulatedContent = '';
-        let finalTasks: Task[] | null = null;
+        let finalResumes: Resume[] | null = null;
         let finalToolCalls: any[] | null = null;
 
         while (true) {
@@ -126,7 +127,7 @@ export function useChat(
                 setStreamingContent(accumulatedContent);
                 break;
               case 'done':
-                finalTasks = data.tasks;
+                finalResumes = data.resumes;
                 finalToolCalls = data.toolCalls;
                 break;
               case 'error':
@@ -146,8 +147,8 @@ export function useChat(
           saveChatHistory([...newMessages, agentMessage]);
         }
 
-        if (finalTasks) {
-          onAgentUpdateTasks(finalTasks);
+        if (finalResumes) {
+          onAgentUpdateResumes(finalResumes);
         }
       } else {
         const data = await response.json();
@@ -159,8 +160,8 @@ export function useChat(
           toolCalls: data.toolCalls && data.toolCalls.length > 0 ? data.toolCalls : undefined,
         };
         saveChatHistory([...newMessages, agentMessage]);
-        if (data.tasks) {
-          onAgentUpdateTasks(data.tasks);
+        if (data.resumes) {
+          onAgentUpdateResumes(data.resumes);
         }
       }
     } catch (e: any) {
@@ -168,7 +169,7 @@ export function useChat(
       const errorMessage: ChatMessage = {
         id: generateId(),
         role: 'model',
-        content: `⚠️ Sorry, I encountered an error: ${e.message || 'Unknown error'}. Make sure your GEMINI_API_KEY is configured in Settings > Secrets.`,
+        content: `⚠️ Sorry, I encountered an error: ${e.message || 'Unknown error'}. Make sure your GEMINI_API_KEY is configured.`,
         timestamp: new Date().toISOString(),
       };
       saveChatHistory([...newMessages, errorMessage]);
@@ -187,7 +188,7 @@ export function useChat(
     const welcomeMessage: ChatMessage = {
       id: 'welcome',
       role: 'model',
-      content: "Chat cleared. What project or goal would you like me to break down next?",
+      content: "Chat cleared. Ready to work on your resume! Paste your text or ask for help tailoring a section.",
       timestamp: new Date().toISOString(),
     };
     saveChatHistory([welcomeMessage]);
