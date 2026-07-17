@@ -65,6 +65,12 @@ function summarizeToolCalls(calls: ToolCall[]): string {
       lines.push(tc.result.message);
     } else if (tc.name === 'getResume') {
       lines.push('Retrieved the resume data.');
+    } else if (tc.name === 'renameResume' && tc.result?.status === 'success') {
+      lines.push(`Renamed resume to "${tc.result.resume.title}".`);
+    } else if (tc.name === 'duplicateResume' && tc.result?.status === 'success') {
+      lines.push(`Duplicated resume as "${tc.result.resume.title}".`);
+    } else if (tc.name === 'reorderSections' && tc.result?.status === 'success') {
+      lines.push('Reordered resume sections.');
     }
   }
   return lines.length > 0 ? lines.join(' ') : 'Done.';

@@ -13,6 +13,9 @@ interface ResumeContextType {
   handleUpdateSection: (resumeId: string, sectionId: string, title?: string, content?: string) => void;
   handleDeleteSection: (resumeId: string, sectionId: string) => void;
   handleAgentUpdateResumes: (newResumes: Resume[]) => void;
+  handleRenameResume: (id: string, title: string) => void;
+  handleDuplicateResume: (id: string) => Resume | null;
+  handleReorderSections: (resumeId: string, sectionIds: string[]) => void;
   resumeCount: number;
   totalSections: number;
 }

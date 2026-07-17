@@ -109,12 +109,57 @@ export const replaceSectionsTool: FunctionDeclaration = {
   },
 };
 
+export const renameResumeTool: FunctionDeclaration = {
+  name: "renameResume",
+  description: "Rename a resume without changing its slug or sections.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      resumeId: { type: Type.STRING, description: "The ID of the resume to rename" },
+      title: { type: Type.STRING, description: "New title for the resume" },
+    },
+    required: ["resumeId", "title"],
+  },
+};
+
+export const duplicateResumeTool: FunctionDeclaration = {
+  name: "duplicateResume",
+  description: "Duplicate an entire resume including all its sections, creating a fresh copy with a new ID and slug.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      resumeId: { type: Type.STRING, description: "The ID of the resume to duplicate" },
+    },
+    required: ["resumeId"],
+  },
+};
+
+export const reorderSectionsTool: FunctionDeclaration = {
+  name: "reorderSections",
+  description: "Reorder the sections of a resume by providing the section IDs in the desired order.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      resumeId: { type: Type.STRING, description: "The ID of the resume whose sections to reorder" },
+      sectionIds: {
+        type: Type.ARRAY,
+        items: { type: Type.STRING },
+        description: "Array of section IDs in the desired order",
+      },
+    },
+    required: ["resumeId", "sectionIds"],
+  },
+};
+
 export const ALL_TOOLS: FunctionDeclaration[] = [
   addResumeTool,
   updateSectionTool,
   addSectionTool,
   deleteSectionTool,
   replaceSectionsTool,
+  renameResumeTool,
+  duplicateResumeTool,
+  reorderSectionsTool,
   getResumeTool,
 ];
 
@@ -287,6 +332,88 @@ export function executeTool(
       result = found
         ? { status: "success", resume: found }
         : { status: "error", message: `Resume with ID ${args.resumeId} not found.` };
+      break;
+    }
+
+    case "renameResume": {
+      const resumeIndex = updatedResumes.findIndex(r => r.id === args.resumeId);
+      if (resumeIndex === -1) {
+        result = { status: "error", message: `Resume with ID ${args.resumeId} not found.` };
+        break;
+      }
+      updatedResumes[resumeIndex] = {
+        ...updatedResumes[resumeIndex],
+        title: args.title,
+        updatedAt: new Date().toISOString(),
+      };
+      result = {
+        status: "success",
+        message: `Renamed resume to "${args.title}".`,
+        resume: updatedResumes[resumeIndex],
+      };
+      updated = true;
+      break;
+    }
+
+    case "duplicateResume": {
+      const source = updatedResumes.find(r => r.id === args.resumeId);
+      if (!source) {
+        result = { status: "error", message: `Resume with ID ${args.resumeId} not found.` };
+        break;
+      }
+      const now = new Date().toISOString();
+      const newSlug = `${toSlug(source.title)}-${generateId().slice(0, 6)}`;
+      const duplicate: Resume = {
+        ...source,
+        id: generateId(),
+        slug: newSlug,
+        title: `${source.title} (Copy)`,
+        sections: source.sections.map(s => ({
+          ...s,
+          id: generateId(),
+        })),
+        createdAt: now,
+        updatedAt: now,
+      };
+      updatedResumes.push(duplicate);
+      result = {
+        status: "success",
+        message: `Duplicated resume "${source.title}" as "${duplicate.title}".`,
+        resume: duplicate,
+      };
+      updated = true;
+      break;
+    }
+
+    case "reorderSections": {
+      const resumeIndex = updatedResumes.findIndex(r => r.id === args.resumeId);
+      if (resumeIndex === -1) {
+        result = { status: "error", message: `Resume with ID ${args.resumeId} not found.` };
+        break;
+      }
+      const resume = updatedResumes[resumeIndex];
+      const ids: string[] = args.sectionIds || [];
+      const sectionMap = new Map(resume.sections.map(s => [s.id, s]));
+      const missing = ids.filter(id => !sectionMap.has(id));
+      if (missing.length > 0) {
+        result = { status: "error", message: `Section IDs not found: ${missing.join(', ')}` };
+        break;
+      }
+      const reordered = ids.map((id, i) => ({
+        ...sectionMap.get(id)!,
+        order: i,
+      }));
+      updatedResumes[resumeIndex] = {
+        ...resume,
+        sections: reordered,
+        updatedAt: new Date().toISOString(),
+      };
+      result = {
+        status: "success",
+        message: `Reordered ${reordered.length} sections in resume "${resume.title}".`,
+        resume: updatedResumes[resumeIndex],
+      };
+      updated = true;
       break;
     }
 

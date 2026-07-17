@@ -117,6 +117,52 @@ export function useResumeCrud() {
     handleSaveResumes(newResumes);
   };
 
+  const handleRenameResume = (id: string, title: string) => {
+    const updated = resumes.map(r => {
+      if (r.id !== id) return r;
+      return { ...r, title, updatedAt: new Date().toISOString() };
+    });
+    handleSaveResumes(updated);
+  };
+
+  const handleDuplicateResume = (id: string): Resume | null => {
+    const source = resumes.find(r => r.id === id);
+    if (!source) return null;
+    const now = new Date().toISOString();
+    const newSlug = `${generateUniqueSlug(source.title, resumes)}`;
+    const duplicate: Resume = {
+      ...source,
+      id: generateId(),
+      slug: newSlug,
+      title: `${source.title} (Copy)`,
+      sections: source.sections.map(s => ({
+        ...s,
+        id: generateId(),
+      })),
+      createdAt: now,
+      updatedAt: now,
+    };
+    handleSaveResumes([...resumes, duplicate]);
+    return duplicate;
+  };
+
+  const handleReorderSections = (resumeId: string, sectionIds: string[]) => {
+    const updated = resumes.map(r => {
+      if (r.id !== resumeId) return r;
+      const sectionMap = new Map(r.sections.map(s => [s.id, s]));
+      const reordered = sectionIds.map((id, i) => ({
+        ...sectionMap.get(id)!,
+        order: i,
+      }));
+      return {
+        ...r,
+        sections: reordered,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    handleSaveResumes(updated);
+  };
+
   const resumeCount = resumes.length;
   const totalSections = resumes.reduce((acc, r) => acc + r.sections.length, 0);
 
@@ -129,6 +175,9 @@ export function useResumeCrud() {
     handleUpdateSection,
     handleDeleteSection,
     handleAgentUpdateResumes,
+    handleRenameResume,
+    handleDuplicateResume,
+    handleReorderSections,
     resumeCount,
     totalSections,
   };
