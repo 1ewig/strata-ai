@@ -44,7 +44,7 @@ export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps)
   };
 
   return (
-    <div id="chat-panel-container" className="flex flex-col h-[650px] md:h-full bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl relative">
+    <div id="chat-panel-container" className="flex flex-col h-[650px] md:h-full md:max-h-[calc(100vh-10rem)] bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl relative">
 
       <div id="chat-panel-header" className="flex-shrink-0 flex items-center justify-between border-b border-zinc-800 px-4 py-4 bg-zinc-900/40 relative z-10">
         <div className="flex items-center gap-2">
