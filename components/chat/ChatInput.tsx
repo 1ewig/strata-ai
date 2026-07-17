@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Send } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { ArrowUp } from 'lucide-react';
 
 interface ChatInputProps {
   inputValue: string;
@@ -11,28 +11,53 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({ inputValue, onInputChange, onSubmit, isLoading }: ChatInputProps) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    onInputChange(e.target.value);
+  };
+
+  useEffect(() => {
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.style.height = 'auto';
+      ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+    }
+  }, [inputValue]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      if (inputValue.trim() && !isLoading) {
+        onSubmit(e as unknown as React.FormEvent);
+      }
+    }
+  };
+
   return (
-    <form onSubmit={onSubmit} className="p-4 border-t border-zinc-800 bg-zinc-900/30 relative z-10">
-      <div className="flex gap-2 bg-zinc-950 border border-zinc-800 focus-within:border-emerald-500/50 rounded-xl px-3.5 py-1.5 items-center transition-all">
-        <input
+    <form onSubmit={onSubmit} className="relative z-10">
+      <div className="flex items-end gap-2 bg-zinc-900 border border-zinc-700/50 focus-within:border-zinc-500 rounded-2xl px-3 py-2 transition-all">
+        <textarea
+          ref={textareaRef}
           id="chat-input-field"
-          type="text"
+          rows={1}
           disabled={isLoading}
-          placeholder="Ask TaskFlow to break down a project..."
+          placeholder="Message ResumeFlow..."
           value={inputValue}
-          onChange={(e) => onInputChange(e.target.value)}
-          className="flex-grow bg-transparent text-zinc-200 placeholder-zinc-600 border-none text-sm focus:outline-none py-1.5 focus:ring-0 disabled:opacity-50"
+          onChange={handleInput}
+          onKeyDown={handleKeyDown}
+          className="flex-1 bg-transparent text-zinc-200 placeholder-zinc-500 border-none text-sm focus:outline-none resize-none max-h-40 py-1 focus:ring-0 disabled:opacity-50"
         />
         <button
           id="chat-submit-btn"
           type="submit"
           disabled={isLoading || !inputValue.trim()}
-          className="text-emerald-500 hover:text-emerald-400 disabled:text-zinc-600 transition-colors p-1.5 focus:outline-none"
-          aria-label="Send message"
+          className="p-2 rounded-lg bg-zinc-100 hover:bg-white disabled:bg-zinc-800 disabled:opacity-40 shrink-0 transition-colors focus:outline-none"
         >
-          <Send className="w-4 h-4" />
+          <ArrowUp className="w-4 h-4 text-zinc-900" />
         </button>
       </div>
+      <p className="text-center text-xs text-zinc-600 mt-2">ResumeFlow can make mistakes. Verify important info.</p>
     </form>
   );
 }

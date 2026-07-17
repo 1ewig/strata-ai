@@ -1,6 +1,5 @@
 'use client';
 
-import { User, Sparkles } from 'lucide-react';
 import { ChatMessage } from '@/lib/schemas';
 import ToolCallCard from './ToolCallCard';
 
@@ -13,23 +12,23 @@ export default function ChatBubble({ message, isStreaming }: ChatBubbleProps) {
   const isUser = message.role === 'user';
 
   return (
-    <div className={`flex items-start gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
+    <div className={`flex items-start gap-3 fade-in ${isUser ? 'flex-row-reverse' : ''}`}>
       <div
-        className={`w-8 h-8 rounded-lg border flex-shrink-0 flex items-center justify-center mt-0.5 ${
+        className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 mt-0.5 ${
           isUser
-            ? 'bg-zinc-800 border-zinc-700 text-zinc-300'
-            : 'bg-emerald-950/20 border-emerald-500/10 text-emerald-400'
+            ? 'bg-zinc-700 text-white'
+            : 'bg-gradient-to-br from-emerald-400 to-cyan-500 text-white'
         }`}
       >
-        {isUser ? <User className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
+        {isUser ? 'A' : 'R'}
       </div>
 
       <div className="flex flex-col max-w-[85%] gap-2">
         <div
-          className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed shadow-sm ${
+          className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
             isUser
-              ? 'bg-emerald-600 text-white rounded-tr-none font-medium'
-              : 'bg-zinc-900 border border-zinc-800/80 text-zinc-300 rounded-tl-none whitespace-pre-line'
+              ? 'bg-zinc-800 text-zinc-200 rounded-tr-sm'
+              : 'bg-zinc-900 border border-zinc-800/80 text-zinc-300 rounded-tl-sm whitespace-pre-line'
           }`}
         >
           {message.content.split('**').map((part, i) =>

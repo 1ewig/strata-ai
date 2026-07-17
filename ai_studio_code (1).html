@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChatDash</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: {
+      extend: {
+        colors: {
+          dark: {
+            50: '#f7f7f8',
+            100: '#ececf1',
+            200: '#d9d9e3',
+            700: '#2a2b32',
+            750: '#242530',
+            800: '#1e1f27',
+            850: '#191a22',
+            900: '#131318',
+          }
+        }
+      }
+    }
+  }
+</script>
+<style>
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #3a3b45; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #4a4b57; }
+
+  .typing-dot {
+    animation: blink 1.4s infinite both;
+  }
+  .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes blink {
+    0%, 80%, 100% { opacity: 0.2; }
+    40% { opacity: 1; }
+  }
+
+  textarea::-webkit-scrollbar { width: 6px; }
+
+  .fade-in {
+    animation: fadeIn 0.25s ease-in-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body class="h-screen w-screen overflow-hidden bg-dark-800 text-dark-100 font-sans">
+
+<div class="flex h-full w-full">
+
+  <!-- Sidebar -->
+  <aside id="sidebar" class="fixed md:static z-30 inset-y-0 left-0 w-64 bg-dark-900 flex flex-col transition-transform duration-200 -translate-x-full md:translate-x-0">
+    <!-- New chat -->
+    <div class="p-2 flex items-center gap-2">
+      <button class="flex-1 flex items-center gap-2 border border-white/20 rounded-lg px-3 py-2.5 text-sm hover:bg-dark-750 transition">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+        New chat
+      </button>
+      <button id="closeSidebar" class="md:hidden p-2 rounded-lg hover:bg-dark-750">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <!-- Search -->
+    <div class="px-2 pb-2">
+      <div class="flex items-center gap-2 bg-dark-800 rounded-lg px-3 py-2 text-sm text-dark-200">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 opacity-60" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" placeholder="Search chats" class="bg-transparent outline-none w-full placeholder-dark-200/60" />
+      </div>
+    </div>
+
+    <!-- Chat history -->
+    <nav class="flex-1 overflow-y-auto px-2 space-y-4 pb-2">
+      <div>
+        <p class="text-xs text-dark-200/50 px-2 py-1 uppercase tracking-wide">Today</p>
+        <a href="#" class="active-chat block px-2 py-2 rounded-lg text-sm bg-dark-750 truncate">Dashboard layout ideas</a>
+        <a href="#" class="chat-item block px-2 py-2 rounded-lg text-sm hover:bg-dark-750 truncate">Tailwind grid tricks</a>
+      </div>
+      <div>
+        <p class="text-xs text-dark-200/50 px-2 py-1 uppercase tracking-wide">Yesterday</p>
+        <a href="#" class="chat-item block px-2 py-2 rounded-lg text-sm hover:bg-dark-750 truncate">Explain async/await</a>
+        <a href="#" class="chat-item block px-2 py-2 rounded-lg text-sm hover:bg-dark-750 truncate">Resume bullet points</a>
+        <a href="#" class="chat-item block px-2 py-2 rounded-lg text-sm hover:bg-dark-750 truncate">SQL join examples</a>
+      </div>
+      <div>
+        <p class="text-xs text-dark-200/50 px-2 py-1 uppercase tracking-wide">Previous 7 days</p>
+        <a href="#" class="chat-item block px-2 py-2 rounded-lg text-sm hover:bg-dark-750 truncate">Trip itinerary Japan</a>
+        <a href="#" class="chat-item block px-2 py-2 rounded-lg text-sm hover:bg-dark-750 truncate">React vs Vue debate</a>
+        <a href="#" class="chat-item block px-2 py-2 rounded-lg text-sm hover:bg-dark-750 truncate">Naming a startup</a>
+      </div>
+    </nav>
+
+    <!-- User -->
+    <div class="p-2 border-t border-white/10">
+      <button class="w-full flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-dark-750 transition">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-sm font-semibold text-white">A</div>
+        <div class="text-left text-sm">
+          <p class="font-medium">Alex Doe</p>
+          <p class="text-xs text-dark-200/50">Free plan</p>
+        </div>
+      </button>
+    </div>
+  </aside>
+
+  <!-- Overlay for mobile -->
+  <div id="overlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden"></div>
+
+  <!-- Main -->
+  <div class="flex-1 flex flex-col h-full min-w-0">
+
+    <!-- Top bar -->
+    <header class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+      <div class="flex items-center gap-3">
+        <button id="openSidebar" class="md:hidden p-2 rounded-lg hover:bg-dark-750">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <div class="relative">
+          <button id="modelBtn" class="flex items-center gap-1 text-sm font-medium px-3 py-1.5 rounded-lg hover:bg-dark-750">
+            ChatDash 4.0
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <div id="modelMenu" class="hidden absolute mt-1 left-0 w-56 bg-dark-750 border border-white/10 rounded-xl shadow-xl overflow-hidden text-sm z-10">
+            <button class="w-full text-left px-4 py-3 hover:bg-dark-700 flex flex-col">
+              <span class="font-medium">ChatDash 4.0</span>
+              <span class="text-xs text-dark-200/50">Great for everyday tasks</span>
+            </button>
+            <button class="w-full text-left px-4 py-3 hover:bg-dark-700 flex flex-col">
+              <span class="font-medium">ChatDash 4.0 Turbo</span>
+              <span class="text-xs text-dark-200/50">Faster responses</span>
+            </button>
+            <button class="w-full text-left px-4 py-3 hover:bg-dark-700 flex flex-col">
+              <span class="font-medium">ChatDash Reasoning</span>
+              <span class="text-xs text-dark-200/50">Best for complex problems</span>
+            </button>
+          </div>
+        </div>
+      </div>
+      <button class="text-sm bg-white text-dark-900 font-medium px-3 py-1.5 rounded-lg hover:bg-dark-100 transition">
+        Upgrade
+      </button>
+    </header>
+
+    <!-- Messages -->
+    <main id="messages" class="flex-1 overflow-y-auto">
+      <div class="max-w-3xl mx-auto px-4 py-6 space-y-6">
+
+        <!-- Assistant intro -->
+        <div class="flex flex-col items-center justify-center text-center py-16 gap-3" id="emptyState">
+          <div class="w-12 h-12 rounded-full bg-gradient-to-br from-emerald-400 to-cyan-500 flex items-center justify-center text-white font-bold text-lg">C</div>
+          <h1 class="text-2xl font-semibold">How can I help you today?</h1>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-6 w-full max-w-xl">
+            <button class="suggestion text-left p-3 rounded-xl border border-white/10 hover:bg-dark-750 text-sm">
+              <p class="font-medium">Explain quantum computing</p>
+              <p class="text-dark-200/50 text-xs">in simple terms</p>
+            </button>
+            <button class="suggestion text-left p-3 rounded-xl border border-white/10 hover:bg-dark-750 text-sm">
+              <p class="font-medium">Write a thank you note</p>
+              <p class="text-dark-200/50 text-xs">to a colleague</p>
+            </button>
+            <button class="suggestion text-left p-3 rounded-xl border border-white/10 hover:bg-dark-750 text-sm">
+              <p class="font-medium">Plan a weekly workout</p>
+              <p class="text-dark-200/50 text-xs">for beginners</p>
+            </button>
+            <button class="suggestion text-left p-3 rounded-xl border border-white/10 hover:bg-dark-750 text-sm">
+              <p class="font-medium">Debug my code</p>
+              <p class="text-dark-200/50 text-xs">JavaScript function</p>
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Input -->
+    <div class="px-4 pb-4 pt-2">
+      <div class="max-w-3xl mx-auto">
+        <div class="flex items-end gap-2 bg-dark-750 border border-white/10 rounded-2xl px-3 py-2 focus-within:border-white/20">
+          <button class="p-2 rounded-lg hover:bg-dark-700 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.44 11.05 12.25 20.24a5.5 5.5 0 0 1-7.78-7.78l9.19-9.19a3.67 3.67 0 0 1 5.19 5.19l-9.2 9.19a1.83 1.83 0 0 1-2.6-2.6l8.49-8.48"/></svg>
+          </button>
+          <textarea id="chatInput" rows="1" placeholder="Message ChatDash..." class="flex-1 bg-transparent outline-none resize-none max-h-40 py-2 text-sm placeholder-dark-200/50"></textarea>
+          <button id="sendBtn" class="p-2 rounded-lg bg-white/10 hover:bg-white/20 shrink-0 disabled:opacity-40" disabled>
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+          </button>
+        </div>
+        <p class="text-center text-xs text-dark-200/40 mt-2">ChatDash can make mistakes. Check important info.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+  // Sidebar toggle (mobile)
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  document.getElementById('openSidebar').addEventListener('click', () => {
+    sidebar.classList.remove('-translate-x-full');
+    overlay.classList.remove('hidden');
+  });
+  document.getElementById('closeSidebar').addEventListener('click', closeSidebar);
+  overlay.addEventListener('click', closeSidebar);
+  function closeSidebar() {
+    sidebar.classList.add('-translate-x-full');
+    overlay.classList.add('hidden');
+  }
+
+  // Model menu toggle
+  const modelBtn = document.getElementById('modelBtn');
+  const modelMenu = document.getElementById('modelMenu');
+  modelBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    modelMenu.classList.toggle('hidden');
+  });
+  document.addEventListener('click', () => modelMenu.classList.add('hidden'));
+
+  // Chat item active state
+  document.querySelectorAll('.chat-item, .active-chat').forEach(item => {
+    item.addEventListener('click', (e) => {
+      e.preventDefault();
+      document.querySelectorAll('.chat-item, .active-chat').forEach(i => i.classList.remove('bg-dark-750'));
+      item.classList.add('bg-dark-750');
+      closeSidebar();
+    });
+  });
+
+  // Chat input logic
+  const chatInput = document.getElementById('chatInput');
+  const sendBtn = document.getElementById('sendBtn');
+  const messagesEl = document.getElementById('messages').firstElementChild;
+  const emptyState = document.getElementById('emptyState');
+
+  chatInput.addEventListener('input', () => {
+    chatInput.style.height = 'auto';
+    chatInput.style.height = Math.min(chatInput.scrollHeight, 160) + 'px';
+    sendBtn.disabled = chatInput.value.trim() === '';
+  });
+
+  chatInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  sendBtn.addEventListener('click', sendMessage);
+
+  document.querySelectorAll('.suggestion').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const title = btn.querySelector('p').textContent;
+      chatInput.value = title;
+      sendMessage();
+    });
+  });
+
+  function sendMessage() {
+    const text = chatInput.value.trim();
+    if (!text) return;
+
+    if (emptyState) emptyState.remove();
+
+    appendMessage('user', text);
+    chatInput.value = '';
+    chatInput.style.height = 'auto';
+    sendBtn.disabled = true;
+
+    const typingId = appendTyping();
+
+    setTimeout(() => {
+      document.getElementById(typingId)?.remove();
+      appendMessage('assistant', generateFakeReply(text));
+    }, 1200 + Math.random() * 800);
+  }
+
+  function generateFakeReply(text) {
+    return `That's an interesting point about "${text.slice(0, 60)}${text.length > 60 ? '…' : ''}". Here's a thoughtful response: I've analyzed your request and here are some key considerations to keep in mind, structured clearly for easy reading. Let me know if you'd like me to go deeper into any part of this.`;
+  }
+
+  function appendMessage(role, text) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'flex gap-3 fade-in ' + (role === 'user' ? 'flex-row-reverse' : '');
+
+    const avatar = document.createElement('div');
+    avatar.className = 'w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ' +
+      (role === 'user' ? 'bg-dark-700 text-white' : 'bg-gradient-to-br from-emerald-400 to-cyan-500 text-white');
+    avatar.textContent = role === 'user' ? 'A' : 'C';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed ' +
+      (role === 'user' ? 'bg-dark-700 text-white rounded-tr-sm' : 'bg-dark-750 text-dark-100 rounded-tl-sm');
+    bubble.textContent = text;
+
+    wrapper.appendChild(avatar);
+    wrapper.appendChild(bubble);
+    messagesEl.appendChild(wrapper);
+    scrollToBottom();
+  }
+
+  function appendTyping() {
+    const id = 'typing-' + Date.now();
+    const wrapper = document.createElement('div');
+    wrapper.id = id;
+    wrapper.className = 'flex gap-3 fade-in';
+    wrapper.innerHTML = `
+      <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 bg-gradient-to-br from-emerald-400 to-cyan-500 text-white">C</div>
+      <div class="px-4 py-3 rounded-2xl rounded-tl-sm bg-dark-750 flex items-center gap-1">
+        <span class="typing-dot w-1.5 h-1.5 bg-dark-200 rounded-full"></span>
+        <span class="typing-dot w-1.5 h-1.5 bg-dark-200 rounded-full"></span>
+        <span class="typing-dot w-1.5 h-1.5 bg-dark-200 rounded-full"></span>
+      </div>
+    `;
+    messagesEl.appendChild(wrapper);
+    scrollToBottom();
+    return id;
+  }
+
+  function scrollToBottom() {
+    const container = document.getElementById('messages');
+    container.scrollTop = container.scrollHeight;
+  }
+</script>
+
+</body>
+</html>

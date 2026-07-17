@@ -12,6 +12,14 @@ export const MODELS: ModelOption[] = [
   { id: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B IT', provider: 'Gemma 4' },
 ];
 
+export const MODEL_DESCRIPTIONS: Record<string, string> = {
+  'gemini-3.5-flash': 'Best overall for most tasks',
+  'gemini-3.1-flash-lite': 'Fastest responses, simple tasks',
+  'gemini-3-flash-preview': 'Latest Gemini 3 model',
+  'gemma-4-31b-it': 'Open-weight, fully private',
+  'gemma-4-26b-a4b-it': 'Efficient open model',
+};
+
 export type ThinkingLevelId = 'minimal' | 'low' | 'medium' | 'high';
 
 export const THINKING_LEVEL_LABELS: Record<ThinkingLevelId, string> = {
