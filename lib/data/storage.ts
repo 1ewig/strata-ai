@@ -1,7 +1,8 @@
 import { Task } from "../schemas";
 import { generateId } from "../id";
+import { toSlug } from "../slug";
 
-export const SAMPLE_TASKS: Omit<Task, 'id' | 'createdAt'>[] = [
+export const SAMPLE_TASKS: Omit<Task, 'id' | 'slug' | 'createdAt'>[] = [
   {
     title: "Build a Modern Website",
     description: "Create a fully responsive Next.js portfolio website with Tailwind CSS.",
@@ -72,7 +73,16 @@ export function getStoredTasks(): Task[] {
 
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored) as any[];
+      if (parsed.some(t => !t.slug)) {
+        const migrated = parsed.map(t => ({
+          ...t,
+          slug: t.slug || `${toSlug(t.title)}-${t.id.slice(0, 6)}`,
+        }));
+        localStorage.setItem(key, JSON.stringify(migrated));
+        return migrated as Task[];
+      }
+      return parsed as Task[];
     } catch (e) {
       console.error("Error parsing tasks", e);
     }
@@ -81,8 +91,10 @@ export function getStoredTasks(): Task[] {
   const defaultTasks: Task[] = SAMPLE_TASKS.map((sample, index) => {
     const d = new Date();
     d.setMinutes(d.getMinutes() - (SAMPLE_TASKS.length - index) * 15);
+    const slug = toSlug(sample.title);
     return {
       ...sample,
+      slug: slug + (index > 0 ? `-${index}` : ''),
       id: generateId(),
       createdAt: d.toISOString(),
       steps: sample.steps.map(step => ({

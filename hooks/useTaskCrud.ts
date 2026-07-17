@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Task, TaskStep } from "@/lib/schemas";
 import { getStoredTasks, saveTasks } from "@/lib/data/storage";
 import { generateId } from "@/lib/id";
+import { generateUniqueSlug } from "@/lib/slug";
 
 export function useTaskCrud() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -30,6 +31,7 @@ export function useTaskCrud() {
 
     const newTask: Task = {
       id: generateId(),
+      slug: generateUniqueSlug(title, tasks),
       title: title.trim(),
       description,
       steps: stepItems,

@@ -8,7 +8,8 @@ export const TaskStepSchema = z.object({
 });
 
 export const TaskSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
+  slug: z.string(),
   title: z.string(),
   description: z.string().optional(),
   steps: z.array(TaskStepSchema).default([]),

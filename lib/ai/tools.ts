@@ -1,6 +1,7 @@
 import { Type, FunctionDeclaration } from "@google/genai";
 import { Task, TaskStep } from "../schemas";
 import { generateId } from "../id";
+import { toSlug } from "../slug";
 
 export const addTaskTool: FunctionDeclaration = {
   name: "addTask",
@@ -169,8 +170,10 @@ export function executeTool(
         createdAt: new Date().toISOString()
       }));
 
+      const taskSlug = toSlug(args.title || "Untitled Task") + '-' + generateId().slice(0, 6);
       const newTask: Task = {
         id: generateId(),
+        slug: taskSlug,
         title: args.title || "Untitled Task",
         description: args.description || "",
         steps: newSteps,

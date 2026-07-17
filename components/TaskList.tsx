@@ -1,37 +1,23 @@
 'use client';
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { AnimatePresence, motion } from 'motion/react';
 import { ClipboardList, Plus, BarChart2, FolderPlus, Info } from 'lucide-react';
 import { Task } from '@/lib/schemas';
 import ProgressBar from '@/components/ui/ProgressBar';
 import TaskCard from '@/components/tasks/TaskCard';
-import TaskDetail from '@/components/tasks/TaskDetail';
 import TaskForm from '@/components/tasks/TaskForm';
 
 interface TaskListProps {
   tasks: Task[];
   onAddTask: (title: string, description?: string, steps?: string[]) => void;
-  onUpdateTask: (id: string, title?: string, description?: string) => void;
   onDeleteTask: (id: string) => void;
-  onAddStep: (taskId: string, title: string) => void;
-  onUpdateStep: (taskId: string, stepId: string, title?: string, completed?: boolean) => void;
-  onDeleteStep: (taskId: string, stepId: string) => void;
 }
 
-export default function TaskList({
-  tasks,
-  onAddTask,
-  onUpdateTask,
-  onDeleteTask,
-  onAddStep,
-  onUpdateStep,
-  onDeleteStep,
-}: TaskListProps) {
-  const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
+export default function TaskList({ tasks, onAddTask, onDeleteTask }: TaskListProps) {
+  const router = useRouter();
   const [isNewTaskOpen, setIsNewTaskOpen] = useState(false);
-
-  const activeTask = tasks.find(t => t.id === activeTaskId) || null;
 
   const totalTasks = tasks.length;
   const totalSteps = tasks.reduce((sum, t) => sum + t.steps.length, 0);
@@ -120,61 +106,40 @@ export default function TaskList({
       </AnimatePresence>
 
       <div id="master-split-container" className="relative min-h-[300px]">
-        <AnimatePresence mode="wait">
-          {activeTask ? (
-            <TaskDetail
-              task={activeTask}
-              onUpdateTask={onUpdateTask}
-              onAddStep={onAddStep}
-              onUpdateStep={onUpdateStep}
-              onDeleteStep={onDeleteStep}
-              onClose={() => setActiveTaskId(null)}
-            />
-          ) : (
-            <motion.div
-              id="tasks-home-view"
-              key="list"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              transition={{ duration: 0.2 }}
-              className="space-y-4"
-            >
-              <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Your Active Goals</h4>
+        <div className="space-y-4">
+          <h4 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Your Active Goals</h4>
 
-              <AnimatePresence mode="popLayout">
-                {tasks.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-3">
-                    {tasks.map(task => (
-                      <TaskCard
-                        key={task.id}
-                        task={task}
-                        onClick={() => setActiveTaskId(task.id)}
-                        onDelete={onDeleteTask}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center border border-dashed border-zinc-800 rounded-2xl p-12 text-center bg-zinc-950/20">
-                    <div className="w-12 h-12 rounded-full bg-zinc-900 flex items-center justify-center mb-4 text-zinc-600 border border-zinc-800">
-                      <ClipboardList className="w-5 h-5 text-zinc-500" />
-                    </div>
-                    <h4 className="text-zinc-300 font-semibold text-base">No projects listed</h4>
-                    <p className="text-sm text-zinc-500 max-w-sm mt-1 mb-5">
-                      Your master tasklist is empty! Add a new goal manually or ask **TaskFlow AI** to break down a big idea for you.
-                    </p>
-                    <button
-                      onClick={() => setIsNewTaskOpen(true)}
-                      className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-4 py-2.5 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/20 transition-all focus:outline-none"
-                    >
-                      Quick Create Project
-                    </button>
-                  </div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          <AnimatePresence mode="popLayout">
+            {tasks.length > 0 ? (
+              <div className="grid grid-cols-1 gap-3">
+                {tasks.map(task => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onClick={() => router.push('/tasks/' + task.slug)}
+                    onDelete={onDeleteTask}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center border border-dashed border-zinc-800 rounded-2xl p-12 text-center bg-zinc-950/20">
+                <div className="w-12 h-12 rounded-full bg-zinc-900 flex items-center justify-center mb-4 text-zinc-600 border border-zinc-800">
+                  <ClipboardList className="w-5 h-5 text-zinc-500" />
+                </div>
+                <h4 className="text-zinc-300 font-semibold text-base">No projects listed</h4>
+                <p className="text-sm text-zinc-500 max-w-sm mt-1 mb-5">
+                  Your master tasklist is empty! Add a new goal manually or ask **TaskFlow AI** to break down a big idea for you.
+                </p>
+                <button
+                  onClick={() => setIsNewTaskOpen(true)}
+                  className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 px-4 py-2.5 rounded-xl border border-emerald-500/20 hover:bg-emerald-500/20 transition-all focus:outline-none"
+                >
+                  Quick Create Project
+                </button>
+              </div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
     </div>
