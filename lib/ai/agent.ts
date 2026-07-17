@@ -1,6 +1,7 @@
 import { getGeminiClient } from "./client";
 import { ALL_TOOLS, executeTool } from "./tools";
 import { Resume, ChatMessage, ToolCall } from "../schemas";
+import { ThinkingLevel } from "@google/genai";
 
 function buildSystemInstruction(resumes: Resume[]): string {
   const resumesJson = JSON.stringify(resumes.map(r => ({
@@ -80,7 +81,8 @@ export async function runAgentChat(
   messages: ChatMessage[],
   resumes: Resume[],
   model?: string,
-  onStream?: (chunk: string) => void
+  onStream?: (chunk: string) => void,
+  thinkingLevel?: string
 ): Promise<{ content: string; resumes: Resume[]; toolCalls: ToolCall[] }> {
   const ai = getGeminiClient();
   const systemInstruction = buildSystemInstruction(resumes);
@@ -94,13 +96,19 @@ export async function runAgentChat(
   let finalModelResponse = "";
 
   while (loopCount < 5) {
+    const config: any = {
+      systemInstruction,
+      tools: [{ functionDeclarations: ALL_TOOLS }],
+    };
+
+    if (thinkingLevel && ThinkingLevel[thinkingLevel.toUpperCase() as keyof typeof ThinkingLevel]) {
+      config.thinkingConfig = { thinkingLevel: ThinkingLevel[thinkingLevel.toUpperCase() as keyof typeof ThinkingLevel] };
+    }
+
     const stream = await ai.models.generateContentStream({
       model: modelName,
       contents,
-      config: {
-        systemInstruction,
-        tools: [{ functionDeclarations: ALL_TOOLS }],
-      }
+      config,
     });
 
     const textChunks: string[] = [];

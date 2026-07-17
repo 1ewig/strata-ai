@@ -9,7 +9,8 @@ const CHAT_STORAGE_KEY = "resumeflow_chat_history";
 export function useChat(
   resumes: Resume[],
   onAgentUpdateResumes: (newResumes: Resume[]) => void,
-  model: string
+  model: string,
+  thinkingLevel?: string
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -87,6 +88,7 @@ export function useChat(
           })),
           resumes: resumesRef.current,
           model,
+          thinkingLevel,
         }),
       });
 

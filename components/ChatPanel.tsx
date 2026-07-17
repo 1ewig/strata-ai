@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Trash, ChevronDown } from 'lucide-react';
 import { Resume } from '@/lib/schemas';
 import { useChat } from '@/hooks/useChat';
-import { MODELS, getInitialModel, saveModelPreference } from '@/lib/models';
+import { MODELS, getInitialModel, saveModelPreference, MODEL_THINKING_LEVELS, THINKING_LEVEL_LABELS, getStoredThinkingLevel, saveThinkingLevel, getValidThinkingLevelForModel } from '@/lib/models';
 import ChatBubble from '@/components/chat/ChatBubble';
 import ChatInput from '@/components/chat/ChatInput';
 import SuggestionChips from '@/components/chat/SuggestionChips';
@@ -24,6 +24,7 @@ interface ChatPanelProps {
 
 export default function ChatPanel({ resumes, onAgentUpdateResumes }: ChatPanelProps) {
   const [model, setModel] = useState(getInitialModel);
+  const [thinkingLevel, setThinkingLevel] = useState(() => getValidThinkingLevelForModel(model, getStoredThinkingLevel(model)));
 
   const {
     messages,
@@ -35,13 +36,25 @@ export default function ChatPanel({ resumes, onAgentUpdateResumes }: ChatPanelPr
     handleSubmit,
     handleClearChat,
     handleSendMessage,
-  } = useChat(resumes, onAgentUpdateResumes, model);
+  } = useChat(resumes, onAgentUpdateResumes, model, thinkingLevel);
 
   const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const id = e.target.value;
     setModel(id);
     saveModelPreference(id);
+    const currentLevel = getStoredThinkingLevel(id);
+    const valid = getValidThinkingLevelForModel(id, currentLevel);
+    setThinkingLevel(valid);
+    saveThinkingLevel(valid);
   };
+
+  const handleThinkingLevelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const level = e.target.value;
+    setThinkingLevel(level);
+    saveThinkingLevel(level);
+  };
+
+  const currentModelThinkingConfig = MODEL_THINKING_LEVELS[model];
 
   return (
     <div id="chat-panel-container" className="flex flex-col h-[650px] md:h-full md:max-h-[calc(100vh-10rem)] bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl relative">
@@ -79,6 +92,21 @@ export default function ChatPanel({ resumes, onAgentUpdateResumes }: ChatPanelPr
               </select>
               <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
             </div>
+            {currentModelThinkingConfig && (
+              <div className="relative ml-1.5">
+                <select
+                  id="thinking-level-selector"
+                  value={thinkingLevel}
+                  onChange={handleThinkingLevelChange}
+                  className="text-xs text-zinc-500 bg-zinc-900/80 border border-zinc-800 rounded-md appearance-none cursor-pointer hover:text-zinc-200 hover:border-zinc-700 focus:outline-none focus:text-zinc-200 focus:border-emerald-500/50 px-2 py-1 pr-6 transition-colors"
+                >
+                  {currentModelThinkingConfig.levels.map(level => (
+                    <option key={level} value={level}>{THINKING_LEVEL_LABELS[level]}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
+              </div>
+            )}
           </div>
         </div>
 

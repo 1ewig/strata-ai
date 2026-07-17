@@ -12,6 +12,7 @@ const bodySchema = z.object({
   messages: z.array(IncomingMessageSchema),
   resumes: z.array(ResumeSchema),
   model: z.string().optional(),
+  thinkingLevel: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const { resumes, model } = parsed.data;
+    const { resumes, model, thinkingLevel } = parsed.data;
     const messages = parsed.data.messages as any[];
 
     const encoder = new TextEncoder();
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
         try {
           const result = await runAgentChat(messages, resumes, model, (chunk) => {
             sendEvent("text_chunk", chunk);
-          });
+          }, thinkingLevel);
 
           sendEvent("done", {
             resumes: result.resumes,
