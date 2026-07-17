@@ -86,7 +86,7 @@ export default function Home() {
         </div>
         )}
 
-        <div id="split-grid-wrapper" className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start h-full flex-grow">
+        <div id="split-grid-wrapper" className="grid grid-cols-1 md:grid-cols-12 gap-6 h-full flex-grow grid-rows-1">
 
           <div
             id="checklist-column-wrapper"
