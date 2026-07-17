@@ -1,0 +1,6 @@
+{
+  "name": "TaskFlow",
+  "description": "An AI-powered task breakdown and project organizer that converts high-level goals into tiny action items.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
