@@ -1,10 +1,11 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, Trash } from 'lucide-react';
+import { Sparkles, Trash, ChevronDown } from 'lucide-react';
 import { Task } from '@/lib/schemas';
 import { useChat } from '@/hooks/useChat';
+import { MODELS, getInitialModel, saveModelPreference } from '@/lib/models';
 import ChatBubble from '@/components/chat/ChatBubble';
 import ChatInput from '@/components/chat/ChatInput';
 import SuggestionChips from '@/components/chat/SuggestionChips';
@@ -22,16 +23,25 @@ interface ChatPanelProps {
 }
 
 export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps) {
+  const [model, setModel] = useState(getInitialModel);
+
   const {
     messages,
     inputValue,
     setInputValue,
     isLoading,
+    streamingContent,
     messagesEndRef,
     handleSubmit,
     handleClearChat,
     handleSendMessage,
-  } = useChat(tasks, onAgentUpdateTasks);
+  } = useChat(tasks, onAgentUpdateTasks, model);
+
+  const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const id = e.target.value;
+    setModel(id);
+    saveModelPreference(id);
+  };
 
   return (
     <div id="chat-panel-container" className="flex flex-col h-[650px] md:h-full bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl relative">
@@ -49,7 +59,21 @@ export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps)
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
             </h3>
-            <p id="chat-header-status" className="text-[10px] text-zinc-500">Active • Powered by {process.env.NEXT_PUBLIC_GEMINI_MODEL || "Gemini 2.5"}</p>
+            <div className="relative">
+              <select
+                id="model-selector"
+                value={model}
+                onChange={handleModelChange}
+                className="text-[10px] text-zinc-500 bg-transparent border-none appearance-none cursor-pointer hover:text-zinc-300 focus:outline-none focus:text-zinc-300 pr-4 transition-colors"
+              >
+                {MODELS.map(m => (
+                  <option key={m.id} value={m.id} className="bg-zinc-900 text-zinc-300">
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-zinc-600 pointer-events-none" />
+            </div>
           </div>
         </div>
 
@@ -67,7 +91,19 @@ export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps)
           <ChatBubble key={message.id} message={message} />
         ))}
 
-        {isLoading && (
+        {streamingContent !== null && (
+          <ChatBubble
+            message={{
+              id: 'streaming',
+              role: 'model',
+              content: streamingContent,
+              timestamp: '',
+            }}
+            isStreaming
+          />
+        )}
+
+        {isLoading && streamingContent === null && (
           <div id="chat-loading-row" className="flex items-start gap-3">
             <div id="chat-loading-avatar" className="w-8 h-8 rounded-lg bg-emerald-950/20 border border-emerald-500/10 text-emerald-400 flex-shrink-0 flex items-center justify-center mt-0.5">
               <Sparkles className="w-4 h-4 animate-spin text-emerald-500" />
@@ -88,7 +124,7 @@ export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps)
         <div ref={messagesEndRef} />
       </div>
 
-      {messages.length <= 1 && (
+      {messages.length <= 1 && streamingContent === null && (
         <SuggestionChips suggestions={QUICK_SUGGESTIONS} onSelect={handleSendMessage} />
       )}
 

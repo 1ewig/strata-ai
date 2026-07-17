@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { z } from "zod";
 import { runAgentChat } from "@/lib/ai/agent";
 import { TaskSchema } from "@/lib/schemas";
@@ -12,6 +11,7 @@ const IncomingMessageSchema = z.object({
 const bodySchema = z.object({
   messages: z.array(IncomingMessageSchema),
   tasks: z.array(TaskSchema),
+  model: z.string().optional(),
 });
 
 export async function POST(req: Request) {
@@ -20,21 +20,52 @@ export async function POST(req: Request) {
     const parsed = bodySchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Invalid request body", details: parsed.error.flatten() },
-        { status: 400 }
+      return new Response(
+        JSON.stringify({ error: "Invalid request body", details: parsed.error.flatten() }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    const { tasks } = parsed.data;
+    const { tasks, model } = parsed.data;
     const messages = parsed.data.messages as any[];
-    const result = await runAgentChat(messages, tasks);
-    return NextResponse.json(result);
+
+    const encoder = new TextEncoder();
+    const stream = new ReadableStream({
+      async start(controller) {
+        const sendEvent = (event: string, data: unknown) => {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        };
+
+        try {
+          const result = await runAgentChat(messages, tasks, model, (chunk) => {
+            sendEvent("text_chunk", chunk);
+          });
+
+          sendEvent("done", {
+            tasks: result.tasks,
+            toolCalls: result.toolCalls,
+          });
+        } catch (error: any) {
+          console.error("Error in agent API route:", error);
+          sendEvent("error", { message: error.message || "An error occurred inside the AI Task Agent." });
+        } finally {
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
   } catch (error: any) {
     console.error("Error in agent API route:", error);
-    return NextResponse.json(
-      { error: error.message || "An error occurred inside the AI Task Agent." },
-      { status: 500 }
+    return new Response(
+      JSON.stringify({ error: error.message || "An error occurred." }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
 }

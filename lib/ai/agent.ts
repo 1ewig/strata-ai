@@ -52,11 +52,15 @@ function mapMessagesToContents(messages: ChatMessage[]): any[] {
 
 export async function runAgentChat(
   messages: ChatMessage[],
-  tasks: Task[]
+  tasks: Task[],
+  model?: string,
+  onStream?: (chunk: string) => void
 ): Promise<{ content: string; tasks: Task[]; toolCalls: ToolCall[] }> {
   const ai = getGeminiClient();
   const systemInstruction = buildSystemInstruction(tasks);
   const contents = mapMessagesToContents(messages);
+
+  const modelName = model || process.env.NEXT_PUBLIC_GEMINI_MODEL || "gemini-3.1-flash-lite";
 
   let currentTasks = [...tasks];
   const toolCallsExecuted: ToolCall[] = [];
@@ -64,8 +68,8 @@ export async function runAgentChat(
   let finalModelResponse = "";
 
   while (loopCount < 5) {
-    const response = await ai.models.generateContent({
-      model: process.env.NEXT_PUBLIC_GEMINI_MODEL || "gemini-3.1-flash-lite",
+    const stream = await ai.models.generateContentStream({
+      model: modelName,
       contents,
       config: {
         systemInstruction,
@@ -73,13 +77,27 @@ export async function runAgentChat(
       }
     });
 
-    const functionCalls = response.functionCalls;
+    const textChunks: string[] = [];
+    let aggregatedFunctionCalls: any[] | null = null;
+    let aggregatedCandidateContent: any = null;
 
-    if (functionCalls && functionCalls.length > 0) {
+    for await (const chunk of stream) {
+      if (chunk.text) {
+        textChunks.push(chunk.text);
+      }
+      if (chunk.functionCalls && chunk.functionCalls.length > 0) {
+        aggregatedFunctionCalls = chunk.functionCalls;
+      }
+      if (chunk.candidates?.[0]?.content && !aggregatedCandidateContent) {
+        aggregatedCandidateContent = chunk.candidates[0].content;
+      }
+    }
+
+    if (aggregatedFunctionCalls && aggregatedFunctionCalls.length > 0) {
       const responseParts: any[] = [];
       const modelParts: any[] = [];
 
-      for (const call of functionCalls) {
+      for (const call of aggregatedFunctionCalls) {
         if (!call.name) continue;
 
         const { result, updatedTasks, updated } = executeTool(call.name, call.args, currentTasks);
@@ -108,8 +126,8 @@ export async function runAgentChat(
         });
       }
 
-      if (response.candidates?.[0]?.content) {
-        contents.push(response.candidates[0].content);
+      if (aggregatedCandidateContent) {
+        contents.push(aggregatedCandidateContent);
       } else {
         contents.push({
           role: 'model',
@@ -124,7 +142,10 @@ export async function runAgentChat(
 
       loopCount++;
     } else {
-      finalModelResponse = response.text || "";
+      finalModelResponse = textChunks.join('');
+      for (const chunk of textChunks) {
+        onStream?.(chunk);
+      }
       break;
     }
   }

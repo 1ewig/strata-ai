@@ -6,9 +6,10 @@ import ToolCallCard from './ToolCallCard';
 
 interface ChatBubbleProps {
   message: ChatMessage;
+  isStreaming?: boolean;
 }
 
-export default function ChatBubble({ message }: ChatBubbleProps) {
+export default function ChatBubble({ message, isStreaming }: ChatBubbleProps) {
   const isUser = message.role === 'user';
 
   return (
@@ -34,9 +35,12 @@ export default function ChatBubble({ message }: ChatBubbleProps) {
           {message.content.split('**').map((part, i) =>
             i % 2 === 1 ? <strong key={i} className="text-zinc-100 font-bold">{part}</strong> : part
           )}
+          {isStreaming && (
+            <span className="inline-block w-[2px] h-4 bg-emerald-400 ml-0.5 animate-pulse align-text-bottom" />
+          )}
         </div>
 
-        {!isUser && message.toolCalls && message.toolCalls.length > 0 && (
+        {!isUser && message.toolCalls && message.toolCalls.length > 0 && !isStreaming && (
           <div className="space-y-2 ml-1">
             {message.toolCalls.map((tc, idx) => (
               <ToolCallCard key={idx} toolCall={tc} index={idx} messageId={message.id} />
