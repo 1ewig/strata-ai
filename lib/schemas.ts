@@ -18,14 +18,19 @@ export const TaskSchema = z.object({
 export type TaskStep = z.infer<typeof TaskStepSchema>;
 export type Task = z.infer<typeof TaskSchema>;
 
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'model';
-  content: string;
-  timestamp: string;
-  toolCalls?: {
-    name: string;
-    args: any;
-    result?: any;
-  }[];
-}
+export const ToolCallSchema = z.object({
+  name: z.string(),
+  args: z.any(),
+  result: z.any().optional(),
+});
+
+export const ChatMessageSchema = z.object({
+  id: z.string(),
+  role: z.enum(["user", "model"]),
+  content: z.string(),
+  timestamp: z.string(),
+  toolCalls: z.array(ToolCallSchema).optional(),
+});
+
+export type ChatMessage = z.infer<typeof ChatMessageSchema>;
+export type ToolCall = z.infer<typeof ToolCallSchema>;
