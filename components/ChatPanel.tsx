@@ -98,7 +98,7 @@ export default function ChatPanel({ resumes, onAgentUpdateResumes }: ChatPanelPr
                   id="thinking-level-selector"
                   value={thinkingLevel}
                   onChange={handleThinkingLevelChange}
-                  className="text-xs text-zinc-500 bg-zinc-900/80 border border-zinc-800 rounded-md appearance-none cursor-pointer hover:text-zinc-200 hover:border-zinc-700 focus:outline-none focus:text-zinc-200 focus:border-emerald-500/50 px-2 py-1 pr-6 transition-colors"
+                  className="text-xs text-zinc-400 bg-zinc-900/80 border border-zinc-800 rounded-md appearance-none cursor-pointer hover:text-zinc-200 hover:border-zinc-700 focus:outline-none focus:text-zinc-200 focus:border-emerald-500/50 px-2 py-1 pr-6 transition-colors"
                 >
                   {currentModelThinkingConfig.levels.map(level => (
                     <option key={level} value={level}>{THINKING_LEVEL_LABELS[level]}</option>

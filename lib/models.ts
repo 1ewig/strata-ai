@@ -5,13 +5,11 @@ export interface ModelOption {
 }
 
 export const MODELS: ModelOption[] = [
+  { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash', provider: 'Gemini' },
   { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', provider: 'Gemini' },
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', provider: 'Gemini' },
-  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', provider: 'Gemini' },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview', provider: 'Gemini' },
   { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', provider: 'Gemma 4' },
   { id: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B IT', provider: 'Gemma 4' },
-  { id: 'gemma-4-e4b-it', label: 'Gemma 4 E4B IT', provider: 'Gemma 4' },
-  { id: 'gemma-4-e2b-it', label: 'Gemma 4 E2B IT', provider: 'Gemma 4' },
 ];
 
 export type ThinkingLevelId = 'minimal' | 'low' | 'medium' | 'high';
@@ -29,9 +27,9 @@ export interface ModelThinkingConfig {
 }
 
 export const MODEL_THINKING_LEVELS: Record<string, ModelThinkingConfig> = {
+  'gemini-3.5-flash': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'medium' },
   'gemini-3.1-flash-lite': { levels: ['minimal', 'high'], defaultLevel: 'minimal' },
-  'gemini-2.5-flash': { levels: ['low', 'medium', 'high'], defaultLevel: 'medium' },
-  'gemini-2.5-pro': { levels: ['low', 'medium', 'high'], defaultLevel: 'medium' },
+  'gemini-3-flash-preview': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'high' },
 };
 
 const STORAGE_KEY = 'selectedModel';
