@@ -64,15 +64,20 @@ export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps)
                 id="model-selector"
                 value={model}
                 onChange={handleModelChange}
-                className="text-[10px] text-zinc-500 bg-transparent border-none appearance-none cursor-pointer hover:text-zinc-300 focus:outline-none focus:text-zinc-300 pr-4 transition-colors"
+                className="text-xs text-zinc-400 bg-zinc-900/80 border border-zinc-800 rounded-md appearance-none cursor-pointer hover:text-zinc-200 hover:border-zinc-700 focus:outline-none focus:text-zinc-200 focus:border-emerald-500/50 px-2 py-1 pr-6 transition-colors"
               >
-                {MODELS.map(m => (
-                  <option key={m.id} value={m.id} className="bg-zinc-900 text-zinc-300">
-                    {m.label}
-                  </option>
-                ))}
+                <optgroup label="Gemini" className="bg-zinc-900">
+                  {MODELS.filter(m => m.provider === 'Gemini').map(m => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </optgroup>
+                <optgroup label="Gemma 4" className="bg-zinc-900">
+                  {MODELS.filter(m => m.provider === 'Gemma 4').map(m => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </optgroup>
               </select>
-              <ChevronDown className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 text-zinc-600 pointer-events-none" />
+              <ChevronDown className="absolute right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-zinc-500 pointer-events-none" />
             </div>
           </div>
         </div>
