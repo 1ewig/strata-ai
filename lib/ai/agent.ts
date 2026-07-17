@@ -82,11 +82,14 @@ export async function runAgentChat(
     let aggregatedCandidateContent: any = null;
 
     for await (const chunk of stream) {
-      if (chunk.text) {
-        textChunks.push(chunk.text);
-      }
       if (chunk.functionCalls && chunk.functionCalls.length > 0) {
         aggregatedFunctionCalls = chunk.functionCalls;
+      }
+      if (chunk.text) {
+        textChunks.push(chunk.text);
+        if (!aggregatedFunctionCalls) {
+          onStream?.(chunk.text);
+        }
       }
       if (chunk.candidates?.[0]?.content && !aggregatedCandidateContent) {
         aggregatedCandidateContent = chunk.candidates[0].content;
@@ -143,9 +146,6 @@ export async function runAgentChat(
       loopCount++;
     } else {
       finalModelResponse = textChunks.join('');
-      for (const chunk of textChunks) {
-        onStream?.(chunk);
-      }
       break;
     }
   }
