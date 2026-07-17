@@ -73,7 +73,6 @@ export function useChat(
     saveChatHistory(newMessages);
     setInputValue('');
     setIsLoading(true);
-    setStreamingContent('');
 
     try {
       const response = await fetch('/api/agent', {
