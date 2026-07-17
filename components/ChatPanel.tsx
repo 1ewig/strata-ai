@@ -46,7 +46,7 @@ export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps)
   return (
     <div id="chat-panel-container" className="flex flex-col h-[650px] md:h-full bg-zinc-950 border border-zinc-800 rounded-2xl overflow-hidden shadow-2xl relative">
 
-      <div id="chat-panel-header" className="flex items-center justify-between border-b border-zinc-800 px-4 py-4 bg-zinc-900/40 relative z-10">
+      <div id="chat-panel-header" className="flex-shrink-0 flex items-center justify-between border-b border-zinc-800 px-4 py-4 bg-zinc-900/40 relative z-10">
         <div className="flex items-center gap-2">
           <div id="chat-sparkle-avatar" className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
             <Sparkles className="w-4.5 h-4.5 text-emerald-400" />
@@ -86,7 +86,7 @@ export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps)
         </button>
       </div>
 
-      <div id="chat-messages-scroll" className="flex-grow overflow-y-auto p-4 space-y-4">
+      <div id="chat-messages-scroll" className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <ChatBubble key={message.id} message={message} />
         ))}
@@ -124,16 +124,20 @@ export default function ChatPanel({ tasks, onAgentUpdateTasks }: ChatPanelProps)
         <div ref={messagesEndRef} />
       </div>
 
-      {messages.length <= 1 && streamingContent === null && (
-        <SuggestionChips suggestions={QUICK_SUGGESTIONS} onSelect={handleSendMessage} />
-      )}
+      <div className="flex-shrink-0">
+        {messages.length <= 1 && streamingContent === null && (
+          <SuggestionChips suggestions={QUICK_SUGGESTIONS} onSelect={handleSendMessage} />
+        )}
+      </div>
 
-      <ChatInput
-        inputValue={inputValue}
-        onInputChange={setInputValue}
-        onSubmit={handleSubmit}
-        isLoading={isLoading}
-      />
+      <div className="flex-shrink-0">
+        <ChatInput
+          inputValue={inputValue}
+          onInputChange={setInputValue}
+          onSubmit={handleSubmit}
+          isLoading={isLoading}
+        />
+      </div>
     </div>
   );
 }
