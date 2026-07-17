@@ -27,7 +27,7 @@ export default function Home() {
   const [activeMobileTab, setActiveMobileTab] = useState<'checklist' | 'assistant'>('checklist');
 
   return (
-    <main id="app-workspace-root" className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
+    <main id="app-workspace-root" className="h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
 
       <header id="main-app-header" className="border-b border-zinc-900 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
