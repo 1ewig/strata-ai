@@ -151,6 +151,18 @@ export const reorderSectionsTool: FunctionDeclaration = {
   },
 };
 
+export const deleteResumeTool: FunctionDeclaration = {
+  name: "deleteResume",
+  description: "Delete an entire resume and all its sections.",
+  parameters: {
+    type: Type.OBJECT,
+    properties: {
+      resumeId: { type: Type.STRING, description: "The ID of the resume to delete" },
+    },
+    required: ["resumeId"],
+  },
+};
+
 export const ALL_TOOLS: FunctionDeclaration[] = [
   addResumeTool,
   updateSectionTool,
@@ -160,6 +172,7 @@ export const ALL_TOOLS: FunctionDeclaration[] = [
   renameResumeTool,
   duplicateResumeTool,
   reorderSectionsTool,
+  deleteResumeTool,
   getResumeTool,
 ];
 
@@ -412,6 +425,23 @@ export function executeTool(
         status: "success",
         message: `Reordered ${reordered.length} sections in resume "${resume.title}".`,
         resume: updatedResumes[resumeIndex],
+      };
+      updated = true;
+      break;
+    }
+
+    case "deleteResume": {
+      const resumeIndex = updatedResumes.findIndex(r => r.id === args.resumeId);
+      if (resumeIndex === -1) {
+        result = { status: "error", message: `Resume with ID ${args.resumeId} not found.` };
+        break;
+      }
+      const deleted = updatedResumes[resumeIndex];
+      updatedResumes.splice(resumeIndex, 1);
+      result = {
+        status: "success",
+        message: `Deleted resume "${deleted.title}".`,
+        title: deleted.title,
       };
       updated = true;
       break;

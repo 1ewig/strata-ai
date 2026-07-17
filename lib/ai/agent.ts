@@ -72,6 +72,8 @@ function summarizeToolCalls(calls: ToolCall[]): string {
       lines.push(`Duplicated resume as "${tc.result.resume.title}".`);
     } else if (tc.name === 'reorderSections' && tc.result?.status === 'success') {
       lines.push('Reordered resume sections.');
+    } else if (tc.name === 'deleteResume' && tc.result?.status === 'success') {
+      lines.push(`Deleted resume "${tc.result.title}".`);
     }
   }
   return lines.length > 0 ? lines.join(' ') : 'Done.';
