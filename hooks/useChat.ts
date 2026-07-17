@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ChatMessage, Task } from "@/lib/schemas";
+import { generateId } from "@/lib/id";
 
 export function useChat(
   tasks: Task[],
@@ -55,7 +56,7 @@ export function useChat(
     if (!text.trim() || isLoading) return;
 
     const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       role: 'user',
       content: text,
       timestamp: new Date().toISOString(),
@@ -87,7 +88,7 @@ export function useChat(
       const data = await response.json();
 
       const agentMessage: ChatMessage = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         role: 'model',
         content: data.content,
         timestamp: new Date().toISOString(),
@@ -103,7 +104,7 @@ export function useChat(
     } catch (e: any) {
       console.error(e);
       const errorMessage: ChatMessage = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         role: 'model',
         content: `⚠️ Sorry, I encountered an error: ${e.message || 'Unknown error'}. Make sure your GEMINI_API_KEY is configured in Settings > Secrets.`,
         timestamp: new Date().toISOString(),

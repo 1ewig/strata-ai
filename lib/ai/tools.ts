@@ -1,5 +1,6 @@
 import { Type, FunctionDeclaration } from "@google/genai";
 import { Task, TaskStep } from "../schemas";
+import { generateId } from "../id";
 
 export const addTaskTool: FunctionDeclaration = {
   name: "addTask",
@@ -162,14 +163,14 @@ export function executeTool(
     case "addTask": {
       const stepTitles: string[] = args.steps || [];
       const newSteps: TaskStep[] = stepTitles.map(title => ({
-        id: crypto.randomUUID(),
+        id: generateId(),
         title: title.trim(),
         completed: false,
         createdAt: new Date().toISOString()
       }));
 
       const newTask: Task = {
-        id: crypto.randomUUID(),
+        id: generateId(),
         title: args.title || "Untitled Task",
         description: args.description || "",
         steps: newSteps,
@@ -191,7 +192,7 @@ export function executeTool(
       if (taskIndex !== -1) {
         const task = updatedTasks[taskIndex];
         const newStep: TaskStep = {
-          id: crypto.randomUUID(),
+          id: generateId(),
           title: args.title || "Untitled Step",
           completed: false,
           createdAt: new Date().toISOString()

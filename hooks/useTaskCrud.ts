@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { Task, TaskStep } from "@/lib/schemas";
 import { getStoredTasks, saveTasks } from "@/lib/data/storage";
+import { generateId } from "@/lib/id";
 
 export function useTaskCrud() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -21,14 +22,14 @@ export function useTaskCrud() {
 
   const handleAddTask = (title: string, description?: string, steps?: string[]) => {
     const stepItems: TaskStep[] = (steps || []).map(stepTitle => ({
-      id: crypto.randomUUID(),
+      id: generateId(),
       title: stepTitle.trim(),
       completed: false,
       createdAt: new Date().toISOString(),
     }));
 
     const newTask: Task = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       title: title.trim(),
       description,
       steps: stepItems,
@@ -62,7 +63,7 @@ export function useTaskCrud() {
     const updated = tasks.map(task => {
       if (task.id === taskId) {
         const newStep: TaskStep = {
-          id: crypto.randomUUID(),
+          id: generateId(),
           title: title.trim(),
           completed: false,
           createdAt: new Date().toISOString(),

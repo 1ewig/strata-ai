@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { BrainCircuit, ListTodo, Sparkles } from 'lucide-react';
 import { useTaskCrud } from '@/hooks/useTaskCrud';
+import { useIsMobile } from '@/hooks/use-mobile';
 import StatsHeader from '@/components/ui/StatsHeader';
 import TaskList from '@/components/TaskList';
 import ChatPanel from '@/components/ChatPanel';
@@ -22,6 +23,7 @@ export default function Home() {
     completedStepsCount,
   } = useTaskCrud();
 
+  const isMobile = useIsMobile();
   const [activeMobileTab, setActiveMobileTab] = useState<'checklist' | 'assistant'>('checklist');
 
   return (
@@ -54,7 +56,8 @@ export default function Home() {
 
       <div id="workspace-layout" className="flex-grow max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-6 flex flex-col justify-stretch">
 
-        <div id="mobile-layout-tabs" className="md:hidden flex bg-zinc-900 border border-zinc-800 p-1.5 rounded-2xl mb-5 w-full gap-1">
+        {isMobile && (
+        <div id="mobile-layout-tabs" className="flex bg-zinc-900 border border-zinc-800 p-1.5 rounded-2xl mb-5 w-full gap-1">
           <button
             id="mobile-tab-checklist"
             onClick={() => setActiveMobileTab('checklist')}
@@ -81,12 +84,13 @@ export default function Home() {
             AI Breakdown Coach
           </button>
         </div>
+        )}
 
         <div id="split-grid-wrapper" className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start h-full flex-grow">
 
           <div
             id="checklist-column-wrapper"
-            className={`md:col-span-7 space-y-6 ${activeMobileTab === 'checklist' ? 'block' : 'hidden md:block'}`}
+            className={`md:col-span-7 space-y-6 ${!isMobile || activeMobileTab === 'checklist' ? 'block' : 'hidden'}`}
           >
             <TaskList
               tasks={tasks}
@@ -101,7 +105,7 @@ export default function Home() {
 
           <div
             id="assistant-column-wrapper"
-            className={`md:col-span-5 h-full ${activeMobileTab === 'assistant' ? 'block' : 'hidden md:block'}`}
+            className={`md:col-span-5 h-full ${!isMobile || activeMobileTab === 'assistant' ? 'block' : 'hidden'}`}
           >
             <ChatPanel
               tasks={tasks}
