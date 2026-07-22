@@ -1,72 +1,61 @@
+import { google } from "@ai-sdk/google";
+import {
+  streamText,
+  isStepCount,
+  convertToModelMessages,
+  createUIMessageStreamResponse,
+  toUIMessageStream,
+} from "ai";
 import { z } from "zod";
-import { runAgentChat } from "@/lib/ai/agent";
-import { ResumeSchema } from "@/lib/schemas";
-
-const IncomingMessageSchema = z.object({
-  role: z.enum(["user", "model"]),
-  content: z.string(),
-  toolCalls: z.array(z.any()).optional(),
-});
+import { Resume } from "@/lib/schemas";
+import { buildSystemInstruction, createResumeTools } from "@/lib/ai";
 
 const bodySchema = z.object({
-  messages: z.array(IncomingMessageSchema),
-  resumes: z.array(ResumeSchema),
+  messages: z.array(z.any()),
+  resumes: z.array(z.any()).optional(),
   model: z.string().optional(),
   thinkingLevel: z.string().optional(),
 });
 
 export async function POST(req: Request) {
-  try {
-    const body = await req.json();
-    const parsed = bodySchema.safeParse(body);
-
-    if (!parsed.success) {
-      return new Response(
-        JSON.stringify({ error: "Invalid request body", details: parsed.error.flatten() }),
-        { status: 400, headers: { "Content-Type": "application/json" } }
-      );
-    }
-
-    const { resumes, model, thinkingLevel } = parsed.data;
-    const messages = parsed.data.messages as any[];
-
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      async start(controller) {
-        const sendEvent = (event: string, data: unknown) => {
-          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
-        };
-
-        try {
-          const result = await runAgentChat(messages, resumes, model, (chunk) => {
-            sendEvent("text_chunk", chunk);
-          }, thinkingLevel);
-
-          sendEvent("done", {
-            resumes: result.resumes,
-            toolCalls: result.toolCalls,
-          });
-        } catch (error: any) {
-          console.error("Error in agent API route:", error);
-          sendEvent("error", { message: error.message || "An error occurred inside the ResumeFlow AI agent." });
-        } finally {
-          controller.close();
-        }
-      },
-    });
-
-    return new Response(stream, {
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-    });
-  } catch (error: any) {
-    console.error("Error in agent API route:", error);
+  const parsed = bodySchema.safeParse(await req.json());
+  if (!parsed.success) {
     return new Response(
-      JSON.stringify({ error: error.message || "An error occurred." }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
+      JSON.stringify({ error: "Invalid request", details: parsed.error.flatten() }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
     );
   }
+
+  const { messages, model, thinkingLevel } = parsed.data;
+  let workingResumes: Resume[] = parsed.data.resumes || [];
+
+  const result = streamText({
+    model: google(model || "gemini-3.5-flash-lite"),
+    system: buildSystemInstruction(workingResumes[0]),
+    messages: await convertToModelMessages(messages),
+    tools: createResumeTools(workingResumes),
+    onError({ error }) {
+      console.error("streamText detailed error:", error);
+    },
+    stopWhen: isStepCount(5),
+    providerOptions:
+      thinkingLevel && thinkingLevel.length > 0
+        ? {
+            google: {
+              thinkingConfig: {
+                thinkingLevel: thinkingLevel as
+                  | "minimal"
+                  | "low"
+                  | "medium"
+                  | "high",
+                includeThoughts: true,
+              },
+            },
+          }
+        : undefined,
+  });
+
+  return createUIMessageStreamResponse({
+    stream: toUIMessageStream({ stream: result.stream }),
+  });
 }
