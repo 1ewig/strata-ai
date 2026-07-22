@@ -51,17 +51,15 @@ function extractResumeFromMessage(msg: GenericUIMessage): Resume | null {
   if (!msg || !Array.isArray(msg.parts)) return null;
 
   for (const part of msg.parts) {
-    const isSetResume =
+    const isSetResumeTool =
       part.toolName === 'setResumeMarkdown' ||
       part.name === 'setResumeMarkdown' ||
       part.type === 'tool-setResumeMarkdown';
 
-    if (isSetResume) {
+    if (isSetResumeTool) {
       const res =
         (part.result as { resume?: Resume })?.resume ||
-        (part.output as { resume?: Resume })?.resume ||
-        (typeof (part.result as Resume)?.markdownContent === 'string' ? (part.result as Resume) : null) ||
-        (typeof (part.output as Resume)?.markdownContent === 'string' ? (part.output as Resume) : null);
+        (part.output as { resume?: Resume })?.resume;
 
       if (res && typeof res.markdownContent === 'string') {
         return res;

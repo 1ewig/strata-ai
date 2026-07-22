@@ -27,15 +27,35 @@ export async function POST(req: Request) {
   }
 
   const { messages, model, thinkingLevel } = parsed.data;
-  let workingResumes: Resume[] = parsed.data.resumes || [];
+  const workingResumes: Resume[] = parsed.data.resumes || [];
+  const currentResume = workingResumes.length > 0 ? workingResumes[0] : undefined;
 
   const result = streamText({
     model: google(model || "gemini-3.5-flash-lite"),
-    system: buildSystemInstruction(workingResumes[0]),
+    system: buildSystemInstruction(currentResume),
     messages: await convertToModelMessages(messages),
-    tools: createResumeTools(workingResumes),
+    tools: createResumeTools(),
+    toolsContext: {
+      setResumeMarkdown: {
+        currentResume,
+      },
+    },
+    onStart() {
+      console.log("[agent] Generation stream started.");
+    },
+    onStepEnd({ stepNumber, toolCalls }) {
+      console.log(
+        `[agent] Step ${stepNumber} completed. Executed tool calls: ${toolCalls?.length || 0}`,
+      );
+    },
+    onEnd({ finishReason, usage }) {
+      console.log(
+        `[agent] Stream finished (${finishReason}). Total token usage:`,
+        usage,
+      );
+    },
     onError({ error }) {
-      console.error("streamText detailed error:", error);
+      console.error("[agent] Detailed error:", error);
     },
     stopWhen: isStepCount(5),
     providerOptions:
