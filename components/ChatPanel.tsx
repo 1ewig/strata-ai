@@ -5,11 +5,11 @@ import { ChatMessage } from '@/lib/schemas';
 import ChatBubble from '@/components/chat/ChatBubble';
 
 interface ChatPanelProps {
-  messages: ChatMessage[];
+  messages: any[];
   streamingContent: string | null;
   isLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  onSendMessage: (text: string) => void;
+  onSendMessage?: (text: string) => void;
 }
 
 export default function ChatPanel({ messages, streamingContent, isLoading, messagesEndRef }: ChatPanelProps) {
@@ -37,7 +37,6 @@ export default function ChatPanel({ messages, streamingContent, isLoading, messa
             id: 'streaming',
             role: 'model',
             content: streamingContent,
-            timestamp: '',
           }}
           isStreaming
         />

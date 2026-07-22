@@ -15,7 +15,6 @@ interface ChatHeaderProps {
   thinkingLevel: string;
   onModelSelect: (modelId: string) => void;
   onThinkingLevelChange: (level: string) => void;
-  onClearChat: () => void;
   onOpenResumeDrawer: () => void;
 }
 
@@ -25,7 +24,6 @@ export default function ChatHeader({
   thinkingLevel,
   onModelSelect,
   onThinkingLevelChange,
-  onClearChat,
   onOpenResumeDrawer,
 }: ChatHeaderProps) {
   const [modelMenuOpen, setModelMenuOpen] = useState(false);
@@ -128,14 +126,6 @@ export default function ChatHeader({
         </div>
 
         <div className="w-px h-5 bg-zinc-800" />
-
-        <button
-          id="clear-chat-btn"
-          onClick={onClearChat}
-          className="text-xs text-zinc-500 hover:text-zinc-300 px-2 py-1 rounded hover:bg-zinc-800 transition-colors focus:outline-none"
-        >
-          Clear chat
-        </button>
 
         <button
           onClick={onOpenResumeDrawer}

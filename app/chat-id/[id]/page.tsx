@@ -25,7 +25,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     isLoading,
     handleSendMessage,
     handleSubmit,
-    handleClearChat,
     handleUpdateResume,
     handleModelSelect,
     handleThinkingLevelChange,
@@ -42,7 +41,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
           thinkingLevel={thinkingLevel}
           onModelSelect={handleModelSelect}
           onThinkingLevelChange={handleThinkingLevelChange}
-          onClearChat={handleClearChat}
           onOpenResumeDrawer={() => setIsResumeDrawerOpen(true)}
         />
 

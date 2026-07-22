@@ -1,5 +1,6 @@
 import Dexie, { Table } from 'dexie';
-import { ChatMessage, Resume } from '@/lib/schemas';
+import { UIMessage } from 'ai';
+import { Resume } from '@/lib/schemas';
 
 export interface Conversation {
   id: string;
@@ -11,8 +12,9 @@ export interface Conversation {
   updatedAt: string;
 }
 
-export interface DBMessage extends ChatMessage {
+export interface DBMessage extends UIMessage {
   chatId: string;
+  timestamp: string;
 }
 
 export class ChatDatabase extends Dexie {
@@ -21,7 +23,7 @@ export class ChatDatabase extends Dexie {
 
   constructor() {
     super('ResumeFlowChatDB');
-    this.version(3).stores({
+    this.version(4).stores({
       conversations: 'id, updatedAt, createdAt',
       messages: 'id, chatId, timestamp',
     });
@@ -81,17 +83,22 @@ export async function deleteConversation(id: string): Promise<void> {
   });
 }
 
-export async function saveMessage(chatId: string, message: ChatMessage): Promise<void> {
-  const dbMsg: DBMessage = { ...message, chatId };
+export async function saveMessage(chatId: string, message: UIMessage): Promise<void> {
+  const dbMsg: DBMessage = {
+    ...message,
+    chatId,
+    timestamp: new Date().toISOString(),
+  };
   await db.messages.put(dbMsg);
   await db.conversations.update(chatId, { updatedAt: new Date().toISOString() });
 }
 
-export async function getChatMessages(chatId: string): Promise<ChatMessage[]> {
+export async function getChatMessages(chatId: string): Promise<UIMessage[]> {
   const dbMsgs = await db.messages.where('chatId').equals(chatId).sortBy('timestamp');
-  return dbMsgs.map(({ chatId: _, ...msg }) => msg);
+  return dbMsgs.map(({ chatId: _, timestamp: __, ...msg }) => msg as UIMessage);
 }
 
 export async function clearChatMessages(chatId: string): Promise<void> {
   await db.messages.where('chatId').equals(chatId).delete();
 }
+

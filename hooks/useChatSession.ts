@@ -60,48 +60,7 @@ export function extractResumeFromMessage(msg: GenericUIMessage): Resume | null {
   return null;
 }
 
-export function uiMessageToChatMessage(msg: GenericUIMessage): ChatMessage {
-  let content = '';
-  if (typeof msg.content === 'string' && msg.content) {
-    content = msg.content;
-  } else if (Array.isArray(msg.parts)) {
-    content = msg.parts
-      .filter(p => p.type === 'text' && typeof p.text === 'string')
-      .map(p => p.text as string)
-      .join('');
-  }
 
-  const toolCalls = Array.isArray(msg.parts)
-    ? msg.parts
-        .filter(p => {
-          const isTool =
-            p.toolName === 'setResumeMarkdown' ||
-            p.name === 'setResumeMarkdown' ||
-            p.type === 'tool-invocation' ||
-            p.type === 'dynamic-tool' ||
-            (typeof p.type === 'string' && p.type.startsWith('tool'));
-          const isDone =
-            p.state === 'result' ||
-            p.state === 'output-available' ||
-            p.result !== undefined ||
-            p.output !== undefined;
-          return isTool && isDone;
-        })
-        .map(p => ({
-          name: p.toolName || p.name || 'setResumeMarkdown',
-          args: p.args || p.input,
-          result: p.result || p.output,
-        }))
-    : undefined;
-
-  return {
-    id: msg.id,
-    role: msg.role === 'assistant' ? ('model' as const) : ('user' as const),
-    content,
-    timestamp: new Date().toISOString(),
-    toolCalls: toolCalls && toolCalls.length > 0 ? toolCalls : undefined,
-  };
-}
 
 export function useChatSession(chatId: string) {
   const [model, setModel] = useState(getInitialModel);
@@ -165,9 +124,12 @@ export function useChatSession(chatId: string) {
     transport: transport as any,
     onFinish: useCallback(
       async ({ message, messages: allMessages }: { message: unknown; messages: unknown[] }) => {
-        for (const msg of allMessages) {
-          const dexieMsg = uiMessageToChatMessage(msg as GenericUIMessage);
-          await db.messages.put({ ...dexieMsg, chatId });
+        for (const msg of allMessages as any[]) {
+          await db.messages.put({
+            ...msg,
+            chatId,
+            timestamp: new Date().toISOString(),
+          });
         }
         await db.conversations.update(chatId, { updatedAt: new Date().toISOString() });
 
@@ -188,8 +150,7 @@ export function useChatSession(chatId: string) {
   useEffect(() => {
     if (dexieMessages && chatId !== prevChatIdRef.current) {
       prevChatIdRef.current = chatId;
-      const uiMessages = dexieMessages.map(uiMessageToChatMessage);
-      chat.setMessages(uiMessages as unknown as ReturnType<typeof chat.setMessages> extends (msgs: infer M) => void ? M : never);
+      chat.setMessages(dexieMessages as any);
     }
   }, [chatId, dexieMessages, chat]);
 
@@ -249,15 +210,17 @@ export function useChatSession(chatId: string) {
   const isStreaming = chat.status === 'streaming' && lastAssistantMsg != null;
 
   const streamingContent = useMemo(() => {
-    return isStreaming && lastAssistantMsg
-      ? uiMessageToChatMessage(lastAssistantMsg as GenericUIMessage).content
-      : null;
+    if (!isStreaming || !lastAssistantMsg) return null;
+    return (
+      (lastAssistantMsg.parts
+        ?.filter(p => p.type === 'text' && typeof (p as any).text === 'string')
+        .map(p => (p as any).text)
+        .join('') as string) || null
+    );
   }, [isStreaming, lastAssistantMsg]);
 
   const displayMessages = useMemo(() => {
-    return chat.messages
-      .filter(m => !(isStreaming && m.id === lastAssistantMsg?.id))
-      .map(m => uiMessageToChatMessage(m as GenericUIMessage));
+    return chat.messages.filter(m => !(isStreaming && m.id === lastAssistantMsg?.id));
   }, [chat.messages, isStreaming, lastAssistantMsg?.id]);
 
   return {
