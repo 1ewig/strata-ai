@@ -3,32 +3,33 @@ import { ALL_TOOLS, executeTool } from "./tools";
 import { Resume, ChatMessage, ToolCall } from "../schemas";
 import { ThinkingLevel } from "@google/genai";
 
-function buildSystemInstruction(resumes: Resume[]): string {
-  const resumesJson = JSON.stringify(resumes.map(r => ({
-    id: r.id,
-    title: r.title,
-    sections: r.sections.map(s => ({
-      id: s.id,
-      type: s.type,
-      title: s.title,
-      content: s.content,
-      order: s.order,
-    }))
-  })));
+function buildSystemInstruction(resume?: Resume): string {
+  const resumeJson = resume
+    ? JSON.stringify({
+        id: resume.id,
+        title: resume.title,
+        sections: resume.sections.map(s => ({
+          id: s.id,
+          type: s.type,
+          title: s.title,
+          content: s.content,
+          order: s.order,
+        }))
+      })
+    : "No resume created yet for this chat.";
 
   return `You are ResumeFlow, a precise and professional AI resume tailoring expert.
-Your job is to help users parse, organize, and polish their resumes section by section.
+Your job is to help the user manage and polish their SINGLE resume for this chat session.
 
-The user's current resumes and their sections are:
-${resumesJson}
+The current resume for this chat is:
+${resumeJson}
 
 Key directives:
-1. When a user pastes raw resume text, call 'addResume' with the title, the full raw text, and an array of parsed sections. Identify standard sections (Professional Summary, Experience, Education, Skills, Projects, Certifications, Languages) and extract each one with its full content.
-2. When a user asks to rewrite or improve a specific section, call 'updateSection' with the resumeId and sectionId. ONLY update the requested section — never touch other sections.
-3. Use 'addSection' to append new sections the user wants to add.
-4. Use 'deleteSection' to remove sections the user wants to remove.
-5. Always use the actual tools to make changes. Do not pretend — call the correct function tool.
-6. Be encouraging, editorial, and focused on making the resume more impactful and ATS-friendly. Keep your conversational replies brief and actionable.`;
+1. Exactly ONE resume exists per chat session. Its ID is "${resume?.id || 'default'}".
+2. When the user asks to parse, add, or create a resume from text, parse the sections and update this single chat resume (use 'replaceSections' or 'addResume'/'updateSection'/'addSection').
+3. When updating, adding, or deleting sections, target the single chat resume ID ("${resume?.id || 'default'}").
+4. Always call the real function tools to apply updates directly.
+5. Keep conversational replies concise, structured, and helpful.`;
 }
 
 function mapMessagesToContents(messages: ChatMessage[]): any[] {
@@ -57,23 +58,15 @@ function summarizeToolCalls(calls: ToolCall[]): string {
   const lines: string[] = [];
   for (const tc of calls) {
     if (tc.name === 'addResume' && tc.result?.status === 'success') {
-      lines.push(`Created resume "${tc.result.resume.title}" with ${tc.result.resume.sections.length} sections.`);
+      lines.push(`Updated chat resume with ${tc.result.resume.sections.length} sections.`);
     } else if (tc.name === 'updateSection' && tc.result?.status === 'success') {
       lines.push(`Updated section "${tc.result.section.title}".`);
     } else if (tc.name === 'addSection' && tc.result?.status === 'success') {
       lines.push(`Added section "${tc.result.section.title}".`);
+    } else if (tc.name === 'replaceSections' && tc.result?.status === 'success') {
+      lines.push(`Replaced sections (${tc.result.resume.sections.length} sections total).`);
     } else if (tc.name === 'deleteSection' && tc.result?.status === 'success') {
       lines.push(tc.result.message);
-    } else if (tc.name === 'getResume') {
-      lines.push('Retrieved the resume data.');
-    } else if (tc.name === 'renameResume' && tc.result?.status === 'success') {
-      lines.push(`Renamed resume to "${tc.result.resume.title}".`);
-    } else if (tc.name === 'duplicateResume' && tc.result?.status === 'success') {
-      lines.push(`Duplicated resume as "${tc.result.resume.title}".`);
-    } else if (tc.name === 'reorderSections' && tc.result?.status === 'success') {
-      lines.push('Reordered resume sections.');
-    } else if (tc.name === 'deleteResume' && tc.result?.status === 'success') {
-      lines.push(`Deleted resume "${tc.result.title}".`);
     }
   }
   return lines.length > 0 ? lines.join(' ') : 'Done.';
@@ -87,12 +80,13 @@ export async function runAgentChat(
   thinkingLevel?: string
 ): Promise<{ content: string; resumes: Resume[]; toolCalls: ToolCall[] }> {
   const ai = getGeminiClient();
-  const systemInstruction = buildSystemInstruction(resumes);
+  const currentResume = resumes.length > 0 ? resumes[0] : undefined;
+  const systemInstruction = buildSystemInstruction(currentResume);
   const contents = mapMessagesToContents(messages);
 
   const modelName = model || process.env.NEXT_PUBLIC_GEMINI_MODEL || "gemini-3.1-flash-lite";
 
-  let currentResumes = [...resumes];
+  let workingResumes = resumes.length > 0 ? [...resumes] : [];
   const toolCallsExecuted: ToolCall[] = [];
   let loopCount = 0;
   let finalModelResponse = "";
@@ -137,9 +131,24 @@ export async function runAgentChat(
       for (const call of aggregatedFunctionCalls) {
         if (!call.name) continue;
 
-        const { result, updatedResumes, updated } = executeTool(call.name, call.args, currentResumes);
+        // If tool call is addResume or replaceSections, enforce modifying the single chat resume
+        if (call.name === 'addResume' && workingResumes.length > 0) {
+          call.args.resumeId = workingResumes[0].id;
+        }
+
+        const { result, updatedResumes, updated } = executeTool(call.name, call.args, workingResumes);
         if (updated) {
-          currentResumes = updatedResumes;
+          // Guarantee single resume in array
+          if (call.name === 'addResume') {
+            const newest = updatedResumes[updatedResumes.length - 1];
+            workingResumes = [{
+              ...newest,
+              id: currentResume?.id || newest.id,
+              slug: currentResume?.slug || newest.slug,
+            }];
+          } else {
+            workingResumes = updatedResumes.slice(0, 1);
+          }
         }
 
         toolCallsExecuted.push({
@@ -191,7 +200,7 @@ export async function runAgentChat(
 
   return {
     content: finalModelResponse,
-    resumes: currentResumes,
+    resumes: workingResumes,
     toolCalls: toolCallsExecuted
   };
 }
