@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { MessageSquare, Plus, Trash2, ChevronRight } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, BrainCircuit } from 'lucide-react';
 import { db, deleteConversation } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
 
@@ -38,17 +38,30 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-zinc-900/60 border-r border-zinc-800/80 flex flex-col h-full shrink-0">
+    <aside className="w-64 bg-zinc-900/60 border-r border-zinc-800/80 flex flex-col h-screen sticky top-0 shrink-0 select-none">
+      {/* Brand Header */}
+      <div className="h-14 px-4 border-b border-zinc-800/60 flex items-center gap-2.5">
+        <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)]">
+            <BrainCircuit className="w-4 h-4 text-zinc-950" />
+          </div>
+          <h1 className="text-sm font-bold tracking-tight text-zinc-100">ResumeFlow</h1>
+          <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded bg-zinc-950 border border-zinc-800 text-zinc-500">TAILOR</span>
+        </Link>
+      </div>
+
+      {/* New Chat Button */}
       <div className="p-3 border-b border-zinc-800/60">
         <button
           onClick={handleNewChat}
-          className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-semibold px-3 py-2 rounded-lg text-xs transition-colors shadow-sm"
+          className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-semibold px-3 py-2 rounded-lg text-xs transition-colors shadow-sm cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           New Conversation
         </button>
       </div>
 
+      {/* Conversations List */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
         <div className="px-2 py-1 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
           Conversations

@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, use } from 'react';
-import Link from 'next/link';
-import { BrainCircuit, FileText, ChevronDown, PanelRightOpen } from 'lucide-react';
+import { ChevronDown, PanelRightOpen } from 'lucide-react';
 import { useChat } from '@/hooks/useChat';
 import Sidebar from '@/components/Sidebar';
 import ResumeDrawer from '@/components/resumes/ResumeDrawer';
@@ -63,17 +62,18 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const currentModelThinkingConfig = MODEL_THINKING_LEVELS[model];
 
   return (
-    <main className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
-      <header className="border-b border-zinc-900 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-                <BrainCircuit className="w-5 h-5 text-zinc-950" />
-              </div>
-              <h1 className="text-base font-bold tracking-tight text-zinc-100">ResumeFlow</h1>
-              <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-500">TAILOR</span>
-            </Link>
+    <main className="h-screen max-h-screen bg-zinc-950 text-zinc-100 flex overflow-hidden font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
+      {/* 100dvh Sticky Sidebar */}
+      <Sidebar />
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 relative">
+        {/* Integrated Top Navigation Bar */}
+        <header className="h-14 border-b border-zinc-900 bg-zinc-950/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-40">
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-zinc-300 truncate max-w-xs sm:max-w-md">
+              {resume?.title || 'Chat Workspace'}
+            </span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -147,20 +147,17 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
             <button
               onClick={() => setIsResumeDrawerOpen(true)}
-              className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-all font-medium"
+              className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-all font-medium cursor-pointer"
             >
               <PanelRightOpen className="w-3.5 h-3.5" />
               Resume Drawer
             </button>
           </div>
-        </div>
-      </header>
+        </header>
 
-      <div className="flex-1 flex overflow-hidden">
-        <Sidebar />
-
-        <div className="flex-1 flex flex-col min-h-0 pb-28 relative">
-          <div className="flex-1 flex flex-col max-w-2xl w-full mx-auto px-4">
+        {/* Scrollable Chat Area */}
+        <div className="flex-1 overflow-y-auto min-h-0 pb-28">
+          <div className="max-w-2xl w-full mx-auto px-4">
             <ChatPanel
               messages={messages}
               streamingContent={streamingContent}
@@ -169,20 +166,22 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               onSendMessage={handleSendMessage}
             />
           </div>
+        </div>
 
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-950 via-zinc-950/95 to-transparent pt-8 pb-4 px-4">
-            <div className="max-w-2xl mx-auto">
-              <ChatInput
-                inputValue={inputValue}
-                onInputChange={setInputValue}
-                onSubmit={handleSubmit}
-                isLoading={isLoading}
-              />
-            </div>
+        {/* Sticky Bottom Chat Input Bar */}
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-950 via-zinc-950/95 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30">
+          <div className="max-w-2xl mx-auto pointer-events-auto">
+            <ChatInput
+              inputValue={inputValue}
+              onInputChange={setInputValue}
+              onSubmit={handleSubmit}
+              isLoading={isLoading}
+            />
           </div>
         </div>
       </div>
 
+      {/* Slide-over Resume Drawer */}
       <ResumeDrawer
         isOpen={isResumeDrawerOpen}
         onClose={() => setIsResumeDrawerOpen(false)}
