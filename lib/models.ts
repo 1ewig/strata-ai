@@ -5,8 +5,6 @@ export interface ModelOption {
 }
 
 export const MODELS: ModelOption[] = [
-  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', provider: 'Gemini' },
-  { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', provider: 'Gemini' },
   { id: 'gemini-3.5-flash', label: 'Gemini 3.5 Flash', provider: 'Gemini' },
   { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite', provider: 'Gemini' },
   { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', provider: 'Gemini' },
@@ -16,8 +14,6 @@ export const MODELS: ModelOption[] = [
 ];
 
 export const MODEL_DESCRIPTIONS: Record<string, string> = {
-  'gemini-2.5-flash': 'Fast & versatile multimodal model',
-  'gemini-2.5-pro': 'High reasoning power & complex tasks',
   'gemini-3.5-flash': 'Best overall for most tasks',
   'gemini-3.5-flash-lite': 'Ultra-fast lightweight Gemini 3.5 model',
   'gemini-3.1-flash-lite': 'Fastest responses, simple tasks',
@@ -41,8 +37,6 @@ export interface ModelThinkingConfig {
 }
 
 export const MODEL_THINKING_LEVELS: Record<string, ModelThinkingConfig> = {
-  'gemini-2.5-flash': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'medium' },
-  'gemini-2.5-pro': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'high' },
   'gemini-3.5-flash': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'medium' },
   'gemini-3.5-flash-lite': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'low' },
   'gemini-3.1-flash-lite': { levels: ['minimal', 'high'], defaultLevel: 'minimal' },

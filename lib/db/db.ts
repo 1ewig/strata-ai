@@ -35,7 +35,7 @@ export const db = new ChatDatabase();
 export async function createConversation(
   id: string,
   initialTitle = 'New Chat',
-  model = 'gemini-2.5-flash',
+  model = 'gemini-3.5-flash-lite',
   thinkingLevel?: string
 ): Promise<Conversation> {
   const now = new Date().toISOString();
