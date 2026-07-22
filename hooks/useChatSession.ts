@@ -15,7 +15,8 @@ import {
   db,
   createConversation,
   updateConversationResume,
-  clearChatMessages,
+  updateConversationTitle,
+  updateConversationModel,
 } from '@/lib/db/db';
 import { Resume, ChatMessage } from '@/lib/schemas';
 
@@ -158,33 +159,35 @@ export function useChatSession(chatId: string) {
     }
   }, [chatId, dexieMessages, chat]);
 
+  useEffect(() => {
+    if (currentConv?.model) {
+      setModel(currentConv.model);
+      if (currentConv.thinkingLevel) {
+        setThinkingLevel(currentConv.thinkingLevel);
+      }
+    }
+  }, [currentConv?.id]);
+
   const handleSendMessage = useCallback(
     (text: string) => {
-      if (text.trim() && chat.status === 'ready') {
-        chat.sendMessage({ text });
+      const trimmed = text.trim();
+      if (trimmed && chat.status === 'ready') {
+        if (!currentConv?.title || currentConv.title === 'New Chat') {
+          const autoTitle = trimmed.length > 40 ? `${trimmed.slice(0, 40)}...` : trimmed;
+          updateConversationTitle(chatId, autoTitle);
+        }
+        chat.sendMessage({ text: trimmed });
       }
     },
-    [chat],
+    [chat, chatId, currentConv?.title],
   );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (inputValue.trim() && chat.status === 'ready') {
-      chat.sendMessage({ text: inputValue });
+      handleSendMessage(inputValue);
       setInputValue('');
     }
-  };
-
-  const handleClearChat = async () => {
-    await clearChatMessages(chatId);
-    const welcomeText = 'Chat cleared. Ready to work on your resume!';
-    chat.setMessages([
-      {
-        id: 'welcome',
-        role: 'assistant',
-        parts: [{ type: 'text', text: welcomeText }],
-      },
-    ]);
   };
 
   const handleUpdateResume = async (updated: Resume) => {
@@ -199,11 +202,13 @@ export function useChatSession(chatId: string) {
     const valid = getValidThinkingLevelForModel(id, currentLevel);
     setThinkingLevel(valid);
     saveThinkingLevel(valid);
+    updateConversationModel(chatId, id, valid);
   };
 
   const handleThinkingLevelChange = (level: string) => {
     setThinkingLevel(level);
     saveThinkingLevel(level);
+    updateConversationModel(chatId, model, level);
   };
 
   const isLoading = chat.status !== 'ready';
@@ -240,7 +245,6 @@ export function useChatSession(chatId: string) {
     isLoading,
     handleSendMessage,
     handleSubmit,
-    handleClearChat,
     handleUpdateResume,
     handleModelSelect,
     handleThinkingLevelChange,
