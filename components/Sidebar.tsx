@@ -1,0 +1,93 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { MessageSquare, Plus, Trash2, ChevronRight } from 'lucide-react';
+import { db, deleteConversation } from '@/lib/db/db';
+import { generateId } from '@/lib/id';
+
+export default function Sidebar() {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const conversations = useLiveQuery(
+    () => db.conversations.orderBy('updatedAt').reverse().toArray(),
+    []
+  );
+
+  const handleNewChat = () => {
+    const newId = generateId();
+    router.push(`/chat-id/${newId}`);
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await deleteConversation(id);
+    if (pathname === `/chat-id/${id}`) {
+      const remaining = await db.conversations.orderBy('updatedAt').reverse().toArray();
+      if (remaining.length > 0) {
+        router.push(`/chat-id/${remaining[0].id}`);
+      } else {
+        const newId = generateId();
+        router.push(`/chat-id/${newId}`);
+      }
+    }
+  };
+
+  return (
+    <aside className="w-64 bg-zinc-900/60 border-r border-zinc-800/80 flex flex-col h-full shrink-0">
+      <div className="p-3 border-b border-zinc-800/60">
+        <button
+          onClick={handleNewChat}
+          className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-zinc-950 font-semibold px-3 py-2 rounded-lg text-xs transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          New Conversation
+        </button>
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-2 space-y-1">
+        <div className="px-2 py-1 text-[10px] font-semibold text-zinc-500 uppercase tracking-wider">
+          Conversations
+        </div>
+        {(!conversations || conversations.length === 0) ? (
+          <div className="px-3 py-4 text-center text-xs text-zinc-600">
+            No saved chats yet
+          </div>
+        ) : (
+          conversations.map((conv) => {
+            const isActive = pathname === `/chat-id/${conv.id}`;
+            return (
+              <div
+                key={conv.id}
+                className={`group relative flex items-center rounded-lg text-xs transition-colors ${
+                  isActive
+                    ? 'bg-zinc-800/90 text-zinc-100 font-medium'
+                    : 'text-zinc-400 hover:bg-zinc-800/40 hover:text-zinc-200'
+                }`}
+              >
+                <Link
+                  href={`/chat-id/${conv.id}`}
+                  className="flex-1 flex items-center gap-2.5 px-3 py-2.5 truncate"
+                >
+                  <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-emerald-400' : 'text-zinc-500'}`} />
+                  <span className="truncate flex-1">{conv.title || 'Untitled Chat'}</span>
+                </Link>
+                <button
+                  onClick={(e) => handleDelete(e, conv.id)}
+                  className="opacity-0 group-hover:opacity-100 p-1.5 mr-1 hover:text-rose-400 text-zinc-500 rounded transition-opacity"
+                  title="Delete chat"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </aside>
+  );
+}

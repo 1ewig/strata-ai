@@ -12,6 +12,8 @@
   "dependencies": {
     "@google/genai": "^2.4.0",
     "autoprefixer": "^10.4.21",
+    "dexie": "^4.4.4",
+    "dexie-react-hooks": "^4.4.0",
     "lucide-react": "^0.553.0",
     "motion": "^12.23.24",
     "next": "16.2.10",

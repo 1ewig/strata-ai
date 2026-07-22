@@ -1,57 +1,56 @@
 'use client';
 
 import { useState, useRef, useEffect } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
 import { ChatMessage, Resume } from "@/lib/schemas";
 import { generateId } from "@/lib/id";
-
-const CHAT_STORAGE_KEY = "resumeflow_chat_history";
+import { db, saveMessage, createConversation, updateConversationTitle, updateConversationResume, clearChatMessages } from "@/lib/db/db";
 
 export function useChat(
-  resumes: Resume[],
-  onAgentUpdateResumes: (newResumes: Resume[]) => void,
+  chatId: string,
   model: string,
   thinkingLevel?: string
 ) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const rawMessages = useLiveQuery(
+    () => db.messages.where('chatId').equals(chatId).sortBy('timestamp'),
+    [chatId]
+  );
+
+  const currentConv = useLiveQuery(
+    () => db.conversations.get(chatId),
+    [chatId]
+  );
+
+  const messages: ChatMessage[] = (rawMessages || []).map(({ chatId: _, ...m }) => m as ChatMessage);
+  const resume: Resume | undefined = currentConv?.resume;
+
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [streamingContent, setStreamingContent] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const resumesRef = useRef(resumes);
+  const resumeRef = useRef(resume);
 
+  // Initialize conversation in Dexie if it doesn't exist
   useEffect(() => {
-    const stored = localStorage.getItem(CHAT_STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        setTimeout(() => {
-          setMessages(parsed);
-        }, 0);
-      } catch (e) {
-        console.error("Error parsing chat history", e);
+    if (!chatId) return;
+    db.conversations.get(chatId).then(existing => {
+      if (!existing) {
+        createConversation(chatId, 'New Chat', model, thinkingLevel).then(() => {
+          const welcomeMessage: ChatMessage = {
+            id: 'welcome',
+            role: 'model',
+            content: "Hi! I'm **ResumeFlow**, your AI resume tailoring assistant. 📝\n\nPaste your resume text in the chat or open the **Resume Drawer** on the right to edit it. Ask me: *'Parse my resume'* or *'Rewrite my summary section'*.",
+            timestamp: new Date().toISOString(),
+          };
+          saveMessage(chatId, welcomeMessage);
+        });
       }
-    } else {
-      const welcomeMessage: ChatMessage = {
-        id: 'welcome',
-        role: 'model',
-        content: "Hi! I'm **ResumeFlow**, your AI resume tailoring assistant. 📝\n\nPaste your resume text and I'll help you parse it into sections, rewrite specific parts, or tailor it for a job application. Try saying: *'Parse my resume'* or *'Rewrite my summary section'*.",
-        timestamp: new Date().toISOString(),
-      };
-      setTimeout(() => {
-        setMessages([welcomeMessage]);
-      }, 0);
-      localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify([welcomeMessage]));
-    }
-  }, []);
+    });
+  }, [chatId, model, thinkingLevel]);
 
   useEffect(() => {
-    resumesRef.current = resumes;
-  }, [resumes]);
-
-  const saveChatHistory = (updatedMessages: ChatMessage[]) => {
-    setMessages(updatedMessages);
-    localStorage.setItem(CHAT_STORAGE_KEY, JSON.stringify(updatedMessages));
-  };
+    resumeRef.current = resume;
+  }, [resume]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -61,8 +60,20 @@ export function useChat(
     scrollToBottom();
   }, [messages, isLoading, streamingContent]);
 
+  const handleUpdateResume = async (updated: Resume) => {
+    if (!chatId) return;
+    await updateConversationResume(chatId, updated);
+  };
+
   const handleSendMessage = async (text: string) => {
-    if (!text.trim() || isLoading) return;
+    if (!text.trim() || isLoading || !chatId) return;
+
+    // Set title on first user message if title is default
+    const conv = await db.conversations.get(chatId);
+    if (conv && (conv.title === 'New Chat' || !conv.title)) {
+      const generatedTitle = text.slice(0, 30) + (text.length > 30 ? '...' : '');
+      await updateConversationTitle(chatId, generatedTitle);
+    }
 
     const userMessage: ChatMessage = {
       id: generateId(),
@@ -71,22 +82,24 @@ export function useChat(
       timestamp: new Date().toISOString(),
     };
 
-    const newMessages = [...messages, userMessage];
-    saveChatHistory(newMessages);
+    await saveMessage(chatId, userMessage);
+    const updatedMessages = [...messages, userMessage];
+
     setInputValue('');
     setIsLoading(true);
 
     try {
+      const activeResumes = resumeRef.current ? [resumeRef.current] : [];
       const response = await fetch('/api/agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: newMessages.map(m => ({
+          messages: updatedMessages.map(m => ({
             role: m.role,
             content: m.content,
             toolCalls: m.toolCalls,
           })),
-          resumes: resumesRef.current,
+          resumes: activeResumes,
           model,
           thinkingLevel,
         }),
@@ -146,11 +159,11 @@ export function useChat(
             timestamp: new Date().toISOString(),
             toolCalls: finalToolCalls && finalToolCalls.length > 0 ? finalToolCalls : undefined,
           };
-          saveChatHistory([...newMessages, agentMessage]);
+          await saveMessage(chatId, agentMessage);
         }
 
-        if (finalResumes) {
-          onAgentUpdateResumes(finalResumes);
+        if (finalResumes && finalResumes.length > 0) {
+          await handleUpdateResume(finalResumes[0]);
         }
       } else {
         const data = await response.json();
@@ -161,9 +174,9 @@ export function useChat(
           timestamp: new Date().toISOString(),
           toolCalls: data.toolCalls && data.toolCalls.length > 0 ? data.toolCalls : undefined,
         };
-        saveChatHistory([...newMessages, agentMessage]);
-        if (data.resumes) {
-          onAgentUpdateResumes(data.resumes);
+        await saveMessage(chatId, agentMessage);
+        if (data.resumes && data.resumes.length > 0) {
+          await handleUpdateResume(data.resumes[0]);
         }
       }
     } catch (e: any) {
@@ -174,7 +187,7 @@ export function useChat(
         content: `⚠️ Sorry, I encountered an error: ${e.message || 'Unknown error'}. Make sure your GEMINI_API_KEY is configured.`,
         timestamp: new Date().toISOString(),
       };
-      saveChatHistory([...newMessages, errorMessage]);
+      await saveMessage(chatId, errorMessage);
     } finally {
       setIsLoading(false);
       setStreamingContent(null);
@@ -186,18 +199,21 @@ export function useChat(
     handleSendMessage(inputValue);
   };
 
-  const handleClearChat = () => {
+  const handleClearChat = async () => {
+    if (!chatId) return;
+    await clearChatMessages(chatId);
     const welcomeMessage: ChatMessage = {
       id: 'welcome',
       role: 'model',
-      content: "Chat cleared. Ready to work on your resume! Paste your text or ask for help tailoring a section.",
+      content: "Chat cleared. Ready to work on your resume!",
       timestamp: new Date().toISOString(),
     };
-    saveChatHistory([welcomeMessage]);
+    await saveMessage(chatId, welcomeMessage);
   };
 
   return {
     messages,
+    resume,
     inputValue,
     setInputValue,
     isLoading,
@@ -206,5 +222,6 @@ export function useChat(
     handleSubmit,
     handleClearChat,
     handleSendMessage,
+    handleUpdateResume,
   };
 }
