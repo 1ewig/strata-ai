@@ -145,11 +145,15 @@ export function useChatSession(chatId: string) {
     ),
   });
 
-  const prevChatIdRef = useRef(chatId);
+  const loadedChatIdRef = useRef<string | null>(null);
 
   useEffect(() => {
-    if (dexieMessages && chatId !== prevChatIdRef.current) {
-      prevChatIdRef.current = chatId;
+    if (loadedChatIdRef.current !== chatId) {
+      loadedChatIdRef.current = null;
+    }
+
+    if (dexieMessages !== undefined && loadedChatIdRef.current === null) {
+      loadedChatIdRef.current = chatId;
       chat.setMessages(dexieMessages as any);
     }
   }, [chatId, dexieMessages, chat]);
