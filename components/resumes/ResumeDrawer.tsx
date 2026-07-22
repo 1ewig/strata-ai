@@ -1,11 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Plus, FileText } from 'lucide-react';
-import { Resume, ResumeSection } from '@/lib/schemas';
-import SectionItem from './SectionItem';
-import { generateId } from '@/lib/id';
+import { X, FileText, Copy, Edit3, Eye, Check } from 'lucide-react';
+import { Resume } from '@/lib/schemas';
 
 interface ResumeDrawerProps {
   isOpen: boolean;
@@ -22,72 +20,37 @@ export default function ResumeDrawer({
   resume,
   onUpdateResume,
 }: ResumeDrawerProps) {
-  const [showAddSection, setShowAddSection] = useState(false);
-  const [newType, setNewType] = useState('custom');
-  const [newTitle, setNewTitle] = useState('');
-  const [newContent, setNewContent] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  const [markdownValue, setMarkdownValue] = useState(resume?.markdownContent || '');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setMarkdownValue(resume?.markdownContent || '');
+  }, [resume?.markdownContent]);
 
   if (!isOpen) return null;
 
   const currentResume: Resume = resume || {
     id: 'default',
-    slug: 'default',
     title: 'Chat Resume',
-    rawText: '',
-    sections: [],
+    markdownContent: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
 
-  const handleUpdateSection = (sectionId: string, title?: string, content?: string) => {
-    const updatedSections = currentResume.sections.map((sec) => {
-      if (sec.id === sectionId) {
-        return {
-          ...sec,
-          title: title !== undefined ? title : sec.title,
-          content: content !== undefined ? content : sec.content,
-        };
-      }
-      return sec;
-    });
-
+  const handleSaveEdit = () => {
     onUpdateResume({
       ...currentResume,
-      sections: updatedSections,
+      markdownContent: markdownValue,
       updatedAt: new Date().toISOString(),
     });
+    setIsEditing(false);
   };
 
-  const handleDeleteSection = (sectionId: string) => {
-    const updatedSections = currentResume.sections.filter((s) => s.id !== sectionId);
-    onUpdateResume({
-      ...currentResume,
-      sections: updatedSections,
-      updatedAt: new Date().toISOString(),
-    });
-  };
-
-  const handleAddSectionSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTitle.trim()) return;
-
-    const newSection: ResumeSection = {
-      id: generateId(),
-      type: newType,
-      title: newTitle.trim(),
-      content: newContent.trim(),
-      order: currentResume.sections.length,
-    };
-
-    onUpdateResume({
-      ...currentResume,
-      sections: [...currentResume.sections, newSection],
-      updatedAt: new Date().toISOString(),
-    });
-
-    setNewTitle('');
-    setNewContent('');
-    setShowAddSection(false);
+  const handleCopyMarkdown = () => {
+    navigator.clipboard.writeText(currentResume.markdownContent);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -108,113 +71,79 @@ export default function ResumeDrawer({
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="relative w-full max-w-xl bg-zinc-900 border-l border-zinc-800 shadow-2xl h-full flex flex-col z-10"
+          className="relative w-full max-w-2xl bg-zinc-900 border-l border-zinc-800 shadow-2xl h-full flex flex-col z-10"
         >
           {/* Header */}
-          <div className="h-14 px-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/40">
+          <div className="h-14 px-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/40 shrink-0">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-emerald-400" />
-              <h2 className="text-sm font-semibold text-zinc-100">Chat Resume</h2>
+              <h2 className="text-sm font-semibold text-zinc-100">{currentResume.title}</h2>
               <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-medium">
-                {currentResume.sections.length} Sections
+                Markdown
               </span>
             </div>
-            <button
-              onClick={onClose}
-              className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
+
+            <div className="flex items-center gap-2">
+              {currentResume.markdownContent && (
+                <button
+                  onClick={handleCopyMarkdown}
+                  className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 px-2.5 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-colors"
+                  title="Copy markdown"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? 'Copied' : 'Copy'}
+                </button>
+              )}
+
+              {isEditing ? (
+                <button
+                  onClick={handleSaveEdit}
+                  className="flex items-center gap-1 text-xs font-semibold text-emerald-950 bg-emerald-400 hover:bg-emerald-300 px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  <Check className="w-3.5 h-3.5" /> Save
+                </button>
+              ) : (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 px-2.5 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-colors"
+                >
+                  <Edit3 className="w-3.5 h-3.5" /> Edit
+                </button>
+              )}
+
+              <button
+                onClick={onClose}
+                className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
           </div>
 
-          {/* Drawer Content */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Structured Sections */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-semibold text-zinc-400 uppercase tracking-wider">
-                  Resume Sections
-                </h3>
-                <button
-                  onClick={() => setShowAddSection(!showAddSection)}
-                  className="flex items-center gap-1 text-[11px] text-emerald-400 hover:text-emerald-300 font-medium"
-                >
-                  <Plus className="w-3 h-3" /> Add Section
-                </button>
+          {/* Drawer Body */}
+          <div className="flex-1 overflow-y-auto p-6">
+            {isEditing ? (
+              <textarea
+                value={markdownValue}
+                onChange={(e) => setMarkdownValue(e.target.value)}
+                rows={28}
+                placeholder="# Your Name&#10;your.email@example.com&#10;&#10;## Professional Summary..."
+                className="w-full h-full bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-200 font-mono focus:outline-none focus:border-emerald-500/60 leading-relaxed resize-none"
+              />
+            ) : !currentResume.markdownContent ? (
+              <div className="h-full flex flex-col items-center justify-center border border-dashed border-zinc-800/80 rounded-2xl p-8 text-center bg-zinc-950/20">
+                <FileText className="w-10 h-10 text-zinc-600 mb-3" />
+                <h4 className="text-zinc-300 font-semibold text-sm">No Resume Generated Yet</h4>
+                <p className="text-xs text-zinc-500 max-w-sm mt-1">
+                  Paste your resume text in the chat or ask the AI: <br />
+                  <span className="text-emerald-400 italic font-mono mt-1 inline-block">"Create a Markdown resume for a Senior Software Engineer"</span>
+                </p>
               </div>
-
-              {showAddSection && (
-                <form onSubmit={handleAddSectionSubmit} className="bg-zinc-950/80 border border-zinc-800 rounded-xl p-4 space-y-3">
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <label className="block text-[10px] text-zinc-500 mb-1">Type</label>
-                      <select
-                        value={newType}
-                        onChange={(e) => setNewType(e.target.value)}
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500/60"
-                      >
-                        {['summary', 'experience', 'education', 'skills', 'projects', 'certifications', 'languages', 'custom'].map((t) => (
-                          <option key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex-[2]">
-                      <label className="block text-[10px] text-zinc-500 mb-1">Title</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Work Experience"
-                        value={newTitle}
-                        onChange={(e) => setNewTitle(e.target.value)}
-                        className="w-full bg-zinc-900 border border-zinc-800 rounded-lg px-2.5 py-1.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500/60"
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-[10px] text-zinc-500 mb-1">Content</label>
-                    <textarea
-                      required
-                      placeholder="Section content..."
-                      value={newContent}
-                      onChange={(e) => setNewContent(e.target.value)}
-                      rows={3}
-                      className="w-full bg-zinc-900 border border-zinc-800 rounded-lg p-2.5 text-xs text-zinc-200 font-mono focus:outline-none focus:border-emerald-500/60 resize-y"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShowAddSection(false)}
-                      className="text-xs text-zinc-400 hover:text-zinc-300 px-3 py-1 rounded-md border border-zinc-800"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-3 py-1 rounded-md hover:bg-emerald-500/20"
-                    >
-                      Add
-                    </button>
-                  </div>
-                </form>
-              )}
-
-              {currentResume.sections.length === 0 ? (
-                <div className="text-center py-8 border border-dashed border-zinc-800/80 rounded-xl bg-zinc-950/30">
-                  <p className="text-xs text-zinc-500">No sections added yet.</p>
-                  <p className="text-[11px] text-zinc-600 mt-1">Ask the AI bot in chat to parse or add resume sections!</p>
-                </div>
-              ) : (
-                currentResume.sections.map((section) => (
-                  <SectionItem
-                    key={section.id}
-                    section={section}
-                    onUpdate={(sectionId, title, content) => handleUpdateSection(sectionId, title, content)}
-                    onDelete={(sectionId) => handleDeleteSection(sectionId)}
-                  />
-                ))
-              )}
-            </div>
+            ) : (
+              <div className="bg-zinc-950 border border-zinc-800/80 rounded-xl p-6 shadow-inner text-zinc-200 text-xs font-sans leading-relaxed whitespace-pre-wrap select-text selection:bg-emerald-500/30">
+                {currentResume.markdownContent}
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

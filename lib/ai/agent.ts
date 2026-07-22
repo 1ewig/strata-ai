@@ -4,32 +4,61 @@ import { Resume, ChatMessage, ToolCall } from "../schemas";
 import { ThinkingLevel } from "@google/genai";
 
 function buildSystemInstruction(resume?: Resume): string {
-  const resumeJson = resume
-    ? JSON.stringify({
-        id: resume.id,
-        title: resume.title,
-        sections: resume.sections.map(s => ({
-          id: s.id,
-          type: s.type,
-          title: s.title,
-          content: s.content,
-          order: s.order,
-        }))
-      })
-    : "No resume created yet for this chat.";
+  const currentMarkdown = resume?.markdownContent
+    ? resume.markdownContent
+    : "No resume created yet.";
 
-  return `You are ResumeFlow, a precise and professional AI resume tailoring expert.
-Your job is to help the user manage and polish their SINGLE resume for this chat session.
+  return `You are ResumeFlow, an expert AI resume editor and career strategist.
+Your primary task is to generate and maintain a clean, high-impact, professional Markdown resume for this chat session.
 
-The current resume for this chat is:
-${resumeJson}
+Current Markdown Resume:
+\`\`\`markdown
+${currentMarkdown}
+\`\`\`
 
-Key directives:
-1. Exactly ONE resume exists per chat session. Its ID is "${resume?.id || 'default'}".
-2. When the user asks to parse, add, or create a resume from text, parse the sections and update this single chat resume (use 'replaceSections' or 'addResume'/'updateSection'/'addSection').
-3. When updating, adding, or deleting sections, target the single chat resume ID ("${resume?.id || 'default'}").
-4. Always call the real function tools to apply updates directly.
-5. Keep conversational replies concise, structured, and helpful.`;
+MANDATORY RULES & WORKFLOW:
+1. Whenever the user provides resume text, requests a resume creation, asks to tailor/rewrite/edit the resume, or wants to add/modify bullet points:
+   ALWAYS call the 'setResumeMarkdown' tool with the complete, beautifully formatted markdown content.
+
+2. MARKDOWN FORMATTING BEST PRACTICES:
+   - Use # for Candidate Name (Header 1)
+   - Use contact line directly under name (Email | Phone | Location | LinkedIn | Portfolio)
+   - Use ## for Section Titles (e.g. ## Professional Summary, ## Work Experience, ## Skills, ## Education, ## Projects)
+   - Use bold **Job Titles** and **Company Names**, with dates aligned right or italicized.
+   - Use bullet points (*) for high-impact accomplishments, metrics, and technical skills.
+
+EXAMPLE MARKDOWN RESUME OUTPUT FOR 'setResumeMarkdown':
+\`\`\`markdown
+# Jane Doe
+jane.doe@example.com | (555) 019-2831 | San Francisco, CA | linkedin.com/in/janedoe | github.com/janedoe
+
+## Professional Summary
+Results-driven Senior Full Stack Engineer with 6+ years of experience architecting scalable web applications, real-time AI systems, and microservices. Expert in TypeScript, React, Next.js, and Node.js.
+
+## Technical Skills
+* **Languages**: TypeScript, JavaScript, Python, SQL, HTML5, CSS3
+* **Frontend**: React, Next.js, Tailwind CSS, Redux Toolkit, Framer Motion
+* **Backend**: Node.js, Express, PostgreSQL, Redis, GraphQL, REST APIs
+* **Cloud & DevOps**: AWS (S3, EC2, Lambda), Docker, CI/CD pipelines, Vercel
+
+## Professional Experience
+### **Senior Frontend Engineer** | TechCorp Inc.
+*Jan 2023 – Present | San Francisco, CA*
+* Spearheaded the migration of legacy frontend apps to Next.js 15, reducing initial load times by 42%.
+* Integrated Gemini LLM APIs and real-time streaming tools, boosting user interaction efficiency by 35%.
+* Mentored a team of 5 junior developers and established automated testing pipelines.
+
+### **Software Engineer** | WebCraft Labs
+*Jun 2020 – Dec 2022 | San Jose, CA*
+* Built interactive dashboards serving 100k+ active daily users using React and WebSockets.
+* Optimized database queries resulting in a 25% throughput improvement.
+
+## Education
+### **B.S. in Computer Science** | University of California, Berkeley
+*Graduated May 2020*
+\`\`\`
+
+3. In addition to calling 'setResumeMarkdown', explain your edits concisely in your conversational response. Always maintain precision and strong typography.`;
 }
 
 function mapMessagesToContents(messages: ChatMessage[]): any[] {
@@ -52,24 +81,6 @@ function mapMessagesToContents(messages: ChatMessage[]): any[] {
   }
 
   return contents;
-}
-
-function summarizeToolCalls(calls: ToolCall[]): string {
-  const lines: string[] = [];
-  for (const tc of calls) {
-    if (tc.name === 'addResume' && tc.result?.status === 'success') {
-      lines.push(`Updated chat resume with ${tc.result.resume.sections.length} sections.`);
-    } else if (tc.name === 'updateSection' && tc.result?.status === 'success') {
-      lines.push(`Updated section "${tc.result.section.title}".`);
-    } else if (tc.name === 'addSection' && tc.result?.status === 'success') {
-      lines.push(`Added section "${tc.result.section.title}".`);
-    } else if (tc.name === 'replaceSections' && tc.result?.status === 'success') {
-      lines.push(`Replaced sections (${tc.result.resume.sections.length} sections total).`);
-    } else if (tc.name === 'deleteSection' && tc.result?.status === 'success') {
-      lines.push(tc.result.message);
-    }
-  }
-  return lines.length > 0 ? lines.join(' ') : 'Done.';
 }
 
 export async function runAgentChat(
@@ -131,24 +142,9 @@ export async function runAgentChat(
       for (const call of aggregatedFunctionCalls) {
         if (!call.name) continue;
 
-        // If tool call is addResume or replaceSections, enforce modifying the single chat resume
-        if (call.name === 'addResume' && workingResumes.length > 0) {
-          call.args.resumeId = workingResumes[0].id;
-        }
-
         const { result, updatedResumes, updated } = executeTool(call.name, call.args, workingResumes);
         if (updated) {
-          // Guarantee single resume in array
-          if (call.name === 'addResume') {
-            const newest = updatedResumes[updatedResumes.length - 1];
-            workingResumes = [{
-              ...newest,
-              id: currentResume?.id || newest.id,
-              slug: currentResume?.slug || newest.slug,
-            }];
-          } else {
-            workingResumes = updatedResumes.slice(0, 1);
-          }
+          workingResumes = updatedResumes;
         }
 
         toolCallsExecuted.push({
@@ -194,7 +190,7 @@ export async function runAgentChat(
   }
 
   if (!finalModelResponse && toolCallsExecuted.length > 0) {
-    finalModelResponse = summarizeToolCalls(toolCallsExecuted);
+    finalModelResponse = "I've updated your resume markdown. You can view it in the **Resume Drawer**!";
     onStream?.(finalModelResponse);
   }
 

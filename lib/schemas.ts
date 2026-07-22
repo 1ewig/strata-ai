@@ -1,24 +1,13 @@
 import { z } from "zod";
 
-export const ResumeSectionSchema = z.object({
-  id: z.string(),
-  type: z.string(),
-  title: z.string(),
-  content: z.string(),
-  order: z.number(),
-});
-
 export const ResumeSchema = z.object({
   id: z.string(),
-  slug: z.string(),
   title: z.string(),
-  rawText: z.string(),
-  sections: z.array(ResumeSectionSchema).default([]),
+  markdownContent: z.string().default(""),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
 
-export type ResumeSection = z.infer<typeof ResumeSectionSchema>;
 export type Resume = z.infer<typeof ResumeSchema>;
 
 export const ToolCallSchema = z.object({

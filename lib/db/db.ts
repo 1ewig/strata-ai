@@ -21,7 +21,7 @@ export class ChatDatabase extends Dexie {
 
   constructor() {
     super('ResumeFlowChatDB');
-    this.version(2).stores({
+    this.version(3).stores({
       conversations: 'id, updatedAt, createdAt',
       messages: 'id, chatId, timestamp',
     });
@@ -39,10 +39,8 @@ export async function createConversation(
   const now = new Date().toISOString();
   const initialResume: Resume = {
     id: `resume-${id}`,
-    slug: `resume-${id}`,
     title: 'Chat Resume',
-    rawText: '',
-    sections: [],
+    markdownContent: '',
     createdAt: now,
     updatedAt: now,
   };
