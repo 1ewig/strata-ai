@@ -29,12 +29,18 @@ export async function POST(req: Request) {
   const { messages, model, thinkingLevel } = parsed.data;
   const workingResumes: Resume[] = parsed.data.resumes || [];
   const currentResume = workingResumes.length > 0 ? workingResumes[0] : undefined;
+  let mutableMarkdown = currentResume?.markdownContent || "";
 
   const result = streamText({
     model: google(model || "gemini-3.5-flash-lite"),
     system: buildSystemInstruction(currentResume),
     messages: await convertToModelMessages(messages),
-    tools: createResumeTools(),
+    tools: createResumeTools({
+      getCurrentResume: () => mutableMarkdown,
+      onUpdateResume: (content: string) => {
+        mutableMarkdown = content;
+      },
+    }),
     toolsContext: {
       writeResume: { currentResume },
       readResume: { currentResume },
@@ -44,8 +50,18 @@ export async function POST(req: Request) {
       console.log("[agent] Generation stream started.");
     },
     onStepEnd({ stepNumber, toolCalls }) {
+      for (const tc of toolCalls || []) {
+        const call = tc as any;
+        const result = call.result;
+        if (call.toolName === "writeResume" && result?.resume?.markdownContent) {
+          mutableMarkdown = result.resume.markdownContent;
+        }
+        if (call.toolName === "deleteResume" && result?.resume?.markdownContent != null) {
+          mutableMarkdown = result.resume.markdownContent;
+        }
+      }
       console.log(
-        `[agent] Step ${stepNumber} completed. Executed tool calls: ${toolCalls?.length || 0}`,
+        `[agent] Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`,
       );
     },
     onEnd({ finishReason, usage }) {
@@ -57,7 +73,7 @@ export async function POST(req: Request) {
     onError({ error }) {
       console.error("[agent] Detailed error:", error);
     },
-    stopWhen: isStepCount(5),
+    stopWhen: isStepCount(10),
     providerOptions:
       thinkingLevel && thinkingLevel.length > 0
         ? {

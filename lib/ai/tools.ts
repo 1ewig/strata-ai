@@ -1,6 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { Resume, ResumeSchema } from "@/lib/schemas";
+import { ResumeEditEngine } from "@/lib/edit-engine";
 
 export const writeResume = tool({
   description:
@@ -97,10 +98,67 @@ export const deleteResume = tool({
   },
 });
 
-export function createResumeTools(workingResumes?: Resume[]) {
+interface EditResumeContext {
+  getCurrentResume: () => string;
+  onUpdateResume: (newContent: string) => void;
+}
+
+export function createEditResumeTool({ getCurrentResume, onUpdateResume }: EditResumeContext) {
+  return tool({
+    description:
+      "Surgically edit a specific block or section of the resume (e.g., update a bullet point, fix a typo, add a skill). Use searchString to specify the exact text to replace. Never output the full document — only the changed block.",
+    inputSchema: z.object({
+      explanation: z
+        .string()
+        .describe("Reason for this edit and brief overview of changes made."),
+      searchString: z
+        .string()
+        .describe(
+          "The EXACT block of text to replace, copied verbatim from `<workspace_resume>`. Include 1-2 surrounding context lines to make the match unique.",
+        ),
+      replaceString: z
+        .string()
+        .describe("The new markdown content to place in place of searchString."),
+    }),
+    execute: async ({ searchString, replaceString, explanation }) => {
+      const currentMarkdown = getCurrentResume();
+
+      const result = ResumeEditEngine.applyEdit(currentMarkdown, searchString, replaceString);
+
+      if (!result.success || !result.newContent) {
+        return {
+          success: false,
+          error: result.error,
+        };
+      }
+
+      onUpdateResume(result.newContent);
+
+      const now = new Date().toISOString();
+      const updatedResume: Resume = {
+        id: "chat-resume",
+        title: "Chat Resume",
+        markdownContent: result.newContent,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      return {
+        success: true,
+        explanation,
+        strategyUsed: result.strategyUsed,
+        message: "Resume section updated successfully.",
+        resume: updatedResume,
+      };
+    },
+  });
+}
+
+export function createResumeTools(editResumeContext?: EditResumeContext) {
   return {
     writeResume,
     readResume,
     deleteResume,
+    ...(editResumeContext ? { editResume: createEditResumeTool(editResumeContext) } : {}),
   };
 }

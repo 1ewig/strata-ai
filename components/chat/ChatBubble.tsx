@@ -6,6 +6,7 @@ import remarkGfm from 'remark-gfm';
 import { UIMessage } from 'ai';
 import { Check, Code2, User, BrainCircuit } from 'lucide-react';
 import ToolCallCard from './ToolCallCard';
+import { resolveToolDisplay } from './tools/resolver';
 
 interface ChatBubbleProps {
   message: UIMessage | { id: string; role: string; content?: string; parts?: any[] };
@@ -186,11 +187,11 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
             {toolParts.map((tc: any, idx: number) => {
               const inv = tc.toolInvocation || tc;
               const key = inv.toolCallId || tc.toolCallId || `tool-${idx}`;
+              const cardProps = resolveToolDisplay(tc, onOpenResumeDrawer);
               return (
                 <ToolCallCard
                   key={key}
-                  toolCall={tc}
-                  onOpenResumeDrawer={onOpenResumeDrawer}
+                  {...cardProps}
                 />
               );
             })}
