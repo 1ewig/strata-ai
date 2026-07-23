@@ -48,8 +48,10 @@
 │   │   ├── ChatBubble.tsx        # User/assistant message bubble
 │   │   ├── ChatInput.tsx         # Auto-resize textarea with Enter-to-send
 │   │   ├── ChatHeader.tsx        # Model selector + thinking level + resume drawer
-│   │   ├── ToolCallCard.tsx      # Resume Workspace card (tool result display)
-│   │   └── SuggestionChips.tsx   # [DEPRECATED] No longer rendered
+│   │   ├── ToolCallCard.tsx      # Pure shell card (87 lines) — receives ToolCardProps
+│   │   ├── SuggestionChips.tsx   # [DEPRECATED] No longer rendered
+│   │   └── tools/
+│   │       └── resolver.tsx      # extractToolInfo + resolveToolDisplay → ToolCardProps, per-tool summary builders
 │   └── resumes/
 │       └── ResumeDrawer.tsx      # Slide-over panel: preview/edit/copy resume
 ├── hooks/
@@ -59,12 +61,13 @@
 │   ├── schemas.ts                # Zod types: Resume, ChatMessage, ToolCall
 │   ├── models.ts                 # Model registry, thinking levels, localStorage
 │   ├── id.ts                     # ID generation (crypto.randomUUID)
+│   ├── edit-engine.ts            # ResumeEditEngine — 3-tier matching (exact / whitespace / anchor)
 │   ├── db/
 │   │   └── db.ts                 # Dexie schema v4, CRUD helpers
 │   └── ai/
 │       ├── index.ts              # Re-exports prompts + tools
 │       ├── prompts.ts            # buildSystemInstruction() — system prompt
-│       └── tools.ts              # writeResume, readResume, deleteResume tools (contextSchema)
+│       └── tools.ts              # writeResume, readResume, deleteResume, createEditResumeTool
 ├── assets/.aistudio/             # AI Studio metadata (gitignored)
 ├── .env.example                  # Required env vars
 ├── next.config.ts                # Standalone output, motion transpilation
@@ -96,15 +99,20 @@ DefaultChatTransport           ← wraps fetch to /api/agent
   ▼
 POST /api/agent (route.ts)
   ├── Parse request body with Zod
+  ├── let mutableMarkdown = currentResume?.markdownContent || ""
   ├── streamText({
   │     model: google(modelId),
   │     system: buildSystemInstruction(currentResume),
   │     messages: convertToModelMessages(messages),
-  │     tools: { writeResume, readResume, deleteResume },
+  │     tools: createResumeTools({
+  │       getCurrentResume: () => mutableMarkdown,      ← closure for editResume
+  │       onUpdateResume: (c) => { mutableMarkdown = c },
+  │     }),
   │     toolsContext: { writeResume: { currentResume }, readResume: { currentResume }, deleteResume: { currentResume } },
   │     reasoning / providerOptions.thinkingConfig,
   │     stopWhen: isStepCount(5),
-  │     onStart, onStepEnd, onEnd, onError
+  │     onStepEnd: syncs mutableMarkdown from writeResume/deleteResume results
+  │     onStart, onEnd, onError
   │   })
   │
   ▼
@@ -163,38 +171,55 @@ return createUIMessageStreamResponse({
 });
 ```
 
-### 5b. Tool Definitions with contextSchema (`lib/ai/tools.ts`)
+### 5b. Tool Definitions (`lib/ai/tools.ts`)
 
-Three tools are registered in `createResumeTools()`:
+Four tools are registered via `createResumeTools()`:
 
 | Tool | Input | Output | Purpose |
 |------|-------|--------|---------|
-| `writeResume` | `title?`, `markdownContent` | `{ resume }` | Create or fully replace the resume |
+| `writeResume` | `title?`, `markdownContent` | `{ action: "created"|"replaced", resume }` | Create or fully replace the resume. Returns `action` flag for badge display |
 | `readResume` | `section?` | `{ exists, content, section? }` | Read full resume or a specific heading section |
 | `deleteResume` | — | `{ deleted, resume: empty }` | Clear the resume canvas |
+| `editResume` | `searchString`, `replaceString`, `explanation` | `{ success, resume, strategyUsed, error? }` | Surgical search-and-replace via `ResumeEditEngine` |
 
-All three use `contextSchema: { currentResume: ResumeSchema.optional().nullable() }` and receive state through `toolsContext`.
+**writeResume, readResume, deleteResume** use `contextSchema: { currentResume: ResumeSchema.optional().nullable() }` — state flows in through `toolsContext` at request start.
+
+**editResume** uses a **closure pattern** instead of `contextSchema`. The route creates a mutable `mutableMarkdown` variable passed via `getCurrentResume`/`onUpdateResume` callbacks. This allows multi-step edits within the same request to build on each other.
 
 ```typescript
+// writeResume — contextSchema pattern
 export const writeResume = tool({
-  description: "Create or replace the entire resume markdown on the canvas.",
+  description: "Create or replace the entire resume... Prefer editResume for targeted changes.",
   inputSchema: z.object({
     title: z.string().optional(),
     markdownContent: z.string(),
   }),
   contextSchema: z.object({ currentResume: ResumeSchema.optional().nullable() }),
   execute: async ({ title, markdownContent }, { context }) => {
-    const existing = context?.currentResume;
-    const updatedResume: Resume = {
-      id: existing?.id || "chat-resume",
-      title: title || existing?.title || "Chat Resume",
-      markdownContent,
-      createdAt: existing?.createdAt || now,
-      updatedAt: now,
-    };
-    return { resume: updatedResume };
+    const existing = context?.currentResume || null;
+    const wasEmpty = !existing?.markdownContent?.trim();
+    const updatedResume: Resume = { ... };
+    return { action: wasEmpty ? "created" : "replaced", resume: updatedResume };
   },
 });
+
+// createEditResumeTool — closure pattern (called from route with mutable state)
+export function createEditResumeTool({ getCurrentResume, onUpdateResume }: EditResumeContext) {
+  return tool({
+    description: "Surgically edit a specific block...",
+    parameters: z.object({
+      searchString: z.string().describe("Verbatim block to replace"),
+      replaceString: z.string().describe("New content"),
+      explanation: z.string(),
+    }),
+    execute: async ({ searchString, replaceString, explanation }) => {
+      const result = ResumeEditEngine.applyEdit(getCurrentResume(), searchString, replaceString);
+      if (!result.success) return { success: false, error: result.error };
+      onUpdateResume(result.newContent!);
+      return { success: true, resume: { ... }, strategyUsed: result.strategyUsed };
+    },
+  });
+}
 ```
 
 ### 5c. Client-Side Chat Hook (`hooks/useChatSession.ts`)
@@ -336,19 +361,43 @@ ChatBubble
               └── deleteResume → "Resume Deleted" (red, canvas cleared message)
 ```
 
-### ToolCallCard Internals
+### ToolCallCard (Pure Shell)
+
+**`ToolCallCard.tsx`** (87 lines) receives `ToolCardProps` and renders only the chrome — header badge, collapsible raw params, and the `summary` slot. It has zero knowledge of tool names, icons, or result shapes.
 
 ```
-ToolCallCard
-  ├── Config map per tool: { icon, accent color, label, badge text }
-  ├── writeResume:  Sparkles icon, emerald, "Resume Updated" + "Updated" badge
-  │     └── Summary: file icon, title, char/section count + "Open Drawer" button
-  ├── readResume:   Search icon, blue, "Resume Read" + "Read" badge
-  │     └── Summary: section heading name + first 200 chars content preview
-  ├── deleteResume: Trash2 icon, red, "Resume Deleted" + "Cleared" badge
-  │     └── Summary: "Canvas cleared" message + start-fresh hint
-  └── All: Collapsible "View Parameters" → raw JSON of args + result
+ToolCallCard (ToolCardProps)
+  ├── Header: icon in colored square + label text + status badge (loading/success/error)
+  ├── summary: ReactNode          ← injected by resolver, tool-specific
+  └── Collapsible raw args/result (same for all tools)
 ```
+
+### resolver.tsx — Display Logic
+
+`components/chat/tools/resolver.tsx` owns extraction, config, and summary building. `ChatBubble` calls `resolveToolDisplay(tc, onOpenDrawer)` once per tool invocation and spreads the result onto `<ToolCallCard>`.
+
+```
+resolveToolDisplay(toolCall, onOpenDrawer?) → ToolCardProps
+  ├── extractToolInfo() → { name, args, result, state }
+  ├── toolConfigs[name] → { icon, accent, label, badge }
+  ├── writeResume:
+  │     action === "created" → label "Resume Created" / badge "Created"
+  │     action === "replaced" → label "Resume Replaced" / badge "Replaced"
+  │     Summary: FileText icon, title, char/section count + Open Drawer
+  ├── readResume:
+  │     Label "Resume Read" / badge "Read"
+  │     Summary: Search icon, section name + content preview + Open Drawer
+  ├── deleteResume:
+  │     Label "Resume Deleted" / badge "Cleared"
+  │     Summary: Trash2 icon, "Canvas Cleared" + hint text
+  ├── editResume:
+  │     Label "Resume Edited" / badge "Applied"
+  │     Summary: PencilLine icon, explanation text, strategyUsed badge + Open Drawer
+  └── generic (custom/unknown tools):
+        Summary: Wrench icon, raw name, truncated JSON input
+```
+
+The resolver pattern means adding a new tool never touches `ToolCallCard.tsx` — just add a config entry + summary builder in `resolver.tsx`.
 
 ## 8. Model Registry (`lib/models.ts`)
 
@@ -358,6 +407,7 @@ ToolCallCard
 |----|-------|----------|-----------------|
 | `gemini-3.5-flash` | Gemini 3.5 Flash | Gemini | minimal, low, medium, high |
 | `gemini-3.5-flash-lite` | Gemini 3.5 Flash Lite | Gemini | minimal, low, medium, high |
+| `gemini-3.6-flash` | Gemini 3.6 Flash | Gemini | minimal, low, medium, high |
 | `gemini-3.1-flash-lite` | Gemini 3.1 Flash Lite | Gemini | minimal, high |
 | `gemini-3-flash-preview` | Gemini 3 Flash Preview | Gemini | minimal, low, medium, high |
 | `gemma-4-31b-it` | Gemma 4 31B IT | Gemma 4 | — |
@@ -376,12 +426,11 @@ On chat load, the conversation's stored `model` and `thinkingLevel` take priorit
 The `buildSystemInstruction(resume?)` function builds a structured system prompt with:
 
 1. **Role definition** — "elite AI Career Strategist, Resume Architect, and ATS Optimization Specialist"
-2. **Canvas status** — a one-line indicator (`populated` / `empty`); the model must call `readResume` to inspect content
-3. **Markdown & ATS formatting rules** — heading levels, bolding, bullet lists, code blocks, ATS/PDF guardrails
-4. **Tool execution protocol** — documents `readResume`, `writeResume`, and `deleteResume` with usage guidance
-5. **Few-shot examples** — advisory response vs tool-execution response patterns
-
-The resume markdown is **no longer injected** into the system prompt. This keeps prompt size small and forces the model to read the current state via `readResume`, avoiding stale data after writes.
+2. **Canvas status** — a one-line indicator (`populated` / `empty`)
+3. **Active workspace content** — when populated, the full resume markdown is injected inside `<workspace_resume>` tags with an injection guard (`.replaceAll("</workspace_resume>", "")`). This is required for `editResume` — the model must copy exact verbatim text for `searchString` anchors.
+4. **Markdown & ATS formatting rules** — heading levels, bolding, bullet lists, code blocks, ATS/PDF guardrails
+5. **Tool execution protocol** — documents `readResume`, `writeResume`, `deleteResume`, and `editResume` with usage guidance including the **anchor rule** (include 1-2 surrounding lines), **verbatim copy rule**, and **preserve existing content rule**
+6. **Few-shot examples** — advisory response (no tool call), full resume generation (`writeResume`), and surgical edit (`editResume`)
 
 ## 10. Environment Variables
 
@@ -434,7 +483,8 @@ Raw Google GenAI SDK  ──→  AI SDK 7 Migration  ──→  Native UIMessage
 ## 14. Notes for Future Agents
 
 - **Adding a new model:** add entry to `MODELS` array in `lib/models.ts`, set `MODEL_DESCRIPTIONS` and optionally `MODEL_THINKING_LEVELS`
-- **Adding a new tool:** define with `tool()` from `ai`, add `inputSchema`, optionally `contextSchema`, then register in `createResumeTools()` in `lib/ai/tools.ts` and update the system prompt in `lib/ai/prompts.ts`. If the tool returns a `{ resume }` object, `extractResumeFromMessage` in `useChatSession.ts` will auto-discover it — no filter update needed.
+- **Adding a new tool:** define with `tool()` from `ai`, add `inputSchema`, optionally `contextSchema`, then register in `createResumeTools()` in `lib/ai/tools.ts` and update the system prompt in `lib/ai/prompts.ts`. If the tool returns a `{ resume }` object, `extractResumeFromMessage` in `useChatSession.ts` will auto-discover it — no filter update needed. Finally add a config entry + summary builder in `components/chat/tools/resolver.tsx` — `ToolCallCard.tsx` needs zero changes.
+- **Closure-based tools (no contextSchema):** tools that need mutable state across multi-step requests (like `editResume`) should accept `getCurrentResume` / `onUpdateResume` callbacks. Pass them via `createResumeTools({ getCurrentResume, onUpdateResume })` in the route handler. The route also syncs `mutableMarkdown` from `writeResume`/`deleteResume` results in `onStepEnd`.
 - **Adding a new provider:** add `@ai-sdk/<provider>` to `package.json`, set as `model` parameter in `streamText` (e.g., `anthropic("claude-4")`), add models to registry
 - **Schema migrations:** increment the version number in `db.ts` constructor and define new `stores()` — Dexie handles the upgrade
 - **The `app/api/jd` and `lib/data` directories are empty** — reserved for future job description extraction features

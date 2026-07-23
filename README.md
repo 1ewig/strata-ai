@@ -1,20 +1,37 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# ResumeFlow — AI Resume Tailoring Agent
 
-# Run and deploy your AI Studio app
+An AI-powered resume builder and optimiser built with Next.js, Vercel AI SDK 7, and Google Gemini. Features conversational chat with 4 tools (`writeResume`, `readResume`, `deleteResume`, `editResume`), client-side Dexie persistence, and a modular tool-display UI.
 
-This contains everything you need to run your app locally.
+## Stack
 
-View your app in AI Studio: https://ai.studio/apps/373d58f1-f393-4a8d-9f12-d4e66de221ba
+| Layer | Choice |
+|-------|--------|
+| Framework | Next.js 16 (App Router) |
+| AI SDK | `ai@^7.0.0` + `@ai-sdk/google@^4.0.0` |
+| UI | Tailwind CSS 4 + `lucide-react` |
+| Persistence | Dexie.js 4 (IndexedDB) |
+| Schemas | Zod 4 |
+| Runtime | Node.js 22+, bun |
 
-## Run Locally
+## Models
 
-**Prerequisites:**  Node.js
+gemini-3.5-flash, gemini-3.5-flash-lite, gemini-3.6-flash, gemini-3.1-flash-lite, gemini-3-flash-preview, gemma-4-31b-it, gemma-4-26b-a4b-it
 
+## Quick Start
 
-1. Install dependencies:
-   `bun install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `bun run dev`
+```bash
+bun install
+# Set GOOGLE_GENERATIVE_AI_API_KEY in .env.local
+bun run dev
+```
+
+## Architecture
+
+See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for full details.
+
+Key patterns:
+- **Stateless API route** — full message history + resume sent in each request
+- **contextSchema + closure tools** — `writeResume`/`readResume`/`deleteResume` use `toolsContext`; `editResume` uses mutable closures for multi-step edits
+- **3-tier edit engine** — `ResumeEditEngine` tries exact, whitespace-normalized, then anchor matching
+- **Resolver pattern** — `components/chat/tools/resolver.tsx` owns all tool-display logic; `ToolCallCard` is a pure 87-line shell
+- **Dexie UIMessage persistence** — native AI SDK message objects stored in IndexedDB, survives refresh
