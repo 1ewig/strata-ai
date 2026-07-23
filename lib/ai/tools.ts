@@ -5,7 +5,7 @@ import { ResumeEditEngine } from "@/lib/edit-engine";
 
 export const writeResume = tool({
   description:
-    "Create or replace the entire resume markdown on the canvas. Use for initial creation or full rewrites. Always call readResume first to inspect the current state.",
+    "Create or replace the entire resume markdown on the canvas. Use for initial creation or complete rewrites. Always call readResume first to inspect the current state. Prefer editResume for targeted, surgical changes.",
   inputSchema: z.object({
     title: z
       .string()
@@ -23,6 +23,7 @@ export const writeResume = tool({
   execute: async ({ title, markdownContent }, { context }) => {
     const existing = context?.currentResume || null;
     const now = new Date().toISOString();
+    const wasEmpty = !existing?.markdownContent?.trim();
 
     const updatedResume: Resume = {
       id: existing?.id || "chat-resume",
@@ -32,7 +33,7 @@ export const writeResume = tool({
       updatedAt: now,
     };
 
-    return { resume: updatedResume };
+    return { action: wasEmpty ? "created" : "replaced", resume: updatedResume };
   },
 });
 

@@ -269,9 +269,15 @@ function buildGenericSummary(args: any, rawName: string): ReactNode {
 export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): ToolCardProps {
   const { name, rawName, args, result, state, isCustom } = extractToolInfo(toolCall);
 
-  const cfg = toolConfigs[name] || defaultConfig;
-  const label = !isCustom ? cfg.label : (rawName || cfg.label);
+  let cfg = toolConfigs[name] || defaultConfig;
+  let label = !isCustom ? cfg.label : (rawName || cfg.label);
   const status = state === 'call' || state === 'partial-call' ? 'loading' : result?.success === false ? 'error' : 'success';
+
+  const action = (result as any)?.action;
+  if (name === 'writeResume' && (action === 'created' || action === 'replaced')) {
+    cfg = { ...cfg, badge: action === 'created' ? 'Created' : 'Replaced' };
+    label = action === 'created' ? 'Resume Created' : 'Resume Replaced';
+  }
 
   let summary: ReactNode;
   switch (name) {
