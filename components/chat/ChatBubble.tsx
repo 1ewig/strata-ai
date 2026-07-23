@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { UIMessage } from 'ai';
-import { Check, Code2, User, BrainCircuit } from 'lucide-react';
+import { Check, Code2, User, BrainCircuit, Brain, ChevronDown, ChevronUp } from 'lucide-react';
 import ToolCallCard from './ToolCallCard';
 
 interface ChatBubbleProps {
@@ -16,14 +16,23 @@ interface ChatBubbleProps {
 export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+  const [showThinking, setShowThinking] = useState(false);
 
   let textContent = '';
+  let reasoningText = '';
+
   if (Array.isArray(message.parts)) {
     textContent = message.parts
       .filter(p => p.type === 'text' && typeof p.text === 'string')
       .map(p => p.text)
       .join('');
+
+    reasoningText = message.parts
+      .filter(p => (p.type === 'reasoning' || p.type === 'thought') && typeof (p as any).text === 'string')
+      .map(p => (p as any).text)
+      .join('');
   }
+
   if (!textContent && typeof (message as any).content === 'string') {
     textContent = (message as any).content;
   }
@@ -65,6 +74,29 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
       </div>
 
       <div className="flex flex-col max-w-[88%] min-w-0 gap-2">
+        {/* Assistant Reasoning / Thought Process Accordion */}
+        {!isUser && reasoningText && (
+          <div className="bg-zinc-950/90 border border-purple-500/30 rounded-xl p-3 shadow-xs backdrop-blur-sm transition-all hover:border-purple-500/50 max-w-md my-0.5">
+            <button
+              onClick={() => setShowThinking(!showThinking)}
+              className="w-full flex items-center justify-between gap-2 text-xs font-medium text-purple-300/90 hover:text-purple-200 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Brain className="w-4 h-4 text-purple-400 animate-pulse" />
+                <span>Thought Process</span>
+                <span className="text-[10px] text-zinc-500 font-mono">({reasoningText.length.toLocaleString()} chars)</span>
+              </div>
+              {showThinking ? <ChevronUp className="w-3.5 h-3.5 text-zinc-400" /> : <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />}
+            </button>
+
+            {showThinking && (
+              <div className="mt-2.5 pt-2.5 border-t border-zinc-800/80 text-[11px] text-zinc-400 font-mono leading-relaxed whitespace-pre-wrap max-h-56 overflow-y-auto">
+                {reasoningText}
+              </div>
+            )}
+          </div>
+        )}
+
         {textContent && (
           <div
             className={`relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all ${
