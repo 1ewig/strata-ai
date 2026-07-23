@@ -64,7 +64,7 @@
 │   └── ai/
 │       ├── index.ts              # Re-exports prompts + tools
 │       ├── prompts.ts            # buildSystemInstruction() — system prompt
-│       └── tools.ts              # writeResume tool (contextSchema)
+│       └── tools.ts              # writeResume, readResume, deleteResume tools (contextSchema)
 ├── assets/.aistudio/             # AI Studio metadata (gitignored)
 ├── .env.example                  # Required env vars
 ├── next.config.ts                # Standalone output, motion transpilation
@@ -100,8 +100,8 @@ POST /api/agent (route.ts)
   │     model: google(modelId),
   │     system: buildSystemInstruction(currentResume),
   │     messages: convertToModelMessages(messages),
-  │     tools: { writeResume },
-  │     toolsContext: { writeResume: { currentResume } },
+  │     tools: { writeResume, readResume, deleteResume },
+  │     toolsContext: { writeResume: { currentResume }, readResume: { currentResume }, deleteResume: { currentResume } },
   │     reasoning / providerOptions.thinkingConfig,
   │     stopWhen: isStepCount(5),
   │     onStart, onStepEnd, onEnd, onError
@@ -143,6 +143,8 @@ const result = streamText({
   tools: createResumeTools(),
   toolsContext: {
     writeResume: { currentResume },
+    readResume: { currentResume },
+    deleteResume: { currentResume },
   },
   onStart() { /* log */ },
   onStepEnd({ stepNumber, toolCalls }) { /* log */ },
@@ -161,18 +163,26 @@ return createUIMessageStreamResponse({
 });
 ```
 
-### 5b. Tool Definition with contextSchema (`lib/ai/tools.ts`)
+### 5b. Tool Definitions with contextSchema (`lib/ai/tools.ts`)
+
+Three tools are registered in `createResumeTools()`:
+
+| Tool | Input | Output | Purpose |
+|------|-------|--------|---------|
+| `writeResume` | `title?`, `markdownContent` | `{ resume }` | Create or fully replace the resume |
+| `readResume` | `section?` | `{ exists, content, section? }` | Read full resume or a specific heading section |
+| `deleteResume` | — | `{ deleted, resume: empty }` | Clear the resume canvas |
+
+All three use `contextSchema: { currentResume: ResumeSchema.optional().nullable() }` and receive state through `toolsContext`.
 
 ```typescript
 export const writeResume = tool({
-  description: "Set or update the full markdown content of the single chat resume.",
+  description: "Create or replace the entire resume markdown on the canvas.",
   inputSchema: z.object({
     title: z.string().optional(),
-    markdownContent: z.string().describe("The complete formatted markdown string."),
+    markdownContent: z.string(),
   }),
-  contextSchema: z.object({
-    currentResume: ResumeSchema.optional().nullable(),
-  }),
+  contextSchema: z.object({ currentResume: ResumeSchema.optional().nullable() }),
   execute: async ({ title, markdownContent }, { context }) => {
     const existing = context?.currentResume;
     const updatedResume: Resume = {
@@ -221,20 +231,16 @@ const chat = useChat({
 
 ### 5d. Resume Extraction from UI Message Parts
 
+The function is tool-name-agnostic — it scans all tool result parts for a `resume` key, handling `writeResume`, `deleteResume`, and future tools that return `{ resume }`.
+
 ```typescript
 export function extractResumeFromMessage(msg: GenericUIMessage): Resume | null {
   if (!msg || !Array.isArray(msg.parts)) return null;
   for (const part of msg.parts) {
-    const isSetResumeTool =
-      part.toolName === 'writeResume' ||
-      part.name === 'writeResume' ||
-      part.type === 'tool-writeResume';
-    if (isSetResumeTool) {
-      const res =
-        (part.result as { resume?: Resume })?.resume ||
-        (part.output as { resume?: Resume })?.resume;
-      if (res && typeof res.markdownContent === 'string') return res;
-    }
+    const res =
+      (part.result as { resume?: Resume })?.resume ||
+      (part.output as { resume?: Resume })?.resume;
+    if (res && typeof res.markdownContent === 'string') return res;
   }
   return null;
 }
@@ -324,18 +330,24 @@ ChatBubble
         ├── Markdown content rendered with react-markdown + GFM
         │     └── Custom components for h1-h3, code blocks (with copy), tables, blockquotes
         ├── Streaming cursor (pulsing emerald bar)
-        └── ToolCallCard[] (for writeResume tool results)
-              └── "Resume Workspace Updated" card with Open Drawer button
+        └── ToolCallCard[] (for tool invocation results)
+              ├── writeResume → "Resume Updated" (emerald, file summary + Open Drawer)
+              ├── readResume → "Resume Read" (blue, section name + content preview)
+              └── deleteResume → "Resume Deleted" (red, canvas cleared message)
 ```
 
 ### ToolCallCard Internals
 
 ```
 ToolCallCard
-  ├── Header: "Resume Workspace Updated" badge + "Executed" pill
-  ├── Summary: file icon, resume title, char count + section count
-  ├── Action button: "Open Drawer" → opens ResumeDrawer
-  └── Collapsible: "View Parameters" → raw JSON of args + result
+  ├── Config map per tool: { icon, accent color, label, badge text }
+  ├── writeResume:  Sparkles icon, emerald, "Resume Updated" + "Updated" badge
+  │     └── Summary: file icon, title, char/section count + "Open Drawer" button
+  ├── readResume:   Search icon, blue, "Resume Read" + "Read" badge
+  │     └── Summary: section heading name + first 200 chars content preview
+  ├── deleteResume: Trash2 icon, red, "Resume Deleted" + "Cleared" badge
+  │     └── Summary: "Canvas cleared" message + start-fresh hint
+  └── All: Collapsible "View Parameters" → raw JSON of args + result
 ```
 
 ## 8. Model Registry (`lib/models.ts`)
@@ -361,13 +373,15 @@ On chat load, the conversation's stored `model` and `thinkingLevel` take priorit
 
 ## 9. System Prompt Design (`lib/ai/prompts.ts`)
 
-The `buildSystemInstruction(resume?)` function injects the current resume markdown into a structured system prompt with:
+The `buildSystemInstruction(resume?)` function builds a structured system prompt with:
 
 1. **Role definition** — "elite AI Career Strategist, Resume Architect, and ATS Optimization Specialist"
-2. **Workspace state** — the current resume markdown inside a code block
-3. **Markdown visual hierarchy rules** — heading levels, bolding, bullet lists, code blocks
-4. **Tool execution protocol** — when to call `writeResume`, always provide complete markdown
+2. **Canvas status** — a one-line indicator (`populated` / `empty`); the model must call `readResume` to inspect content
+3. **Markdown & ATS formatting rules** — heading levels, bolding, bullet lists, code blocks, ATS/PDF guardrails
+4. **Tool execution protocol** — documents `readResume`, `writeResume`, and `deleteResume` with usage guidance
 5. **Few-shot examples** — advisory response vs tool-execution response patterns
+
+The resume markdown is **no longer injected** into the system prompt. This keeps prompt size small and forces the model to read the current state via `readResume`, avoiding stale data after writes.
 
 ## 10. Environment Variables
 
@@ -420,7 +434,7 @@ Raw Google GenAI SDK  ──→  AI SDK 7 Migration  ──→  Native UIMessage
 ## 14. Notes for Future Agents
 
 - **Adding a new model:** add entry to `MODELS` array in `lib/models.ts`, set `MODEL_DESCRIPTIONS` and optionally `MODEL_THINKING_LEVELS`
-- **Adding a new tool:** define with `tool()` from `ai`, add `inputSchema`, optionally `contextSchema`, then register in `createResumeTools()` in `lib/ai/tools.ts` and update the system prompt in `lib/ai/prompts.ts`
+- **Adding a new tool:** define with `tool()` from `ai`, add `inputSchema`, optionally `contextSchema`, then register in `createResumeTools()` in `lib/ai/tools.ts` and update the system prompt in `lib/ai/prompts.ts`. If the tool returns a `{ resume }` object, `extractResumeFromMessage` in `useChatSession.ts` will auto-discover it — no filter update needed.
 - **Adding a new provider:** add `@ai-sdk/<provider>` to `package.json`, set as `model` parameter in `streamText` (e.g., `anthropic("claude-4")`), add models to registry
 - **Schema migrations:** increment the version number in `db.ts` constructor and define new `stores()` — Dexie handles the upgrade
 - **The `app/api/jd` and `lib/data` directories are empty** — reserved for future job description extraction features
