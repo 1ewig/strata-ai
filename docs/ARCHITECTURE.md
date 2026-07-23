@@ -64,7 +64,7 @@
 │   └── ai/
 │       ├── index.ts              # Re-exports prompts + tools
 │       ├── prompts.ts            # buildSystemInstruction() — system prompt
-│       └── tools.ts              # setResumeMarkdown tool (contextSchema)
+│       └── tools.ts              # writeResume tool (contextSchema)
 ├── assets/.aistudio/             # AI Studio metadata (gitignored)
 ├── .env.example                  # Required env vars
 ├── next.config.ts                # Standalone output, motion transpilation
@@ -100,8 +100,8 @@ POST /api/agent (route.ts)
   │     model: google(modelId),
   │     system: buildSystemInstruction(currentResume),
   │     messages: convertToModelMessages(messages),
-  │     tools: { setResumeMarkdown },
-  │     toolsContext: { setResumeMarkdown: { currentResume } },
+  │     tools: { writeResume },
+  │     toolsContext: { writeResume: { currentResume } },
   │     reasoning / providerOptions.thinkingConfig,
   │     stopWhen: isStepCount(5),
   │     onStart, onStepEnd, onEnd, onError
@@ -142,7 +142,7 @@ const result = streamText({
   messages: await convertToModelMessages(messages),
   tools: createResumeTools(),
   toolsContext: {
-    setResumeMarkdown: { currentResume },
+    writeResume: { currentResume },
   },
   onStart() { /* log */ },
   onStepEnd({ stepNumber, toolCalls }) { /* log */ },
@@ -164,7 +164,7 @@ return createUIMessageStreamResponse({
 ### 5b. Tool Definition with contextSchema (`lib/ai/tools.ts`)
 
 ```typescript
-export const setResumeMarkdown = tool({
+export const writeResume = tool({
   description: "Set or update the full markdown content of the single chat resume.",
   inputSchema: z.object({
     title: z.string().optional(),
@@ -226,9 +226,9 @@ export function extractResumeFromMessage(msg: GenericUIMessage): Resume | null {
   if (!msg || !Array.isArray(msg.parts)) return null;
   for (const part of msg.parts) {
     const isSetResumeTool =
-      part.toolName === 'setResumeMarkdown' ||
-      part.name === 'setResumeMarkdown' ||
-      part.type === 'tool-setResumeMarkdown';
+      part.toolName === 'writeResume' ||
+      part.name === 'writeResume' ||
+      part.type === 'tool-writeResume';
     if (isSetResumeTool) {
       const res =
         (part.result as { resume?: Resume })?.resume ||
@@ -324,7 +324,7 @@ ChatBubble
         ├── Markdown content rendered with react-markdown + GFM
         │     └── Custom components for h1-h3, code blocks (with copy), tables, blockquotes
         ├── Streaming cursor (pulsing emerald bar)
-        └── ToolCallCard[] (for setResumeMarkdown tool results)
+        └── ToolCallCard[] (for writeResume tool results)
               └── "Resume Workspace Updated" card with Open Drawer button
 ```
 
@@ -366,7 +366,7 @@ The `buildSystemInstruction(resume?)` function injects the current resume markdo
 1. **Role definition** — "elite AI Career Strategist, Resume Architect, and ATS Optimization Specialist"
 2. **Workspace state** — the current resume markdown inside a code block
 3. **Markdown visual hierarchy rules** — heading levels, bolding, bullet lists, code blocks
-4. **Tool execution protocol** — when to call `setResumeMarkdown`, always provide complete markdown
+4. **Tool execution protocol** — when to call `writeResume`, always provide complete markdown
 5. **Few-shot examples** — advisory response vs tool-execution response patterns
 
 ## 10. Environment Variables

@@ -19,7 +19,7 @@ interface ToolCallCardProps {
 export default function ToolCallCard({ toolCall, onOpenResumeDrawer }: ToolCallCardProps) {
   const [showRaw, setShowRaw] = useState(false);
 
-  const name = toolCall.toolName || toolCall.name || 'setResumeMarkdown';
+  const name = toolCall.toolName || toolCall.name || 'writeResume';
   const args = toolCall.args || toolCall.input || {};
   const result = toolCall.result || toolCall.output || {};
 
@@ -59,7 +59,7 @@ export default function ToolCallCard({ toolCall, onOpenResumeDrawer }: ToolCallC
             <Sparkles className="w-3.5 h-3.5" />
           </div>
           <span className="text-xs font-semibold text-zinc-200">
-            {name === 'setResumeMarkdown' ? 'Resume Workspace Updated' : name}
+            {name === 'writeResume' ? 'Resume Workspace Updated' : name === 'readResume' ? 'Read Resume' : name === 'deleteResume' ? 'Resume Deleted' : name}
           </span>
         </div>
         <div className="flex items-center gap-1 text-[10px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full">
@@ -75,21 +75,33 @@ export default function ToolCallCard({ toolCall, onOpenResumeDrawer }: ToolCallC
             <FileText className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-zinc-200 truncate">{title}</p>
-            <p className="text-[10px] text-zinc-400">
-              {charCount > 0 ? `${charCount.toLocaleString()} chars • ${sectionCount} Sections` : 'Markdown Updated'}
-            </p>
+            {name === 'deleteResume' ? (
+              <p className="text-xs font-semibold text-zinc-200">Canvas cleared</p>
+            ) : name === 'readResume' ? (
+              <p className="text-xs font-semibold text-zinc-200">
+                {result?.exists === false ? 'Section not found' : 'Resume read successfully'}
+              </p>
+            ) : (
+              <>
+                <p className="text-xs font-semibold text-zinc-200 truncate">{title}</p>
+                <p className="text-[10px] text-zinc-400">
+                  {charCount > 0 ? `${charCount.toLocaleString()} chars • ${sectionCount} Sections` : 'Markdown Updated'}
+                </p>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Action Button */}
-        <button
-          onClick={handleOpenDrawer}
-          className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg transition-all shrink-0 font-medium cursor-pointer"
-        >
-          <span>Open Drawer</span>
-          <ExternalLink className="w-3 h-3" />
-        </button>
+        {/* Action Button — only for writeResume */}
+        {name === 'writeResume' && (
+          <button
+            onClick={handleOpenDrawer}
+            className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg transition-all shrink-0 font-medium cursor-pointer"
+          >
+            <span>Open Drawer</span>
+            <ExternalLink className="w-3 h-3" />
+          </button>
+        )}
       </div>
 
       {/* Collapsible Technical Details */}

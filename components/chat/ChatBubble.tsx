@@ -31,8 +31,6 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
   const toolParts = Array.isArray(message.parts)
     ? message.parts.filter(p => {
         const isTool =
-          p.toolName === 'setResumeMarkdown' ||
-          p.name === 'setResumeMarkdown' ||
           p.type === 'tool-invocation' ||
           p.type === 'dynamic-tool' ||
           (typeof p.type === 'string' && p.type.startsWith('tool'));

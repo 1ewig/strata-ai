@@ -43,19 +43,12 @@ export function extractResumeFromMessage(msg: GenericUIMessage): Resume | null {
   if (!msg || !Array.isArray(msg.parts)) return null;
 
   for (const part of msg.parts) {
-    const isSetResumeTool =
-      part.toolName === 'setResumeMarkdown' ||
-      part.name === 'setResumeMarkdown' ||
-      part.type === 'tool-setResumeMarkdown';
+    const res =
+      (part.result as { resume?: Resume })?.resume ||
+      (part.output as { resume?: Resume })?.resume;
 
-    if (isSetResumeTool) {
-      const res =
-        (part.result as { resume?: Resume })?.resume ||
-        (part.output as { resume?: Resume })?.resume;
-
-      if (res && typeof res.markdownContent === 'string') {
-        return res;
-      }
+    if (res && typeof res.markdownContent === 'string') {
+      return res;
     }
   }
   return null;

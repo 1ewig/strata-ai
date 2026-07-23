@@ -36,9 +36,9 @@ export async function POST(req: Request) {
     messages: await convertToModelMessages(messages),
     tools: createResumeTools(),
     toolsContext: {
-      setResumeMarkdown: {
-        currentResume,
-      },
+      writeResume: { currentResume },
+      readResume: { currentResume },
+      deleteResume: { currentResume },
     },
     onStart() {
       console.log("[agent] Generation stream started.");
