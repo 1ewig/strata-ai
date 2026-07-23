@@ -43,7 +43,10 @@ export function extractResumeFromMessage(msg: GenericUIMessage): Resume | null {
   if (!msg || !Array.isArray(msg.parts)) return null;
 
   for (const part of msg.parts) {
+    const inv = (part as any).toolInvocation || part;
     const res =
+      (inv.result as { resume?: Resume })?.resume ||
+      (inv.output as { resume?: Resume })?.resume ||
       (part.result as { resume?: Resume })?.resume ||
       (part.output as { resume?: Resume })?.resume;
 

@@ -34,11 +34,12 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
           p.type === 'tool-invocation' ||
           p.type === 'dynamic-tool' ||
           (typeof p.type === 'string' && p.type.startsWith('tool'));
+        const inv = (p as any).toolInvocation || p;
         const isDone =
-          p.state === 'result' ||
-          p.state === 'output-available' ||
-          p.result !== undefined ||
-          p.output !== undefined;
+          inv.state === 'result' ||
+          inv.state === 'output-available' ||
+          inv.result !== undefined ||
+          inv.output !== undefined;
         return isTool && isDone;
       })
     : (message as any).toolCalls || [];
@@ -182,13 +183,17 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
         {/* Tool Invocations */}
         {!isUser && toolParts.length > 0 && !isStreaming && (
           <div className="space-y-2 ml-0.5">
-            {toolParts.map((tc: any, idx: number) => (
-              <ToolCallCard
-                key={idx}
-                toolCall={tc}
-                onOpenResumeDrawer={onOpenResumeDrawer}
-              />
-            ))}
+            {toolParts.map((tc: any, idx: number) => {
+              const inv = tc.toolInvocation || tc;
+              const key = inv.toolCallId || tc.toolCallId || `tool-${idx}`;
+              return (
+                <ToolCallCard
+                  key={key}
+                  toolCall={tc}
+                  onOpenResumeDrawer={onOpenResumeDrawer}
+                />
+              );
+            })}
           </div>
         )}
       </div>
