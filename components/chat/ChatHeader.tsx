@@ -64,30 +64,7 @@ export default function ChatHeader({
             {modelMenuOpen && (
               <div className="absolute mt-1 right-0 w-60 bg-surface-elevated border border-edge-hover rounded-xl shadow-xl overflow-hidden text-sm z-50">
                 <div className="py-1">
-                  <p className="px-3 py-1.5 text-[10px] font-semibold text-text-muted uppercase tracking-wider">
-                    Gemini
-                  </p>
-                  {MODELS.filter(m => m.provider === 'Gemini').map(m => (
-                    <button
-                      key={m.id}
-                      onClick={() => {
-                        onModelSelect(m.id);
-                        setModelMenuOpen(false);
-                      }}
-                      className={`w-full text-left px-3 py-2.5 hover:bg-surface-hover flex flex-col ${
-                        m.id === model ? 'bg-surface-hover/60' : ''
-                      }`}
-                    >
-                      <span className="text-sm font-medium text-text-primary">{m.label}</span>
-                      <span className="text-xs text-text-muted">{MODEL_DESCRIPTIONS[m.id]}</span>
-                    </button>
-                  ))}
-                </div>
-                <div className="border-t border-edge-hover py-1">
-                  <p className="px-3 py-1.5 text-[10px] font-semibold text-text-muted uppercase tracking-wider">
-                    Gemma 4
-                  </p>
-                  {MODELS.filter(m => m.provider === 'Gemma 4').map(m => (
+                  {MODELS.map(m => (
                     <button
                       key={m.id}
                       onClick={() => {

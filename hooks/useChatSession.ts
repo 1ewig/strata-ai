@@ -10,6 +10,7 @@ import {
   getStoredThinkingLevel,
   saveThinkingLevel,
   getValidThinkingLevelForModel,
+  MODEL_THINKING_LEVELS,
 } from '@/lib/models';
 import {
   db,
@@ -60,12 +61,22 @@ export function extractResumeFromMessage(msg: GenericUIMessage): Resume | null {
 
 
 export function useChatSession(chatId: string) {
-  const [model, setModel] = useState(getInitialModel);
-  const [thinkingLevel, setThinkingLevel] = useState(() =>
-    getValidThinkingLevelForModel(model, getStoredThinkingLevel(model)),
-  );
+  const defaultModel = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const [model, setModel] = useState(defaultModel);
+  const [thinkingLevel, setThinkingLevel] = useState<string>(() => {
+    const config = MODEL_THINKING_LEVELS[defaultModel];
+    return config?.defaultLevel || '';
+  });
   const [inputValue, setInputValue] = useState('');
   const [isResumeDrawerOpen, setIsResumeDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const storedModel = getInitialModel();
+    if (storedModel !== model) setModel(storedModel);
+    setThinkingLevel(
+      getValidThinkingLevelForModel(storedModel, getStoredThinkingLevel(storedModel)),
+    );
+  }, []);
 
   const dexieMessages = useLiveQuery(
     () => db.messages.where('chatId').equals(chatId).sortBy('timestamp'),
