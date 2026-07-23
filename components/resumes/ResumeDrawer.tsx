@@ -64,7 +64,7 @@ export default function ResumeDrawer({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/60 backdrop-blur-xs"
+          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
         />
 
         {/* Drawer Panel */}
@@ -73,20 +73,20 @@ export default function ResumeDrawer({
           animate={{ x: 0 }}
           exit={{ x: '100%' }}
           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-          className="relative w-full max-w-2xl bg-zinc-900 border-l border-zinc-800 shadow-2xl h-full flex flex-col z-10"
+          className="relative w-full max-w-2xl bg-surface-raised border-l border-edge-raised shadow-2xl h-full flex flex-col z-10"
         >
           {/* Header */}
-          <div className="h-14 px-6 border-b border-zinc-800 flex items-center justify-between bg-zinc-950/40 shrink-0">
+          <div className="h-14 px-6 border-b border-edge-raised flex items-center justify-between bg-surface-base/40 shrink-0">
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-emerald-400" />
-              <h2 className="text-sm font-semibold text-zinc-100">{currentResume.title}</h2>
+              <h2 className="text-sm font-semibold text-text-bright">{currentResume.title}</h2>
             </div>
 
             <div className="flex items-center gap-2">
               {currentResume.markdownContent && (
                 <button
                   onClick={handleCopyMarkdown}
-                  className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 px-2.5 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary px-2.5 py-1.5 rounded-lg border border-edge-raised hover:border-edge-hover transition-colors cursor-pointer"
                   title="Copy markdown"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -97,14 +97,14 @@ export default function ResumeDrawer({
               {isEditing ? (
                 <button
                   onClick={handleSaveEdit}
-                  className="flex items-center gap-1 text-xs font-semibold text-emerald-950 bg-emerald-400 hover:bg-emerald-300 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-xs font-semibold text-surface-base bg-emerald-400 hover:bg-emerald-300 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5" /> Save
                 </button>
               ) : (
                 <button
                   onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-1 text-xs text-zinc-400 hover:text-zinc-200 px-2.5 py-1.5 rounded-lg border border-zinc-800 hover:border-zinc-700 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary px-2.5 py-1.5 rounded-lg border border-edge-raised hover:border-edge-hover transition-colors cursor-pointer"
                 >
                   <Edit3 className="w-3.5 h-3.5" /> Edit
                 </button>
@@ -112,7 +112,7 @@ export default function ResumeDrawer({
 
               <button
                 onClick={onClose}
-                className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -127,64 +127,64 @@ export default function ResumeDrawer({
                 onChange={(e) => setMarkdownValue(e.target.value)}
                 rows={28}
                 placeholder="# Your Name&#10;your.email@example.com&#10;&#10;## Professional Summary..."
-                className="w-full h-full min-h-[500px] bg-zinc-950 border border-zinc-800 rounded-xl p-4 text-xs text-zinc-200 font-mono focus:outline-none focus:border-emerald-500/60 leading-relaxed resize-y"
+                className="w-full h-full min-h-[500px] bg-surface-base border border-edge-raised rounded-xl p-4 text-xs text-text-primary font-mono focus:outline-none focus:border-emerald-500/60 leading-relaxed resize-y"
               />
             ) : !currentResume.markdownContent ? (
-              <div className="h-full flex flex-col items-center justify-center border border-dashed border-zinc-800/80 rounded-2xl p-8 text-center bg-zinc-950/20">
-                <FileText className="w-10 h-10 text-zinc-600 mb-3" />
-                <h4 className="text-zinc-300 font-semibold text-sm">No Resume Generated Yet</h4>
-                <p className="text-xs text-zinc-500 max-w-sm mt-1">
+              <div className="h-full flex flex-col items-center justify-center border border-dashed border-edge-raised/80 rounded-2xl p-8 text-center bg-surface-base/20">
+                <FileText className="w-10 h-10 text-text-faint mb-3" />
+                <h4 className="text-text-secondary font-semibold text-sm">No Resume Generated Yet</h4>
+                <p className="text-xs text-text-muted max-w-sm mt-1">
                   Paste your resume text in the chat or ask the AI: <br />
                   <span className="text-emerald-400 italic font-mono mt-1 inline-block">"Create a Markdown resume for a Senior Software Engineer"</span>
                 </p>
               </div>
             ) : (
-              <div className="bg-zinc-950 border border-zinc-800/80 rounded-xl p-8 shadow-2xl text-zinc-100 selection:bg-emerald-500/30">
+              <div className="bg-surface-base border border-edge-raised/80 rounded-xl p-8 shadow-2xl text-text-primary selection:bg-emerald-500/30">
                 <article className="prose prose-invert prose-emerald max-w-none space-y-4 text-xs leading-relaxed">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ children }) => (
-                        <h1 className="text-2xl font-bold text-zinc-100 tracking-tight border-b border-zinc-800 pb-2 mb-3">
+                        <h1 className="text-2xl font-bold text-text-bright tracking-tight border-b border-edge-raised pb-2 mb-3">
                           {children}
                         </h1>
                       ),
                       h2: ({ children }) => (
-                        <h2 className="text-sm font-bold text-emerald-400 tracking-wider uppercase border-b border-zinc-800/60 pb-1 mt-6 mb-2">
+                        <h2 className="text-sm font-bold text-emerald-400 tracking-wider uppercase border-b border-edge-raised/60 pb-1 mt-6 mb-2">
                           {children}
                         </h2>
                       ),
                       h3: ({ children }) => (
-                        <h3 className="text-xs font-semibold text-zinc-200 mt-3 mb-1 flex items-center justify-between">
+                        <h3 className="text-xs font-semibold text-text-primary mt-3 mb-1 flex items-center justify-between">
                           {children}
                         </h3>
                       ),
                       p: ({ children }) => (
-                        <p className="text-xs text-zinc-300 leading-normal my-1">
+                        <p className="text-xs text-text-secondary leading-normal my-1">
                           {children}
                         </p>
                       ),
                       ul: ({ children }) => (
-                        <ul className="list-disc list-outside pl-4 space-y-1.5 my-2 text-xs text-zinc-300">
+                        <ul className="list-disc list-outside pl-4 space-y-1.5 my-2 text-xs text-text-secondary">
                           {children}
                         </ul>
                       ),
                       li: ({ children }) => (
-                        <li className="text-xs text-zinc-300 leading-normal">
+                        <li className="text-xs text-text-secondary leading-normal">
                           {children}
                         </li>
                       ),
                       strong: ({ children }) => (
-                        <strong className="font-semibold text-zinc-100">
+                        <strong className="font-semibold text-text-bright">
                           {children}
                         </strong>
                       ),
                       em: ({ children }) => (
-                        <em className="text-zinc-400 not-italic text-[11px] float-right">
+                        <em className="text-text-muted not-italic text-[11px] float-right">
                           {children}
                         </em>
                       ),
-                      hr: () => <hr className="border-zinc-800 my-4" />,
+                      hr: () => <hr className="border-edge-raised my-4" />,
                     }}
                   >
                     {currentResume.markdownContent}

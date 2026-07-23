@@ -36,7 +36,7 @@ export default function ChatInput({ inputValue, onInputChange, onSubmit, isLoadi
 
   return (
     <form onSubmit={onSubmit} className="relative z-10">
-      <div className="flex items-end gap-2 bg-zinc-900 border border-zinc-700/50 focus-within:border-zinc-500 rounded-2xl px-3 py-2 transition-all">
+      <div className="flex items-end gap-2 bg-surface-raised border border-edge-hover/60 focus-within:border-edge-hover rounded-2xl px-3 py-2 transition-all">
         <textarea
           ref={textareaRef}
           id="chat-input-field"
@@ -46,18 +46,18 @@ export default function ChatInput({ inputValue, onInputChange, onSubmit, isLoadi
           value={inputValue}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          className="flex-1 bg-transparent text-zinc-200 placeholder-zinc-500 border-none text-sm focus:outline-none resize-none max-h-40 py-1 focus:ring-0 disabled:opacity-50"
+          className="flex-1 bg-transparent text-text-primary placeholder-text-muted border-none text-sm focus:outline-none resize-none max-h-40 py-1 focus:ring-0 disabled:opacity-50"
         />
         <button
           id="chat-submit-btn"
           type="submit"
           disabled={isLoading || !inputValue.trim()}
-          className="p-2 rounded-lg bg-zinc-100 hover:bg-white disabled:bg-zinc-800 disabled:opacity-40 shrink-0 transition-colors focus:outline-none"
+          className="p-2 rounded-lg bg-text-primary hover:bg-text-bright disabled:bg-surface-elevated disabled:opacity-40 shrink-0 transition-colors focus:outline-none"
         >
-          <ArrowUp className="w-4 h-4 text-zinc-900" />
+          <ArrowUp className="w-4 h-4 text-surface-base" />
         </button>
       </div>
-      <p className="text-center text-xs text-zinc-600 mt-2">ResumeFlow can make mistakes. Verify important info.</p>
+      <p className="text-center text-xs text-text-faint mt-2">ResumeFlow can make mistakes. Verify important info.</p>
     </form>
   );
 }

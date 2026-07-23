@@ -27,10 +27,10 @@ function ThoughtAccordion({ text, isThinking }: { text: string; isThinking?: boo
   if (!text || !text.trim()) return null;
 
   return (
-    <div className="my-1.5 rounded-xl border border-cyan-900/40 bg-cyan-950/20 overflow-hidden text-xs">
+    <div className="my-1.5 rounded-xl border border-edge-raised/40 bg-surface-overlay/30 overflow-hidden text-xs">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-zinc-900/60 hover:bg-zinc-900 transition-colors text-left font-mono text-[11px] text-cyan-300 cursor-pointer"
+        className="w-full flex items-center justify-between px-3 py-2 bg-surface-raised/60 hover:bg-surface-raised transition-colors text-left font-mono text-[11px] text-cyan-300 cursor-pointer"
       >
         <div className="flex items-center gap-2">
           {isThinking ? (
@@ -39,25 +39,25 @@ function ThoughtAccordion({ text, isThinking }: { text: string; isThinking?: boo
             <BrainCircuit className="w-3.5 h-3.5 text-cyan-400" />
           )}
           <span className="font-semibold">{isThinking ? 'Thinking...' : 'Thought Process'}</span>
-          <span className="text-[10px] text-zinc-500 font-normal">({text.length} chars)</span>
+          <span className="text-[10px] text-text-muted font-normal">({text.length} chars)</span>
         </div>
-        <div className="flex items-center gap-1 text-zinc-500">
+        <div className="flex items-center gap-1 text-text-muted">
           {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </div>
       </button>
 
       {isOpen && (
-        <div className="p-3 border-t border-zinc-800/60 text-[11px] text-zinc-300 leading-relaxed max-h-56 overflow-y-auto bg-zinc-950/90 font-mono">
+        <div className="p-3 border-t border-edge-raised/60 text-[11px] text-text-secondary leading-relaxed max-h-56 overflow-y-auto bg-surface-base/90 font-mono">
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
-              p: ({ children }) => <p className="mb-2 leading-relaxed text-zinc-300">{children}</p>,
-              ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-2 text-zinc-400">{children}</ul>,
-              ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-2 text-zinc-400">{children}</ol>,
+              p: ({ children }) => <p className="mb-2 leading-relaxed text-text-secondary">{children}</p>,
+              ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-2 text-text-muted">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-2 text-text-muted">{children}</ol>,
               li: ({ children }) => <li className="text-[11px] leading-relaxed">{children}</li>,
               strong: ({ children }) => <strong className="font-semibold text-cyan-300">{children}</strong>,
               code: ({ children }) => (
-                <code className="bg-zinc-900 text-cyan-200 px-1 py-0.5 rounded text-[10px] font-mono border border-zinc-800">
+                <code className="bg-surface-raised text-cyan-200 px-1 py-0.5 rounded text-[10px] font-mono border border-edge-raised">
                   {children}
                 </code>
               ),
@@ -162,11 +162,11 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
       <div
         className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-semibold shrink-0 mt-0.5 transition-transform ${
           isUser
-            ? 'bg-zinc-800 border border-zinc-700/60 text-zinc-200 shadow-sm'
-            : 'bg-gradient-to-tr from-emerald-600 via-emerald-500 to-cyan-400 text-zinc-950 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
+            ? 'bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-sm'
+            : 'bg-gradient-to-tr from-emerald-600 via-emerald-500 to-cyan-400 text-surface-base shadow-[0_0_15px_rgba(16,185,129,0.25)]'
         }`}
       >
-        {isUser ? <User className="w-4 h-4 text-zinc-300" /> : <BrainCircuit className="w-4.5 h-4.5 text-zinc-950 stroke-[2.5]" />}
+        {isUser ? <User className="w-4 h-4 text-text-secondary" /> : <BrainCircuit className="w-4.5 h-4.5 text-surface-base stroke-[2.5]" />}
       </div>
 
       <div className="flex flex-col max-w-[88%] min-w-0 gap-2">
@@ -177,7 +177,7 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
             return (
               <div
                 key={seg.key}
-                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-emerald-950/40 border border-emerald-800/40 text-emerald-100 rounded-tr-xs shadow-sm"
+                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-emerald-950/30 border border-emerald-800/30 text-emerald-100 rounded-tr-xs shadow-sm"
               >
                 <p className="whitespace-pre-wrap leading-relaxed">{seg.content}</p>
               </div>
@@ -197,41 +197,41 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
             return (
               <div
                 key={seg.key}
-                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-zinc-900/90 border border-zinc-800/80 text-zinc-200 rounded-tl-xs shadow-md backdrop-blur-sm"
+                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs shadow-md backdrop-blur-sm"
               >
-                <div className="prose prose-invert max-w-none text-xs sm:text-sm text-zinc-200 leading-relaxed">
+                <div className="prose prose-invert max-w-none text-xs sm:text-sm text-text-primary leading-relaxed">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ children }) => (
-                        <h1 className="text-base sm:text-lg font-bold text-zinc-100 mt-3 mb-2 border-b border-zinc-800/80 pb-1.5 flex items-center gap-2">
+                        <h1 className="text-base sm:text-lg font-bold text-text-bright mt-3 mb-2 border-b border-edge-raised/80 pb-1.5 flex items-center gap-2">
                           {children}
                         </h1>
                       ),
                       h2: ({ children }) => (
-                        <h2 className="text-xs sm:text-sm font-bold text-zinc-100 mt-3 mb-1.5 text-emerald-400/90 tracking-wide uppercase">
+                        <h2 className="text-xs sm:text-sm font-bold text-text-bright mt-3 mb-1.5 text-emerald-400/90 tracking-wide uppercase">
                           {children}
                         </h2>
                       ),
                       h3: ({ children }) => (
-                        <h3 className="text-xs font-semibold text-zinc-200 mt-2 mb-1">
+                        <h3 className="text-xs font-semibold text-text-primary mt-2 mb-1">
                           {children}
                         </h3>
                       ),
                       p: ({ children }) => <p className="mb-2.5 leading-relaxed">{children}</p>,
                       ul: ({ children }) => (
-                        <ul className="list-disc list-inside space-y-1.5 mb-3 text-zinc-300">
+                        <ul className="list-disc list-inside space-y-1.5 mb-3 text-text-secondary">
                           {children}
                         </ul>
                       ),
                       ol: ({ children }) => (
-                        <ol className="list-decimal list-inside space-y-1.5 mb-3 text-zinc-300">
+                        <ol className="list-decimal list-inside space-y-1.5 mb-3 text-text-secondary">
                           {children}
                         </ol>
                       ),
                       li: ({ children }) => <li className="text-xs sm:text-sm leading-relaxed">{children}</li>,
                       strong: ({ children }) => (
-                        <strong className="font-semibold text-zinc-100">{children}</strong>
+                        <strong className="font-semibold text-text-bright">{children}</strong>
                       ),
                       code: ({ className, children, ...props }) => {
                         const isInline = !className;
@@ -240,18 +240,18 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
 
                         if (isInline) {
                           return (
-                            <code className="bg-zinc-800/90 text-emerald-300 font-mono px-1.5 py-0.5 rounded text-[11px] border border-zinc-700/50" {...props}>
+                            <code className="bg-surface-elevated/90 text-emerald-300 font-mono px-1.5 py-0.5 rounded text-[11px] border border-edge-hover/60" {...props}>
                               {children}
                             </code>
                           );
                         }
                         return (
-                          <div className="my-2.5 rounded-xl bg-zinc-950 border border-zinc-800/80 overflow-hidden font-mono text-[11px] shadow-sm">
-                            <div className="bg-zinc-900/90 px-3 py-1.5 border-b border-zinc-800 text-[10px] text-zinc-400 font-semibold uppercase tracking-wider flex items-center justify-between">
-                              <span className="text-zinc-400">Code Snippet</span>
+                          <div className="my-2.5 rounded-xl bg-surface-base border border-edge-raised/80 overflow-hidden font-mono text-[11px] shadow-sm">
+                            <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-[10px] text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
+                              <span className="text-text-muted">Code Snippet</span>
                               <button
                                 onClick={() => handleCopyCodeSnippet(rawCode, snippetId)}
-                                className="flex items-center gap-1 text-[10px] text-zinc-400 hover:text-emerald-400 transition-colors cursor-pointer"
+                                className="flex items-center gap-1 text-[10px] text-text-muted hover:text-emerald-400 transition-colors cursor-pointer"
                               >
                                 {copiedCodeId === snippetId ? (
                                   <>
@@ -266,31 +266,31 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
                                 )}
                               </button>
                             </div>
-                            <pre className="p-3 overflow-x-auto text-zinc-300 leading-relaxed">
+                            <pre className="p-3 overflow-x-auto text-text-secondary leading-relaxed">
                               <code>{children}</code>
                             </pre>
                           </div>
                         );
                       },
                       table: ({ children }) => (
-                        <div className="overflow-x-auto my-3 rounded-xl border border-zinc-800/80 bg-zinc-950/40">
-                          <table className="min-w-full text-xs text-left text-zinc-300">{children}</table>
+                        <div className="overflow-x-auto my-3 rounded-xl border border-edge-raised/80 bg-surface-base/40">
+                          <table className="min-w-full text-xs text-left text-text-secondary">{children}</table>
                         </div>
                       ),
                       th: ({ children }) => (
-                        <th className="bg-zinc-800/70 px-3 py-2 border-b border-zinc-800 font-semibold text-zinc-200">
+                        <th className="bg-surface-elevated/70 px-3 py-2 border-b border-edge-raised font-semibold text-text-primary">
                           {children}
                         </th>
                       ),
                       td: ({ children }) => (
-                        <td className="px-3 py-2 border-b border-zinc-800/40 hover:bg-zinc-800/20">{children}</td>
+                        <td className="px-3 py-2 border-b border-edge-raised/40 hover:bg-surface-hover/20">{children}</td>
                       ),
                       blockquote: ({ children }) => (
-                        <blockquote className="border-l-2 border-emerald-500/60 pl-3 my-2 text-zinc-400 italic text-xs">
+                        <blockquote className="border-l-2 border-emerald-500/60 pl-3 my-2 text-text-muted italic text-xs">
                           {children}
                         </blockquote>
                       ),
-                      hr: () => <hr className="my-3.5 border-zinc-800" />,
+                      hr: () => <hr className="my-3.5 border-edge-raised" />,
                     }}
                   >
                     {seg.content}

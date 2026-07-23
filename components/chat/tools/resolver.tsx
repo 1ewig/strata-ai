@@ -32,36 +32,36 @@ const toolConfigs: Record<string, ToolConfig> = {
     label: 'Resume Updated',
     badge: 'Updated',
     icon: Sparkles,
-    accent: 'emerald-500',
-    accentBg: 'bg-emerald-500/20',
-    accentBorder: 'border-emerald-500/30',
+    accent: 'emerald-400',
+    accentBg: 'bg-emerald-400/12',
+    accentBorder: 'border-emerald-400/20',
     accentText: 'text-emerald-400',
   },
   readResume: {
     label: 'Resume Read',
     badge: 'Read',
     icon: Search,
-    accent: 'blue-500',
-    accentBg: 'bg-blue-500/20',
-    accentBorder: 'border-blue-500/30',
+    accent: 'blue-400',
+    accentBg: 'bg-blue-400/12',
+    accentBorder: 'border-blue-400/20',
     accentText: 'text-blue-400',
   },
   deleteResume: {
     label: 'Resume Deleted',
     badge: 'Cleared',
     icon: Trash2,
-    accent: 'red-500',
-    accentBg: 'bg-red-500/20',
-    accentBorder: 'border-red-500/30',
+    accent: 'red-400',
+    accentBg: 'bg-red-400/12',
+    accentBorder: 'border-red-400/20',
     accentText: 'text-red-400',
   },
   editResume: {
     label: 'Resume Edited',
     badge: 'Applied',
     icon: PencilLine,
-    accent: 'amber-500',
-    accentBg: 'bg-amber-500/20',
-    accentBorder: 'border-amber-500/30',
+    accent: 'amber-400',
+    accentBg: 'bg-amber-400/12',
+    accentBorder: 'border-amber-400/20',
     accentText: 'text-amber-400',
   },
 };
@@ -70,9 +70,9 @@ const defaultConfig: ToolConfig = {
   label: 'Tool Executed',
   badge: 'Executed',
   icon: Wrench,
-  accent: 'cyan-500',
-  accentBg: 'bg-cyan-500/20',
-  accentBorder: 'border-cyan-500/30',
+  accent: 'cyan-400',
+  accentBg: 'bg-cyan-400/12',
+  accentBorder: 'border-cyan-400/20',
   accentText: 'text-cyan-400',
 };
 
@@ -146,21 +146,21 @@ function buildWriteResumeSummary(args: any, result: any, onOpenDrawer?: () => vo
   const sectionCount = (markdown.match(/^##\s+/gm) || []).length;
 
   return (
-    <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-lg p-2.5 flex items-center justify-between gap-3">
+    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
           <FileText className="w-4 h-4 text-emerald-400" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-zinc-200 truncate">{title}</p>
-          <p className="text-[10px] text-zinc-400 truncate">
+          <p className="text-xs font-semibold text-text-primary truncate">{title}</p>
+          <p className="text-[10px] text-text-muted truncate">
             {charCount > 0 ? `${charCount.toLocaleString()} chars • ${sectionCount} Sections` : 'Markdown Updated'}
           </p>
         </div>
       </div>
       <button
         onClick={onOpenDrawer}
-        className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg transition-all shrink-0 font-medium cursor-pointer"
+        className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg transition-all shrink-0 font-medium cursor-pointer"
       >
         <span>Open Drawer</span>
         <ExternalLink className="w-3 h-3" />
@@ -174,14 +174,14 @@ function buildReadResumeSummary(args: any, result: any, onOpenDrawer?: () => voi
   const content = result?.content || (typeof result === 'string' ? result : '');
 
   return (
-    <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-lg p-2.5 flex items-center justify-between gap-3">
+    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
           <Search className="w-4 h-4 text-blue-400" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-zinc-200 truncate">{section || 'Full Resume'}</p>
-          <p className="text-[10px] text-zinc-400 truncate">
+          <p className="text-xs font-semibold text-text-primary truncate">{section || 'Full Resume'}</p>
+          <p className="text-[10px] text-text-muted truncate">
             {result?.exists === false
               ? 'Section not found'
               : content
@@ -192,7 +192,7 @@ function buildReadResumeSummary(args: any, result: any, onOpenDrawer?: () => voi
       </div>
       <button
         onClick={onOpenDrawer}
-        className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 px-2.5 py-1.5 rounded-lg transition-all shrink-0 font-medium cursor-pointer"
+        className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-400/10 hover:bg-blue-400/20 border border-blue-400/20 px-2.5 py-1.5 rounded-lg transition-all shrink-0 font-medium cursor-pointer"
       >
         <span>Open Drawer</span>
         <ExternalLink className="w-3 h-3" />
@@ -203,13 +203,13 @@ function buildReadResumeSummary(args: any, result: any, onOpenDrawer?: () => voi
 
 function buildDeleteResumeSummary(): ReactNode {
   return (
-    <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-lg p-2.5 flex items-center gap-2.5 min-w-0">
-      <div className="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
+    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center gap-2.5 min-w-0">
+      <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
         <Trash2 className="w-4 h-4 text-red-400" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-semibold text-zinc-200 truncate">Canvas Cleared</p>
-        <p className="text-[10px] text-zinc-400 truncate">Start fresh by asking the AI to create a new resume.</p>
+        <p className="text-xs font-semibold text-text-primary truncate">Canvas Cleared</p>
+        <p className="text-[10px] text-text-muted truncate">Start fresh by asking the AI to create a new resume.</p>
       </div>
     </div>
   );
@@ -217,16 +217,16 @@ function buildDeleteResumeSummary(): ReactNode {
 
 function buildEditResumeSummary(args: any, result: any, onOpenDrawer?: () => void): ReactNode {
   return (
-    <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-lg p-2.5 flex items-center justify-between gap-3">
+    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center justify-between gap-3">
       <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
           <PencilLine className="w-4 h-4 text-amber-400" />
         </div>
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-zinc-200 truncate">
+          <p className="text-xs font-semibold text-text-primary truncate">
             {args?.explanation || result?.explanation || 'Surgical Edit'}
           </p>
-          <p className="text-[10px] text-zinc-400 truncate">
+          <p className="text-[10px] text-text-muted truncate">
             {result?.error
               ? `Error: ${result.error}`
               : result?.strategyUsed
@@ -239,7 +239,7 @@ function buildEditResumeSummary(args: any, result: any, onOpenDrawer?: () => voi
       </div>
       <button
         onClick={onOpenDrawer}
-        className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-2.5 py-1.5 rounded-lg transition-all shrink-0 font-medium cursor-pointer"
+        className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/20 px-2.5 py-1.5 rounded-lg transition-all shrink-0 font-medium cursor-pointer"
       >
         <span>Open Drawer</span>
         <ExternalLink className="w-3 h-3" />
@@ -250,14 +250,14 @@ function buildEditResumeSummary(args: any, result: any, onOpenDrawer?: () => voi
 
 function buildGenericSummary(args: any, rawName: string): ReactNode {
   return (
-    <div className="bg-zinc-900/80 border border-zinc-800/80 rounded-lg p-2.5 flex items-center gap-2.5 min-w-0">
-      <div className="w-8 h-8 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
+    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center gap-2.5 min-w-0">
+      <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
         <Wrench className="w-4 h-4 text-cyan-400" />
       </div>
       <div className="min-w-0">
-        <p className="text-xs font-semibold text-zinc-200 truncate">{rawName || 'Tool Execution'}</p>
+        <p className="text-xs font-semibold text-text-primary truncate">{rawName || 'Tool Execution'}</p>
         {Object.keys(args).length > 0 && (
-          <p className="text-[10px] text-zinc-400 truncate font-mono">
+          <p className="text-[10px] text-text-muted truncate font-mono">
             Input: {JSON.stringify(args).slice(0, 80)}
           </p>
         )}

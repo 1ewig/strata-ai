@@ -22,7 +22,7 @@ export default function Home() {
   }, [router]);
 
   return (
-    <main className="min-h-screen bg-zinc-950 flex items-center justify-center text-zinc-400 text-sm">
+    <main className="min-h-screen bg-surface-base flex items-center justify-center text-text-muted text-sm">
       <div className="flex items-center gap-2">
         <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
         Loading workspace...

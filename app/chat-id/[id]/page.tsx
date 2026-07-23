@@ -39,7 +39,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   }, [setIsResumeDrawerOpen]);
 
   return (
-    <main className="h-screen max-h-screen bg-zinc-950 text-zinc-100 flex overflow-hidden font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
+    <main className="h-screen max-h-screen bg-surface-base text-text-primary flex overflow-hidden font-sans">
       <Sidebar />
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 relative">
@@ -65,7 +65,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
           </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-zinc-950 via-zinc-950/95 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30">
+        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30">
           <div className="max-w-2xl mx-auto pointer-events-auto">
             <ChatInput
               inputValue={inputValue}
