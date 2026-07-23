@@ -80,9 +80,6 @@ export default function ResumeDrawer({
             <div className="flex items-center gap-2">
               <FileText className="w-4 h-4 text-emerald-400" />
               <h2 className="text-sm font-semibold text-zinc-100">{currentResume.title}</h2>
-              <span className="text-[10px] bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full font-medium">
-                Markdown Preview
-              </span>
             </div>
 
             <div className="flex items-center gap-2">
