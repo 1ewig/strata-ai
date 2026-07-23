@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { UIMessage } from 'ai';
-import { Check, FileText, Code2, User, BrainCircuit } from 'lucide-react';
+import { Check, Code2, User, BrainCircuit } from 'lucide-react';
 import ToolCallCard from './ToolCallCard';
 
 interface ChatBubbleProps {
@@ -15,7 +15,6 @@ interface ChatBubbleProps {
 
 export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }: ChatBubbleProps) {
   const isUser = message.role === 'user';
-  const [copiedType, setCopiedType] = useState<'markdown' | 'text' | null>(null);
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
   let textContent = '';
@@ -45,25 +44,6 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
         return isTool && isDone;
       })
     : (message as any).toolCalls || [];
-
-  const handleCopyMarkdown = () => {
-    navigator.clipboard.writeText(textContent);
-    setCopiedType('markdown');
-    setTimeout(() => setCopiedType(null), 2000);
-  };
-
-  const handleCopyText = () => {
-    const plainText = textContent
-      .replace(/#{1,6}\s?/g, '')
-      .replace(/(\*\*|__)(.*?)\1/g, '$2')
-      .replace(/(\*|_)(.*?)\1/g, '$2')
-      .replace(/`{1,3}(.*?)`{1,3}/g, '$1')
-      .replace(/\[(.*?)\]\(.*?\)/g, '$1')
-      .trim();
-    navigator.clipboard.writeText(plainText);
-    setCopiedType('text');
-    setTimeout(() => setCopiedType(null), 2000);
-  };
 
   const handleCopyCodeSnippet = (codeText: string, id: string) => {
     navigator.clipboard.writeText(codeText);
@@ -197,39 +177,6 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
 
             {isStreaming && (
               <span className="inline-block w-[2px] h-4 bg-emerald-400 ml-1 animate-pulse align-text-bottom" />
-            )}
-
-            {/* AI Studio Action Toolbar on Assistant Messages */}
-            {!isUser && !isStreaming && (
-              <div className="opacity-0 group-hover:opacity-100 transition-opacity absolute -top-3.5 right-3 bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-lg p-1 flex items-center gap-1 shadow-lg z-10 text-[11px]">
-                <button
-                  onClick={handleCopyMarkdown}
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
-                  title="Copy Raw Markdown"
-                >
-                  {copiedType === 'markdown' ? (
-                    <Check className="w-3 h-3 text-emerald-400" />
-                  ) : (
-                    <Code2 className="w-3 h-3" />
-                  )}
-                  <span>{copiedType === 'markdown' ? 'Copied MD' : 'Copy MD'}</span>
-                </button>
-
-                <div className="w-px h-3 bg-zinc-800" />
-
-                <button
-                  onClick={handleCopyText}
-                  className="flex items-center gap-1 px-2 py-1 hover:bg-zinc-800 rounded text-zinc-400 hover:text-zinc-200 transition-colors cursor-pointer"
-                  title="Copy Plain Text"
-                >
-                  {copiedType === 'text' ? (
-                    <Check className="w-3 h-3 text-emerald-400" />
-                  ) : (
-                    <FileText className="w-3 h-3" />
-                  )}
-                  <span>{copiedType === 'text' ? 'Copied Text' : 'Copy Text'}</span>
-                </button>
-              </div>
             )}
           </div>
         )}
