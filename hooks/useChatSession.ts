@@ -208,25 +208,13 @@ export function useChatSession(chatId: string) {
   };
 
   const isLoading = chat.status !== 'ready';
-  const lastAssistantMsg =
+  const lastAssistantMsgId =
     chat.messages.length > 0 && chat.messages[chat.messages.length - 1].role === 'assistant'
-      ? chat.messages[chat.messages.length - 1]
+      ? chat.messages[chat.messages.length - 1].id
       : null;
-  const isStreaming = chat.status === 'streaming' && lastAssistantMsg != null;
 
-  const streamingContent = useMemo(() => {
-    if (!isStreaming || !lastAssistantMsg) return null;
-    return (
-      (lastAssistantMsg.parts
-        ?.filter(p => p.type === 'text' && typeof (p as any).text === 'string')
-        .map(p => (p as any).text)
-        .join('') as string) || null
-    );
-  }, [isStreaming, lastAssistantMsg]);
-
-  const displayMessages = useMemo(() => {
-    return chat.messages.filter(m => !(isStreaming && m.id === lastAssistantMsg?.id));
-  }, [chat.messages, isStreaming, lastAssistantMsg?.id]);
+  const displayMessages = chat.messages;
+  const streamingContent = null;
 
   return {
     model,

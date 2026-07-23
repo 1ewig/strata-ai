@@ -34,27 +34,19 @@ export default function ChatPanel({
         </div>
       )}
 
-      {messages.map((message) => (
-        <ChatBubble
-          key={message.id}
-          message={message}
-          onOpenResumeDrawer={onOpenResumeDrawer}
-        />
-      ))}
+      {messages.map((message, idx) => {
+        const isLastAssistant = isLoading && message.role === 'assistant' && idx === messages.length - 1;
+        return (
+          <ChatBubble
+            key={message.id}
+            message={message}
+            isStreaming={isLastAssistant}
+            onOpenResumeDrawer={onOpenResumeDrawer}
+          />
+        );
+      })}
 
-      {streamingContent !== null && (
-        <ChatBubble
-          message={{
-            id: 'streaming',
-            role: 'model',
-            content: streamingContent,
-          }}
-          isStreaming
-          onOpenResumeDrawer={onOpenResumeDrawer}
-        />
-      )}
-
-      {isLoading && streamingContent === null && (
+      {isLoading && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
         <div className="flex items-start gap-3.5 fade-in">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-cyan-400 flex items-center justify-center text-zinc-950 shrink-0 mt-0.5 shadow-[0_0_15px_rgba(16,185,129,0.25)]">
             <BrainCircuit className="w-4.5 h-4.5 stroke-[2.5]" />
