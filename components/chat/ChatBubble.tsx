@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { UIMessage } from 'ai';
-import { Check, Code2, User, BrainCircuit } from 'lucide-react';
+import { Check, Code2, User, BrainCircuit, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 import ToolCallCard from './ToolCallCard';
 import { resolveToolDisplay } from './tools/resolver';
 
@@ -19,6 +19,40 @@ interface Segment {
   content?: string;
   part?: any;
   key: string;
+}
+
+function ThoughtAccordion({ text, isThinking }: { text: string; isThinking?: boolean }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!text || !text.trim()) return null;
+
+  return (
+    <div className="my-1.5 rounded-xl border border-cyan-900/40 bg-cyan-950/20 overflow-hidden text-xs">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3 py-2 bg-zinc-900/60 hover:bg-zinc-900 transition-colors text-left font-mono text-[11px] text-cyan-300 cursor-pointer"
+      >
+        <div className="flex items-center gap-2">
+          {isThinking ? (
+            <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+          ) : (
+            <BrainCircuit className="w-3.5 h-3.5 text-cyan-400" />
+          )}
+          <span className="font-semibold">{isThinking ? 'Thinking...' : 'Thought Process'}</span>
+          <span className="text-[10px] text-zinc-500 font-normal">({text.length} chars)</span>
+        </div>
+        <div className="flex items-center gap-1 text-zinc-500">
+          {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="p-3 border-t border-zinc-800/60 font-mono text-[11px] text-zinc-300 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap bg-zinc-950/90">
+          {text}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }: ChatBubbleProps) {
@@ -61,7 +95,28 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
         (typeof p.type === 'string' && p.type.startsWith('tool')) ||
         (p as any).toolInvocation !== undefined;
 
-      if (isTool) {
+      const isReasoning =
+        p.type === 'reasoning' ||
+        p.type === 'thought' ||
+        p.type === 'thinking' ||
+        typeof (p as any).reasoning === 'string' ||
+        typeof (p as any).reasoningText === 'string';
+
+      if (isReasoning) {
+        if (currentText) {
+          result.push({ type: 'text', content: currentText, key: `text-${idx}` });
+          currentText = '';
+        }
+        const reasoningText =
+          (p as any).reasoning ||
+          (p as any).reasoningText ||
+          (p as any).thought ||
+          (p.type === 'reasoning' || p.type === 'thought' || p.type === 'thinking' ? p.text : '') ||
+          '';
+        if (reasoningText) {
+          result.push({ type: 'reasoning', content: reasoningText, key: `reasoning-${idx}` });
+        }
+      } else if (isTool) {
         if (currentText) {
           result.push({ type: 'text', content: currentText, key: `text-${idx}` });
           currentText = '';
@@ -111,6 +166,10 @@ export default function ChatBubble({ message, isStreaming, onOpenResumeDrawer }:
                 <p className="whitespace-pre-wrap leading-relaxed">{seg.content}</p>
               </div>
             );
+          }
+
+          if (seg.type === 'reasoning' && seg.content) {
+            return <ThoughtAccordion key={seg.key} text={seg.content} isThinking={isStreaming && isLastSegment} />;
           }
 
           if (seg.type === 'tool') {
