@@ -30,6 +30,14 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     handleThinkingLevelChange,
   } = useChatSession(chatId);
 
+  const handleOpenResumeDrawer = () => setIsResumeDrawerOpen(true);
+
+  React.useEffect(() => {
+    const handleCustomOpen = () => setIsResumeDrawerOpen(true);
+    window.addEventListener('open-resume-drawer', handleCustomOpen);
+    return () => window.removeEventListener('open-resume-drawer', handleCustomOpen);
+  }, [setIsResumeDrawerOpen]);
+
   return (
     <main className="h-screen max-h-screen bg-zinc-950 text-zinc-100 flex overflow-hidden font-sans selection:bg-emerald-500/20 selection:text-emerald-300">
       <Sidebar />
@@ -41,7 +49,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
           thinkingLevel={thinkingLevel}
           onModelSelect={handleModelSelect}
           onThinkingLevelChange={handleThinkingLevelChange}
-          onOpenResumeDrawer={() => setIsResumeDrawerOpen(true)}
+          onOpenResumeDrawer={handleOpenResumeDrawer}
         />
 
         <div className="flex-1 overflow-y-auto min-h-0 pb-28">
@@ -52,6 +60,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               isLoading={isLoading}
               messagesEndRef={messagesEndRef}
               onSendMessage={handleSendMessage}
+              onOpenResumeDrawer={handleOpenResumeDrawer}
             />
           </div>
         </div>
