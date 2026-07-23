@@ -47,8 +47,24 @@ function ThoughtAccordion({ text, isThinking }: { text: string; isThinking?: boo
       </button>
 
       {isOpen && (
-        <div className="p-3 border-t border-zinc-800/60 font-mono text-[11px] text-zinc-300 leading-relaxed max-h-48 overflow-y-auto whitespace-pre-wrap bg-zinc-950/90">
-          {text}
+        <div className="p-3 border-t border-zinc-800/60 text-[11px] text-zinc-300 leading-relaxed max-h-56 overflow-y-auto bg-zinc-950/90 font-mono">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              p: ({ children }) => <p className="mb-2 leading-relaxed text-zinc-300">{children}</p>,
+              ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-2 text-zinc-400">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-2 text-zinc-400">{children}</ol>,
+              li: ({ children }) => <li className="text-[11px] leading-relaxed">{children}</li>,
+              strong: ({ children }) => <strong className="font-semibold text-cyan-300">{children}</strong>,
+              code: ({ children }) => (
+                <code className="bg-zinc-900 text-cyan-200 px-1 py-0.5 rounded text-[10px] font-mono border border-zinc-800">
+                  {children}
+                </code>
+              ),
+            }}
+          >
+            {text}
+          </ReactMarkdown>
         </div>
       )}
     </div>
