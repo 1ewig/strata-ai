@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react';
-import { type LucideIcon, Sparkles, Search, Trash2, PencilLine, Wrench, FileText, ExternalLink, Folder } from 'lucide-react';
+import { type LucideIcon, Sparkles, Search, Trash2, PencilLine, PenLine, Wrench, FileText, ExternalLink, Folder } from 'lucide-react';
 import { Resume, WorkspaceFile } from '@/lib/schemas';
 
 export interface ToolCardProps {
@@ -63,6 +63,15 @@ const toolConfigs: Record<string, ToolConfig> = {
     accentBg: 'bg-amber-400/12',
     accentBorder: 'border-amber-400/20',
     accentText: 'text-amber-400',
+  },
+  renameFile: {
+    label: 'File Renamed',
+    badge: 'Renamed',
+    icon: PenLine,
+    accent: 'violet-400',
+    accentBg: 'bg-violet-400/12',
+    accentBorder: 'border-violet-400/20',
+    accentText: 'text-violet-400',
   },
   deleteFile: {
     label: 'File Deleted',
@@ -131,6 +140,7 @@ function normalizeToolName(raw: string): { normalized: string; isCustom: boolean
   if (clean === 'writefile' || clean === 'writef') return { normalized: 'writeFile', isCustom: false };
   if (clean === 'editfile' || clean === 'editf') return { normalized: 'editFile', isCustom: false };
   if (clean === 'deletefile' || clean === 'deletef') return { normalized: 'deleteFile', isCustom: false };
+  if (clean === 'renamefile' || clean === 'renamef') return { normalized: 'renameFile', isCustom: false };
 
   if (clean === 'writeresume') return { normalized: 'writeResume', isCustom: false };
   if (clean === 'readresume') return { normalized: 'readResume', isCustom: false };
@@ -308,6 +318,22 @@ function buildEditFileSummary(args: any, result: any, onOpenDrawer?: () => void)
   );
 }
 
+function buildRenameFileSummary(args: any, result: any): ReactNode {
+  const oldName = args?.nameOrId || result?.oldName || 'File';
+  const newName = result?.newName || args?.newName || '';
+  return (
+    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center gap-2.5 min-w-0">
+      <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
+        <PenLine className="w-4 h-4 text-violet-400" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-xs font-semibold text-text-primary truncate">{oldName} → {newName}</p>
+        <p className="text-[10px] text-text-muted truncate">File renamed successfully</p>
+      </div>
+    </div>
+  );
+}
+
 function buildDeleteFileSummary(args: any, result: any): ReactNode {
   const name = args?.nameOrId || result?.name || 'File';
   return (
@@ -370,6 +396,9 @@ export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): To
     case 'editFile':
     case 'editResume':
       summary = buildEditFileSummary(args, result, onOpenDrawer);
+      break;
+    case 'renameFile':
+      summary = buildRenameFileSummary(args, result);
       break;
     case 'deleteFile':
     case 'deleteResume':

@@ -215,6 +215,60 @@ export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceT
   });
 }
 
+export function createRenameFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceToolsContext) {
+  return tool({
+    description:
+      "Rename a workspace file. Updates the filename while preserving its content.",
+    inputSchema: z.object({
+      nameOrId: z
+        .string()
+        .describe("Current filename or file ID of the file to rename."),
+      newName: z
+        .string()
+        .describe("New filename (e.g. 'notes.md', 'resume.md'). Must not already exist in workspace."),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      oldName: z.string().optional(),
+      newName: z.string().optional(),
+      file: workspaceFileSchema.optional(),
+      error: z.string().optional(),
+    }),
+    execute: async ({ nameOrId, newName }) => {
+      const files = getCurrentFiles();
+      const target = files.find(
+        (f) => f.id === nameOrId || f.name.toLowerCase() === nameOrId.toLowerCase(),
+      );
+
+      if (!target) {
+        return { success: false, error: `File "${nameOrId}" not found. Call listFiles to see available files.` };
+      }
+
+      const collision = files.find(
+        (f) => f.id !== target.id && f.name.toLowerCase() === newName.toLowerCase(),
+      );
+      if (collision) {
+        return { success: false, error: `A file named "${newName}" already exists.` };
+      }
+
+      const renamed: WorkspaceFile = {
+        ...target,
+        name: newName,
+        updatedAt: new Date().toISOString(),
+      };
+
+      onUpdateFile(renamed);
+
+      return {
+        success: true,
+        oldName: target.name,
+        newName,
+        file: renamed,
+      };
+    },
+  });
+}
+
 export function createDeleteFileTool({ getCurrentFiles, onDeleteFile }: WorkspaceToolsContext) {
   return tool({
     description: "Delete a file from the workspace canvas.",
@@ -254,6 +308,7 @@ export function createWorkspaceTools(context: WorkspaceToolsContext) {
     readFile: createReadFileTool(context),
     writeFile: createWriteFileTool(context),
     editFile: createEditFileTool(context),
+    renameFile: createRenameFileTool(context),
     deleteFile: createDeleteFileTool(context),
   };
 }

@@ -56,6 +56,7 @@ ${formattedFilesList}
 - **\`editFile\`**: Call to make targeted search-and-replace edits on a specific workspace file.
   - **Anchor Rule**: Include 1 line above and 1 line below the target change in \`searchString\` to ensure uniqueness.
   - **Verbatim Copy Rule**: Copy text character-for-character from \`<workspace_files>\`.
+- **\`renameFile\`**: Call to rename an existing workspace file. Specify \`nameOrId\` (current filename or ID) and \`newName\` (desired new filename).
 - **\`deleteFile\`**: Call to delete a specific file from the workspace.
 
 When generating documents, formatted reports, summaries, code, or structured drafts, use \`writeFile\` or \`editFile\` to place them into the user's workspace canvas.
