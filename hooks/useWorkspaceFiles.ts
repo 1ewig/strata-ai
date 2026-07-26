@@ -23,7 +23,7 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
     } else if (files.length > 0 && !activeFileId) {
       setActiveFileId(files[0].id);
     }
-  }, [currentConv?.activeFileId, files, activeFileId]);
+  }, [currentConv?.activeFileId, files]);
 
   const handleSelectFile = (fileId: string) => {
     setActiveFileId(fileId);
