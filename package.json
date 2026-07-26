@@ -10,9 +10,9 @@
     "clean": "next clean"
   },
   "dependencies": {
-    "ai": "^7.0.0",
     "@ai-sdk/google": "^4.0.0",
     "@ai-sdk/react": "^2.0.0",
+    "ai": "^7.0.0",
     "autoprefixer": "^10.4.21",
     "dexie": "^4.4.4",
     "dexie-react-hooks": "^4.4.0",
@@ -24,6 +24,7 @@
     "react-dom": "19.2.7",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
+    "use-stick-to-bottom": "^1.1.6",
     "zod": "^4.4.3"
   },
   "devDependencies": {
