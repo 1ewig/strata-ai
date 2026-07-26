@@ -1,6 +1,6 @@
 # Strata AI — Agentic AI Workspace & Document Studio
 
-An AI-powered agentic workspace studio built with Next.js 16, Vercel AI SDK 7, and Google Gemini. Features conversational chat with 5 general-purpose workspace file management tools (`listFiles`, `readFile`, `writeFile`, `editFile`, `deleteFile`), client-side Dexie IndexedDB persistence, an interactive slide-over Workspace Drawer, and a modular tool-display UI.
+An AI-powered agentic workspace studio built with Next.js 16, Vercel AI SDK 7, and Google Gemini. Features conversational chat with 6 general-purpose workspace file management tools (`listFiles`, `readFile`, `writeFile`, `editFile`, `renameFile`, `deleteFile`), client-side Dexie IndexedDB persistence, an interactive slide-over Workspace Drawer, and a minimal accordion-style tool display.
 
 ## Stack
 
@@ -31,7 +31,9 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for full details.
 
 Key patterns:
 - **Stateless API route** — full message history + active workspace files sent in each request with `abortSignal` and `smoothStream`
-- **Closure-based agent tools** — `listFiles`, `readFile`, `writeFile`, `editFile`, `deleteFile` use single-source-of-truth workspace closure context
+- **Closure-based agent tools** — `listFiles`, `readFile`, `writeFile`, `editFile`, `renameFile`, `deleteFile` use single-source-of-truth workspace closure context
 - **3-tier edit engine** — `ResumeEditEngine` performs exact, whitespace-normalized, and anchor matching for verbatim targeted edits
+- **Constrained system prompt** — numbered tool rules with priority hierarchy (`editFile` over `writeFile`), post-mutation response discipline (1-3 sentences, no content dump), error recovery (retry once), and edge case handling
+- **Metadata-only workspace listing** — system prompt lists file names and IDs only; model calls `readFile` for content, keeping context footprint small
 - **Resolver pattern** — `components/chat/tools/resolver.tsx` owns tool-display cards; `ToolCallCard` is a pure presentation shell
 - **Dexie UIMessage & Workspace persistence** — native AI SDK message objects and multi-file collections stored in IndexedDB across reloads
