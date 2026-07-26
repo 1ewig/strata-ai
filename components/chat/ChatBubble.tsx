@@ -185,7 +185,7 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
                   transition-all duration-300
                   bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs
                   shadow-md backdrop-blur-sm
-                  ${isStreaming && isLastSegment ? 'ring-1 ring-emerald-500/20 shadow-[0_0_24px_-6px_rgba(16,185,129,0.25)]' : ''}
+                  ${isStreaming && isLastSegment ? 'shadow-[0_0_24px_-6px_rgba(16,185,129,0.25)]' : ''}
                 `}
               >
                 {isStreaming && isLastSegment && (
@@ -290,10 +290,10 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
                   >
                     {seg.content}
                   </ReactMarkdown>
-                </div>
                   {isStreaming && isLastSegment && (
                     <span className="inline-block w-[1.5px] h-[1.05em] ml-0.5 -mb-0.5 bg-emerald-400/90 rounded-full animate-caret align-text-bottom" />
                   )}
+                </div>
               </div>
             );
           }
