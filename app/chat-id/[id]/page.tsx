@@ -3,7 +3,7 @@
 import React, { use, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
 import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
-import ChatPanel from '@/components/ChatPanel';
+import ChatPanel from '@/components/chat/ChatPanel';
 import ChatInput from '@/components/chat/ChatInput';
 import ChatHeader from '@/components/chat/ChatHeader';
 import { useChatSession } from '@/hooks/useChatSession';
