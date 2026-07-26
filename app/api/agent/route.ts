@@ -104,21 +104,14 @@ export async function POST(req: Request) {
       console.error("[agent] Stream error:", error);
     },
     stopWhen: isStepCount(10),
-    providerOptions:
-      thinkingLevel && thinkingLevel.length > 0
-        ? {
-            google: {
-              thinkingConfig: {
-                thinkingLevel: thinkingLevel as
-                  | "minimal"
-                  | "low"
-                  | "medium"
-                  | "high",
-                includeThoughts: true,
-              },
-            },
-          }
-        : undefined,
+    reasoning: thinkingLevel ? (thinkingLevel as any) : "provider-default",
+    providerOptions: {
+      google: {
+        thinkingConfig: {
+          includeThoughts: true,
+        },
+      },
+    },
   });
 
   return createUIMessageStreamResponse({
