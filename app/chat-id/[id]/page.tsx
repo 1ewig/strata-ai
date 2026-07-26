@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useRef } from 'react';
+import React, { useEffect, use, useRef, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
 import ChatPanel from '@/components/chat/ChatPanel';
@@ -34,6 +34,29 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     handleThinkingLevelChange,
   } = useChatSession(chatId);
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [isAtBottom, setIsAtBottom] = useState(true);
+  const hasScrolledOnOpen = useRef(false);
+
+  useEffect(() => {
+    if (displayMessages.length > 0 && !hasScrolledOnOpen.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
+      hasScrolledOnOpen.current = true;
+    }
+  }, [displayMessages.length, messagesEndRef]);
+
+  useEffect(() => {
+    if (isAtBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [displayMessages, isLoading, isAtBottom, messagesEndRef]);
+
+  const handleScroll = () => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
+  };
+
   const handleOpenDrawer = () => setIsWorkspaceDrawerOpen(true);
 
   React.useEffect(() => {
@@ -65,7 +88,11 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
           onOpenDrawer={handleOpenDrawer}
         />
 
-        <div className="flex-1 overflow-y-auto min-h-0 pb-28">
+        <div
+          ref={scrollContainerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto min-h-0 pb-28"
+        >
           <div className="max-w-2xl w-full mx-auto px-4">
             <ChatPanel
               messages={displayMessages}
@@ -75,6 +102,17 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               onSendMessage={handleSendMessage}
               onOpenDrawer={handleOpenDrawer}
             />
+
+            {!isAtBottom && (
+              <div className="flex justify-center pb-4">
+                <button
+                  onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                  className="rounded-full border border-edge-raised bg-surface-overlay/90 px-3 py-1 text-xs text-text-muted hover:text-text-primary shadow-sm backdrop-blur-sm transition-colors"
+                >
+                  ↓ Scroll to bottom
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

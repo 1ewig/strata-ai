@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { BrainCircuit } from 'lucide-react';
 import ChatBubble from '@/components/chat/ChatBubble';
 
@@ -20,36 +20,8 @@ export default function ChatPanel({
   messagesEndRef,
   onOpenDrawer,
 }: ChatPanelProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isAtBottom, setIsAtBottom] = useState(true);
-  const hasScrolledOnOpen = useRef(false);
-
-  useEffect(() => {
-    if (messages.length > 0 && !hasScrolledOnOpen.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
-      hasScrolledOnOpen.current = true;
-    }
-  }, [messages.length, messagesEndRef]);
-
-  useEffect(() => {
-    if (isAtBottom) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, isLoading, isAtBottom, messagesEndRef]);
-
-  const handleScroll = () => {
-    const el = containerRef.current;
-    if (!el) return;
-    setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
-  };
-
   return (
-    <div
-      ref={containerRef}
-      onScroll={handleScroll}
-      id="chat-messages-scroll"
-      className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-4"
-    >
+    <div className="space-y-4">
       {messages.length === 0 && streamingContent === null && !isLoading && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-cyan-400 border border-emerald-500/30 flex items-center justify-center text-surface-base font-semibold text-lg shadow-[0_0_20px_rgba(16,185,129,0.25)]">
@@ -88,17 +60,6 @@ export default function ChatPanel({
       )}
 
       <div ref={messagesEndRef} />
-
-      {!isAtBottom && (
-        <div className="flex justify-center">
-          <button
-            onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
-            className="rounded-full border border-edge-raised bg-surface-overlay/90 px-3 py-1 text-xs text-text-muted hover:text-text-primary shadow-sm backdrop-blur-sm transition-colors"
-          >
-            ↓ Scroll to bottom
-          </button>
-        </div>
-      )}
     </div>
   );
 }
