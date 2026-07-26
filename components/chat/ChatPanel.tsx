@@ -21,7 +21,7 @@ export default function ChatPanel({
   onOpenDrawer,
 }: ChatPanelProps) {
   return (
-    <div className="space-y-4">
+    <div className="pt-4 space-y-4">
       {messages.length === 0 && streamingContent === null && !isLoading && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-cyan-400 border border-emerald-500/30 flex items-center justify-center text-surface-base font-semibold text-lg shadow-[0_0_20px_rgba(16,185,129,0.25)]">
