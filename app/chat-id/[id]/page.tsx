@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, use, useRef, useState } from 'react';
+import React, { useCallback, useEffect, use, useRef, useState } from 'react';
 import Sidebar from '@/components/Sidebar';
 import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
 import ChatPanel from '@/components/chat/ChatPanel';
@@ -23,6 +23,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     activeFileId,
     displayMessages,
     streamingContent,
+    status,
     isLoading,
     handleSendMessage,
     handleSubmit,
@@ -38,24 +39,36 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const [isAtBottom, setIsAtBottom] = useState(true);
   const hasScrolledOnOpen = useRef(false);
 
+  const checkIfAtBottom = useCallback(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 100;
+  }, []);
+
+  const handleScroll = () => setIsAtBottom(checkIfAtBottom());
+
+  // 1. Jump to bottom instantly when opening a chat with messages
   useEffect(() => {
     if (displayMessages.length > 0 && !hasScrolledOnOpen.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'instant' });
       hasScrolledOnOpen.current = true;
+      setIsAtBottom(true);
     }
   }, [displayMessages.length, messagesEndRef]);
 
+  // 2. Auto-scroll during streaming only while user is at bottom
   useEffect(() => {
-    if (isAtBottom) {
+    if (status === 'streaming' && isAtBottom) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [displayMessages, isLoading, isAtBottom, messagesEndRef]);
+  }, [displayMessages, status, isAtBottom, messagesEndRef]);
 
-  const handleScroll = () => {
-    const el = scrollContainerRef.current;
-    if (!el) return;
-    setIsAtBottom(el.scrollHeight - el.scrollTop - el.clientHeight < 80);
-  };
+  // 3. Scroll on new user message or stream finish (only if at bottom)
+  useEffect(() => {
+    if ((status === 'submitted' || status === 'ready') && isAtBottom) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [status, isAtBottom, messagesEndRef]);
 
   const handleOpenDrawer = () => setIsWorkspaceDrawerOpen(true);
 
@@ -106,7 +119,10 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
             {!isAtBottom && (
               <div className="flex justify-center pb-4">
                 <button
-                  onClick={() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                  onClick={() => {
+                    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+                    setIsAtBottom(true);
+                  }}
                   className="rounded-full border border-edge-raised bg-surface-overlay/90 px-3 py-1 text-xs text-text-muted hover:text-text-primary shadow-sm backdrop-blur-sm transition-colors"
                 >
                   ↓ Scroll to bottom

@@ -181,6 +181,7 @@ export function useChatSession(chatId: string) {
     activeFileId: workspace.activeFileId,
     displayMessages: chat.messages,
     streamingContent: null,
+    status: chat.status,
     isLoading,
     handleSendMessage,
     handleSubmit,
