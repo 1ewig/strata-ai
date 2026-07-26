@@ -1,6 +1,6 @@
-# ResumeFlow — AI Resume Tailoring Agent
+# Strata AI — Agentic AI Workspace & Document Studio
 
-An AI-powered resume builder and optimiser built with Next.js, Vercel AI SDK 7, and Google Gemini. Features conversational chat with 4 tools (`writeResume`, `readResume`, `deleteResume`, `editResume`), client-side Dexie persistence, and a modular tool-display UI.
+An AI-powered agentic workspace studio built with Next.js 16, Vercel AI SDK 7, and Google Gemini. Features conversational chat with 5 general-purpose workspace file management tools (`listFiles`, `readFile`, `writeFile`, `editFile`, `deleteFile`), client-side Dexie IndexedDB persistence, an interactive slide-over Workspace Drawer, and a modular tool-display UI.
 
 ## Stack
 
@@ -30,8 +30,8 @@ bun run dev
 See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) for full details.
 
 Key patterns:
-- **Stateless API route** — full message history + resume sent in each request
-- **contextSchema + closure tools** — `writeResume`/`readResume`/`deleteResume` use `toolsContext`; `editResume` uses mutable closures for multi-step edits
-- **3-tier edit engine** — `ResumeEditEngine` tries exact, whitespace-normalized, then anchor matching
-- **Resolver pattern** — `components/chat/tools/resolver.tsx` owns all tool-display logic; `ToolCallCard` is a pure 87-line shell
-- **Dexie UIMessage persistence** — native AI SDK message objects stored in IndexedDB, survives refresh
+- **Stateless API route** — full message history + active workspace files sent in each request with `abortSignal` and `smoothStream`
+- **Closure-based agent tools** — `listFiles`, `readFile`, `writeFile`, `editFile`, `deleteFile` use single-source-of-truth workspace closure context
+- **3-tier edit engine** — `ResumeEditEngine` performs exact, whitespace-normalized, and anchor matching for verbatim targeted edits
+- **Resolver pattern** — `components/chat/tools/resolver.tsx` owns tool-display cards; `ToolCallCard` is a pure presentation shell
+- **Dexie UIMessage & Workspace persistence** — native AI SDK message objects and multi-file collections stored in IndexedDB across reloads

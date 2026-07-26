@@ -45,8 +45,8 @@ export default function Sidebar() {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)]">
             <BrainCircuit className="w-4 h-4 text-surface-base" />
           </div>
-          <h1 className="text-sm font-bold tracking-tight text-text-bright">ResumeFlow</h1>
-          <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised text-text-muted">TAILOR</span>
+          <h1 className="text-sm font-bold tracking-tight text-text-bright">Strata AI</h1>
+          <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised text-text-muted">WORKSPACE</span>
         </Link>
       </div>
 

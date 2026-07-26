@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'ResumeFlow - AI Resume Tailoring Agent',
-  description: 'Parse, organize, and polish your resume with AI',
+  title: 'Strata AI - Agentic Workspace & Document Studio',
+  description: 'Create, edit, and orchestrate documents with AI tools and live workspace canvas',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
