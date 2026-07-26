@@ -152,7 +152,7 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: Workspace
 export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceToolsContext) {
   return tool({
     description:
-      "Surgically edit a specific block of a workspace file. Use searchString to specify verbatim text to replace.",
+      "Surgically edit a specific block of a workspace file. Call readFile first to get the exact text, then use searchString to specify the verbatim block to replace.",
     inputSchema: z.object({
       nameOrId: z
         .string()
