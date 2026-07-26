@@ -15,11 +15,16 @@ import {
 import {
   db,
   createConversation,
-  updateConversationResume,
   updateConversationTitle,
   updateConversationModel,
+  getWorkspaceFiles,
+  saveWorkspaceFile,
+  deleteWorkspaceFile,
+  updateConversationFiles,
+  updateConversationResume,
 } from '@/lib/db/db';
-import { Resume, ChatMessage } from '@/lib/schemas';
+import { Resume, WorkspaceFile } from '@/lib/schemas';
+import { generateId } from '@/lib/id';
 
 export interface MessagePart {
   type: string;
@@ -28,8 +33,8 @@ export interface MessagePart {
   name?: string;
   args?: Record<string, unknown>;
   input?: Record<string, unknown>;
-  result?: { resume?: Resume; markdownContent?: string } | unknown;
-  output?: { resume?: Resume; markdownContent?: string } | unknown;
+  result?: { resume?: Resume; file?: WorkspaceFile; files?: WorkspaceFile[] } | unknown;
+  output?: { resume?: Resume; file?: WorkspaceFile; files?: WorkspaceFile[] } | unknown;
   state?: string;
 }
 
@@ -40,25 +45,35 @@ export interface GenericUIMessage {
   parts?: MessagePart[];
 }
 
-export function extractResumeFromMessage(msg: GenericUIMessage): Resume | null {
+export function extractFilesFromMessage(msg: GenericUIMessage): WorkspaceFile[] | null {
   if (!msg || !Array.isArray(msg.parts)) return null;
 
   for (const part of msg.parts) {
     const inv = (part as any).toolInvocation || part;
-    const res =
-      (inv.result as { resume?: Resume })?.resume ||
-      (inv.output as { resume?: Resume })?.resume ||
-      (part.result as { resume?: Resume })?.resume ||
-      (part.output as { resume?: Resume })?.resume;
+    const res = inv.result || inv.output || part.result || part.output;
 
-    if (res && typeof res.markdownContent === 'string') {
-      return res;
+    if (res?.files && Array.isArray(res.files)) {
+      return res.files;
+    }
+    if (res?.file && typeof res.file.content === 'string') {
+      return [res.file];
+    }
+    if (res?.resume && typeof res.resume.markdownContent === 'string') {
+      const r = res.resume;
+      return [
+        {
+          id: r.id || 'resume-file',
+          name: `${r.title || 'resume'}.md`,
+          content: r.markdownContent,
+          language: 'markdown',
+          createdAt: r.createdAt || new Date().toISOString(),
+          updatedAt: r.updatedAt || new Date().toISOString(),
+        },
+      ];
     }
   }
   return null;
 }
-
-
 
 export function useChatSession(chatId: string) {
   const defaultModel = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-3.5-flash-lite';
@@ -68,7 +83,8 @@ export function useChatSession(chatId: string) {
     return config?.defaultLevel || '';
   });
   const [inputValue, setInputValue] = useState('');
-  const [isResumeDrawerOpen, setIsResumeDrawerOpen] = useState(false);
+  const [isWorkspaceDrawerOpen, setIsWorkspaceDrawerOpen] = useState(false);
+  const [activeFileId, setActiveFileId] = useState<string | null>(null);
 
   useEffect(() => {
     const storedModel = getInitialModel();
@@ -88,14 +104,14 @@ export function useChatSession(chatId: string) {
     [chatId],
   );
 
-  const resume = currentConv?.resume;
-  const resumeRef = useRef(resume);
+  const files = useMemo(() => getWorkspaceFiles(currentConv), [currentConv]);
+  const filesRef = useRef(files);
   const modelRef = useRef(model);
   const thinkingLevelRef = useRef(thinkingLevel);
 
   useEffect(() => {
-    resumeRef.current = resume;
-  }, [resume]);
+    filesRef.current = files;
+  }, [files]);
 
   useEffect(() => {
     modelRef.current = model;
@@ -104,6 +120,15 @@ export function useChatSession(chatId: string) {
   useEffect(() => {
     thinkingLevelRef.current = thinkingLevel;
   }, [thinkingLevel]);
+
+  // Set default active file if not set
+  useEffect(() => {
+    if (currentConv?.activeFileId) {
+      setActiveFileId(currentConv.activeFileId);
+    } else if (files.length > 0 && !activeFileId) {
+      setActiveFileId(files[0].id);
+    }
+  }, [currentConv?.activeFileId, files]);
 
   useEffect(() => {
     if (!chatId) return;
@@ -121,7 +146,17 @@ export function useChatSession(chatId: string) {
         body: () => ({
           model: modelRef.current,
           thinkingLevel: thinkingLevelRef.current,
-          resumes: resumeRef.current ? [resumeRef.current] : [],
+          files: filesRef.current,
+          // Backward compatibility support for endpoints still checking resumes
+          resumes: filesRef.current.length > 0 ? [
+            {
+              id: filesRef.current[0].id,
+              title: filesRef.current[0].name.replace(/\.md$/, ''),
+              markdownContent: filesRef.current[0].content,
+              createdAt: filesRef.current[0].createdAt,
+              updatedAt: filesRef.current[0].updatedAt,
+            }
+          ] : [],
         }),
       }),
     [],
@@ -142,9 +177,20 @@ export function useChatSession(chatId: string) {
         await db.conversations.update(chatId, { updatedAt: new Date().toISOString() });
 
         for (const m of [message, ...allMessages].reverse()) {
-          const updatedResume = extractResumeFromMessage(m as GenericUIMessage);
-          if (updatedResume) {
-            await updateConversationResume(chatId, updatedResume);
+          const updatedFiles = extractFilesFromMessage(m as GenericUIMessage);
+          if (updatedFiles && updatedFiles.length > 0) {
+            const conv = await db.conversations.get(chatId);
+            const current = getWorkspaceFiles(conv);
+            let merged = [...current];
+            for (const newFile of updatedFiles) {
+              const idx = merged.findIndex(f => f.id === newFile.id || f.name === newFile.name);
+              if (idx >= 0) {
+                merged[idx] = newFile;
+              } else {
+                merged.push(newFile);
+              }
+            }
+            await updateConversationFiles(chatId, merged, updatedFiles[0].id);
             break;
           }
         }
@@ -197,9 +243,36 @@ export function useChatSession(chatId: string) {
     }
   };
 
-  const handleUpdateResume = async (updated: Resume) => {
-    if (!chatId) return;
-    await updateConversationResume(chatId, updated);
+  const handleSelectFile = (fileId: string) => {
+    setActiveFileId(fileId);
+    setIsWorkspaceDrawerOpen(true);
+  };
+
+  const handleCreateFile = async (name: string, content = '') => {
+    const now = new Date().toISOString();
+    const newFile: WorkspaceFile = {
+      id: generateId(),
+      name: name.endsWith('.md') || name.endsWith('.txt') ? name : `${name}.md`,
+      content,
+      language: name.endsWith('.txt') ? 'text' : 'markdown',
+      createdAt: now,
+      updatedAt: now,
+    };
+    await saveWorkspaceFile(chatId, newFile);
+    setActiveFileId(newFile.id);
+    setIsWorkspaceDrawerOpen(true);
+  };
+
+  const handleUpdateFile = async (updatedFile: WorkspaceFile) => {
+    await saveWorkspaceFile(chatId, updatedFile);
+  };
+
+  const handleDeleteFile = async (fileId: string) => {
+    await deleteWorkspaceFile(chatId, fileId);
+    if (activeFileId === fileId) {
+      const remaining = files.filter(f => f.id !== fileId);
+      setActiveFileId(remaining.length > 0 ? remaining[0].id : null);
+    }
   };
 
   const handleModelSelect = (id: string) => {
@@ -219,11 +292,6 @@ export function useChatSession(chatId: string) {
   };
 
   const isLoading = chat.status !== 'ready';
-  const lastAssistantMsgId =
-    chat.messages.length > 0 && chat.messages[chat.messages.length - 1].role === 'assistant'
-      ? chat.messages[chat.messages.length - 1].id
-      : null;
-
   const displayMessages = chat.messages;
   const streamingContent = null;
 
@@ -232,15 +300,19 @@ export function useChatSession(chatId: string) {
     thinkingLevel,
     inputValue,
     setInputValue,
-    isResumeDrawerOpen,
-    setIsResumeDrawerOpen,
-    resume,
+    isWorkspaceDrawerOpen,
+    setIsWorkspaceDrawerOpen,
+    files,
+    activeFileId,
     displayMessages,
     streamingContent,
     isLoading,
     handleSendMessage,
     handleSubmit,
-    handleUpdateResume,
+    handleSelectFile,
+    handleCreateFile,
+    handleUpdateFile,
+    handleDeleteFile,
     handleModelSelect,
     handleThinkingLevelChange,
   };

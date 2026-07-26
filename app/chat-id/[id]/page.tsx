@@ -2,7 +2,7 @@
 
 import React, { use, useRef } from 'react';
 import Sidebar from '@/components/Sidebar';
-import ResumeDrawer from '@/components/resumes/ResumeDrawer';
+import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
 import ChatPanel from '@/components/ChatPanel';
 import ChatInput from '@/components/chat/ChatInput';
 import ChatHeader from '@/components/chat/ChatHeader';
@@ -17,26 +17,34 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     thinkingLevel,
     inputValue,
     setInputValue,
-    isResumeDrawerOpen,
-    setIsResumeDrawerOpen,
-    resume,
+    isWorkspaceDrawerOpen,
+    setIsWorkspaceDrawerOpen,
+    files,
+    activeFileId,
     displayMessages,
     streamingContent,
     isLoading,
     handleSendMessage,
     handleSubmit,
-    handleUpdateResume,
+    handleSelectFile,
+    handleCreateFile,
+    handleUpdateFile,
+    handleDeleteFile,
     handleModelSelect,
     handleThinkingLevelChange,
   } = useChatSession(chatId);
 
-  const handleOpenResumeDrawer = () => setIsResumeDrawerOpen(true);
+  const handleOpenDrawer = () => setIsWorkspaceDrawerOpen(true);
 
   React.useEffect(() => {
-    const handleCustomOpen = () => setIsResumeDrawerOpen(true);
+    const handleCustomOpen = () => setIsWorkspaceDrawerOpen(true);
     window.addEventListener('open-resume-drawer', handleCustomOpen);
-    return () => window.removeEventListener('open-resume-drawer', handleCustomOpen);
-  }, [setIsResumeDrawerOpen]);
+    window.addEventListener('open-workspace-drawer', handleCustomOpen);
+    return () => {
+      window.removeEventListener('open-resume-drawer', handleCustomOpen);
+      window.removeEventListener('open-workspace-drawer', handleCustomOpen);
+    };
+  }, [setIsWorkspaceDrawerOpen]);
 
   return (
     <main className="h-screen max-h-screen bg-surface-base text-text-primary flex overflow-hidden font-sans">
@@ -44,12 +52,17 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 relative">
         <ChatHeader
-          resumeTitle={resume?.title}
+          files={files}
+          activeFileId={activeFileId}
           model={model}
           thinkingLevel={thinkingLevel}
           onModelSelect={handleModelSelect}
           onThinkingLevelChange={handleThinkingLevelChange}
-          onOpenResumeDrawer={handleOpenResumeDrawer}
+          onOpenFile={(fileId) => {
+            handleSelectFile(fileId);
+            setIsWorkspaceDrawerOpen(true);
+          }}
+          onOpenDrawer={handleOpenDrawer}
         />
 
         <div className="flex-1 overflow-y-auto min-h-0 pb-28">
@@ -60,7 +73,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               isLoading={isLoading}
               messagesEndRef={messagesEndRef}
               onSendMessage={handleSendMessage}
-              onOpenResumeDrawer={handleOpenResumeDrawer}
+              onOpenResumeDrawer={handleOpenDrawer}
             />
           </div>
         </div>
@@ -77,11 +90,15 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         </div>
       </div>
 
-      <ResumeDrawer
-        isOpen={isResumeDrawerOpen}
-        onClose={() => setIsResumeDrawerOpen(false)}
-        resume={resume}
-        onUpdateResume={handleUpdateResume}
+      <WorkspaceDrawer
+        isOpen={isWorkspaceDrawerOpen}
+        onClose={() => setIsWorkspaceDrawerOpen(false)}
+        files={files}
+        activeFileId={activeFileId}
+        onSelectFile={handleSelectFile}
+        onUpdateFile={handleUpdateFile}
+        onCreateFile={handleCreateFile}
+        onDeleteFile={handleDeleteFile}
         onSendMessage={handleSendMessage}
         isLoading={isLoading}
       />
