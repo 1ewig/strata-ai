@@ -5,6 +5,7 @@ import {
   convertToModelMessages,
   createUIMessageStreamResponse,
   toUIMessageStream,
+  smoothStream,
 } from "ai";
 import { z } from "zod";
 import { Resume, WorkspaceFile } from "@/lib/schemas";
@@ -28,24 +29,31 @@ export async function POST(req: Request) {
   }
 
   const { messages, model, thinkingLevel } = parsed.data;
-  let mutableFiles: WorkspaceFile[] = parsed.data.files || [];
+  const mutableFiles: WorkspaceFile[] = parsed.data.files || [];
 
   // Migration / fallback from legacy resumes
   if (mutableFiles.length === 0 && parsed.data.resumes && parsed.data.resumes.length > 0) {
     const legacy: Resume = parsed.data.resumes[0];
     if (legacy.markdownContent) {
-      mutableFiles = [
-        {
-          id: legacy.id || "chat-file",
-          name: `${legacy.title || "resume"}.md`,
-          content: legacy.markdownContent,
-          language: "markdown",
-          createdAt: legacy.createdAt || new Date().toISOString(),
-          updatedAt: legacy.updatedAt || new Date().toISOString(),
-        },
-      ];
+      mutableFiles.push({
+        id: legacy.id || "chat-file",
+        name: `${legacy.title || "resume"}.md`,
+        content: legacy.markdownContent,
+        language: "markdown",
+        createdAt: legacy.createdAt || new Date().toISOString(),
+        updatedAt: legacy.updatedAt || new Date().toISOString(),
+      });
     }
   }
+
+  const removeFileFromMutable = (fileIdOrName: string) => {
+    const target = fileIdOrName.toLowerCase();
+    for (let i = mutableFiles.length - 1; i >= 0; i--) {
+      if (mutableFiles[i].id === fileIdOrName || mutableFiles[i].name.toLowerCase() === target) {
+        mutableFiles.splice(i, 1);
+      }
+    }
+  };
 
   const result = streamText({
     model: google(model || "gemini-3.5-flash-lite"),
@@ -54,54 +62,34 @@ export async function POST(req: Request) {
     tools: createWorkspaceTools({
       getCurrentFiles: () => mutableFiles,
       onUpdateFile: (file: WorkspaceFile) => {
-        const idx = mutableFiles.findIndex(f => f.id === file.id || f.name === file.name);
+        const idx = mutableFiles.findIndex(
+          (f) => f.id === file.id || f.name.toLowerCase() === file.name.toLowerCase(),
+        );
         if (idx >= 0) {
           mutableFiles[idx] = file;
         } else {
           mutableFiles.push(file);
         }
       },
-      onDeleteFile: (fileId: string) => {
-        mutableFiles = mutableFiles.filter(f => f.id !== fileId);
+      onDeleteFile: (fileIdOrName: string) => {
+        removeFileFromMutable(fileIdOrName);
       },
     }),
-    toolsContext: {
-      listFiles: { workspaceFiles: mutableFiles },
-      readFile: { workspaceFiles: mutableFiles },
-      writeFile: { workspaceFiles: mutableFiles },
-      // Legacy context mappings
-      writeResume: { workspaceFiles: mutableFiles },
-      readResume: { workspaceFiles: mutableFiles },
+    abortSignal: req.signal,
+    experimental_transform: smoothStream({
+      delayInMs: 15,
+      chunking: "word",
+    }),
+    prepareStep: async ({ stepNumber }) => {
+      console.log(`[agent] Preparing step ${stepNumber}. Active workspace files: ${mutableFiles.length}`);
+      return {
+        system: buildSystemInstruction(mutableFiles),
+      };
     },
     onStart() {
       console.log("[agent] Generation stream started.");
     },
     onStepEnd({ stepNumber, toolCalls }) {
-      for (const tc of toolCalls || []) {
-        const call = tc as any;
-        const result = call.result;
-        if (result?.file) {
-          const idx = mutableFiles.findIndex(f => f.id === result.file.id || f.name === result.file.name);
-          if (idx >= 0) {
-            mutableFiles[idx] = result.file;
-          } else {
-            mutableFiles.push(result.file);
-          }
-        }
-        if (result?.deleted && result?.fileId) {
-          mutableFiles = mutableFiles.filter(f => f.id !== result.fileId);
-        }
-        if (call.toolName === "writeResume" && result?.resume?.markdownContent) {
-          mutableFiles[0] = {
-            id: result.resume.id || "chat-file",
-            name: `${result.resume.title || "resume"}.md`,
-            content: result.resume.markdownContent,
-            language: "markdown",
-            createdAt: result.resume.createdAt || new Date().toISOString(),
-            updatedAt: result.resume.updatedAt || new Date().toISOString(),
-          };
-        }
-      }
       console.log(
         `[agent] Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`,
       );
@@ -113,7 +101,7 @@ export async function POST(req: Request) {
       );
     },
     onError({ error }) {
-      console.error("[agent] Detailed error:", error);
+      console.error("[agent] Stream error:", error);
     },
     stopWhen: isStepCount(10),
     providerOptions:

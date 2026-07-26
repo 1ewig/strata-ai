@@ -1,121 +1,120 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { WorkspaceFile, WorkspaceFileSchema } from "@/lib/schemas";
+import { WorkspaceFile } from "@/lib/schemas";
 import { ResumeEditEngine } from "@/lib/edit-engine";
 
-export const listFiles = tool({
-  description:
-    "List all existing files in the current workspace canvas with metadata.",
-  inputSchema: z.object({}),
-  contextSchema: z.object({
-    workspaceFiles: z.array(WorkspaceFileSchema).optional(),
-  }),
-  execute: async (_, { context }) => {
-    const files = context?.workspaceFiles || [];
-    return {
-      count: files.length,
-      files: files.map((f) => ({
-        id: f.id,
-        name: f.name,
-        language: f.language || "markdown",
-        charCount: f.content?.length || 0,
-      })),
-    };
-  },
-});
-
-export const readFile = tool({
-  description:
-    "Read the full content or a specific section of a workspace file by name or ID. Always call this before making targeted edits.",
-  inputSchema: z.object({
-    nameOrId: z
-      .string()
-      .describe("Filename (e.g. 'notes.md', 'resume.md') or file ID to read."),
-    section: z
-      .string()
-      .optional()
-      .describe(
-        "Optional section heading to extract (e.g. 'Professional Summary'). Omit to read full file.",
-      ),
-  }),
-  contextSchema: z.object({
-    workspaceFiles: z.array(WorkspaceFileSchema).optional(),
-  }),
-  execute: async ({ nameOrId, section }, { context }) => {
-    const files = context?.workspaceFiles || [];
-    const file = files.find(
-      (f) => f.id === nameOrId || f.name.toLowerCase() === nameOrId.toLowerCase(),
-    );
-
-    if (!file || !file.content?.trim()) {
-      return { exists: false, error: `File "${nameOrId}" not found or empty.` };
-    }
-
-    if (section) {
-      const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const regex = new RegExp(`##\\s*${escaped}[\\s\\S]*?(?=\\n##\\s|\\n$)`, "i");
-      const match = file.content.match(regex);
-      if (match) {
-        return { exists: true, name: file.name, section, content: match[0].trim() };
-      }
-      return {
-        exists: false,
-        name: file.name,
-        section,
-        content: `Section "${section}" not found in ${file.name}.`,
-      };
-    }
-
-    return { exists: true, name: file.name, content: file.content.trim(), file };
-  },
-});
-
-export const writeFile = tool({
-  description:
-    "Create a new file or completely replace an existing file in the workspace canvas. Prefer editFile for targeted, surgical changes.",
-  inputSchema: z.object({
-    name: z
-      .string()
-      .describe("Filename for the document (e.g. 'document.md', 'notes.txt')."),
-    content: z
-      .string()
-      .describe("The complete content of the file."),
-    language: z
-      .string()
-      .optional()
-      .default("markdown")
-      .describe("Format/language type e.g. 'markdown' or 'text'."),
-  }),
-  contextSchema: z.object({
-    workspaceFiles: z.array(WorkspaceFileSchema).optional(),
-  }),
-  execute: async ({ name, content, language }, { context }) => {
-    const existingFiles = context?.workspaceFiles || [];
-    const existing = existingFiles.find(
-      (f) => f.name.toLowerCase() === name.toLowerCase(),
-    );
-
-    const now = new Date().toISOString();
-    const updatedFile: WorkspaceFile = {
-      id: existing?.id || `file-${Date.now()}`,
-      name,
-      content,
-      language: language || (name.endsWith(".txt") ? "text" : "markdown"),
-      createdAt: existing?.createdAt || now,
-      updatedAt: now,
-    };
-
-    return {
-      action: existing ? "replaced" : "created",
-      file: updatedFile,
-    };
-  },
-});
-
-interface WorkspaceToolsContext {
+export interface WorkspaceToolsContext {
   getCurrentFiles: () => WorkspaceFile[];
   onUpdateFile: (file: WorkspaceFile) => void;
-  onDeleteFile?: (fileId: string) => void;
+  onDeleteFile?: (fileIdOrName: string) => void;
+}
+
+export function createListFilesTool({ getCurrentFiles }: WorkspaceToolsContext) {
+  return tool({
+    description:
+      "List all existing files in the current workspace canvas with metadata.",
+    inputSchema: z.object({}),
+    execute: async () => {
+      const files = getCurrentFiles();
+      return {
+        count: files.length,
+        files: files.map((f) => ({
+          id: f.id,
+          name: f.name,
+          language: f.language || "markdown",
+          charCount: f.content?.length || 0,
+        })),
+      };
+    },
+  });
+}
+
+export function createReadFileTool({ getCurrentFiles }: WorkspaceToolsContext) {
+  return tool({
+    description:
+      "Read full content or a specific section of a workspace file by name or ID. Always call this before making targeted edits.",
+    inputSchema: z.object({
+      nameOrId: z
+        .string()
+        .describe("Filename (e.g. 'notes.md', 'resume.md') or file ID to read."),
+      section: z
+        .string()
+        .optional()
+        .describe(
+          "Optional section heading to extract (e.g. 'Professional Summary'). Omit to read full file.",
+        ),
+    }),
+    execute: async ({ nameOrId, section }) => {
+      const files = getCurrentFiles();
+      const file = files.find(
+        (f) => f.id === nameOrId || f.name.toLowerCase() === nameOrId.toLowerCase(),
+      );
+
+      if (!file || !file.content?.trim()) {
+        return { exists: false, error: `File "${nameOrId}" not found or empty.` };
+      }
+
+      if (section) {
+        const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const regex = new RegExp(`##\\s*${escaped}[\\s\\S]*?(?=\\n##\\s|\\n$)`, "i");
+        const match = file.content.match(regex);
+        if (match) {
+          return { exists: true, name: file.name, section, content: match[0].trim() };
+        }
+        return {
+          exists: false,
+          name: file.name,
+          section,
+          content: `Section "${section}" not found in ${file.name}.`,
+        };
+      }
+
+      return { exists: true, name: file.name, content: file.content.trim(), file };
+    },
+  });
+}
+
+export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceToolsContext) {
+  return tool({
+    description:
+      "Create a new file or completely replace an existing file in the workspace canvas. Prefer editFile for targeted, surgical changes.",
+    inputSchema: z.object({
+      name: z
+        .string()
+        .describe("Filename for the document (e.g. 'document.md', 'notes.txt')."),
+      content: z
+        .string()
+        .describe("The complete content of the file."),
+      language: z
+        .string()
+        .optional()
+        .default("markdown")
+        .describe("Format/language type e.g. 'markdown' or 'text'."),
+    }),
+    execute: async ({ name, content, language }) => {
+      const existingFiles = getCurrentFiles();
+      const existing = existingFiles.find(
+        (f) => f.name.toLowerCase() === name.toLowerCase(),
+      );
+
+      const now = new Date().toISOString();
+      const updatedFile: WorkspaceFile = {
+        id: existing?.id || `file-${Date.now()}`,
+        name,
+        content,
+        language: language || (name.endsWith(".txt") ? "text" : "markdown"),
+        createdAt: existing?.createdAt || now,
+        updatedAt: now,
+      };
+
+      onUpdateFile(updatedFile);
+
+      return {
+        action: existing ? "replaced" : "created",
+        file: updatedFile,
+      };
+    },
+  });
 }
 
 export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceToolsContext) {
@@ -205,23 +204,12 @@ export function createDeleteFileTool({ getCurrentFiles, onDeleteFile }: Workspac
   });
 }
 
-// Backward compatibility legacy aliases
-export const writeResume = writeFile;
-export const readResume = readFile;
-
-export function createWorkspaceTools(context?: WorkspaceToolsContext) {
+export function createWorkspaceTools(context: WorkspaceToolsContext) {
   return {
-    listFiles,
-    readFile,
-    writeFile,
-    ...(context
-      ? {
-          editFile: createEditFileTool(context),
-          deleteFile: createDeleteFileTool(context),
-        }
-      : {}),
-    // Fallback aliases for backward compatibility
-    writeResume,
-    readResume,
+    listFiles: createListFilesTool(context),
+    readFile: createReadFileTool(context),
+    writeFile: createWriteFileTool(context),
+    editFile: createEditFileTool(context),
+    deleteFile: createDeleteFileTool(context),
   };
 }

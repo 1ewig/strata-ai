@@ -21,7 +21,6 @@ import {
   saveWorkspaceFile,
   deleteWorkspaceFile,
   updateConversationFiles,
-  updateConversationResume,
 } from '@/lib/db/db';
 import { Resume, WorkspaceFile } from '@/lib/schemas';
 import { generateId } from '@/lib/id';
@@ -33,8 +32,8 @@ export interface MessagePart {
   name?: string;
   args?: Record<string, unknown>;
   input?: Record<string, unknown>;
-  result?: { resume?: Resume; file?: WorkspaceFile; files?: WorkspaceFile[] } | unknown;
-  output?: { resume?: Resume; file?: WorkspaceFile; files?: WorkspaceFile[] } | unknown;
+  result?: { resume?: Resume; file?: WorkspaceFile; files?: WorkspaceFile[]; deleted?: boolean; fileId?: string } | unknown;
+  output?: { resume?: Resume; file?: WorkspaceFile; files?: WorkspaceFile[]; deleted?: boolean; fileId?: string } | unknown;
   state?: string;
 }
 
@@ -43,6 +42,21 @@ export interface GenericUIMessage {
   role: string;
   content?: string;
   parts?: MessagePart[];
+}
+
+export function extractDeletedFilesFromMessage(msg: GenericUIMessage): { fileId?: string; name?: string }[] {
+  if (!msg || !Array.isArray(msg.parts)) return [];
+
+  const deletions: { fileId?: string; name?: string }[] = [];
+  for (const part of msg.parts) {
+    const inv = (part as any).toolInvocation || part;
+    const res = inv.result || inv.output || part.result || part.output;
+
+    if (res?.deleted === true && (res?.fileId || res?.name)) {
+      deletions.push({ fileId: res.fileId, name: res.name });
+    }
+  }
+  return deletions;
 }
 
 export function extractFilesFromMessage(msg: GenericUIMessage): WorkspaceFile[] | null {
@@ -147,7 +161,6 @@ export function useChatSession(chatId: string) {
           model: modelRef.current,
           thinkingLevel: thinkingLevelRef.current,
           files: filesRef.current,
-          // Backward compatibility support for endpoints still checking resumes
           resumes: filesRef.current.length > 0 ? [
             {
               id: filesRef.current[0].id,
@@ -177,13 +190,28 @@ export function useChatSession(chatId: string) {
         await db.conversations.update(chatId, { updatedAt: new Date().toISOString() });
 
         for (const m of [message, ...allMessages].reverse()) {
+          const deletions = extractDeletedFilesFromMessage(m as GenericUIMessage);
+          if (deletions.length > 0) {
+            const conv = await db.conversations.get(chatId);
+            const current = getWorkspaceFiles(conv);
+            const remaining = current.filter(f => {
+              for (const del of deletions) {
+                if (del.fileId && f.id === del.fileId) return false;
+                if (del.name && f.name.toLowerCase() === del.name.toLowerCase()) return false;
+              }
+              return true;
+            });
+            const activeId = remaining.length > 0 ? remaining[0].id : undefined;
+            await updateConversationFiles(chatId, remaining, activeId);
+          }
+
           const updatedFiles = extractFilesFromMessage(m as GenericUIMessage);
           if (updatedFiles && updatedFiles.length > 0) {
             const conv = await db.conversations.get(chatId);
             const current = getWorkspaceFiles(conv);
             let merged = [...current];
             for (const newFile of updatedFiles) {
-              const idx = merged.findIndex(f => f.id === newFile.id || f.name === newFile.name);
+              const idx = merged.findIndex(f => f.id === newFile.id || f.name.toLowerCase() === newFile.name.toLowerCase());
               if (idx >= 0) {
                 merged[idx] = newFile;
               } else {
