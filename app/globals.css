@@ -16,6 +16,9 @@
   --color-edge-default: rgba(255, 255, 255, 0.04);
   --color-edge-raised: rgba(255, 255, 255, 0.09);
   --color-edge-hover: rgba(255, 255, 255, 0.13);
+
+  --animate-shimmer: shimmer 2.8s ease-in-out infinite;
+  --animate-caret: caret 1.1s ease-in-out infinite;
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -50,4 +53,13 @@ body::before {
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(4px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+@keyframes caret {
+  0%, 45% { opacity: 1; }
+  50%, 100% { opacity: 0.15; }
 }

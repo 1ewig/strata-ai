@@ -108,19 +108,51 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
   }, [message, isUser]);
 
   return (
-    <div className={`group relative flex items-start gap-3.5 fade-in ${isUser ? 'flex-row-reverse' : ''}`}>
+    <div
+      className={`group relative flex items-start gap-3.5 ${
+        isUser ? 'flex-row-reverse' : ''
+      } ${!isUser ? 'animate-in fade-in duration-500' : ''}`}
+    >
       {/* Avatar Container */}
       <div
-        className={`w-8 h-8 rounded-xl flex items-center justify-center text-sm font-semibold shrink-0 mt-0.5 transition-transform ${
-          isUser
-            ? 'bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-sm'
-            : 'bg-gradient-to-tr from-emerald-600 via-emerald-500 to-cyan-400 text-surface-base shadow-[0_0_15px_rgba(16,185,129,0.25)]'
-        }`}
+        className={`
+          relative w-8 h-8 rounded-xl flex items-center justify-center text-sm font-semibold shrink-0 mt-0.5
+          transition-all duration-500
+          ${
+            isUser
+              ? 'bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-sm'
+              : `bg-gradient-to-tr from-emerald-600 via-emerald-500 to-cyan-400 text-surface-base
+                 ${isStreaming ? 'shadow-[0_0_20px_rgba(16,185,129,0.45)] scale-[1.03]' : 'shadow-[0_0_15px_rgba(16,185,129,0.25)]'}`
+          }
+        `}
       >
-        {isUser ? <User className="w-4 h-4 text-text-secondary" /> : <BrainCircuit className="w-4.5 h-4.5 text-surface-base stroke-[2.5]" />}
+        {isUser ? (
+          <User className="w-4 h-4 text-text-secondary" />
+        ) : (
+          <BrainCircuit
+            className={`w-4.5 h-4.5 text-surface-base stroke-[2.5] transition-transform duration-700 ${
+              isStreaming ? 'animate-[spin_8s_linear_infinite]' : ''
+            }`}
+          />
+        )}
+
+        {!isUser && isStreaming && (
+          <span className="absolute inset-0 rounded-xl ring-2 ring-emerald-400/30 animate-ping opacity-40" />
+        )}
       </div>
 
       <div className="flex flex-col max-w-[88%] min-w-0 gap-2">
+        {/* Empty streaming state before first tokens */}
+        {!isUser && isStreaming && segments.length === 0 && (
+          <div className="rounded-2xl px-4.5 py-3.5 bg-surface-overlay/70 border border-edge-raised/60 backdrop-blur-sm">
+            <div className="flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 animate-bounce [animation-delay:-0.3s]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 animate-bounce [animation-delay:-0.15s]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 animate-bounce" />
+            </div>
+          </div>
+        )}
+
         {segments.map((seg, segIdx) => {
           const isLastSegment = segIdx === segments.length - 1;
 
@@ -148,9 +180,21 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
             return (
               <div
                 key={seg.key}
-                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs shadow-md backdrop-blur-sm"
+                className={`
+                  relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed
+                  transition-all duration-300
+                  bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs
+                  shadow-md backdrop-blur-sm
+                  ${isStreaming && isLastSegment ? 'ring-1 ring-emerald-500/20 shadow-[0_0_24px_-6px_rgba(16,185,129,0.25)]' : ''}
+                `}
               >
-                <div className="prose prose-invert max-w-none text-xs sm:text-sm text-text-primary leading-relaxed">
+                {isStreaming && isLastSegment && (
+                  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+                    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-emerald-400/5 to-transparent" />
+                  </div>
+                )}
+
+                <div className="prose prose-invert max-w-none text-xs sm:text-sm text-text-primary leading-relaxed relative">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
@@ -169,7 +213,7 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
                           {children}
                         </h3>
                       ),
-                      p: ({ children }) => <p className="mb-2.5 leading-relaxed">{children}</p>,
+                      p: ({ children }) => <p className="mb-2.5 leading-relaxed last:mb-0">{children}</p>,
                       ul: ({ children }) => (
                         <ul className="list-disc list-inside space-y-1.5 mb-3 text-text-secondary">
                           {children}
@@ -247,9 +291,9 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
                     {seg.content}
                   </ReactMarkdown>
                 </div>
-                {isStreaming && isLastSegment && (
-                  <span className="inline-block w-[2px] h-4 bg-emerald-400 ml-1 animate-pulse align-text-bottom" />
-                )}
+                  {isStreaming && isLastSegment && (
+                    <span className="inline-block w-[1.5px] h-[1.05em] ml-0.5 -mb-0.5 bg-emerald-400/90 rounded-full animate-caret align-text-bottom" />
+                  )}
               </div>
             );
           }
