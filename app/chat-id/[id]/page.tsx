@@ -73,7 +73,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               isLoading={isLoading}
               messagesEndRef={messagesEndRef}
               onSendMessage={handleSendMessage}
-              onOpenResumeDrawer={handleOpenDrawer}
+              onOpenDrawer={handleOpenDrawer}
             />
           </div>
         </div>

@@ -1,0 +1,61 @@
+'use client';
+
+import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { BrainCircuit, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+
+interface ThoughtAccordionProps {
+  text: string;
+  isThinking?: boolean;
+}
+
+export default function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!text || !text.trim()) return null;
+
+  return (
+    <div className="my-1.5 rounded-xl border border-edge-raised/40 bg-surface-overlay/30 overflow-hidden text-xs">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full flex items-center justify-between px-3 py-2 bg-surface-raised/60 hover:bg-surface-raised transition-colors text-left font-mono text-[11px] text-cyan-300 cursor-pointer"
+      >
+        <div className="flex items-center gap-2">
+          {isThinking ? (
+            <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+          ) : (
+            <BrainCircuit className="w-3.5 h-3.5 text-cyan-400" />
+          )}
+          <span className="font-semibold">{isThinking ? 'Thinking...' : 'Thought Process'}</span>
+          <span className="text-[10px] text-text-muted font-normal">({text.length.toLocaleString()} chars)</span>
+        </div>
+        <div className="flex items-center gap-1 text-text-muted">
+          {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        </div>
+      </button>
+
+      {isOpen && (
+        <div className="p-3 border-t border-edge-raised/60 text-[11px] text-text-secondary leading-relaxed max-h-56 overflow-y-auto bg-surface-base/90 font-mono">
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              p: ({ children }) => <p className="mb-2 leading-relaxed text-text-secondary">{children}</p>,
+              ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-2 text-text-muted">{children}</ul>,
+              ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-2 text-text-muted">{children}</ol>,
+              li: ({ children }) => <li className="text-[11px] leading-relaxed">{children}</li>,
+              strong: ({ children }) => <strong className="font-semibold text-cyan-300">{children}</strong>,
+              code: ({ children }) => (
+                <code className="bg-surface-raised text-cyan-200 px-1 py-0.5 rounded text-[10px] font-mono border border-edge-raised">
+                  {children}
+                </code>
+              ),
+            }}
+          >
+            {text}
+          </ReactMarkdown>
+        </div>
+      )}
+    </div>
+  );
+}

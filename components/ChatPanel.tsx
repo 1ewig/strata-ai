@@ -10,7 +10,7 @@ interface ChatPanelProps {
   isLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   onSendMessage?: (text: string) => void;
-  onOpenResumeDrawer?: () => void;
+  onOpenDrawer?: () => void;
 }
 
 export default function ChatPanel({
@@ -18,7 +18,7 @@ export default function ChatPanel({
   streamingContent,
   isLoading,
   messagesEndRef,
-  onOpenResumeDrawer,
+  onOpenDrawer,
 }: ChatPanelProps) {
   return (
     <div id="chat-messages-scroll" className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-4">
@@ -27,9 +27,9 @@ export default function ChatPanel({
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-emerald-500 to-cyan-400 border border-emerald-500/30 flex items-center justify-center text-surface-base font-semibold text-lg shadow-[0_0_20px_rgba(16,185,129,0.25)]">
             <BrainCircuit className="w-6 h-6 stroke-[2.5]" />
           </div>
-          <h3 className="text-sm font-semibold text-text-primary">ResumeFlow AI</h3>
+          <h3 className="text-sm font-semibold text-text-primary">Strata AI Workspace</h3>
           <p className="text-xs text-text-muted max-w-sm leading-relaxed">
-            Ask me to generate, tailor, or format your resume. Paste your career history or job description to get started!
+            Ask me to create, edit, analyze, or format documents, code snippets, and markdown notes in your interactive workspace canvas!
           </p>
         </div>
       )}
@@ -41,7 +41,7 @@ export default function ChatPanel({
             key={message.id}
             message={message}
             isStreaming={isLastAssistant}
-            onOpenResumeDrawer={onOpenResumeDrawer}
+            onOpenDrawer={onOpenDrawer}
           />
         );
       })}
