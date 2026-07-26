@@ -6,14 +6,34 @@ import { ResumeEditEngine } from "@/lib/edit-engine";
 export interface WorkspaceToolsContext {
   getCurrentFiles: () => WorkspaceFile[];
   onUpdateFile: (file: WorkspaceFile) => void;
-  onDeleteFile?: (fileIdOrName: string) => void;
+  onDeleteFile: (fileIdOrName: string) => void;
 }
+
+const fileMetadataSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  language: z.string(),
+  charCount: z.number(),
+});
+
+const workspaceFileSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  content: z.string(),
+  language: z.string().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
 
 export function createListFilesTool({ getCurrentFiles }: WorkspaceToolsContext) {
   return tool({
     description:
       "List all existing files in the current workspace canvas with metadata.",
     inputSchema: z.object({}),
+    outputSchema: z.object({
+      count: z.number(),
+      files: z.array(fileMetadataSchema),
+    }),
     execute: async () => {
       const files = getCurrentFiles();
       return {
@@ -44,6 +64,13 @@ export function createReadFileTool({ getCurrentFiles }: WorkspaceToolsContext) {
           "Optional section heading to extract (e.g. 'Professional Summary'). Omit to read full file.",
         ),
     }),
+    outputSchema: z.object({
+      exists: z.boolean(),
+      name: z.string().optional(),
+      section: z.string().optional(),
+      content: z.string().optional(),
+      error: z.string().optional(),
+    }),
     execute: async ({ nameOrId, section }) => {
       const files = getCurrentFiles();
       const file = files.find(
@@ -56,7 +83,8 @@ export function createReadFileTool({ getCurrentFiles }: WorkspaceToolsContext) {
 
       if (section) {
         const escaped = section.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const regex = new RegExp(`##\\s*${escaped}[\\s\\S]*?(?=\\n##\\s|\\n$)`, "i");
+        // Matches H1-H6 headings flexibly
+        const regex = new RegExp(`#{1,6}\\s*${escaped}[\\s\\S]*?(?=\\n#{1,6}\\s|\\n$)`, "i");
         const match = file.content.match(regex);
         if (match) {
           return { exists: true, name: file.name, section, content: match[0].trim() };
@@ -69,7 +97,7 @@ export function createReadFileTool({ getCurrentFiles }: WorkspaceToolsContext) {
         };
       }
 
-      return { exists: true, name: file.name, content: file.content.trim(), file };
+      return { exists: true, name: file.name, content: file.content.trim() };
     },
   });
 }
@@ -91,6 +119,10 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: Workspace
         .default("markdown")
         .describe("Format/language type e.g. 'markdown' or 'text'."),
     }),
+    outputSchema: z.object({
+      action: z.enum(["created", "replaced"]),
+      file: workspaceFileSchema,
+    }),
     execute: async ({ name, content, language }) => {
       const existingFiles = getCurrentFiles();
       const existing = existingFiles.find(
@@ -99,7 +131,7 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: Workspace
 
       const now = new Date().toISOString();
       const updatedFile: WorkspaceFile = {
-        id: existing?.id || `file-${Date.now()}`,
+        id: existing?.id || crypto.randomUUID(),
         name,
         content,
         language: language || (name.endsWith(".txt") ? "text" : "markdown"),
@@ -136,6 +168,14 @@ export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceT
       replaceString: z
         .string()
         .describe("New text content to substitute in place of searchString."),
+    }),
+    outputSchema: z.object({
+      success: z.boolean(),
+      explanation: z.string().optional(),
+      strategyUsed: z.string().optional(),
+      message: z.string().optional(),
+      error: z.string().optional(),
+      file: workspaceFileSchema.optional(),
     }),
     execute: async ({ nameOrId, searchString, replaceString, explanation }) => {
       const files = getCurrentFiles();
@@ -181,6 +221,12 @@ export function createDeleteFileTool({ getCurrentFiles, onDeleteFile }: Workspac
     inputSchema: z.object({
       nameOrId: z.string().describe("Filename or file ID to delete."),
     }),
+    outputSchema: z.object({
+      deleted: z.boolean(),
+      fileId: z.string().optional(),
+      name: z.string().optional(),
+      error: z.string().optional(),
+    }),
     execute: async ({ nameOrId }) => {
       const files = getCurrentFiles();
       const targetFile = files.find(
@@ -188,12 +234,10 @@ export function createDeleteFileTool({ getCurrentFiles, onDeleteFile }: Workspac
       );
 
       if (!targetFile) {
-        return { success: false, error: `File "${nameOrId}" not found.` };
+        return { deleted: false, error: `File "${nameOrId}" not found.` };
       }
 
-      if (onDeleteFile) {
-        onDeleteFile(targetFile.id);
-      }
+      onDeleteFile(targetFile.id);
 
       return {
         deleted: true,
