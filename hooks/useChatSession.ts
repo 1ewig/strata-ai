@@ -62,31 +62,28 @@ export function extractDeletedFilesFromMessage(msg: GenericUIMessage): { fileId?
 export function extractFilesFromMessage(msg: GenericUIMessage): WorkspaceFile[] | null {
   if (!msg || !Array.isArray(msg.parts)) return null;
 
+  const files: WorkspaceFile[] = [];
   for (const part of msg.parts) {
     const inv = (part as any).toolInvocation || part;
     const res = inv.result || inv.output || part.result || part.output;
 
     if (res?.files && Array.isArray(res.files)) {
-      return res.files;
-    }
-    if (res?.file && typeof res.file.content === 'string') {
-      return [res.file];
-    }
-    if (res?.resume && typeof res.resume.markdownContent === 'string') {
+      files.push(...res.files);
+    } else if (res?.file && typeof res.file.content === 'string') {
+      files.push(res.file);
+    } else if (res?.resume && typeof res.resume.markdownContent === 'string') {
       const r = res.resume;
-      return [
-        {
-          id: r.id || 'resume-file',
-          name: `${r.title || 'resume'}.md`,
-          content: r.markdownContent,
-          language: 'markdown',
-          createdAt: r.createdAt || new Date().toISOString(),
-          updatedAt: r.updatedAt || new Date().toISOString(),
-        },
-      ];
+      files.push({
+        id: r.id || 'resume-file',
+        name: `${r.title || 'resume'}.md`,
+        content: r.markdownContent,
+        language: 'markdown',
+        createdAt: r.createdAt || new Date().toISOString(),
+        updatedAt: r.updatedAt || new Date().toISOString(),
+      });
     }
   }
-  return null;
+  return files.length > 0 ? files : null;
 }
 
 export function useChatSession(chatId: string) {
@@ -180,6 +177,7 @@ export function useChatSession(chatId: string) {
     transport: transport as any,
     onFinish: useCallback(
       async ({ message, messages: allMessages }: { message: unknown; messages: unknown[] }) => {
+        // Persist all messages to Dexie
         for (const msg of allMessages as any[]) {
           await db.messages.put({
             ...msg,
@@ -189,38 +187,42 @@ export function useChatSession(chatId: string) {
         }
         await db.conversations.update(chatId, { updatedAt: new Date().toISOString() });
 
-        for (const m of [message, ...allMessages].reverse()) {
-          const deletions = extractDeletedFilesFromMessage(m as GenericUIMessage);
+        // Process file modifications ONLY from the current assistant message
+        const currentMsg = message as GenericUIMessage;
+        const deletions = extractDeletedFilesFromMessage(currentMsg);
+        const updatedFiles = extractFilesFromMessage(currentMsg);
+
+        if (deletions.length > 0 || (updatedFiles && updatedFiles.length > 0)) {
+          const conv = await db.conversations.get(chatId);
+          let currentFiles = getWorkspaceFiles(conv);
+
+          // Apply deletions
           if (deletions.length > 0) {
-            const conv = await db.conversations.get(chatId);
-            const current = getWorkspaceFiles(conv);
-            const remaining = current.filter(f => {
+            currentFiles = currentFiles.filter(f => {
               for (const del of deletions) {
                 if (del.fileId && f.id === del.fileId) return false;
                 if (del.name && f.name.toLowerCase() === del.name.toLowerCase()) return false;
               }
               return true;
             });
-            const activeId = remaining.length > 0 ? remaining[0].id : undefined;
-            await updateConversationFiles(chatId, remaining, activeId);
           }
 
-          const updatedFiles = extractFilesFromMessage(m as GenericUIMessage);
+          // Apply creations or edits
           if (updatedFiles && updatedFiles.length > 0) {
-            const conv = await db.conversations.get(chatId);
-            const current = getWorkspaceFiles(conv);
-            let merged = [...current];
             for (const newFile of updatedFiles) {
-              const idx = merged.findIndex(f => f.id === newFile.id || f.name.toLowerCase() === newFile.name.toLowerCase());
+              const idx = currentFiles.findIndex(
+                f => f.id === newFile.id || f.name.toLowerCase() === newFile.name.toLowerCase(),
+              );
               if (idx >= 0) {
-                merged[idx] = newFile;
+                currentFiles[idx] = newFile;
               } else {
-                merged.push(newFile);
+                currentFiles.push(newFile);
               }
             }
-            await updateConversationFiles(chatId, merged, updatedFiles[0].id);
-            break;
           }
+
+          const activeId = currentFiles.length > 0 ? currentFiles[0].id : undefined;
+          await updateConversationFiles(chatId, currentFiles, activeId);
         }
       },
       [chatId],
