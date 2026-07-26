@@ -22,6 +22,7 @@
 | Markdown | `react-markdown` + `remark-gfm` | Chat rendering, markdown display |
 | Schemas | `zod@^4.4.3` | Input validation, tool schemas |
 | Icons | `lucide-react` | UI iconography |
+| Scroll | `use-stick-to-bottom` | ChatGPT-like auto-scroll (DOM observers, no effect races) |
 | Runtime | Node.js 22+ | Required by AI SDK 7 (ESM + native fetch) |
 | Package manager | bun | Dependency management |
 
@@ -126,7 +127,8 @@ createUIMessageStreamResponse(toUIMessageStream(result.stream))
   │
   ▼
 useChat receives UI message stream
-  │  chat.messages updates reactively
+  │  chat.messages + chat.status update reactively
+  │  status exposed as "streaming" | "submitted" | "ready" for scroll logic
   │
   ▼
 onFinish(message, allMessages)
@@ -270,6 +272,7 @@ const transport = new DefaultChatTransport({
 const chat = useChat({
   id: chatId,
   transport: transport as any,
+  // chat.status exposed as "streaming" | "submitted" | "ready" throughout the hook
   onFinish: async ({ message, messages: allMessages }) => {
     // Persist all messages to Dexie
     for (const msg of allMessages as any[]) {
@@ -396,7 +399,8 @@ RootLayout (globals.css, metadata)
       ├── ChatPanel (components/chat/ChatPanel.tsx)
       │     ├── Empty state (branded prompt when no messages)
       │     ├── ChatBubble[] — message list
-      │     └── Loading indicator (typing dots animation)
+      │     ├── Loading indicator (typing dots animation)
+      │     └── Wrapped in <StickToBottom> for auto-scroll (page.tsx)
       │
       ├── ChatInput (components/chat/ChatInput.tsx)
       │     ├── Auto-resizing textarea (max 160px)
@@ -418,10 +422,11 @@ RootLayout (globals.css, metadata)
 ChatBubble
   ├── User message: plain text with User avatar
   └── Assistant message:
+        ├── Empty streaming state (bouncing dots before first tokens)
         ├── ThoughtAccordion [collapsible reasoning display] — when reasoning present
         ├── Markdown content rendered with react-markdown + GFM
         │     └── Custom components for h1-h3, code blocks (with copy), tables, blockquotes
-        ├── Streaming cursor (pulsing emerald bar)
+        ├── Streaming cursor (thin emerald caret with shimmer overlay + glow shadow + fade-in)
         └── ToolCallCard[] (accordion-style cards for tool invocation results)
               ├── listFiles → "Workspace Files Listed" (blue, file count + names)
               ├── readFile → "File Read" (blue, section name + content preview + Open Drawer)
@@ -556,6 +561,9 @@ Full file content was previously injected into `<workspace_files>` tags for verb
 ### Why DefaultChatTransport?
 `DefaultChatTransport` wraps the `useChat` ↔ API route communication, automatically handling message serialization, streaming via SSE, and reconnection. It's the standard AI SDK pattern for connecting `useChat` to a custom API endpoint.
 
+### Why `use-stick-to-bottom` instead of manual `useEffect` scroll?
+The initial scroll implementation used three `useEffect` hooks with `scrollIntoView` triggered by `displayMessages`, `status`, and `isAtBottom` state. This suffered from race conditions — React batches state updates from scroll events and streaming chunks unpredictably, so the user could never reliably "escape" the auto-scroll by scrolling up during streaming. `use-stick-to-bottom` replaces this with `ResizeObserver` and `MutationObserver` that intercept DOM mutations synchronously, making scroll decisions before React reconciles. The library also handles edge cases (scroll-to-bottom button visibility, instant/smooth/spring animations, preserve-scroll-position) that would require significant additional code to implement manually.
+
 ## 13. Architectural Evolution (from git log)
 
 ```
@@ -579,3 +587,5 @@ Raw Google GenAI SDK  ──→  AI SDK 7 Migration  ──→  Native UIMessage
 - **Adding a new provider:** add `@ai-sdk/<provider>` to `package.json`, set as `model` parameter in `streamText` (e.g., `anthropic("claude-4")`), add models to registry
 - **Schema migrations:** increment the version number in `db.ts` constructor and define new `stores()` — Dexie handles the upgrade
 - **`contexts/` and `components/ui/` are empty** — available for shared state providers and base UI primitives
+- **Auto-scroll is handled by `<StickToBottom>` in `page.tsx`** — not by manual `useEffect` in `ChatPanel`. The library wraps the message list and scroll-to-bottom button. If you need to customize scroll behavior, expose `StickToBottomContext` via a render function (`{(context) => ...}`) or `useStickToBottomContext()` in a child component.
+- **Streaming UX lives in `ChatBubble.tsx` and `globals.css`** — the `animate-caret` and `animate-shimmer` keyframes are defined in the `@theme` block. The caret sits inside the prose div after `</ReactMarkdown>` to stay inline with the last text line. The shimmer overlay uses a `pointer-events-none` absolute div that sweeps across the last streaming segment.

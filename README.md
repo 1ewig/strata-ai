@@ -1,6 +1,6 @@
 # Strata AI — Agentic AI Workspace & Document Studio
 
-An AI-powered agentic workspace studio built with Next.js 16, Vercel AI SDK 7, and Google Gemini. Features conversational chat with 6 general-purpose workspace file management tools (`listFiles`, `readFile`, `writeFile`, `editFile`, `renameFile`, `deleteFile`), client-side Dexie IndexedDB persistence, an interactive slide-over Workspace Drawer, and a minimal accordion-style tool display.
+An AI-powered agentic workspace studio built with Next.js 16, Vercel AI SDK 7, and Google Gemini. Features conversational chat with 6 general-purpose workspace file management tools (`listFiles`, `readFile`, `writeFile`, `editFile`, `renameFile`, `deleteFile`), client-side Dexie IndexedDB persistence, an interactive slide-over Workspace Drawer, ChatGPT-like auto-scroll via `use-stick-to-bottom`, and a refined streaming UX with shimmer, glow, and fade-in animations.
 
 ## Stack
 
@@ -10,6 +10,7 @@ An AI-powered agentic workspace studio built with Next.js 16, Vercel AI SDK 7, a
 | AI SDK | `ai@^7.0.0` + `@ai-sdk/google@^4.0.0` |
 | UI | Tailwind CSS 4 + `lucide-react` |
 | Persistence | Dexie.js 4 (IndexedDB) |
+| Scroll | `use-stick-to-bottom` | ChatGPT-like auto-scroll (DOM observers, no effect races) |
 | Schemas | Zod 4 |
 | Runtime | Node.js 22+, bun |
 
@@ -37,3 +38,5 @@ Key patterns:
 - **Metadata-only workspace listing** — system prompt lists file names and IDs only; model calls `readFile` for content, keeping context footprint small
 - **Resolver pattern** — `components/chat/tools/resolver.tsx` owns tool-display cards; `ToolCallCard` is a pure presentation shell
 - **Dexie UIMessage & Workspace persistence** — native AI SDK message objects and multi-file collections stored in IndexedDB across reloads
+- **Auto-scroll via `use-stick-to-bottom`** — `ResizeObserver`/`MutationObserver`-based scroll following that stops when the user scrolls up (no React effect race conditions)
+- **Streaming UX enhancements** — thin `animate-caret` cursor, sweeping shimmer overlay, breathing avatar glow + ring, soft bubble fade-in, and gentle empty-state bouncing dots
