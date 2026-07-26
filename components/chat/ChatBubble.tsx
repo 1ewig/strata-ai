@@ -260,4 +260,3 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
     </div>
   );
 }
-
