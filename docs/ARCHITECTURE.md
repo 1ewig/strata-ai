@@ -1,12 +1,11 @@
-# ResumeFlow — Architecture Guide
+# Strata AI — Architecture Guide
 
 ## 1. Project Overview
 
-**ResumeFlow** is an AI-powered resume tailoring agent built on Google AI Studio. It helps users generate, edit, optimize, and ATS-format Markdown resumes through a conversational chat interface backed by Google Gemini models.
+**Strata AI** is an AI-powered agentic workspace studio. It lets users create, edit, analyze, and organize documents, code snippets, and markdown notes through a conversational chat interface backed by Google Gemini models. The agent has 6 general-purpose workspace file management tools and persists state client-side via IndexedDB.
 
-- **Hosting:** Google Cloud Run (via AI Studio)
-- **GitHub:** https://github.com/anomalyco/ai-sdk-playground
-- **Stack:** Next.js 16 App Router (standalone output) + Vercel AI SDK 7 + Dexie.js
+- **GitHub:** https://github.com/1ewig/resume-flow
+- **Stack:** Next.js 16 App Router + Vercel AI SDK 7 + Dexie.js
 
 ## 2. Tech Stack
 
@@ -17,11 +16,11 @@
 | AI SDK | `ai@^7.0.0` | Unified LLM interface, streaming, tool calling |
 | Google Provider | `@ai-sdk/google@^4.0.0` | Gemini model access |
 | React AI | `@ai-sdk/react@^2.0.0` | `useChat` hook + UI stream primitives |
-| Client DB | Dexie.js 4 + dexie-react-hooks | IndexedDB persistence (conversations + messages) |
+| Client DB | Dexie.js 4 + dexie-react-hooks | IndexedDB persistence (conversations + messages + files) |
 | Styling | Tailwind CSS 4.1 | Utility-first CSS |
-| Animation | `motion` (Framer Motion) | Drawer transitions |
-| Markdown | `react-markdown` + `remark-gfm` | Resume preview, chat rendering |
-| Schemas | `zod@^4.4.3` | Input validation, tool input/context schemas |
+| Animation | `motion` | Drawer transitions |
+| Markdown | `react-markdown` + `remark-gfm` | Chat rendering, markdown display |
+| Schemas | `zod@^4.4.3` | Input validation, tool schemas |
 | Icons | `lucide-react` | UI iconography |
 | Runtime | Node.js 22+ | Required by AI SDK 7 (ESM + native fetch) |
 | Package manager | bun | Dependency management |
@@ -42,23 +41,26 @@
 │       └── [id]/
 │           └── page.tsx          # Chat page (thin shell, delegates to hook)
 ├── components/
-│   ├── ChatPanel.tsx             # Message list, empty state, loading indicators
 │   ├── Sidebar.tsx               # Conversation list, new/delete
 │   ├── chat/
+│   │   ├── ChatPanel.tsx         # Message list, empty state, loading indicators
 │   │   ├── ChatBubble.tsx        # User/assistant message bubble
 │   │   ├── ChatInput.tsx         # Auto-resize textarea with Enter-to-send
-│   │   ├── ChatHeader.tsx        # Model selector + thinking level + resume drawer
-│   │   ├── ToolCallCard.tsx      # Pure shell card (87 lines) — receives ToolCardProps
-│   │   ├── SuggestionChips.tsx   # [DEPRECATED] No longer rendered
+│   │   ├── ChatHeader.tsx        # Model selector + thinking level + workspace drawer
+│   │   ├── ToolCallCard.tsx      # Minimal accordion card — receives ToolCardProps
+│   │   ├── ThoughtAccordion.tsx  # Collapsible reasoning/thought display
 │   │   └── tools/
 │   │       └── resolver.tsx      # extractToolInfo + resolveToolDisplay → ToolCardProps, per-tool summary builders
-│   └── resumes/
-│       └── ResumeDrawer.tsx      # Slide-over panel: preview/edit/copy resume
+│   ├── ui/                       # (empty — available for base UI primitives)
+│   └── workspace/
+│       └── WorkspaceDrawer.tsx   # Slide-over panel: file list, create, edit, delete
 ├── hooks/
 │   ├── useChatSession.ts         # Central orchestration hook (core logic)
+│   ├── useWorkspaceFiles.ts      # Workspace file CRUD + Dexie persistence
+│   ├── useModelSettings.ts       # Model + thinking level state + localStorage
 │   └── use-mobile.ts             # Responsive breakpoint detection (768px)
 ├── lib/
-│   ├── schemas.ts                # Zod types: Resume, ChatMessage, ToolCall
+│   ├── schemas.ts                # Zod types: WorkspaceFile, Resume (legacy), ChatMessage, ToolCall
 │   ├── models.ts                 # Model registry, thinking levels, localStorage
 │   ├── id.ts                     # ID generation (crypto.randomUUID)
 │   ├── edit-engine.ts            # ResumeEditEngine — 3-tier matching (exact / whitespace / anchor)
@@ -67,8 +69,8 @@
 │   └── ai/
 │       ├── index.ts              # Re-exports prompts + tools
 │       ├── prompts.ts            # buildSystemInstruction() — system prompt
-│       └── tools.ts              # writeResume, readResume, deleteResume, createEditResumeTool
-├── assets/.aistudio/             # AI Studio metadata (gitignored)
+│       ├── tools.ts              # 6 workspace tool factories + createWorkspaceTools()
+│       └── message-extractor.ts  # extractFilesFromMessage / extractDeletedFilesFromMessage
 ├── .env.example                  # Required env vars
 ├── next.config.ts                # Standalone output, motion transpilation
 ├── package.json                  # Dependencies + scripts
@@ -94,24 +96,27 @@ chat.sendMessage({ text })    ← @ai-sdk/react useChat
   │
   ▼
 DefaultChatTransport           ← wraps fetch to /api/agent
-  │  Body: { messages, model, thinkingLevel, resumes }
+  │  Body: { messages, model, thinkingLevel, files }
   │
   ▼
 POST /api/agent (route.ts)
   ├── Parse request body with Zod
-  ├── let mutableMarkdown = currentResume?.markdownContent || ""
+  ├── let mutableFiles = parsed.data.files || []
   ├── streamText({
   │     model: google(modelId),
-  │     system: buildSystemInstruction(currentResume),
+  │     system: buildSystemInstruction(mutableFiles),
   │     messages: convertToModelMessages(messages),
-  │     tools: createResumeTools({
-  │       getCurrentResume: () => mutableMarkdown,      ← closure for editResume
-  │       onUpdateResume: (c) => { mutableMarkdown = c },
+  │     tools: createWorkspaceTools({
+  │       getCurrentFiles: () => mutableFiles,        ← closure for all tools
+  │       onUpdateFile: (file) => { upserts into mutableFiles },
+  │       onDeleteFile: (idOrName) => { removes from mutableFiles },
   │     }),
-  │     toolsContext: { writeResume: { currentResume }, readResume: { currentResume }, deleteResume: { currentResume } },
-  │     reasoning / providerOptions.thinkingConfig,
-  │     stopWhen: isStepCount(5),
-  │     onStepEnd: syncs mutableMarkdown from writeResume/deleteResume results
+  │     abortSignal: req.signal,
+  │     experimental_transform: smoothStream({ delayInMs: 15, chunking: "word" }),
+  │     prepareStep: re-injects system prompt with current file state
+  │     reasoning: thinkingLevel,
+  │     stopWhen: isStepCount(10),
+  │     onStepEnd: logs tool calls
   │     onStart, onEnd, onError
   │   })
   │
@@ -126,44 +131,61 @@ useChat receives UI message stream
   ▼
 onFinish(message, allMessages)
   ├── Persist all messages to Dexie as native UIMessage objects
-  ├── Extract resume from tool result in message parts
-  └── Update conversation.resume in Dexie
+  ├── Extract file updates from tool result parts via extractFilesFromMessage
+  ├── Extract file deletions via extractDeletedFilesFromMessage
+  ├── Merge updates/deletions into current conversation files array
+  └── Persist merged files array to conversation.files in Dexie
 ```
 
-### Key: Two persistence layers
+### Key: Three persistence touchpoints
 
 | Layer | Data | Purpose |
 |-------|------|---------|
-| **Dexie (IndexedDB)** | Conversations + Messages | Client-side persistence across page refreshes |
-| **Request body** | Current resume snapshot | Sent to API route so tool has context on each request |
+| **Dexie (IndexedDB)** | Conversations + Messages + Files | Client-side persistence across page reloads |
+| **Request body** | `files` array (snapshot) | Sent to API route so tools have current workspace context |
+| **API route mutableFiles[]** | Active workspace files | In-memory state mutated by tools during a single request; synced back to client via tool results in message parts |
 
-The API route is **stateless** — every request receives the full message history + current resume. The tool returns the updated resume as a structured result, and the client persists it to Dexie in `onFinish`.
+The API route is **stateless** — every request receives the full message history + current workspace files. Tools mutate a local `mutableFiles` array via closure callbacks. After the stream ends, `onFinish` on the client extracts the final file state from tool result parts and persists it to Dexie, making it durable across page refreshes.
 
 ## 5. AI SDK Integration Patterns
 
 ### 5a. Streaming Agent Endpoint (`app/api/agent/route.ts`)
 
 ```typescript
+const mutableFiles: WorkspaceFile[] = parsed.data.files || [];
+
 const result = streamText({
-  model: google(modelId),
-  system: buildSystemInstruction(currentResume),
+  model: google(model || "gemini-3.5-flash-lite"),
+  system: buildSystemInstruction(mutableFiles),
   messages: await convertToModelMessages(messages),
-  tools: createResumeTools(),
-  toolsContext: {
-    writeResume: { currentResume },
-    readResume: { currentResume },
-    deleteResume: { currentResume },
+  tools: createWorkspaceTools({
+    getCurrentFiles: () => mutableFiles,
+    onUpdateFile: (file: WorkspaceFile) => {
+      const idx = mutableFiles.findIndex(
+        (f) => f.id === file.id || f.name.toLowerCase() === file.name.toLowerCase(),
+      );
+      if (idx >= 0) mutableFiles[idx] = file;
+      else mutableFiles.push(file);
+    },
+    onDeleteFile: (fileIdOrName: string) => {
+      // removes from mutableFiles by id or name
+    },
+  }),
+  abortSignal: req.signal,
+  experimental_transform: smoothStream({
+    delayInMs: 15,
+    chunking: "word",
+  }),
+  prepareStep: async ({ stepNumber }) => {
+    // Re-inject system prompt with current file state each step
+    return { system: buildSystemInstruction(mutableFiles) };
   },
+  reasoning: thinkingLevel ? (thinkingLevel as any) : "provider-default",
+  stopWhen: isStepCount(10),
   onStart() { /* log */ },
   onStepEnd({ stepNumber, toolCalls }) { /* log */ },
   onEnd({ finishReason, usage }) { /* log */ },
   onError({ error }) { /* log */ },
-  stopWhen: isStepCount(5),            // max 5 tool-calling steps
-  providerOptions: {
-    google: {
-      thinkingConfig: { thinkingLevel, includeThoughts: true },
-    },
-  },
 });
 
 return createUIMessageStreamResponse({
@@ -173,50 +195,61 @@ return createUIMessageStreamResponse({
 
 ### 5b. Tool Definitions (`lib/ai/tools.ts`)
 
-Four tools are registered via `createResumeTools()`:
+Six tools are registered via `createWorkspaceTools()`:
 
 | Tool | Input | Output | Purpose |
 |------|-------|--------|---------|
-| `writeResume` | `title?`, `markdownContent` | `{ action: "created"|"replaced", resume }` | Create or fully replace the resume. Returns `action` flag for badge display |
-| `readResume` | `section?` | `{ exists, content, section? }` | Read full resume or a specific heading section |
-| `deleteResume` | — | `{ deleted, resume: empty }` | Clear the resume canvas |
-| `editResume` | `searchString`, `replaceString`, `explanation` | `{ success, resume, strategyUsed, error? }` | Surgical search-and-replace via `ResumeEditEngine` |
+| `listFiles` | — | `{ count, files: [{ id, name, language, charCount }] }` | List all workspace files with metadata |
+| `readFile` | `nameOrId`, `section?` | `{ exists, name, content?, section?, error? }` | Read full file or a specific heading section |
+| `writeFile` | `name`, `content`, `language?` | `{ action: "created"|"replaced", file }` | Create or fully replace a file |
+| `editFile` | `nameOrId`, `searchString`, `replaceString`, `explanation` | `{ success, strategyUsed?, file?, error? }` | Surgical search-and-replace via `ResumeEditEngine` |
+| `renameFile` | `nameOrId`, `newName` | `{ success, oldName, newName, file, error? }` | Rename a file (checks for name collision) |
+| `deleteFile` | `nameOrId` | `{ deleted, fileId?, name?, error? }` | Delete a file from the workspace |
 
-**writeResume, readResume, deleteResume** use `contextSchema: { currentResume: ResumeSchema.optional().nullable() }` — state flows in through `toolsContext` at request start.
-
-**editResume** uses a **closure pattern** instead of `contextSchema`. The route creates a mutable `mutableMarkdown` variable passed via `getCurrentResume`/`onUpdateResume` callbacks. This allows multi-step edits within the same request to build on each other.
+All six tools use the **closure pattern** via a shared `WorkspaceToolsContext`:
 
 ```typescript
-// writeResume — contextSchema pattern
-export const writeResume = tool({
-  description: "Create or replace the entire resume... Prefer editResume for targeted changes.",
-  inputSchema: z.object({
-    title: z.string().optional(),
-    markdownContent: z.string(),
-  }),
-  contextSchema: z.object({ currentResume: ResumeSchema.optional().nullable() }),
-  execute: async ({ title, markdownContent }, { context }) => {
-    const existing = context?.currentResume || null;
-    const wasEmpty = !existing?.markdownContent?.trim();
-    const updatedResume: Resume = { ... };
-    return { action: wasEmpty ? "created" : "replaced", resume: updatedResume };
-  },
-});
+export interface WorkspaceToolsContext {
+  getCurrentFiles: () => WorkspaceFile[];
+  onUpdateFile: (file: WorkspaceFile) => void;
+  onDeleteFile: (fileIdOrName: string) => void;
+}
+```
 
-// createEditResumeTool — closure pattern (called from route with mutable state)
-export function createEditResumeTool({ getCurrentResume, onUpdateResume }: EditResumeContext) {
+No tools use `contextSchema` — every tool receives workspace state through closures captured at creation time in `createWorkspaceTools()`.
+
+```typescript
+// Example: createReadFileTool — closure pattern
+export function createReadFileTool({ getCurrentFiles }: WorkspaceToolsContext) {
   return tool({
-    description: "Surgically edit a specific block...",
-    parameters: z.object({
-      searchString: z.string().describe("Verbatim block to replace"),
-      replaceString: z.string().describe("New content"),
-      explanation: z.string(),
+    description: "Read full content or a specific section of a workspace file...",
+    inputSchema: z.object({
+      nameOrId: z.string().describe("Filename or file ID to read."),
+      section: z.string().optional(),
     }),
-    execute: async ({ searchString, replaceString, explanation }) => {
-      const result = ResumeEditEngine.applyEdit(getCurrentResume(), searchString, replaceString);
+    outputSchema: z.object({
+      exists: z.boolean(), name: z.string().optional(),
+      content: z.string().optional(), error: z.string().optional(),
+    }),
+    execute: async ({ nameOrId, section }) => {
+      const files = getCurrentFiles();
+      // find file, return content
+    },
+  });
+}
+
+// Example: createEditFileTool — uses ResumeEditEngine
+export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceToolsContext) {
+  return tool({
+    description: "Surgically edit a specific block... Call readFile first to get the exact text.",
+    inputSchema: z.object({ ... }),
+    outputSchema: z.object({ success: z.boolean(), strategyUsed: z.string().optional(), ... }),
+    execute: async ({ nameOrId, searchString, replaceString }) => {
+      const targetFile = getCurrentFiles().find(...);
+      const result = ResumeEditEngine.applyEdit(targetFile.content, searchString, replaceString);
       if (!result.success) return { success: false, error: result.error };
-      onUpdateResume(result.newContent!);
-      return { success: true, resume: { ... }, strategyUsed: result.strategyUsed };
+      onUpdateFile({ ...targetFile, content: result.newContent });
+      return { success: true, strategyUsed: result.strategyUsed, file: updatedFile };
     },
   });
 }
@@ -230,59 +263,92 @@ const transport = new DefaultChatTransport({
   body: () => ({
     model: modelRef.current,
     thinkingLevel: thinkingLevelRef.current,
-    resumes: resumeRef.current ? [resumeRef.current] : [],
+    files: filesRef.current,
   }),
 });
 
 const chat = useChat({
   id: chatId,
-  transport,
+  transport: transport as any,
   onFinish: async ({ message, messages: allMessages }) => {
     // Persist all messages to Dexie
-    for (const msg of allMessages) {
+    for (const msg of allMessages as any[]) {
       await db.messages.put({ ...msg, chatId, timestamp: ... });
     }
-    // Extract resume from tool result
-    for (const m of [message, ...allMessages].reverse()) {
-      const updatedResume = extractResumeFromMessage(m);
-      if (updatedResume) {
-        await updateConversationResume(chatId, updatedResume);
-        break;
+
+    // Process workspace file updates from the current assistant message
+    const deletions = extractDeletedFilesFromMessage(message);
+    const updatedFiles = extractFilesFromMessage(message);
+
+    if (deletions.length > 0 || (updatedFiles?.length > 0)) {
+      let currentFiles = getWorkspaceFiles(conv);
+
+      // Apply deletions
+      if (deletions.length > 0) {
+        currentFiles = currentFiles.filter(f => /* not in deletions */);
       }
+
+      // Apply creations or edits (merge by id or name)
+      if (updatedFiles?.length > 0) {
+        for (const newFile of updatedFiles) {
+          const idx = currentFiles.findIndex(
+            f => f.id === newFile.id || f.name.toLowerCase() === newFile.name.toLowerCase()
+          );
+          if (idx >= 0) currentFiles[idx] = newFile;
+          else currentFiles.push(newFile);
+        }
+      }
+
+      await updateConversationFiles(chatId, currentFiles);
     }
   },
 });
 ```
 
-### 5d. Resume Extraction from UI Message Parts
+### 5d. File Extraction from UI Message Parts
 
-The function is tool-name-agnostic — it scans all tool result parts for a `resume` key, handling `writeResume`, `deleteResume`, and future tools that return `{ resume }`.
+Two functions in `lib/ai/message-extractor.ts` scan tool result parts for workspace file state:
 
 ```typescript
-export function extractResumeFromMessage(msg: GenericUIMessage): Resume | null {
-  if (!msg || !Array.isArray(msg.parts)) return null;
+// Extracts created/updated files (looks for `file`, `files`, or `resume` keys)
+export function extractFilesFromMessage(msg): WorkspaceFile[] {
   for (const part of msg.parts) {
-    const res =
-      (part.result as { resume?: Resume })?.resume ||
-      (part.output as { resume?: Resume })?.resume;
-    if (res && typeof res.markdownContent === 'string') return res;
+    const res = getToolOutput(part);
+    if (res?.file && typeof res.file.content === 'string') files.push(res.file);
+    if (Array.isArray(res?.files)) files.push(...res.files);
+    if (res?.resume?.markdownContent) files.push(resumeToFile(res.resume));
   }
-  return null;
+  return files;
+}
+
+// Extracts deleted file references (looks for `deleted: true` with `fileId` or `name`)
+export function extractDeletedFilesFromMessage(msg): { fileId?: string; name?: string }[] {
+  for (const part of msg.parts) {
+    const res = getToolOutput(part);
+    if (res?.deleted === true && (res.fileId || res.name)) {
+      deletions.push({ fileId: res.fileId, name: res.name });
+    }
+  }
+  return deletions;
 }
 ```
+
+This is tool-name-agnostic — any tool that returns `{ file: { ... } }`, `{ files: [...] }`, or `{ deleted: true, fileId }` in its result is automatically picked up. Adding a new file-mutating tool never requires changes to message extraction.
 
 ## 6. Database Schema (Dexie v4)
 
 ### Conversations Table
 
 ```
-id:          string (PK)     — UUID, matches URL param /chat-id/:id
-title:       string          — Auto-generated from first message or "New Chat"
-model:       string          — Gemini model ID (e.g. "gemini-3.5-flash-lite")
-thinkingLevel: string (opt)  — "minimal" | "low" | "medium" | "high"
-resume:      Resume (JSON)   — Current resume object for this conversation
-createdAt:   string (ISO)    — Creation timestamp
-updatedAt:   string (ISO)    — Last activity timestamp
+id:            string (PK)     — UUID, matches URL param /chat-id/:id
+title:         string          — Auto-generated from first message or "New Chat"
+model:         string          — Gemini model ID (e.g. "gemini-3.5-flash-lite")
+thinkingLevel: string (opt)    — "minimal" | "low" | "medium" | "high"
+files:         WorkspaceFile[] — Array of workspace file objects (current)
+activeFileId:  string (opt)    — ID of the currently selected file
+resume:        Resume (JSON)   — Legacy: single-resume object (migration fallback)
+createdAt:     string (ISO)    — Creation timestamp
+updatedAt:     string (ISO)    — Last activity timestamp
 ```
 
 ### Messages Table
@@ -302,7 +368,7 @@ timestamp:   string (ISO)    — Persistence timestamp
 - v1: initial custom ChatMessage schema
 - v2: added thinkingLevel field
 - v3: updated field types
-- v4: switched from custom ChatMessage to native UIMessage format (current)
+- v4: switched from custom ChatMessage to native UIMessage format; added `files` and `activeFileId` to conversations (current)
 
 ## 7. Component Tree & Responsibilities
 
@@ -313,7 +379,7 @@ RootLayout (globals.css, metadata)
 │     └── Redirects to /chat-id/:id (latest conversation or new UUID)
 │
 └── ChatIdPage (app/chat-id/[id]/page.tsx)
-      │  90 lines — thin shell
+      │  107 lines — thin shell, delegates to useChatSession
       │
       ├── Sidebar (components/Sidebar.tsx)
       │     ├── Brand header with logo
@@ -322,12 +388,12 @@ RootLayout (globals.css, metadata)
       │           └── Per-item: Link + delete button
       │
       ├── ChatHeader (components/chat/ChatHeader.tsx)
-      │     ├── Resume title display
+      │     ├── Active file name display
       │     ├── Model dropdown (Gemini / Gemma 4 groups)
       │     ├── Thinking level dropdown (minimal/low/medium/high)
-      │     └── "Resume Drawer" button
+      │     └── "Workspace Files" dropdown → Open Drawer
       │
-      ├── ChatPanel (components/ChatPanel.tsx)
+      ├── ChatPanel (components/chat/ChatPanel.tsx)
       │     ├── Empty state (branded prompt when no messages)
       │     ├── ChatBubble[] — message list
       │     └── Loading indicator (typing dots animation)
@@ -337,12 +403,13 @@ RootLayout (globals.css, metadata)
       │     ├── Enter to send, Shift+Enter for newline
       │     └── Submit button (ArrowUp icon)
       │
-      └── ResumeDrawer (components/resumes/ResumeDrawer.tsx)
+      └── WorkspaceDrawer (components/workspace/WorkspaceDrawer.tsx)
             ├── Slide-over panel (motion spring animation)
-            ├── Preview mode: rendered markdown with custom prose styles
-            ├── Edit mode: raw markdown textarea
-            ├── Copy markdown to clipboard
-            └── Empty state prompt when no resume exists
+            ├── File list with active file highlighting
+            ├── Create new file (inline name input)
+            ├── Edit active file (raw content textarea)
+            ├── Delete file button
+            └── Empty state when no files exist
 ```
 
 ### ChatBubble Internals
@@ -351,25 +418,30 @@ RootLayout (globals.css, metadata)
 ChatBubble
   ├── User message: plain text with User avatar
   └── Assistant message:
-        ├── [Collapsible "Thought Process" accordion] — when reasoningText present
+        ├── ThoughtAccordion [collapsible reasoning display] — when reasoning present
         ├── Markdown content rendered with react-markdown + GFM
         │     └── Custom components for h1-h3, code blocks (with copy), tables, blockquotes
         ├── Streaming cursor (pulsing emerald bar)
-        └── ToolCallCard[] (for tool invocation results)
-              ├── writeResume → "Resume Updated" (emerald, file summary + Open Drawer)
-              ├── readResume → "Resume Read" (blue, section name + content preview)
-              └── deleteResume → "Resume Deleted" (red, canvas cleared message)
+        └── ToolCallCard[] (accordion-style cards for tool invocation results)
+              ├── listFiles → "Workspace Files Listed" (blue, file count + names)
+              ├── readFile → "File Read" (blue, section name + content preview + Open Drawer)
+              ├── writeFile → "File Written" (emerald, file summary + char count + Open Drawer)
+              ├── editFile → "File Edited" (amber, explanation + strategy + Open Drawer)
+              ├── renameFile → "File Renamed" (violet, old name → new name)
+              └── deleteFile → "File Deleted" (red, file name + cleared message)
 ```
 
-### ToolCallCard (Pure Shell)
+### ToolCallCard (Minimal Accordion)
 
-**`ToolCallCard.tsx`** (87 lines) receives `ToolCardProps` and renders only the chrome — header badge, collapsible raw params, and the `summary` slot. It has zero knowledge of tool names, icons, or result shapes.
+**`ToolCallCard.tsx`** is a minimal accordion card matching the `ThoughtAccordion` pattern. It receives `ToolCardProps` and renders only the chrome — no knowledge of tool names, icons, or result shapes.
 
 ```
 ToolCallCard (ToolCardProps)
-  ├── Header: icon in colored square + label text + status badge (loading/success/error)
-  ├── summary: ReactNode          ← injected by resolver, tool-specific
-  └── Collapsible raw args/result (same for all tools)
+  ├── Header button (always visible): inline icon + label + status text + chevron
+  │     └── Click toggles accordion open/closed
+  ├── Expanded content:
+  │     ├── summary: ReactNode     ← injected by resolver, tool-specific
+  │     └── Collapsible raw args/result (same for all tools)
 ```
 
 ### resolver.tsx — Display Logic
@@ -380,19 +452,25 @@ ToolCallCard (ToolCardProps)
 resolveToolDisplay(toolCall, onOpenDrawer?) → ToolCardProps
   ├── extractToolInfo() → { name, args, result, state }
   ├── toolConfigs[name] → { icon, accent, label, badge }
-  ├── writeResume:
-  │     action === "created" → label "Resume Created" / badge "Created"
-  │     action === "replaced" → label "Resume Replaced" / badge "Replaced"
-  │     Summary: FileText icon, title, char/section count + Open Drawer
-  ├── readResume:
-  │     Label "Resume Read" / badge "Read"
+  ├── listFiles:
+  │     Label "Workspace Files Listed" / badge "Listed"
+  │     Summary: Folder icon, file count + file name list
+  ├── readFile:
+  │     Label "File Read" / badge "Read"
   │     Summary: Search icon, section name + content preview + Open Drawer
-  ├── deleteResume:
-  │     Label "Resume Deleted" / badge "Cleared"
-  │     Summary: Trash2 icon, "Canvas Cleared" + hint text
-  ├── editResume:
-  │     Label "Resume Edited" / badge "Applied"
-  │     Summary: PencilLine icon, explanation text, strategyUsed badge + Open Drawer
+  ├── writeFile:
+  │     action === "created" → label "File Created" / badge "Created"
+  │     action === "replaced" → label "File Replaced" / badge "Replaced"
+  │     Summary: FileText icon, char count + Open Drawer
+  ├── editFile:
+  │     Label "File Edited" / badge "Applied"
+  │     Summary: PencilLine icon, explanation, strategyUsed + Open Drawer
+  ├── renameFile:
+  │     Label "File Renamed" / badge "Renamed"
+  │     Summary: PenLine icon, old name → new name
+  ├── deleteFile:
+  │     Label "File Deleted" / badge "Deleted"
+  │     Summary: Trash2 icon, file name + cleared message
   └── generic (custom/unknown tools):
         Summary: Wrench icon, raw name, truncated JSON input
 ```
@@ -423,14 +501,19 @@ On chat load, the conversation's stored `model` and `thinkingLevel` take priorit
 
 ## 9. System Prompt Design (`lib/ai/prompts.ts`)
 
-The `buildSystemInstruction(resume?)` function builds a structured system prompt with:
+The `buildSystemInstruction(files)` function builds a structured 5-section system prompt:
 
-1. **Role definition** — "elite AI Career Strategist, Resume Architect, and ATS Optimization Specialist"
-2. **Canvas status** — a one-line indicator (`populated` / `empty`)
-3. **Active workspace content** — when populated, the full resume markdown is injected inside `<workspace_resume>` tags with an injection guard (`.replaceAll("</workspace_resume>", "")`). This is required for `editResume` — the model must copy exact verbatim text for `searchString` anchors.
-4. **Markdown & ATS formatting rules** — heading levels, bolding, bullet lists, code blocks, ATS/PDF guardrails
-5. **Tool execution protocol** — documents `readResume`, `writeResume`, `deleteResume`, and `editResume` with usage guidance including the **anchor rule** (include 1-2 surrounding lines), **verbatim copy rule**, and **preserve existing content rule**
-6. **Few-shot examples** — advisory response (no tool call), full resume generation (`writeResume`), and surgical edit (`editResume`)
+1. **Goal** — concise role definition: "elite agentic workspace assistant", preference for putting content into files over chat
+2. **Current Workspace** — metadata-only file listing (`name`, `language`, `charCount`, `id`) via `<workspace_files>`. No full content is injected — the model calls `readFile` to get content on demand. Empty workspace shows "No files yet. Offer to create a starting file when appropriate."
+3. **Tool Rules (strict)** — 6 numbered rules covering:
+   - Always `readFile` before editing
+   - Prefer `editFile` over `writeFile` for existing files
+   - Verbatim copy rule for `searchString` (from `readFile` output, not system prompt)
+   - Anchor rule (include 1-2 surrounding lines)
+   - Post-mutation response discipline: 1-3 sentence summary only, no content dump
+   - Error recovery: retry once with corrected call, then ask user. Never invent success.
+4. **Response Style** — conciseness, GFM markdown, fenced code blocks, tool-first for workspace state
+5. **Edge Cases** — empty workspace (offer to create), ambiguous request (ask one clarifying question), off-topic (answer then redirect)
 
 ## 10. Environment Variables
 
@@ -458,8 +541,14 @@ The app is designed for Google AI Studio's ephemeral Cloud Run deployments with 
 ### Why native UIMessage format in Dexie?
 After commit `2f200e6`, messages are stored in the native AI SDK `UIMessage` format (with `parts[]`) instead of a custom `ChatMessage` schema. This eliminates format conversion code and ensures compatibility with `useChat`'s message format. The `parts[]` array is the single source of truth for text, tool invocations, and reasoning content.
 
-### Why contextSchema instead of mutable workingResumes?
-The `contextSchema` pattern (added in `eff20e7`) passes the current resume state through `toolsContext` rather than capturing a mutable array in a closure. This is more idiomatic AI SDK 7 and makes the tool execute function a pure function — it receives context, returns a result, with no side effects.
+### Why closure pattern instead of contextSchema?
+All six workspace tools use the **closure pattern** via `WorkspaceToolsContext` (`getCurrentFiles`, `onUpdateFile`, `onDeleteFile`). The API route creates a local `mutableFiles[]` array and passes closures that mutate it. This keeps the API route stateless at the HTTP layer while allowing multi-step tool calls within a single request to build on each other. The old `contextSchema` approach (used by the legacy resume tools) was dropped because it required separate context wiring per tool and couldn't handle multi-step mutations as cleanly.
+
+### Why metadata-only workspace listing in the system prompt?
+Full file content was previously injected into `<workspace_files>` tags for verbatim `searchString` anchoring. This bloated the context on every `prepareStep` — files with 10-50KB content were re-injected across potentially 10 steps. Current approach lists only `name`, `language`, `charCount`, and `id` in the system prompt. The model calls `readFile` to get the exact text needed for `editFile`'s `searchString`. This trades one extra tool call per edit for significantly smaller context per step.
+
+### Why smoothStream?
+`smoothStream` (`delayInMs: 15`, `chunking: "word"`) emits tokens at a controlled rate instead of dumping them as fast as the model produces them. This dramatically improves the perceived latency — the UI renders tokens smoothly rather than appearing stuck then suddenly receiving a wall of text. Essential for long responses where the generation time exceeds 5-10 seconds.
 
 ### Why streamText over generateText?
 `streamText` enables real-time streaming of both text tokens and tool call invocations back to the client via `createUIMessageStreamResponse`. This gives the user immediate feedback while the agent iterates through multi-step tool calling loops.
@@ -470,22 +559,23 @@ The `contextSchema` pattern (added in `eff20e7`) passes the current resume state
 ## 13. Architectural Evolution (from git log)
 
 ```
-Raw Google GenAI SDK  ──→  AI SDK 7 Migration  ──→  Native UIMessage  ──→  Decomposed & Polished
+Raw Google GenAI SDK  ──→  AI SDK 7 Migration  ──→  Native UIMessage  ──→  General-Purpose Workspace
   (@google/genai)            (f3ff218)                (2f200e6)              (HEAD)
-  - custom agent loop        - streamText + tool()    - DBMessage extends     - useChatSession hook
-  - custom fetch/stream      - useChat + transport      UIMessage             - ChatHeader component
-  - FunctionDeclaration      - createResumeTools()    - no more conversion    - contextSchema
-  - GEMINI_API_KEY           - GOOGLE_GENERATIVE_..   - onFinish persistence  - lifecycle callbacks
-                                                      - title auto-gen        - model sync to Dexie
-                                                      - refresh fix
+  - custom agent loop        - streamText + tool()    - DBMessage extends     - 6 workspace file tools
+  - custom fetch/stream      - useChat + transport      UIMessage             - closure pattern for all tools
+  - FunctionDeclaration      - createResumeTools()    - no more conversion    - metadata-only system prompt
+  - GEMINI_API_KEY           - GOOGLE_GENERATIVE_..   - onFinish persistence  - constrained rules + edge cases
+                                                       - title auto-gen        - smoothStream
+                                                       - refresh fix           - multi-file WorkspaceDrawer
+                                                                               - minimal accordion tool cards
 ```
 
 ## 14. Notes for Future Agents
 
 - **Adding a new model:** add entry to `MODELS` array in `lib/models.ts`, set `MODEL_DESCRIPTIONS` and optionally `MODEL_THINKING_LEVELS`
-- **Adding a new tool:** define with `tool()` from `ai`, add `inputSchema`, optionally `contextSchema`, then register in `createResumeTools()` in `lib/ai/tools.ts` and update the system prompt in `lib/ai/prompts.ts`. If the tool returns a `{ resume }` object, `extractResumeFromMessage` in `useChatSession.ts` will auto-discover it — no filter update needed. Finally add a config entry + summary builder in `components/chat/tools/resolver.tsx` — `ToolCallCard.tsx` needs zero changes.
-- **Closure-based tools (no contextSchema):** tools that need mutable state across multi-step requests (like `editResume`) should accept `getCurrentResume` / `onUpdateResume` callbacks. Pass them via `createResumeTools({ getCurrentResume, onUpdateResume })` in the route handler. The route also syncs `mutableMarkdown` from `writeResume`/`deleteResume` results in `onStepEnd`.
+- **Adding a new tool:** define with `tool()` from `ai`, add `inputSchema` and `outputSchema`, then register in `createWorkspaceTools()` in `lib/ai/tools.ts` and update `lib/ai/prompts.ts` (add to the `## Tool Rules` section, not a verbose re-description). If the tool returns a `{ file }` or `{ files }` object, `extractFilesFromMessage` in `lib/ai/message-extractor.ts` will auto-discover it — no filter update needed. Finally add a config entry + summary builder in `components/chat/tools/resolver.tsx` — `ToolCallCard.tsx` needs zero changes.
+- **All tools use the closure pattern:** add the needed callback to `WorkspaceToolsContext` interface, pass it through `createWorkspaceTools()` in the route handler, and implement the callback in `useWorkspaceFiles.ts` if the operation needs Dexie persistence.
+- **Output schemas:** always add `outputSchema` to new tools — they enable type-safe results and better UI-part inference in AI SDK 7's `useChat`.
 - **Adding a new provider:** add `@ai-sdk/<provider>` to `package.json`, set as `model` parameter in `streamText` (e.g., `anthropic("claude-4")`), add models to registry
 - **Schema migrations:** increment the version number in `db.ts` constructor and define new `stores()` — Dexie handles the upgrade
-- **The `app/api/jd` and `lib/data` directories are empty** — reserved for future job description extraction features
 - **`contexts/` and `components/ui/` are empty** — available for shared state providers and base UI primitives
