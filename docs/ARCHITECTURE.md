@@ -544,7 +544,7 @@ The `buildSystemInstruction(files)` function builds a structured 5-section syste
 The app is designed for Google AI Studio's ephemeral Cloud Run deployments with no persistent server-side storage. All conversation data lives in the browser's IndexedDB, making the app fully client-side persistent.
 
 ### Why native UIMessage format in Dexie?
-After commit `2f200e6`, messages are stored in the native AI SDK `UIMessage` format (with `parts[]`) instead of a custom `ChatMessage` schema. This eliminates format conversion code and ensures compatibility with `useChat`'s message format. The `parts[]` array is the single source of truth for text, tool invocations, and reasoning content.
+Messages are stored in the native AI SDK `UIMessage` format (with `parts[]`) instead of a custom `ChatMessage` schema. This eliminates format conversion code and ensures compatibility with `useChat`'s message format. The `parts[]` array is the single source of truth for text, tool invocations, and reasoning content.
 
 ### Why closure pattern instead of contextSchema?
 All six workspace tools use the **closure pattern** via `WorkspaceToolsContext` (`getCurrentFiles`, `onUpdateFile`, `onDeleteFile`). The API route creates a local `mutableFiles[]` array and passes closures that mutate it. This keeps the API route stateless at the HTTP layer while allowing multi-step tool calls within a single request to build on each other. The old `contextSchema` approach (used by the legacy resume tools) was dropped because it required separate context wiring per tool and couldn't handle multi-step mutations as cleanly.
@@ -564,11 +564,11 @@ Full file content was previously injected into `<workspace_files>` tags for verb
 ### Why `use-stick-to-bottom` instead of manual `useEffect` scroll?
 The initial scroll implementation used three `useEffect` hooks with `scrollIntoView` triggered by `displayMessages`, `status`, and `isAtBottom` state. This suffered from race conditions — React batches state updates from scroll events and streaming chunks unpredictably, so the user could never reliably "escape" the auto-scroll by scrolling up during streaming. `use-stick-to-bottom` replaces this with `ResizeObserver` and `MutationObserver` that intercept DOM mutations synchronously, making scroll decisions before React reconciles. The library also handles edge cases (scroll-to-bottom button visibility, instant/smooth/spring animations, preserve-scroll-position) that would require significant additional code to implement manually.
 
-## 13. Architectural Evolution (from git log)
+## 13. Architectural Evolution
 
 ```
 Raw Google GenAI SDK  ──→  AI SDK 7 Migration  ──→  Native UIMessage  ──→  General-Purpose Workspace
-  (@google/genai)            (f3ff218)                (2f200e6)              (HEAD)
+  (@google/genai)            (AI SDK 7)               (Native UIMessage)     (HEAD)
   - custom agent loop        - streamText + tool()    - DBMessage extends     - 6 workspace file tools
   - custom fetch/stream      - useChat + transport      UIMessage             - closure pattern for all tools
   - FunctionDeclaration      - createResumeTools()    - no more conversion    - metadata-only system prompt

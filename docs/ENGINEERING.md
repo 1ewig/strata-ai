@@ -635,7 +635,7 @@ Previous `scrollIntoView` approach with 3 `useEffects` suffered from React batch
 
 ```
 Raw Google GenAI SDK → AI SDK 7 Migration → Native UIMessage → General-Purpose Workspace
-  (@google/genai)        (f3ff218)            (2f200e6)          (HEAD)
+  (@google/genai)        (AI SDK 7)               (Native UIMessage)     (HEAD)
   custom agent loop      streamText + tool()  DBMessage extends   6 workspace file tools
   custom fetch/stream    useChat + transport    UIMessage         closure pattern
   FunctionDeclaration    createResumeTools()   no more conversion  metadata-only prompt
