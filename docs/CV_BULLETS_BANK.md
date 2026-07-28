@@ -1,6 +1,8 @@
 # Master CV Bullet Bank — Full-Stack, AI & Systems Engineering
 
 > **Personal Note / Context:** A curated, high-density repository of field-tested resume bullet points designed for senior full-stack, AI, and systems engineering roles. Written with authentic engineering depth—focusing on concrete technical decisions, trade-offs, architecture, and measurable impact rather than generic corporate buzzwords.
+>
+> 💡 **CV Portfolio Best Practice:** When listing this project on a resume or portfolio, link directly to the persistent **Code Repository** (`https://github.com/1ewig/strata-ai`). Avoid attaching ephemeral demo URLs unless hosted on a permanent production deployment (e.g., Vercel / custom domain) to prevent broken links during recruiter reviews.
 
 ---
 

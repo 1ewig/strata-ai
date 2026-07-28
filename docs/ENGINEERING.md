@@ -2,7 +2,7 @@
 
 ## 1. Project Overview
 
-**Strata AI** (TaskFlow) is an AI-powered agentic workspace studio. Users create, edit, analyze, and organize documents, code snippets, and markdown notes through a conversational chat interface backed by Google Gemini models via the Vercel AI SDK v7. All state persists client-side using IndexedDB through Dexie.js.
+**Strata AI** is an AI-powered agentic workspace studio. Users create, edit, analyze, and organize documents, code snippets, and markdown notes through a conversational chat interface backed by Google Gemini models via the Vercel AI SDK v7. All state persists client-side using IndexedDB through Dexie.js.
 
 The agent has six workspace file management tools (`listFiles`, `readFile`, `writeFile`, `editFile`, `renameFile`, `deleteFile`) with a constrained system prompt enforcing tool usage discipline, error recovery, and concise response formatting.
 
@@ -319,7 +319,7 @@ export class ChatDatabase extends Dexie {
   messages!: Table<DBMessage, string>;
 
   constructor() {
-    super('ResumeFlowChatDB');
+    super('StrataAIChatDB');
     this.version(4).stores({
       conversations: 'id, updatedAt, createdAt',
       messages: 'id, chatId, timestamp',

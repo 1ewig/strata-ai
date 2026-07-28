@@ -24,7 +24,7 @@ export class ChatDatabase extends Dexie {
   messages!: Table<DBMessage, string>;
 
   constructor() {
-    super('ResumeFlowChatDB');
+    super('StrataAIChatDB');
     this.version(4).stores({
       conversations: 'id, updatedAt, createdAt',
       messages: 'id, chatId, timestamp',

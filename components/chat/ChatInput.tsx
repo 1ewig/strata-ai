@@ -42,7 +42,7 @@ export default function ChatInput({ inputValue, onInputChange, onSubmit, isLoadi
           id="chat-input-field"
           rows={1}
           disabled={isLoading}
-          placeholder="Message ResumeFlow..."
+          placeholder="Message Strata AI..."
           value={inputValue}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
@@ -57,7 +57,7 @@ export default function ChatInput({ inputValue, onInputChange, onSubmit, isLoadi
           <ArrowUp className="w-4 h-4 text-surface-base" />
         </button>
       </div>
-      <p className="text-center text-xs text-text-faint mt-2">ResumeFlow can make mistakes. Verify important info.</p>
+      <p className="text-center text-xs text-text-faint mt-2">Strata AI can make mistakes. Verify important info.</p>
     </form>
   );
 }
