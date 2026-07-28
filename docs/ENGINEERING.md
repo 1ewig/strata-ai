@@ -109,7 +109,7 @@ POST /api/agent (route.ts):
      - smoothStream({ delayInMs: 15, chunking: "word" })
      - prepareStep: re-injects system prompt with current mutableFiles state
      - reasoning: thinkingLevel
-     - stopWhen: isStepCount(10)
+     - stopWhen: isStepCount(25)
   4. Return SSE stream via createUIMessageStreamResponse()
 
 onFinish(message, allMessages):
@@ -163,7 +163,7 @@ export async function POST(req: Request) {
     experimental_transform: smoothStream({ delayInMs: 15, chunking: "word" }),
     prepareStep: () => ({ system: buildSystemInstruction(mutableFiles) }),
     reasoning: thinkingLevel || "provider-default",
-    stopWhen: isStepCount(10),
+    stopWhen: isStepCount(25),
     providerOptions: { google: { thinkingConfig: { includeThoughts: true } } },
     onStart: () => console.log("[agent] Stream started"),
     onStepEnd: ({ stepNumber, toolCalls }) => console.log(`Step ${stepNumber} done`),

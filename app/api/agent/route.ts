@@ -17,6 +17,7 @@ const bodySchema = z.object({
   resumes: z.array(z.any()).optional(),
   model: z.string().optional(),
   thinkingLevel: z.string().optional(),
+  maxSteps: z.number().optional(),
 });
 
 export async function POST(req: Request) {
@@ -28,7 +29,8 @@ export async function POST(req: Request) {
     );
   }
 
-  const { messages, model, thinkingLevel } = parsed.data;
+  const { messages, model, thinkingLevel, maxSteps } = parsed.data;
+  const maxStepsLimit = Math.min(Math.max(maxSteps || 25, 1), 30);
   const mutableFiles: WorkspaceFile[] = parsed.data.files || [];
 
   // Migration / fallback from legacy resumes
@@ -103,7 +105,7 @@ export async function POST(req: Request) {
     onError({ error }) {
       console.error("[agent] Stream error:", error);
     },
-    stopWhen: isStepCount(10),
+    stopWhen: isStepCount(maxStepsLimit),
     reasoning: thinkingLevel ? (thinkingLevel as any) : "provider-default",
     providerOptions: {
       google: {

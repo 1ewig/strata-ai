@@ -62,24 +62,40 @@ export function useChatSession(chatId: string) {
     });
   }, [chatId, modelSettings.model, modelSettings.thinkingLevel]);
 
+  const continuationCountRef = useRef<number>(0);
+  const sendMessageRef = useRef<((msg: { text: string }) => void) | null>(null);
+
+  const getRequestBody = useCallback(
+    () => ({
+      model: modelRef.current,
+      thinkingLevel: thinkingLevelRef.current,
+      files: filesRef.current,
+    }),
+    [],
+  );
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/agent',
-        body: () => ({
-          model: modelRef.current,
-          thinkingLevel: thinkingLevelRef.current,
-          files: filesRef.current,
-        }),
+        body: getRequestBody,
       }),
-    [],
+    [getRequestBody],
   );
 
   const chat = useChat({
     id: chatId,
     transport: transport as any,
     onFinish: useCallback(
-      async ({ message, messages: allMessages }: { message: unknown; messages: unknown[] }) => {
+      async ({
+        message,
+        messages: allMessages,
+        finishReason,
+      }: {
+        message: unknown;
+        messages: unknown[];
+        finishReason?: string;
+      }) => {
         // Persist all messages to Dexie
         for (const msg of allMessages as any[]) {
           await db.messages.put({
@@ -127,10 +143,29 @@ export function useChatSession(chatId: string) {
           const activeId = currentFiles.length > 0 ? currentFiles[0].id : undefined;
           await updateConversationFiles(chatId, currentFiles, activeId);
         }
+
+        // Auto-continuation loop if step limit reached
+        if (finishReason === 'step-limit' && continuationCountRef.current < 2) {
+          continuationCountRef.current += 1;
+          console.log(
+            `[useChatSession] Step limit reached. Auto-continuing pass ${continuationCountRef.current}/2...`,
+          );
+          setTimeout(() => {
+            sendMessageRef.current?.({
+              text: 'Please continue completing the task where you left off.',
+            });
+          }, 300);
+        } else {
+          continuationCountRef.current = 0;
+        }
       },
       [chatId],
     ),
   });
+
+  useEffect(() => {
+    sendMessageRef.current = chat.sendMessage;
+  }, [chat.sendMessage]);
 
   const loadedChatIdRef = useRef<string | null>(null);
 
@@ -146,18 +181,21 @@ export function useChatSession(chatId: string) {
     }
   }, [chatId, dexieMessages, chat]);
 
+  const currentConvTitle = currentConv?.title;
+
   const handleSendMessage = useCallback(
     (text: string) => {
+      continuationCountRef.current = 0;
       const trimmed = text.trim();
       if (trimmed && chat.status === 'ready') {
-        if (!currentConv?.title || currentConv.title === 'New Chat') {
+        if (!currentConvTitle || currentConvTitle === 'New Chat') {
           const autoTitle = trimmed.length > 40 ? `${trimmed.slice(0, 40)}...` : trimmed;
           updateConversationTitle(chatId, autoTitle);
         }
         chat.sendMessage({ text: trimmed });
       }
     },
-    [chat, chatId, currentConv?.title],
+    [chat, chatId, currentConvTitle],
   );
 
   const handleSubmit = (e: React.FormEvent) => {

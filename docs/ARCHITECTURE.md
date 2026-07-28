@@ -116,7 +116,7 @@ POST /api/agent (route.ts)
   │     experimental_transform: smoothStream({ delayInMs: 15, chunking: "word" }),
   │     prepareStep: re-injects system prompt with current file state
   │     reasoning: thinkingLevel,
-  │     stopWhen: isStepCount(10),
+  │     stopWhen: isStepCount(25),
   │     onStepEnd: logs tool calls
   │     onStart, onEnd, onError
   │   })
@@ -183,7 +183,7 @@ const result = streamText({
     return { system: buildSystemInstruction(mutableFiles) };
   },
   reasoning: thinkingLevel ? (thinkingLevel as any) : "provider-default",
-  stopWhen: isStepCount(10),
+  stopWhen: isStepCount(25),
   onStart() { /* log */ },
   onStepEnd({ stepNumber, toolCalls }) { /* log */ },
   onEnd({ finishReason, usage }) { /* log */ },
