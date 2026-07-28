@@ -204,116 +204,81 @@ function buildListFilesSummary(args: any, result: any): ReactNode {
   const filesList = result?.files || [];
 
   return (
-    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center gap-2.5 min-w-0">
-      <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
-        <Folder className="w-4 h-4 text-blue-400" />
+    <div className="py-1 space-y-0.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium text-text-primary">Workspace Files</span>
+        <span className="text-[10px] font-mono text-text-muted">{count} file{count === 1 ? '' : 's'}</span>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold text-text-primary truncate">Workspace Files ({count})</p>
-        <p className="text-[10px] text-text-muted truncate">
-          {filesList.length > 0
-            ? filesList.map((f: any) => f.name).join(', ')
-            : 'No files currently in workspace'}
-        </p>
-      </div>
+      <p className="text-[11px] text-text-muted font-mono truncate">
+        {filesList.length > 0
+          ? filesList.map((f: any) => f.name).join(', ')
+          : 'No files in workspace'}
+      </p>
     </div>
   );
 }
 
-function buildReadFileSummary(args: any, result: any, onOpenDrawer?: () => void): ReactNode {
+function buildReadFileSummary(args: any, result: any): ReactNode {
   const fileName = args?.nameOrId || result?.name || 'File';
   const section = args?.section || result?.section;
   const content = result?.content || (typeof result === 'string' ? result : '');
 
   return (
-    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
-          <Search className="w-4 h-4 text-blue-400" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-text-primary truncate">
-            {fileName} {section ? `(${section})` : ''}
-          </p>
-          <p className="text-[10px] text-text-muted truncate">
-            {result?.exists === false
-              ? result?.error || 'File or section not found'
-              : content
-              ? `${content.slice(0, 80).replace(/\s+/g, ' ')}...`
-              : 'File is empty'}
-          </p>
-        </div>
+    <div className="py-1 space-y-0.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium font-mono text-text-primary truncate">{fileName}</span>
+        {section && <span className="text-[10px] text-blue-400 font-mono shrink-0">section: {section}</span>}
       </div>
-      <button
-        onClick={onOpenDrawer}
-        className="flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 bg-blue-400/10 hover:bg-blue-400/20 border border-blue-400/20 px-2.5 py-1.5 rounded-lg transition-all shrink-0 font-medium cursor-pointer"
-      >
-        <span>Open Drawer</span>
-        <ExternalLink className="w-3 h-3" />
-      </button>
+      <p className="text-[11px] text-text-muted truncate">
+        {result?.exists === false
+          ? result?.error || 'File or section not found'
+          : content
+          ? content.slice(0, 100).replace(/\s+/g, ' ')
+          : 'File content read'}
+      </p>
     </div>
   );
 }
 
-function buildWriteFileSummary(args: any, result: any, onOpenDrawer?: () => void): ReactNode {
+function buildWriteFileSummary(args: any, result: any): ReactNode {
   const file: WorkspaceFile | null = result?.file || null;
   const name = args?.name || file?.name || 'document.md';
   const content = args?.content || file?.content || '';
   const charCount = content.length;
 
   return (
-    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
-          <FileText className="w-4 h-4 text-emerald-400" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-text-primary truncate">{name}</p>
-          <p className="text-[10px] text-text-muted truncate">
-            {charCount > 0 ? `${charCount.toLocaleString()} chars` : 'File updated'}
-          </p>
-        </div>
+    <div className="py-1 space-y-0.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium font-mono text-text-primary truncate">{name}</span>
+        <span className="text-[10px] text-emerald-400/90 font-mono shrink-0">
+          {charCount > 0 ? `${charCount.toLocaleString()} chars` : 'updated'}
+        </span>
       </div>
-      <button
-        onClick={onOpenDrawer}
-        className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg transition-all shrink-0 font-medium cursor-pointer"
-      >
-        <span>Open File</span>
-        <ExternalLink className="w-3 h-3" />
-      </button>
     </div>
   );
 }
 
-function buildEditFileSummary(args: any, result: any, onOpenDrawer?: () => void): ReactNode {
+function buildEditFileSummary(args: any, result: any): ReactNode {
   const name = args?.nameOrId || result?.file?.name || 'File';
 
   return (
-    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center justify-between gap-3">
-      <div className="flex items-center gap-2.5 min-w-0">
-        <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
-          <PencilLine className="w-4 h-4 text-amber-400" />
-        </div>
-        <div className="min-w-0">
-          <p className="text-xs font-semibold text-text-primary truncate">
-            {name} — {args?.explanation || result?.explanation || 'Edited'}
-          </p>
-          <p className="text-[10px] text-text-muted truncate">
-            {result?.error
-              ? `Error: ${result.error}`
-              : result?.strategyUsed
-              ? `${result.strategyUsed} match • ${args?.replaceString?.length || 0} chars modified`
-              : 'Targeted section updated'}
-          </p>
-        </div>
+    <div className="py-1 space-y-0.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium font-mono text-text-primary truncate">{name}</span>
+        {result?.strategyUsed && (
+          <span className="text-[10px] text-amber-400/90 font-mono shrink-0">
+            {result.strategyUsed} match
+          </span>
+        )}
       </div>
-      <button
-        onClick={onOpenDrawer}
-        className="flex items-center gap-1.5 text-xs text-amber-400 hover:text-amber-300 bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/20 px-2.5 py-1.5 rounded-lg transition-all shrink-0 font-medium cursor-pointer"
-      >
-        <span>Open File</span>
-        <ExternalLink className="w-3 h-3" />
-      </button>
+      {(args?.explanation || result?.explanation) && (
+        <p className="text-[11px] text-text-muted truncate">
+          {args?.explanation || result?.explanation}
+        </p>
+      )}
+      {result?.error && (
+        <p className="text-[11px] text-red-400 truncate">Error: {result.error}</p>
+      )}
     </div>
   );
 }
@@ -322,14 +287,10 @@ function buildRenameFileSummary(args: any, result: any): ReactNode {
   const oldName = args?.nameOrId || result?.oldName || 'File';
   const newName = result?.newName || args?.newName || '';
   return (
-    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center gap-2.5 min-w-0">
-      <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
-        <PenLine className="w-4 h-4 text-violet-400" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-text-primary truncate">{oldName} → {newName}</p>
-        <p className="text-[10px] text-text-muted truncate">File renamed successfully</p>
-      </div>
+    <div className="py-1 text-xs flex items-center gap-1.5 font-mono">
+      <span className="text-text-muted line-through truncate">{oldName}</span>
+      <span className="text-text-secondary">→</span>
+      <span className="text-text-primary font-medium truncate">{newName}</span>
     </div>
   );
 }
@@ -337,32 +298,16 @@ function buildRenameFileSummary(args: any, result: any): ReactNode {
 function buildDeleteFileSummary(args: any, result: any): ReactNode {
   const name = args?.nameOrId || result?.name || 'File';
   return (
-    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center gap-2.5 min-w-0">
-      <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
-        <Trash2 className="w-4 h-4 text-red-400" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-text-primary truncate">{name} Deleted</p>
-        <p className="text-[10px] text-text-muted truncate">File removed from workspace canvas.</p>
-      </div>
+    <div className="py-1 text-xs font-mono text-text-muted">
+      File <span className="text-red-400 font-medium">{name}</span> removed from workspace.
     </div>
   );
 }
 
 function buildGenericSummary(args: any, rawName: string): ReactNode {
   return (
-    <div className="bg-surface-overlay border border-edge-raised/80 rounded-lg p-2.5 flex items-center gap-2.5 min-w-0">
-      <div className="w-8 h-8 rounded-md bg-surface-elevated flex items-center justify-center shrink-0">
-        <Wrench className="w-4 h-4 text-cyan-400" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-xs font-semibold text-text-primary truncate">{rawName || 'Tool Execution'}</p>
-        {Object.keys(args).length > 0 && (
-          <p className="text-[10px] text-text-muted truncate font-mono">
-            Input: {JSON.stringify(args).slice(0, 80)}
-          </p>
-        )}
-      </div>
+    <div className="py-1 text-xs">
+      <p className="font-medium text-text-primary truncate">{rawName || 'Tool Execution'}</p>
     </div>
   );
 }
@@ -387,15 +332,15 @@ export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): To
       break;
     case 'readFile':
     case 'readResume':
-      summary = buildReadFileSummary(args, result, onOpenDrawer);
+      summary = buildReadFileSummary(args, result);
       break;
     case 'writeFile':
     case 'writeResume':
-      summary = buildWriteFileSummary(args, result, onOpenDrawer);
+      summary = buildWriteFileSummary(args, result);
       break;
     case 'editFile':
     case 'editResume':
-      summary = buildEditFileSummary(args, result, onOpenDrawer);
+      summary = buildEditFileSummary(args, result);
       break;
     case 'renameFile':
       summary = buildRenameFileSummary(args, result);
