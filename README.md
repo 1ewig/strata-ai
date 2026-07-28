@@ -13,6 +13,16 @@
 
 ---
 
+## 📸 Interface & Agent Preview
+
+### Workspace Studio Homepage
+![Strata AI Workspace Studio](./public/hero.png)
+
+### Agent Execution & Multi-Tool Reasoning
+![Agent in Action with Chain-of-Thought and Tool Cards](./public/agent-in-action.png)
+
+---
+
 ## 🌟 Key Features & Capabilities
 
 - **Autonomous Agentic File Operations**: 6 schema-validated workspace tools enabling the AI to inspect, read, create, surgically edit, rename, and delete workspace documents on demand.
