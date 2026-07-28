@@ -438,15 +438,15 @@ ChatBubble
 
 ### ToolCallCard (Minimal Accordion)
 
-**`ToolCallCard.tsx`** is a minimal accordion card matching the `ThoughtAccordion` pattern. It receives `ToolCardProps` and renders only the chrome — no knowledge of tool names, icons, or result shapes.
+**`ToolCallCard.tsx`** is a compact single-row pill card. It receives `ToolCardProps` and renders only the chrome — no knowledge of tool names, icons, or result shapes. It includes an inline "Open File" action button in the header bar and an expandable drawer for raw execution parameters.
 
 ```
 ToolCallCard (ToolCardProps)
-  ├── Header button (always visible): inline icon + label + status text + chevron
-  │     └── Click toggles accordion open/closed
-  ├── Expanded content:
-  │     ├── summary: ReactNode     ← injected by resolver, tool-specific
-  │     └── Collapsible raw args/result (same for all tools)
+  ├── Header row (always visible): icon + label + badge + inline action button + chevron
+  │     └── Click toggles expanded parameters view
+  └── Expanded content:
+        ├── summary: ReactNode     ← typography-focused inline summary
+        └── Raw parameters/result block
 ```
 
 ### resolver.tsx — Display Logic

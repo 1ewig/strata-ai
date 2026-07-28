@@ -421,24 +421,14 @@ Streaming states:
 
 ### 7.3 ToolCallCard & Resolver Pattern
 
-**ToolCallCard** is a pure presentation component — zero knowledge of tool names, icons, or results. It receives fully resolved `ToolCardProps`:
-
-```typescript
-export interface ToolCardProps {
-  label, badge, icon: LucideIcon,
-  accent, accentBg, accentBorder, accentText: string,
-  status: 'loading' | 'success' | 'error',
-  summary: ReactNode,
-  rawArgs, rawResult: unknown,
-}
-```
+**ToolCallCard** is a streamlined presentation component designed as a compact, single-row pill — zero knowledge of tool names, icons, or results. It receives fully resolved `ToolCardProps` and features an inline "Open File" action button directly in the card header, alongside an expandable details drawer for raw parameters.
 
 **resolver.tsx** owns all tool-display logic through four functions:
 
 1. **`normalizeToolName(raw)`** — Normalizes by lowercasing/stripping separators, maps legacy aliases (`writeResume` → `writeFile`)
 2. **`extractToolInfo(toolCall)`** — Extracts `{ name, rawName, args, result, state }` from any invocation format
 3. **`toolConfigs` registry** — Maps canonical names to visual configs (icon, accent color, label, badge)
-4. **Per-tool summary builders** — Each tool renders a rich ReactNode summary with action buttons (e.g., "Open Drawer" for write/read/edit)
+4. **Per-tool summary builders** — Each tool renders a clean, typography-focused inline summary without heavy nested card containers.
 
 The resolver adds `action` awareness for `writeFile` — badge changes from "Updated" to "Created" or "Replaced" based on result. Adding a new tool requires changes only in `resolver.tsx`; `ToolCallCard.tsx` never needs modification.
 
@@ -472,6 +462,7 @@ Wires together `useChat`, Dexie persistence, workspace files, and model settings
 - Hydrates `useChat` from persisted Dexie messages on mount/chat switch
 - Auto-generates title from first user message
 - Persists messages + file state on `onFinish`
+- **Auto-Continuation Loop**: Detects `finishReason === 'step-limit'` in `onFinish` and automatically dispatches continuation requests up to 2 passes (allowing up to 75 steps total per task)
 - Exposes `isLoading` as `chat.status !== 'ready'`
 
 ### 8.2 `useWorkspaceFiles` — File CRUD
