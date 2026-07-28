@@ -526,7 +526,7 @@ The `buildSystemInstruction(files)` function builds a structured 5-section syste
 |----------|----------|---------|---------|
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Yes | — | Gemini API key for `@ai-sdk/google` |
 | `NEXT_PUBLIC_GEMINI_MODEL` | No | `gemini-3.5-flash-lite` | Default model ID |
-| `APP_URL` | Yes | — | Cloud Run URL (injected by AI Studio) |
+| `APP_URL` | No | `http://localhost:3000` | Application base URL |
 
 ## 11. Scripts & Commands
 
@@ -541,7 +541,7 @@ The `buildSystemInstruction(files)` function builds a structured 5-section syste
 ## 12. Key Architectural Decisions
 
 ### Why Dexie (IndexedDB) instead of server-side DB?
-The app is designed for Google AI Studio's ephemeral Cloud Run deployments with no persistent server-side storage. All conversation data lives in the browser's IndexedDB, making the app fully client-side persistent.
+The app is designed for serverless and local-first containerized deployments with no persistent server-side database requirement. All conversation data lives in the browser's IndexedDB, making the app fully client-side persistent.
 
 ### Why native UIMessage format in Dexie?
 Messages are stored in the native AI SDK `UIMessage` format (with `parts[]`) instead of a custom `ChatMessage` schema. This eliminates format conversion code and ensures compatibility with `useChat`'s message format. The `parts[]` array is the single source of truth for text, tool invocations, and reasoning content.

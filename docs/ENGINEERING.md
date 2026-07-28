@@ -9,7 +9,7 @@ The agent has six workspace file management tools (`listFiles`, `readFile`, `wri
 - **Repo:** https://github.com/1ewig/strata-ai
 - **Stack:** Next.js 16 App Router + Vercel AI SDK 7 + Dexie.js + Tailwind CSS 4
 - **Runtime:** bun
-- **Deployment:** Google AI Studio Cloud Run (ephemeral, no persistent server-side storage)
+- **Deployment:** Vercel / Docker / Standalone Container (Serverless & Local-First)
 
 ---
 
@@ -592,7 +592,7 @@ body::before {
 
 ### Why Dexie Over Server-Side DB?
 
-Designed for Google AI Studio's ephemeral Cloud Run — no persistent server-side storage. All data lives in IndexedDB, making the app fully client-side persistent.
+Designed for serverless and containerized deployments — no persistent server-side DB required. All data lives in IndexedDB, making the app fully client-side persistent.
 
 ### Why Native UIMessage Format in Dexie?
 
@@ -618,7 +618,7 @@ Previous `scrollIntoView` approach with 3 `useEffects` suffered from React batch
 |----------|----------|---------|---------|
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Yes | — | Gemini API key for `@ai-sdk/google` |
 | `NEXT_PUBLIC_GEMINI_MODEL` | No | `gemini-3.5-flash-lite` | Default model ID |
-| `APP_URL` | Yes | — | Cloud Run URL injected by AI Studio |
+| `APP_URL` | No | `http://localhost:3000` | Application base URL |
 
 ---
 

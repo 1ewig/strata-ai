@@ -31,7 +31,7 @@
 ## 2. Frontend Architecture, Next.js & React Ecosystem
 
 ### Application Architecture & Next.js 16
-- **Next.js 16 App Router Migration**: Architected Next.js 16 App Router applications leveraging server/client component separation, routing conventions, and standalone build optimization for fast Cloud Run container deployments.
+- **Next.js 16 App Router Migration**: Architected Next.js 16 App Router applications leveraging server/client component separation, routing conventions, and standalone build optimization for fast containerized serverless deployments.
 - **Thin-Page Architecture**: Implemented ultra-thin page components (`chat-id/[id]/page.tsx`, <130 lines) that delegate complex lifecycle management, DB synchronizations, and event handling to custom React hooks.
 - **Robust Route Handling**: Authored API route handlers (`POST /api/agent`) featuring strict Zod request payload validation, HTTP error status mapping, and Server-Sent Events (SSE) stream construction.
 - **Custom Hook Orchestration**: Created `useChatSession` as a master orchestrator unifying `useChat`, Dexie IndexedDB live queries, model setting states, and workspace file synchronization.
@@ -90,7 +90,7 @@
 ### Technical Documentation & Architecture Planning
 - **System Architecture Documentation**: Authored comprehensive technical documentation (`ARCHITECTURE.md`, `ENGINEERING.md`) detailing data flows, component trees, API contracts, persistence layers, and rationale for future maintainers.
 - **Design Pattern Standardization**: Standardized architectural conventions across projects—enforcing closure contexts for stateful tools, resolver patterns for polymorphic UI elements, and thin controllers for pages.
-- **Pragmatic Technical Decision-Making**: Evaluated architectural trade-offs (e.g., Dexie local-first vs. server DB, streaming pacing vs. latency) to align tech stack choices directly with deployment constraints (Cloud Run ephemeral instances).
+- **Pragmatic Technical Decision-Making**: Evaluated architectural trade-offs (e.g., Dexie local-first vs. server DB, streaming pacing vs. latency) to align tech stack choices directly with deployment constraints (stateless serverless & containerized environments).
 
 ### Product Engineering & User-Centric Mindset
 - **Frictionless Developer Experience**: Designed tools and interfaces requiring zero setup—allowing instant chat initialization, inline file previews, raw markdown editing, and seamless workspace switching.
@@ -116,4 +116,4 @@
 ### Lead / Senior Software Engineer Role
 - Authored comprehensive architectural guides (`ARCHITECTURE.md`, `ENGINEERING.md`) detailing data flow, design patterns, schema migrations, and extension guides for team alignment.
 - Standardized UI component resolver patterns, isolating visual presentation logic from data extraction to enable zero-code-change additions of new agent tools.
-- Spearheaded local-first architectural transitions, moving away from fragile server DBs toward robust IndexedDB client storage for ephemeral Cloud Run deployments.
+- Spearheaded local-first architectural transitions, moving away from fragile server DBs toward robust IndexedDB client storage for stateless serverless deployments.
