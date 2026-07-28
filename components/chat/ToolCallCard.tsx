@@ -21,7 +21,7 @@ export default function ToolCallCard({
   const hasResult = rawResult != null && (typeof rawResult !== 'object' || Object.keys(rawResult as object).length > 0);
 
   return (
-    <div className="my-1.5 rounded-lg border border-edge-raised/40 bg-surface-raised/40 hover:border-edge-raised/70 transition-all text-xs overflow-hidden">
+    <div className="my-1.5 rounded-lg border border-edge-raised/40 bg-surface-raised/40 hover:border-edge-raised/70 transition-all text-xs overflow-hidden fade-in">
       {/* Header bar */}
       <div className="flex items-center justify-between px-3 py-2 gap-2">
         <button

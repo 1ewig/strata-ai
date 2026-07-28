@@ -111,7 +111,7 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
     <div
       className={`group relative flex items-start gap-3.5 ${
         isUser ? 'flex-row-reverse' : ''
-      } ${!isUser ? 'animate-in fade-in duration-500' : ''}`}
+      } ${!isUser ? 'fade-in' : ''}`}
     >
       {/* Avatar Container */}
       <div
@@ -144,7 +144,7 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
       <div className="flex flex-col max-w-[88%] min-w-0 gap-2">
         {/* Empty streaming state before first tokens */}
         {!isUser && isStreaming && segments.length === 0 && (
-          <div className="rounded-2xl px-4.5 py-3.5 bg-surface-overlay/70 border border-edge-raised/60 backdrop-blur-sm">
+          <div className="rounded-2xl px-4.5 py-3.5 bg-surface-overlay/70 border border-edge-raised/60 backdrop-blur-sm fade-in">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 animate-bounce [animation-delay:-0.3s]" />
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 animate-bounce [animation-delay:-0.15s]" />
@@ -160,7 +160,7 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
             return (
               <div
                 key={seg.key}
-                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-emerald-950/30 border border-emerald-800/30 text-emerald-100 rounded-tr-xs shadow-sm"
+                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-emerald-950/30 border border-emerald-800/30 text-emerald-100 rounded-tr-xs shadow-sm fade-in"
               >
                 <p className="whitespace-pre-wrap leading-relaxed">{seg.content}</p>
               </div>
@@ -182,7 +182,7 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
                 key={seg.key}
                 className={`
                   relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed
-                  transition-all duration-300
+                  transition-all duration-300 fade-in
                   bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs
                   shadow-md backdrop-blur-sm
                   ${isStreaming && isLastSegment ? 'shadow-[0_0_24px_-6px_rgba(16,185,129,0.25)]' : ''}
