@@ -23,7 +23,7 @@
 | Schemas | `zod@^4.4.3` | Input validation, tool schemas |
 | Icons | `lucide-react` | UI iconography |
 | Scroll | `use-stick-to-bottom` | ChatGPT-like auto-scroll (DOM observers, no effect races) |
-| Runtime | Node.js 22+ | Required by AI SDK 7 (ESM + native fetch) |
+| Runtime | bun | Fast JS/TS runtime with native fetch |
 | Package manager | bun | Dependency management |
 
 ## 3. Directory Structure

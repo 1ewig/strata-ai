@@ -12,7 +12,7 @@ An AI-powered agentic workspace studio built with Next.js 16, Vercel AI SDK 7, a
 | Persistence | Dexie.js 4 (IndexedDB) |
 | Scroll | `use-stick-to-bottom` | ChatGPT-like auto-scroll (DOM observers, no effect races) |
 | Schemas | Zod 4 |
-| Runtime | Node.js 22+, bun |
+| Runtime | bun |
 
 ## Models
 
