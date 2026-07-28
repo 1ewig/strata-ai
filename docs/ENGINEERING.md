@@ -6,7 +6,7 @@
 
 The agent has six workspace file management tools (`listFiles`, `readFile`, `writeFile`, `editFile`, `renameFile`, `deleteFile`) with a constrained system prompt enforcing tool usage discipline, error recovery, and concise response formatting.
 
-- **Repo:** https://github.com/1ewig/resume-flow
+- **Repo:** https://github.com/1ewig/strata-ai
 - **Stack:** Next.js 16 App Router + Vercel AI SDK 7 + Dexie.js + Tailwind CSS 4
 - **Runtime:** bun
 - **Deployment:** Google AI Studio Cloud Run (ephemeral, no persistent server-side storage)

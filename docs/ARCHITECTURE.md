@@ -4,7 +4,7 @@
 
 **Strata AI** is an AI-powered agentic workspace studio. It lets users create, edit, analyze, and organize documents, code snippets, and markdown notes through a conversational chat interface backed by Google Gemini models. The agent has 6 general-purpose workspace file management tools and persists state client-side via IndexedDB.
 
-- **GitHub:** https://github.com/1ewig/resume-flow
+- **GitHub:** https://github.com/1ewig/strata-ai
 - **Stack:** Next.js 16 App Router + Vercel AI SDK 7 + Dexie.js
 
 ## 2. Tech Stack
@@ -382,7 +382,7 @@ RootLayout (globals.css, metadata)
 │     └── Redirects to /chat-id/:id (latest conversation or new UUID)
 │
 └── ChatIdPage (app/chat-id/[id]/page.tsx)
-      │  107 lines — thin shell, delegates to useChatSession
+      │  124 lines — thin shell, delegates to useChatSession
       │
       ├── Sidebar (components/Sidebar.tsx)
       │     ├── Brand header with logo
@@ -391,7 +391,7 @@ RootLayout (globals.css, metadata)
       │           └── Per-item: Link + delete button
       │
       ├── ChatHeader (components/chat/ChatHeader.tsx)
-      │     ├── Active file name display
+      │     ├── Conversation title (truncated)
       │     ├── Model dropdown (Gemini / Gemma 4 groups)
       │     ├── Thinking level dropdown (minimal/low/medium/high)
       │     └── "Workspace Files" dropdown → Open Drawer
