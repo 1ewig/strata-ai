@@ -7,3 +7,9 @@ coverage/
 .env*
 !.env.example
 docs/CV_BULLETS_BANK.md
+
+# Agents & AI skills
+.agents/
+.agent/
+skills-lock.json
+
