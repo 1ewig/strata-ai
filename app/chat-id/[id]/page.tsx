@@ -88,7 +88,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         <StickToBottom className="flex-1 min-h-0" resize="smooth" initial="instant">
           {(context) => (
             <>
-              <StickToBottom.Content className="max-w-2xl w-full mx-auto px-4 pb-28">
+              <StickToBottom.Content className="max-w-2xl w-full mx-auto px-4 pb-48">
                 <ChatPanel
                   messages={displayMessages}
                   streamingContent={streamingContent}
@@ -100,10 +100,10 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               </StickToBottom.Content>
 
               {!context.isAtBottom && (
-                <div className="flex justify-center pb-4">
+                <div className="fixed bottom-36 left-1/2 -translate-x-1/2 z-40">
                   <button
                     onClick={() => context.scrollToBottom()}
-                    className="rounded-full border border-edge-raised bg-surface-overlay/90 px-3 py-1 text-xs text-text-muted hover:text-text-primary shadow-sm backdrop-blur-sm transition-colors"
+                    className="rounded-full border border-edge-raised bg-surface-overlay/90 px-3.5 py-1.5 text-xs font-medium text-text-muted hover:text-text-primary shadow-lg backdrop-blur-md transition-colors"
                   >
                     ↓ Scroll to bottom
                   </button>
@@ -112,6 +112,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
             </>
           )}
         </StickToBottom>
+
 
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30">
           <div className="max-w-2xl mx-auto pointer-events-auto">
