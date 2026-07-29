@@ -1,0 +1,78 @@
+"use client";
+
+import React, { useState } from "react";
+import Link from "next/link";
+import { useSession, signOut } from "@/lib/auth-client";
+import { User, LogOut, LogIn, Loader2, ChevronUp } from "lucide-react";
+
+export default function UserButton() {
+  const { data: session, isPending } = useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  if (isPending) {
+    return (
+      <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+        <span>Loading...</span>
+      </div>
+    );
+  }
+
+  if (!session?.user) {
+    return (
+      <Link
+        href="/auth"
+        className="w-full flex items-center justify-center gap-2 bg-surface-overlay hover:bg-surface-elevated text-text-bright border border-edge-raised px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+      >
+        <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+        <span>Sign In / Sign Up</span>
+      </Link>
+    );
+  }
+
+  const displayName = session.user.name || session.user.email?.split("@")[0] || "User";
+  const initial = displayName.charAt(0).toUpperCase();
+
+  return (
+    <div className="relative w-full">
+      {/* Dropdown Menu */}
+      {menuOpen && (
+        <div className="absolute bottom-full left-0 right-0 mb-2 p-1.5 bg-surface-overlay border border-edge-raised rounded-xl shadow-xl space-y-1 animate-fade-in z-50">
+          <div className="px-2.5 py-1.5 border-b border-edge-default">
+            <p className="text-xs font-semibold text-text-bright truncate">{displayName}</p>
+            <p className="text-[10px] text-text-muted truncate">{session.user.email}</p>
+          </div>
+
+          <button
+            onClick={async () => {
+              setMenuOpen(false);
+              await signOut();
+            }}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            <span>Sign Out</span>
+          </button>
+        </div>
+      )}
+
+      {/* User Profile Bar */}
+      <button
+        type="button"
+        onClick={() => setMenuOpen(!menuOpen)}
+        className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-base hover:bg-surface-hover/50 border border-edge-default transition-colors text-left"
+      >
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold text-xs flex items-center justify-center shrink-0">
+            {initial}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-semibold text-text-bright truncate leading-none">{displayName}</p>
+            <p className="text-[10px] text-text-muted truncate mt-0.5 leading-none">{session.user.email}</p>
+          </div>
+        </div>
+        <ChevronUp className={`w-3.5 h-3.5 text-text-muted transition-transform shrink-0 ${menuOpen ? "rotate-180" : ""}`} />
+      </button>
+    </div>
+  );
+}
