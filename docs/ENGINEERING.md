@@ -19,7 +19,7 @@ The agent has six workspace file management tools (`listFiles`, `readFile`, `wri
 |-------|--------|---------|
 | Framework | Next.js 16.2.10 (App Router) | SSR, API routes, file-system routing |
 | Language | TypeScript 5.9.3 | Type safety across the full stack |
-| Authentication | Better Auth 1.6 + `@supabase/ssr` | Credentials auth, instant session, multi-layer middleware guard |
+| Authentication | Better Auth 1.6 + `nextCookies` | Credentials auth, instant session, multi-layer proxy guard |
 | PostgreSQL DB | Supabase (Transaction Pooler) | Host database & isolated `better_auth` schema storage |
 | AI SDK Core | `ai@^7.0.0` | `streamText`, `tool()`, message types |
 | Google Provider | `@ai-sdk/google@^4.0.0` | Gemini model access |
@@ -90,10 +90,7 @@ The agent has six workspace file management tools (`listFiles`, `readFile`, `wri
 │   ├── migrate-better-auth-schema.ts # Automated TypeScript migration runner
 │   └── test-db.ts                # Database connection & schema healthcheck script
 │
-├── utils/
-│   └── supabase/                # Supabase client/server/middleware helper utilities
-│
-├── middleware.ts                # Next.js Middleware — edge-safe session cookie enforcement
+├── proxy.ts                     # Next.js 16 proxy — edge-safe session cookie check + security headers
 ├── docs/ARCHITECTURE.md         # Architecture guide
 ├── docs/ENGINEERING.md            # Engineering documentation
 ├── .env.example                 # Environment variables template
@@ -645,6 +642,7 @@ Previous `scrollIntoView` approach with 3 `useEffects` suffered from React batch
 | `DATABASE_URL` | Yes | — | Supabase PostgreSQL Pooler connection string (`aws-0-[region].pooler.supabase.com:6543`) |
 | `BETTER_AUTH_SECRET` | Yes | — | Better Auth session & cookie encryption secret |
 | `BETTER_AUTH_URL` | No | `http://localhost:3000` | Better Auth server base URL |
+| `NEXT_PUBLIC_APP_URL` | No | `http://localhost:3000` | Public-facing app URL (auth client base URL) |
 
 ---
 

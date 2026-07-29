@@ -13,7 +13,7 @@
 |-------|--------|---------|
 | Framework | Next.js 16.2.10 (App Router) | SSR, API routes, routing |
 | Language | TypeScript 5.9.3 | Type safety |
-| Authentication | Better Auth 1.6 + `@supabase/ssr` | Email/password auth, session management, multi-layer middleware protection |
+| Authentication | Better Auth 1.6 + `nextCookies` | Email/password auth, session management, multi-layer proxy protection |
 | PostgreSQL DB | Supabase (Transaction Pooler) | Host database & isolated `better_auth` schema storage |
 | AI SDK | `ai@^7.0.0` | Unified LLM interface, streaming, tool calling |
 | Google Provider | `@ai-sdk/google@^4.0.0` | Gemini model access |
@@ -88,9 +88,7 @@
 │   ├── better-auth-schema.sql    # Raw SQL migration for better_auth schema & tables
 │   ├── migrate-better-auth-schema.ts # Automated TypeScript migration runner
 │   └── test-db.ts                # Database connection & schema healthcheck script
-├── utils/
-│   └── supabase/                 # Supabase client/server/middleware helper utilities
-├── middleware.ts                 # Next.js Middleware — edge-safe session cookie enforcement
+├── proxy.ts                      # Next.js 16 proxy — edge-safe session cookie check + security headers
 ├── .env.example                  # Environment variables template
 ├── next.config.ts                # Standalone output, motion transpilation
 ├── package.json                  # Dependencies + scripts
@@ -552,6 +550,7 @@ The `buildSystemInstruction(files)` function builds a structured 5-section syste
 | `DATABASE_URL` | Yes | — | Supabase PostgreSQL Pooler connection string (`aws-0-[region].pooler.supabase.com:6543`) |
 | `BETTER_AUTH_SECRET` | Yes | — | Better Auth session & cookie encryption secret |
 | `BETTER_AUTH_URL` | No | `http://localhost:3000` | Better Auth server base URL |
+| `NEXT_PUBLIC_APP_URL` | No | `http://localhost:3000` | Public-facing app URL (auth client base URL) |
 
 ## 11. Scripts & Commands
 
