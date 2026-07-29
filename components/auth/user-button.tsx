@@ -21,7 +21,7 @@ export default function UserButton() {
   if (!session?.user) {
     return (
       <Link
-        href="/auth"
+        href="/auth/signin"
         className="w-full flex items-center justify-center gap-2 bg-surface-overlay hover:bg-surface-elevated text-text-bright border border-edge-raised px-3 py-2 rounded-lg text-xs font-semibold transition-all"
       >
         <LogIn className="w-3.5 h-3.5 text-emerald-400" />
