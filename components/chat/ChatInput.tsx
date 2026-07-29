@@ -88,205 +88,215 @@ export default function ChatInput({
 
   return (
     <form onSubmit={onSubmit} className="relative z-10">
-      <div className="flex items-end gap-2 bg-surface-raised border border-edge-hover/60 focus-within:border-edge-hover rounded-2xl px-4 py-3 transition-all">
+      <div className="flex flex-col gap-2 bg-surface-raised border border-edge-hover/60 focus-within:border-edge-hover rounded-2xl p-3.5 transition-all shadow-lg">
 
-        {/* Model Dropdown Trigger & Popover Container */}
-        <div className="relative flex items-center self-stretch">
-          <button
-            ref={triggerRef}
-            type="button"
-            onClick={() => {
-              setMenuOpen(prev => {
-                if (prev) setActiveSubmenu('none');
-                return !prev;
-              });
-            }}
-            className="flex items-center gap-1.5 text-xs font-medium text-text-muted hover:text-text-primary bg-surface-base hover:bg-surface-hover/60 border border-edge-raised px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
-          >
-            <span>{currentModel?.label || 'Model'}</span>
-            {effortLabel && (
-              <span className="text-text-faint font-normal capitalize">{effortLabel}</span>
-            )}
-            <ChevronDown className="w-3 h-3 text-text-muted" />
-          </button>
-
-          {/* Main Dropdown Menu */}
-          {menuOpen && (
-            <div
-              ref={menuRef}
-              className="absolute bottom-full left-0 mb-2 w-72 bg-surface-elevated border border-edge-hover rounded-2xl shadow-2xl p-1.5 text-sm z-50 animate-in fade-in zoom-in-95 duration-100"
-            >
-              {/* Featured Primary Models List */}
-              <div className="space-y-0.5">
-                {primaryModels.map(m => (
-                  <button
-                    key={m.id}
-                    type="button"
-                    onClick={() => {
-                      onModelSelect(m.id);
-                      setMenuOpen(false);
-                      setActiveSubmenu('none');
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-xl hover:bg-surface-hover flex items-start justify-between group transition-colors cursor-pointer ${m.id === model ? 'bg-surface-hover/70' : ''
-                      }`}
-                  >
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-semibold text-text-primary group-hover:text-text-bright">
-                        {m.label}
-                      </span>
-                      {MODEL_DESCRIPTIONS[m.id] && (
-                        <span className="text-[11px] text-text-muted line-clamp-1">
-                          {MODEL_DESCRIPTIONS[m.id]}
-                        </span>
-                      )}
-                    </div>
-                    {m.id === model && (
-                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                    )}
-                  </button>
-                ))}
-              </div>
-
-              <div className="h-px bg-edge-default my-1.5 mx-1" />
-
-              {/* Overflow Menus: Effort & More Models */}
-              <div className="space-y-0.5 relative">
-
-                {/* 1. Effort Overflow Option */}
-                {currentModelThinkingConfig && (
-                  <div
-                    className="relative"
-                    onMouseEnter={() => setActiveSubmenu('effort')}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => setActiveSubmenu(prev => prev === 'effort' ? 'none' : 'effort')}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors ${activeSubmenu === 'effort'
-                          ? 'bg-surface-hover text-text-primary'
-                          : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
-                        }`}
-                    >
-                      <span>Effort</span>
-                      <div className="flex items-center gap-1 text-text-muted">
-                        <span className="text-text-faint capitalize">{effortLabel || 'Default'}</span>
-                        <ChevronRight className="w-3.5 h-3.5" />
-                      </div>
-                    </button>
-
-                    {/* Effort Submenu Flyout Panel */}
-                    {activeSubmenu === 'effort' && (
-                      <div className="absolute left-full bottom-0 ml-1.5 w-48 bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-1.5 space-y-0.5 z-50">
-                        <div className="px-2.5 py-1 text-[10px] font-semibold text-text-faint uppercase tracking-wider">
-                          Thinking Level
-                        </div>
-                        {currentModelThinkingConfig.levels.map(level => {
-                          const label = THINKING_LEVEL_LABELS[level as keyof typeof THINKING_LEVEL_LABELS] || level;
-                          const isSelected = thinkingLevel === level;
-                          return (
-                            <button
-                              key={level}
-                              type="button"
-                              onClick={() => {
-                                onThinkingLevelChange(level);
-                                setMenuOpen(false);
-                                setActiveSubmenu('none');
-                              }}
-                              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${isSelected
-                                  ? 'bg-emerald-500/15 text-emerald-400 font-medium'
-                                  : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
-                                }`}
-                            >
-                              <span className="capitalize">{label}</span>
-                              {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* 2. More Models Overflow Option */}
-                <div
-                  className="relative"
-                  onMouseEnter={() => setActiveSubmenu('more-models')}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setActiveSubmenu(prev => prev === 'more-models' ? 'none' : 'more-models')}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors ${activeSubmenu === 'more-models'
-                        ? 'bg-surface-hover text-text-primary'
-                        : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
-                      }`}
-                  >
-                    <span>More models</span>
-                    <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
-                  </button>
-
-                  {/* More Models Submenu Flyout Panel */}
-                  {activeSubmenu === 'more-models' && (
-                    <div className="absolute left-full bottom-0 ml-1.5 w-64 bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-1.5 space-y-0.5 z-50 max-h-64 overflow-y-auto">
-                      <div className="px-2.5 py-1 text-[10px] font-semibold text-text-faint uppercase tracking-wider">
-                        Other Models
-                      </div>
-                      {overflowModels.map(m => (
-                        <button
-                          key={m.id}
-                          type="button"
-                          onClick={() => {
-                            onModelSelect(m.id);
-                            setMenuOpen(false);
-                            setActiveSubmenu('none');
-                          }}
-                          className={`w-full text-left px-2.5 py-2 rounded-lg hover:bg-surface-hover flex items-start justify-between group transition-colors cursor-pointer ${m.id === model ? 'bg-surface-hover/70' : ''
-                            }`}
-                        >
-                          <div className="flex flex-col gap-0.5">
-                            <span className="text-xs font-medium text-text-primary group-hover:text-text-bright">
-                              {m.label}
-                            </span>
-                            {MODEL_DESCRIPTIONS[m.id] && (
-                              <span className="text-[11px] text-text-muted line-clamp-1">
-                                {MODEL_DESCRIPTIONS[m.id]}
-                              </span>
-                            )}
-                          </div>
-                          {m.id === model && (
-                            <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Text Field Input */}
+        {/* Row 1: Text Field Input */}
         <textarea
           ref={textareaRef}
           id="chat-input-field"
-          rows={1}
+          rows={2}
           disabled={isLoading}
           placeholder="Message Strata AI..."
           value={inputValue}
           onChange={handleInput}
           onKeyDown={handleKeyDown}
-          className="flex-1 bg-transparent text-text-primary placeholder-text-muted border-none text-sm focus:outline-none resize-none max-h-40 py-2 focus:ring-0 disabled:opacity-50"
+          className="w-full bg-transparent text-text-primary placeholder-text-muted border-none text-sm focus:outline-none resize-none min-h-[48px] max-h-48 py-1 focus:ring-0 disabled:opacity-50"
         />
 
-        {/* Send Button */}
-        <button
-          id="chat-submit-btn"
-          type="submit"
-          disabled={isLoading || !inputValue.trim()}
-          className="p-2 rounded-lg bg-text-primary hover:bg-text-bright disabled:bg-surface-elevated disabled:opacity-40 shrink-0 transition-colors focus:outline-none cursor-pointer"
-        >
-          <ArrowUp className="w-4 h-4 text-surface-base" />
-        </button>
+        {/* Row 2: Bottom Toolbar (Model Dropdown on Left, Send Button on Right) */}
+        <div className="flex items-center justify-between pt-1">
+
+          {/* Model Dropdown Trigger & Popover Container */}
+          <div className="relative flex items-center">
+            <button
+              ref={triggerRef}
+              type="button"
+              onClick={() => {
+                setMenuOpen(prev => {
+                  if (prev) setActiveSubmenu('none');
+                  return !prev;
+                });
+              }}
+              className="flex items-center gap-1.5 text-xs font-medium text-text-muted hover:text-text-primary bg-surface-base hover:bg-surface-hover/60 border border-edge-raised px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer shrink-0"
+            >
+              <span>{currentModel?.label || 'Model'}</span>
+              {effortLabel && (
+                <span className="text-text-faint font-normal capitalize">{effortLabel}</span>
+              )}
+              <ChevronDown className="w-3 h-3 text-text-muted" />
+            </button>
+
+            {/* Main Dropdown Menu */}
+            {menuOpen && (
+              <div
+                ref={menuRef}
+                className="absolute bottom-full left-0 mb-2 w-72 bg-surface-elevated border border-edge-hover rounded-2xl shadow-2xl p-1.5 text-sm z-50 animate-in fade-in zoom-in-95 duration-100"
+              >
+                {/* Featured Primary Models List */}
+                <div className="space-y-0.5">
+                  {primaryModels.map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => {
+                        onModelSelect(m.id);
+                        setMenuOpen(false);
+                        setActiveSubmenu('none');
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded-xl hover:bg-surface-hover flex items-start justify-between group transition-colors cursor-pointer ${
+                        m.id === model ? 'bg-surface-hover/70' : ''
+                      }`}
+                    >
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-xs font-semibold text-text-primary group-hover:text-text-bright">
+                          {m.label}
+                        </span>
+                        {MODEL_DESCRIPTIONS[m.id] && (
+                          <span className="text-[11px] text-text-muted line-clamp-1">
+                            {MODEL_DESCRIPTIONS[m.id]}
+                          </span>
+                        )}
+                      </div>
+                      {m.id === model && (
+                        <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="h-px bg-edge-default my-1.5 mx-1" />
+
+                {/* Overflow Menus: Effort & More Models */}
+                <div className="space-y-0.5 relative">
+
+                  {/* 1. Effort Overflow Option */}
+                  {currentModelThinkingConfig && (
+                    <div
+                      className="relative"
+                      onMouseEnter={() => setActiveSubmenu('effort')}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => setActiveSubmenu(prev => prev === 'effort' ? 'none' : 'effort')}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors ${
+                          activeSubmenu === 'effort'
+                            ? 'bg-surface-hover text-text-primary'
+                            : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
+                        }`}
+                      >
+                        <span>Effort</span>
+                        <div className="flex items-center gap-1 text-text-muted">
+                          <span className="text-text-faint capitalize">{effortLabel || 'Default'}</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </div>
+                      </button>
+
+                      {/* Effort Submenu Flyout Panel */}
+                      {activeSubmenu === 'effort' && (
+                        <div className="absolute left-full bottom-0 ml-1.5 w-48 bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-1.5 space-y-0.5 z-50">
+                          <div className="px-2.5 py-1 text-[10px] font-semibold text-text-faint uppercase tracking-wider">
+                            Thinking Level
+                          </div>
+                          {currentModelThinkingConfig.levels.map(level => {
+                            const label = THINKING_LEVEL_LABELS[level as keyof typeof THINKING_LEVEL_LABELS] || level;
+                            const isSelected = thinkingLevel === level;
+                            return (
+                              <button
+                                key={level}
+                                type="button"
+                                onClick={() => {
+                                  onThinkingLevelChange(level);
+                                  setMenuOpen(false);
+                                  setActiveSubmenu('none');
+                                }}
+                                className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
+                                  isSelected
+                                    ? 'bg-emerald-500/15 text-emerald-400 font-medium'
+                                    : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
+                                }`}
+                              >
+                                <span className="capitalize">{label}</span>
+                                {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* 2. More Models Overflow Option */}
+                  <div
+                    className="relative"
+                    onMouseEnter={() => setActiveSubmenu('more-models')}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => setActiveSubmenu(prev => prev === 'more-models' ? 'none' : 'more-models')}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium cursor-pointer transition-colors ${
+                        activeSubmenu === 'more-models'
+                          ? 'bg-surface-hover text-text-primary'
+                          : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
+                      }`}
+                    >
+                      <span>More models</span>
+                      <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
+                    </button>
+
+                    {/* More Models Submenu Flyout Panel */}
+                    {activeSubmenu === 'more-models' && (
+                      <div className="absolute left-full bottom-0 ml-1.5 w-64 bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-1.5 space-y-0.5 z-50 max-h-64 overflow-y-auto">
+                        <div className="px-2.5 py-1 text-[10px] font-semibold text-text-faint uppercase tracking-wider">
+                          Other Models
+                        </div>
+                        {overflowModels.map(m => (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              onModelSelect(m.id);
+                              setMenuOpen(false);
+                              setActiveSubmenu('none');
+                            }}
+                            className={`w-full text-left px-2.5 py-2 rounded-lg hover:bg-surface-hover flex items-start justify-between group transition-colors cursor-pointer ${
+                              m.id === model ? 'bg-surface-hover/70' : ''
+                            }`}
+                          >
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-xs font-medium text-text-primary group-hover:text-text-bright">
+                                {m.label}
+                              </span>
+                              {MODEL_DESCRIPTIONS[m.id] && (
+                                <span className="text-[11px] text-text-muted line-clamp-1">
+                                  {MODEL_DESCRIPTIONS[m.id]}
+                                </span>
+                              )}
+                            </div>
+                            {m.id === model && (
+                              <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Send Button */}
+          <button
+            id="chat-submit-btn"
+            type="submit"
+            disabled={isLoading || !inputValue.trim()}
+            className="p-2 rounded-xl bg-text-primary hover:bg-text-bright disabled:bg-surface-elevated disabled:opacity-40 shrink-0 transition-colors focus:outline-none cursor-pointer"
+          >
+            <ArrowUp className="w-4 h-4 text-surface-base" />
+          </button>
+        </div>
+
       </div>
     </form>
   );
