@@ -288,10 +288,6 @@ export default function ChatInput({
           <ArrowUp className="w-4 h-4 text-surface-base" />
         </button>
       </div>
-
-      <p className="text-center text-xs text-text-faint mt-2">
-        Strata AI can make mistakes. Verify important info.
-      </p>
     </form>
   );
 }
