@@ -41,7 +41,9 @@ The agent has six workspace file management tools (`listFiles`, `readFile`, `wri
 ├── app/
 │   ├── layout.tsx              # Root layout — <html>, <body>, dark class, metadata
 │   ├── page.tsx                 # Home — redirects to latest/new chat via UUID (auth guarded)
-│   ├── auth/page.tsx           # Sign In / Sign Up tabbed auth page (wrapped in Suspense)
+│   ├── auth/page.tsx           # Redirects to /auth/signin
+│   ├── auth/signin/page.tsx    # Sign In page (session guard + form)
+│   ├── auth/signup/page.tsx    # Sign Up page (session guard + form)
 │   ├── not-found.tsx            # Custom 404
 │   ├── globals.css              # Tailwind 4 import, theme tokens, keyframe animations
 │   ├── api/
@@ -52,7 +54,12 @@ The agent has six workspace file management tools (`listFiles`, `readFile`, `wri
 ├── components/
 │   ├── Sidebar.tsx              # Conversation list, new/delete, UserButton footer
 │   ├── auth/
-│   │   └── user-button.tsx       # User profile avatar & sign-out dropdown
+│   │   ├── user-button.tsx       # User profile avatar & sign-out dropdown
+│   │   ├── loading-screen.tsx    # Full-screen spinner (session loading)
+│   │   ├── already-authenticated.tsx  # "Already Authenticated" card
+│   │   ├── auth-shell.tsx        # Shared layout (glow, card, header, footer)
+│   │   ├── sign-in-form.tsx      # Email + password form with error/success state
+│   │   └── sign-up-form.tsx      # Name + email + password form with error/success state
 │   ├── chat/
 │   │   ├── ChatPanel.tsx        # Message list, empty state, typing dots
 │   │   ├── ChatBubble.tsx       # User/assistant message with segment splitting

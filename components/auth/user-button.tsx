@@ -2,12 +2,15 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
 import { User, LogOut, LogIn, Loader2, ChevronUp } from "lucide-react";
 
 export default function UserButton() {
   const { data: session, isPending } = useSession();
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
 
   if (isPending) {
     return (
@@ -45,13 +48,24 @@ export default function UserButton() {
 
           <button
             onClick={async () => {
-              setMenuOpen(false);
+              setSigningOut(true);
               await signOut();
+              router.refresh();
             }}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-rose-400 hover:bg-rose-500/10 rounded-lg transition-colors"
+            disabled={signingOut}
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-rose-400 hover:bg-rose-500/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
-            <LogOut className="w-3.5 h-3.5" />
-            <span>Sign Out</span>
+            {signingOut ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Signing out...</span>
+              </>
+            ) : (
+              <>
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Sign Out</span>
+              </>
+            )}
           </button>
         </div>
       )}

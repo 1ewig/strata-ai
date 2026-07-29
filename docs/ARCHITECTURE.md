@@ -37,7 +37,11 @@
 │   ├── layout.tsx                # Root layout, <html>/<body>, metadata
 │   ├── page.tsx                  # Home — redirects to latest or new chat (auth protected)
 │   ├── auth/
-│   │   └── page.tsx              # Sign In / Sign Up tabbed auth page
+│   │   ├── page.tsx              # Redirects to /auth/signin
+│   │   ├── signin/
+│   │   │   └── page.tsx          # Sign In page (session guard + form)
+│   │   └── signup/
+│   │       └── page.tsx          # Sign Up page (session guard + form)
 │   ├── not-found.tsx             # Custom 404 page
 │   ├── globals.css               # Tailwind import, scrollbar, animations
 │   ├── api/
@@ -52,7 +56,12 @@
 ├── components/
 │   ├── Sidebar.tsx               # Conversation list, new/delete, UserButton footer
 │   ├── auth/
-│   │   └── user-button.tsx       # User profile avatar & sign-out dropdown
+│   │   ├── user-button.tsx       # User profile avatar & sign-out dropdown
+│   │   ├── loading-screen.tsx    # Full-screen spinner (session loading)
+│   │   ├── already-authenticated.tsx  # "Already Authenticated" card
+│   │   ├── auth-shell.tsx        # Shared layout (glow, card, header, footer)
+│   │   ├── sign-in-form.tsx      # Email + password form with error/success state
+│   │   └── sign-up-form.tsx      # Name + email + password form with error/success state
 │   ├── chat/
 │   │   ├── ChatPanel.tsx         # Message list, empty state, loading indicators
 │   │   ├── ChatBubble.tsx        # User/assistant message bubble

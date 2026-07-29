@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signOut } from "@/lib/auth-client";
-import { ArrowRight, ShieldCheck, LogOut } from "lucide-react";
+import { ArrowRight, ShieldCheck, LogOut, Loader2 } from "lucide-react";
 
 interface AlreadyAuthenticatedProps {
   session: { user: { name?: string | null; email?: string | null } };
@@ -11,6 +12,7 @@ interface AlreadyAuthenticatedProps {
 
 export function AlreadyAuthenticated({ session, callbackUrl }: AlreadyAuthenticatedProps) {
   const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
 
   return (
     <div className="min-h-screen bg-surface-base flex items-center justify-center p-4">
@@ -35,16 +37,27 @@ export function AlreadyAuthenticated({ session, callbackUrl }: AlreadyAuthentica
             <span>Go to Workspace</span>
             <ArrowRight className="w-4 h-4" />
           </button>
-          <button
-            onClick={async () => {
-              await signOut();
-              router.refresh();
-            }}
-            className="w-full py-3 px-4 bg-surface-overlay hover:bg-surface-elevated text-text-secondary hover:text-text-bright border border-edge-default rounded-xl flex items-center justify-center gap-2 transition-all"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sign Out</span>
-          </button>
+            <button
+              onClick={async () => {
+                setSigningOut(true);
+                await signOut();
+                router.refresh();
+              }}
+              disabled={signingOut}
+              className="w-full py-3 px-4 bg-surface-overlay hover:bg-surface-elevated disabled:opacity-50 disabled:cursor-not-allowed text-text-secondary hover:text-text-bright border border-edge-default rounded-xl flex items-center justify-center gap-2 transition-all"
+            >
+              {signingOut ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Signing out...</span>
+                </>
+              ) : (
+                <>
+                  <LogOut className="w-4 h-4" />
+                  <span>Sign Out</span>
+                </>
+              )}
+            </button>
         </div>
       </div>
     </div>
