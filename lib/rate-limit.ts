@@ -84,3 +84,31 @@ export async function checkAndIncrementRateLimit(userId: string): Promise<RateLi
     client.release();
   }
 }
+
+export async function getRateLimitStatus(userId: string): Promise<RateLimitResult> {
+  const client = await pool.connect();
+  try {
+    const fiveHourResult = await client.query(
+      `SELECT COUNT(*) AS cnt FROM better_auth.message_log
+       WHERE user_id = $1 AND created_at > NOW() - INTERVAL '5 hours'`,
+      [userId],
+    );
+    const fiveHourCount = parseInt(fiveHourResult.rows[0].cnt, 10);
+
+    const weekResult = await client.query(
+      `SELECT COUNT(*) AS cnt FROM better_auth.message_log
+       WHERE user_id = $1 AND created_at > NOW() - INTERVAL '7 days'`,
+      [userId],
+    );
+    const weekCount = parseInt(weekResult.rows[0].cnt, 10);
+
+    return {
+      allowed: fiveHourCount < MAX_5H && weekCount < MAX_WEEK,
+      remaining5h: Math.max(0, MAX_5H - fiveHourCount),
+      remainingWeek: Math.max(0, MAX_WEEK - weekCount),
+    };
+  } finally {
+    client.release();
+  }
+}
+
