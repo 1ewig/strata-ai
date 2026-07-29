@@ -11,6 +11,8 @@ import { z } from "zod";
 import { Resume, WorkspaceFile } from "@/lib/schemas";
 import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
 
+import { auth } from "@/lib/auth";
+
 const bodySchema = z.object({
   messages: z.array(z.any()),
   files: z.array(z.any()).optional(),
@@ -21,7 +23,16 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const session = await auth.api.getSession({ headers: req.headers });
+  if (!session) {
+    return new Response(JSON.stringify({ error: "Unauthorized. Please sign in." }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
   const parsed = bodySchema.safeParse(await req.json());
+
   if (!parsed.success) {
     return new Response(
       JSON.stringify({ error: "Invalid request", details: parsed.error.flatten() }),
