@@ -100,15 +100,16 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               </StickToBottom.Content>
 
               {!context.isAtBottom && (
-                <div className="fixed bottom-36 left-1/2 -translate-x-1/2 z-40">
+                <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-40">
                   <button
                     onClick={() => context.scrollToBottom()}
-                    className="rounded-full border border-edge-raised bg-surface-overlay/90 px-3.5 py-1.5 text-xs font-medium text-text-muted hover:text-text-primary shadow-lg backdrop-blur-md transition-colors"
+                    className="rounded-full border border-edge-raised bg-surface-overlay/90 px-3.5 py-1.5 text-xs font-medium text-text-muted hover:text-text-primary shadow-lg backdrop-blur-md transition-colors cursor-pointer"
                   >
                     ↓ Scroll to bottom
                   </button>
                 </div>
               )}
+
             </>
           )}
         </StickToBottom>
