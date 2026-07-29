@@ -149,5 +149,10 @@ export async function POST(req: Request) {
 
   return createUIMessageStreamResponse({
     stream: toUIMessageStream({ stream: result.stream }),
+    headers: {
+      "X-RateLimit-Remaining-5h": String(rateLimit.remaining5h),
+      "X-RateLimit-Remaining-Week": String(rateLimit.remainingWeek),
+    },
   });
 }
+
