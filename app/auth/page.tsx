@@ -235,7 +235,7 @@ function AuthForm() {
                 <input
                   type="text"
                   required
-                  placeholder="Asad Shahid"
+                  placeholder="Alex Morgan"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   className="w-full pl-10 pr-4 py-2.5 bg-surface-base border border-edge-default focus:border-emerald-500/50 rounded-xl text-sm text-text-bright placeholder:text-text-faint focus:outline-none transition-colors"
