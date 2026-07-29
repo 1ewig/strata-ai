@@ -13,6 +13,8 @@
 |-------|--------|---------|
 | Framework | Next.js 16.2.10 (App Router) | SSR, API routes, routing |
 | Language | TypeScript 5.9.3 | Type safety |
+| Authentication | Better Auth 1.6 + `@supabase/ssr` | Email/password auth, session management, multi-layer middleware protection |
+| PostgreSQL DB | Supabase (Transaction Pooler) | Host database & isolated `better_auth` schema storage |
 | AI SDK | `ai@^7.0.0` | Unified LLM interface, streaming, tool calling |
 | Google Provider | `@ai-sdk/google@^4.0.0` | Gemini model access |
 | React AI | `@ai-sdk/react@^2.0.0` | `useChat` hook + UI stream primitives |
@@ -26,23 +28,31 @@
 | Runtime | bun | Fast JS/TS runtime with native fetch |
 | Package manager | bun | Dependency management |
 
+
 ## 3. Directory Structure
 
 ```
 .
 ├── app/                          # Next.js App Router
 │   ├── layout.tsx                # Root layout, <html>/<body>, metadata
-│   ├── page.tsx                  # Home — redirects to latest or new chat
+│   ├── page.tsx                  # Home — redirects to latest or new chat (auth protected)
+│   ├── auth/
+│   │   └── page.tsx              # Sign In / Sign Up tabbed auth page
 │   ├── not-found.tsx             # Custom 404 page
 │   ├── globals.css               # Tailwind import, scrollbar, animations
 │   ├── api/
-│   │   └── agent/
-│   │       └── route.ts          # POST /api/agent — AI agent streaming endpoint
+│   │   ├── agent/
+│   │   │   └── route.ts          # POST /api/agent — AI agent streaming endpoint (auth verified)
+│   │   └── auth/
+│   │       └── [...all]/
+│   │           └── route.ts      # Better Auth Next.js API catch-all handler
 │   └── chat-id/
 │       └── [id]/
-│           └── page.tsx          # Chat page (thin shell, delegates to hook)
+│           └── page.tsx          # Chat page (thin shell, auth protected)
 ├── components/
-│   ├── Sidebar.tsx               # Conversation list, new/delete
+│   ├── Sidebar.tsx               # Conversation list, new/delete, UserButton footer
+│   ├── auth/
+│   │   └── user-button.tsx       # User profile avatar & sign-out dropdown
 │   ├── chat/
 │   │   ├── ChatPanel.tsx         # Message list, empty state, loading indicators
 │   │   ├── ChatBubble.tsx        # User/assistant message bubble
@@ -51,7 +61,7 @@
 │   │   ├── ToolCallCard.tsx      # Minimal accordion card — receives ToolCardProps
 │   │   ├── ThoughtAccordion.tsx  # Collapsible reasoning/thought display
 │   │   └── tools/
-│   │       └── resolver.tsx      # extractToolInfo + resolveToolDisplay → ToolCardProps, per-tool summary builders
+│   │       └── resolver.tsx      # extractToolInfo + resolveToolDisplay → ToolCardProps
 │   ├── ui/                       # (empty — available for base UI primitives)
 │   └── workspace/
 │       └── WorkspaceDrawer.tsx   # Slide-over panel: file list, create, edit, delete
@@ -61,6 +71,8 @@
 │   ├── useModelSettings.ts       # Model + thinking level state + localStorage
 │   └── use-mobile.ts             # Responsive breakpoint detection (768px)
 ├── lib/
+│   ├── auth.ts                   # Better Auth server instance (pg Pool driver + search_path)
+│   ├── auth-client.ts            # Better Auth React client export (signIn, signUp, signOut, useSession)
 │   ├── schemas.ts                # Zod types: WorkspaceFile, Resume (legacy), ChatMessage, ToolCall
 │   ├── models.ts                 # Model registry, thinking levels, localStorage
 │   ├── id.ts                     # ID generation (crypto.randomUUID)
@@ -72,9 +84,17 @@
 │       ├── prompts.ts            # buildSystemInstruction() — system prompt
 │       ├── tools.ts              # 6 workspace tool factories + createWorkspaceTools()
 │       └── message-extractor.ts  # extractFilesFromMessage / extractDeletedFilesFromMessage
-├── .env.example                  # Required env vars
+├── scripts/
+│   ├── better-auth-schema.sql    # Raw SQL migration for better_auth schema & tables
+│   ├── migrate-better-auth-schema.ts # Automated TypeScript migration runner
+│   └── test-db.ts                # Database connection & schema healthcheck script
+├── utils/
+│   └── supabase/                 # Supabase client/server/middleware helper utilities
+├── middleware.ts                 # Next.js Middleware — edge-safe session cookie enforcement
+├── .env.example                  # Environment variables template
 ├── next.config.ts                # Standalone output, motion transpilation
 ├── package.json                  # Dependencies + scripts
+
 ├── postcss.config.mjs
 ├── eslint.config.mjs
 └── tsconfig.json
@@ -527,6 +547,11 @@ The `buildSystemInstruction(files)` function builds a structured 5-section syste
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Yes | — | Gemini API key for `@ai-sdk/google` |
 | `NEXT_PUBLIC_GEMINI_MODEL` | No | `gemini-3.5-flash-lite` | Default model ID |
 | `APP_URL` | No | `http://localhost:3000` | Application base URL |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | — | Supabase REST project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | — | Supabase publishable API key |
+| `DATABASE_URL` | Yes | — | Supabase PostgreSQL Pooler connection string (`aws-0-[region].pooler.supabase.com:6543`) |
+| `BETTER_AUTH_SECRET` | Yes | — | Better Auth session & cookie encryption secret |
+| `BETTER_AUTH_URL` | No | `http://localhost:3000` | Better Auth server base URL |
 
 ## 11. Scripts & Commands
 
@@ -535,8 +560,11 @@ The `buildSystemInstruction(files)` function builds a structured 5-section syste
 | `bun run dev` | Start Next.js dev server |
 | `bun run build` | Production build (standalone output) |
 | `bun run start` | Start production server |
+| `bun run db:migrate` | Run Better Auth `better_auth` schema PostgreSQL migration |
+| `bun run db:test` | Run database connection and schema healthcheck test |
 | `bun run lint` | Run ESLint |
 | `bun run clean` | `next clean` |
+
 
 ## 12. Key Architectural Decisions
 

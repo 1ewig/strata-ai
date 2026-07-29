@@ -19,6 +19,8 @@ The agent has six workspace file management tools (`listFiles`, `readFile`, `wri
 |-------|--------|---------|
 | Framework | Next.js 16.2.10 (App Router) | SSR, API routes, file-system routing |
 | Language | TypeScript 5.9.3 | Type safety across the full stack |
+| Authentication | Better Auth 1.6 + `@supabase/ssr` | Credentials auth, instant session, multi-layer middleware guard |
+| PostgreSQL DB | Supabase (Transaction Pooler) | Host database & isolated `better_auth` schema storage |
 | AI SDK Core | `ai@^7.0.0` | `streamText`, `tool()`, message types |
 | Google Provider | `@ai-sdk/google@^4.0.0` | Gemini model access |
 | React AI | `@ai-sdk/react@^2.0.0` | `useChat` hook, `DefaultChatTransport` |
@@ -30,6 +32,7 @@ The agent has six workspace file management tools (`listFiles`, `readFile`, `wri
 | Icons | `lucide-react@^0.553` | UI iconography |
 | Scroll | `use-stick-to-bottom@^1.1.6` | DOM observer-based auto-scroll |
 
+
 ---
 
 ## 3. Directory Structure
@@ -37,14 +40,19 @@ The agent has six workspace file management tools (`listFiles`, `readFile`, `wri
 ```
 ├── app/
 │   ├── layout.tsx              # Root layout — <html>, <body>, dark class, metadata
-│   ├── page.tsx                 # Home — redirects to latest/new chat via UUID
+│   ├── page.tsx                 # Home — redirects to latest/new chat via UUID (auth guarded)
+│   ├── auth/page.tsx           # Sign In / Sign Up tabbed auth page (wrapped in Suspense)
 │   ├── not-found.tsx            # Custom 404
 │   ├── globals.css              # Tailwind 4 import, theme tokens, keyframe animations
-│   ├── api/agent/route.ts       # POST /api/agent — AI streaming endpoint
-│   └── chat-id/[id]/page.tsx    # Chat page — thin shell (~124 lines), delegates to hook
+│   ├── api/
+│   │   ├── agent/route.ts       # POST /api/agent — AI streaming endpoint (session verified)
+│   │   └── auth/[...all]/route.ts # Better Auth Next.js API catch-all handler
+│   └── chat-id/[id]/page.tsx    # Chat page — thin shell (~124 lines), delegates to hook (auth guarded)
 │
 ├── components/
-│   ├── Sidebar.tsx              # Conversation list, new/delete, brand header
+│   ├── Sidebar.tsx              # Conversation list, new/delete, UserButton footer
+│   ├── auth/
+│   │   └── user-button.tsx       # User profile avatar & sign-out dropdown
 │   ├── chat/
 │   │   ├── ChatPanel.tsx        # Message list, empty state, typing dots
 │   │   ├── ChatBubble.tsx       # User/assistant message with segment splitting
@@ -64,6 +72,8 @@ The agent has six workspace file management tools (`listFiles`, `readFile`, `wri
 │   └── use-mobile.ts            # Responsive breakpoint detection (768px)
 │
 ├── lib/
+│   ├── auth.ts                  # Better Auth server instance (pg Pool driver + search_path)
+│   ├── auth-client.ts           # Better Auth React client export (signIn, signUp, signOut, useSession)
 │   ├── schemas.ts               # Zod types: WorkspaceFile, Resume (legacy), ChatMessage, ToolCall
 │   ├── models.ts                # Model registry, thinking levels, localStorage helpers
 │   ├── id.ts                    # crypto.randomUUID with fallback
@@ -75,12 +85,23 @@ The agent has six workspace file management tools (`listFiles`, `readFile`, `wri
 │       ├── tools.ts             # 6 workspace tool factories + aggregator
 │       └── message-extractor.ts # extractFilesFromMessage / extractDeletedFilesFromMessage
 │
-├── docs/ARCHITECTURE.md         # Existing architecture guide
-├── .env.example                 # Required env vars
+├── scripts/
+│   ├── better-auth-schema.sql    # Raw SQL migration for better_auth schema & tables
+│   ├── migrate-better-auth-schema.ts # Automated TypeScript migration runner
+│   └── test-db.ts                # Database connection & schema healthcheck script
+│
+├── utils/
+│   └── supabase/                # Supabase client/server/middleware helper utilities
+│
+├── middleware.ts                # Next.js Middleware — edge-safe session cookie enforcement
+├── docs/ARCHITECTURE.md         # Architecture guide
+├── docs/ENGINEERING.md            # Engineering documentation
+├── .env.example                 # Environment variables template
 ├── next.config.ts               # Standalone output, motion transpilation
 ├── postcss.config.mjs           # @tailwindcss/postcss + autoprefixer
 ├── eslint.config.mjs            # ESLint 9 flat config
 └── tsconfig.json                # ES2017 target, bundler resolution, @/* alias
+
 ```
 
 Total application source: ~3,300 lines across 29 files.
@@ -619,22 +640,25 @@ Previous `scrollIntoView` approach with 3 `useEffects` suffered from React batch
 | `GOOGLE_GENERATIVE_AI_API_KEY` | Yes | — | Gemini API key for `@ai-sdk/google` |
 | `NEXT_PUBLIC_GEMINI_MODEL` | No | `gemini-3.5-flash-lite` | Default model ID |
 | `APP_URL` | No | `http://localhost:3000` | Application base URL |
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | — | Supabase REST project URL |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Yes | — | Supabase publishable API key |
+| `DATABASE_URL` | Yes | — | Supabase PostgreSQL Pooler connection string (`aws-0-[region].pooler.supabase.com:6543`) |
+| `BETTER_AUTH_SECRET` | Yes | — | Better Auth session & cookie encryption secret |
+| `BETTER_AUTH_URL` | No | `http://localhost:3000` | Better Auth server base URL |
 
 ---
 
 ## 15. Architectural Evolution
 
 ```
-Raw Google GenAI SDK → AI SDK 7 Migration → Native UIMessage → General-Purpose Workspace
-  (@google/genai)        (AI SDK 7)               (Native UIMessage)     (HEAD)
-  custom agent loop      streamText + tool()  DBMessage extends   6 workspace file tools
-  custom fetch/stream    useChat + transport    UIMessage         closure pattern
-  FunctionDeclaration    createResumeTools()   no more conversion  metadata-only prompt
-  GEMINI_API_KEY         GOOGLE_GENERATIVE..   onFinish persistence constrained rules
-                                               title auto-gen      smoothStream
-                                               refresh fix         WorkspaceDrawer
-                                                                   resolver tool cards
+Raw Google GenAI SDK → AI SDK 7 Migration → Native UIMessage → General-Purpose Workspace → Supabase & Better Auth
+  (@google/genai)        (AI SDK 7)               (Native UIMessage)     (6 Workspace Tools)    (HEAD)
+  custom agent loop      streamText + tool()  DBMessage extends   closure pattern        better_auth schema isolation
+  custom fetch/stream    useChat + transport    UIMessage         metadata-only prompt   Edge-safe middleware guard
+  FunctionDeclaration    createResumeTools()   no more conversion  constrained rules      Instant credentials auth
+  GEMINI_API_KEY         GOOGLE_GENERATIVE..   onFinish persistence smoothStream           Postgres transaction pooler
 ```
+
 
 ---
 
