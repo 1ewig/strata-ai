@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, FileText, Copy, Edit3, Check, Plus, Trash2, Code } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -39,16 +39,11 @@ export default function WorkspaceDrawer({
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newFileName, setNewFileName] = useState('');
 
-  useEffect(() => {
-    if (activeFile) {
-      setFileName(activeFile.name);
-      setContentValue(activeFile.content);
-    } else {
-      setFileName('');
-      setContentValue('');
-    }
-    setIsEditing(false);
-  }, [activeFile?.id, activeFile?.content, activeFile?.name]);
+  const handleStartEditing = () => {
+    setFileName(activeFile?.name || '');
+    setContentValue(activeFile?.content || '');
+    setIsEditing(true);
+  };
 
   if (!isOpen) return null;
 
@@ -154,7 +149,7 @@ export default function WorkspaceDrawer({
                     </button>
                   ) : (
                     <button
-                      onClick={() => setIsEditing(true)}
+                      onClick={handleStartEditing}
                       className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary px-2.5 py-1.5 rounded-lg border border-edge-raised hover:border-edge-hover transition-colors cursor-pointer"
                     >
                       <Edit3 className="w-3.5 h-3.5" /> Edit
@@ -226,7 +221,7 @@ export default function WorkspaceDrawer({
                 </button>
               </div>
             ) : isEditing ? (
-              <div className="flex flex-col h-full space-y-3">
+              <div key={activeFile?.id || 'none'} className="flex flex-col h-full space-y-3">
                 <input
                   type="text"
                   value={fileName}
@@ -250,7 +245,7 @@ export default function WorkspaceDrawer({
                   Click Edit to add content or prompt the AI assistant.
                 </p>
                 <button
-                  onClick={() => setIsEditing(true)}
+                  onClick={handleStartEditing}
                   className="flex items-center gap-1.5 text-xs text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                 >
                   <Edit3 className="w-3.5 h-3.5" /> Edit File

@@ -16,14 +16,16 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
 
   const files = useMemo(() => getWorkspaceFiles(currentConv), [currentConv]);
 
-  // Set default active file if not set
-  useEffect(() => {
-    if (currentConv?.activeFileId) {
-      setActiveFileId(currentConv.activeFileId);
-    } else if (files.length > 0 && !activeFileId) {
-      setActiveFileId(files[0].id);
-    }
-  }, [currentConv?.activeFileId, files]);
+  // Reset active file on chat switch
+  const [prevChatId, setPrevChatId] = useState(currentConv?.id);
+  const [prevActiveFileId, setPrevActiveFileId] = useState(currentConv?.activeFileId);
+
+  if (currentConv?.id !== prevChatId || currentConv?.activeFileId !== prevActiveFileId) {
+    setPrevChatId(currentConv?.id);
+    setPrevActiveFileId(currentConv?.activeFileId);
+    setActiveFileId(currentConv?.activeFileId || (files.length > 0 ? files[0].id : null));
+  }
+
 
   const handleSelectFile = (fileId: string) => {
     setActiveFileId(fileId);

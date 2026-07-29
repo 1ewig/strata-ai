@@ -65,23 +65,23 @@ export function useChatSession(chatId: string) {
   const continuationCountRef = useRef<number>(0);
   const sendMessageRef = useRef<((msg: { text: string }) => void) | null>(null);
 
-  const getRequestBody = useCallback(
-    () => ({
-      model: modelRef.current,
-      thinkingLevel: thinkingLevelRef.current,
-      files: filesRef.current,
-    }),
-    [],
-  );
-
+  /* eslint-disable react-hooks/refs */
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/agent',
-        body: getRequestBody,
+        body: () => ({
+          model: modelRef.current,
+          thinkingLevel: thinkingLevelRef.current,
+          files: filesRef.current,
+        }),
       }),
-    [getRequestBody],
+    [],
   );
+  /* eslint-enable react-hooks/refs */
+
+
+
 
   const chat = useChat({
     id: chatId,
