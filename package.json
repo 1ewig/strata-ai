@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "clean": "next clean"
+    "clean": "next clean",
+    "db:migrate": "bun run scripts/migrate-better-auth-schema.ts",
+    "db:test": "bun run scripts/test-db.ts"
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.0",
