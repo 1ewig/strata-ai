@@ -81,7 +81,9 @@ The agent has six workspace file management tools (`listFiles`, `readFile`, `wri
 ├── lib/
 │   ├── auth.ts                  # Better Auth server instance (pg Pool driver + search_path)
 │   ├── auth-client.ts           # Better Auth React client export (signIn, signUp, signOut, useSession)
+│   ├── rate-limit.ts            # DB-backed rate limiter (better_auth.message_log, 10 msg/5h, 50 msg/7d)
 │   ├── schemas.ts               # Zod types: WorkspaceFile, Resume (legacy), ChatMessage, ToolCall
+
 │   ├── models.ts                # Model registry, thinking levels, localStorage helpers
 │   ├── id.ts                    # crypto.randomUUID with fallback
 │   ├── edit-engine.ts           # 3-tier string matching (exact / whitespace / anchor)

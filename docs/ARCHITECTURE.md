@@ -82,7 +82,9 @@
 ├── lib/
 │   ├── auth.ts                   # Better Auth server instance (pg Pool driver + search_path)
 │   ├── auth-client.ts            # Better Auth React client export (signIn, signUp, signOut, useSession)
+│   ├── rate-limit.ts             # Database-backed rate limiter (better_auth.message_log, 5h & 7d windows)
 │   ├── schemas.ts                # Zod types: WorkspaceFile, Resume (legacy), ChatMessage, ToolCall
+
 │   ├── models.ts                 # Model registry, thinking levels, localStorage
 │   ├── id.ts                     # ID generation (crypto.randomUUID)
 │   ├── edit-engine.ts            # ResumeEditEngine — 3-tier matching (exact / whitespace / anchor)
