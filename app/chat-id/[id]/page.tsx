@@ -7,13 +7,24 @@ import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
 import ChatPanel from '@/components/chat/ChatPanel';
 import ChatInput from '@/components/chat/ChatInput';
 import ChatHeader from '@/components/chat/ChatHeader';
+import { useRouter } from 'next/navigation';
+import { useSession } from '@/lib/auth-client';
 import { useChatSession } from '@/hooks/useChatSession';
 
 export default function ChatIdPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: chatId } = use(params);
+  const router = useRouter();
+  const { data: session, isPending: isSessionPending } = useSession();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  React.useEffect(() => {
+    if (!isSessionPending && !session?.user) {
+      router.replace(`/auth?callbackUrl=/chat-id/${chatId}`);
+    }
+  }, [session, isSessionPending, chatId, router]);
+
   const {
+
     model,
     thinkingLevel,
     inputValue,
@@ -44,9 +55,20 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     window.addEventListener('open-workspace-drawer', handleCustomOpen);
     return () => {
       window.removeEventListener('open-resume-drawer', handleCustomOpen);
-      window.removeEventListener('open-workspace-drawer', handleCustomOpen);
     };
   }, [setIsWorkspaceDrawerOpen]);
+
+  if (isSessionPending || !session?.user) {
+
+    return (
+      <main className="h-screen bg-surface-base flex items-center justify-center text-text-muted text-sm">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+          Verifying session...
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="h-screen max-h-screen bg-surface-base text-text-primary flex overflow-hidden font-sans">

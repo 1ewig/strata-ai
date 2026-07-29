@@ -2,13 +2,22 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from '@/lib/auth-client';
 import { db } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
 
 export default function Home() {
   const router = useRouter();
+  const { data: session, isPending } = useSession();
 
   useEffect(() => {
+    if (isPending) return;
+
+    if (!session?.user) {
+      router.replace('/auth');
+      return;
+    }
+
     async function initOrRedirect() {
       const latest = await db.conversations.orderBy('updatedAt').reverse().first();
       if (latest) {
@@ -19,7 +28,7 @@ export default function Home() {
       }
     }
     initOrRedirect();
-  }, [router]);
+  }, [session, isPending, router]);
 
   return (
     <main className="min-h-screen bg-surface-base flex items-center justify-center text-text-muted text-sm">
