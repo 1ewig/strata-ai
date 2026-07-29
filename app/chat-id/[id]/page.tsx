@@ -78,10 +78,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         <ChatHeader
           files={files}
           activeFileId={activeFileId}
-          model={model}
-          thinkingLevel={thinkingLevel}
-          onModelSelect={handleModelSelect}
-          onThinkingLevelChange={handleThinkingLevelChange}
           onOpenFile={(fileId) => {
             handleSelectFile(fileId);
             setIsWorkspaceDrawerOpen(true);
@@ -124,6 +120,10 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               onInputChange={setInputValue}
               onSubmit={handleSubmit}
               isLoading={isLoading}
+              model={model}
+              thinkingLevel={thinkingLevel}
+              onModelSelect={handleModelSelect}
+              onThinkingLevelChange={handleThinkingLevelChange}
             />
           </div>
         </div>

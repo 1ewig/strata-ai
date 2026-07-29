@@ -12,6 +12,7 @@ import { Resume, WorkspaceFile } from "@/lib/schemas";
 import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
 
 import { auth } from "@/lib/auth";
+import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
 
 const bodySchema = z.object({
   messages: z.array(z.any()),
@@ -29,6 +30,25 @@ export async function POST(req: Request) {
       status: 401,
       headers: { "Content-Type": "application/json" },
     });
+  }
+
+  const rateLimit = await checkAndIncrementRateLimit(session.user.id);
+  if (!rateLimit.allowed) {
+    return new Response(
+      JSON.stringify({
+        error: "Rate limit exceeded",
+        message: `Max 10 messages per 5 hours, 50 per week. Try again in ${Math.ceil(rateLimit.retryAfter! / 60)} min.`,
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(rateLimit.retryAfter),
+          "X-RateLimit-Remaining-5h": "0",
+          "X-RateLimit-Remaining-Week": String(rateLimit.remainingWeek),
+        },
+      },
+    );
   }
 
   const parsed = bodySchema.safeParse(await req.json());

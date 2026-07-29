@@ -58,3 +58,13 @@ CREATE TABLE IF NOT EXISTS better_auth."verification" (
   "createdAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- 4. Rate limiting message log
+CREATE TABLE IF NOT EXISTS better_auth.message_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL REFERENCES better_auth."user"(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_message_log_user_time
+  ON better_auth.message_log(user_id, created_at);
