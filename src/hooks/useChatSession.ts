@@ -73,6 +73,7 @@ export function useChatSession(chatId: string) {
 
   const continuationCountRef = useRef<number>(0);
   const sendMessageRef = useRef<((msg: { text: string }) => void) | null>(null);
+  const chatRef = useRef<any>(null);
 
   /* eslint-disable react-hooks/refs */
   const transport = useMemo(
@@ -107,6 +108,11 @@ export function useChatSession(chatId: string) {
               message: data?.message || 'Usage quota reached (10 msgs per 5 hours, 50 msgs per week). Please try again later.',
               retryAfter: retryAfterSec || data?.retryAfter,
             });
+            setTimeout(() => {
+              if (chatRef.current?.stop) {
+                chatRef.current.stop();
+              }
+            }, 0);
           }
           return res;
         },
@@ -119,6 +125,9 @@ export function useChatSession(chatId: string) {
     id: chatId,
     transport: transport as any,
     onError: useCallback((err: Error) => {
+      if (chatRef.current?.stop) {
+        chatRef.current.stop();
+      }
       if (err?.message?.includes('429') || err?.message?.toLowerCase().includes('rate limit')) {
         setQuotaError((prev) => prev || {
           message: 'Usage quota reached (10 msgs / 5h, 50 msgs / week). Please wait before trying again.',
@@ -203,8 +212,20 @@ export function useChatSession(chatId: string) {
   });
 
   useEffect(() => {
+    chatRef.current = chat;
     sendMessageRef.current = chat.sendMessage;
-  }, [chat.sendMessage]);
+  }, [chat]);
+
+  useEffect(() => {
+    if (quotaError && chat.messages.length > 0) {
+      const lastMsg: any = chat.messages[chat.messages.length - 1];
+      const isPartless = !lastMsg.parts || lastMsg.parts.length === 0;
+      const isTextEmpty = lastMsg.parts?.every((p: any) => p.type === 'text' && (!p.text || p.text.trim() === ''));
+      if (lastMsg.role === 'assistant' && (isPartless || isTextEmpty)) {
+        chat.setMessages(chat.messages.slice(0, -1));
+      }
+    }
+  }, [quotaError, chat]);
 
   const loadedChatIdRef = useRef<string | null>(null);
 
