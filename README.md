@@ -16,10 +16,10 @@
 ## 📸 Interface & Agent Preview
 
 ### Workspace Studio Homepage
-![Strata AI Workspace Studio](./public/hero.png)
+![Strata AI Workspace Studio](./public/hero.webp)
 
 ### Agent Execution & Multi-Tool Reasoning
-![Agent in Action with Chain-of-Thought and Tool Cards](./public/agent-in-action.png)
+![Agent in Action with Chain-of-Thought and Tool Cards](./public/agent-in-action.webp)
 
 ---
 
