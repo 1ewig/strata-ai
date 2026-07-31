@@ -24,9 +24,24 @@ interface RateLimitContextType {
 
 const RateLimitContext = createContext<RateLimitContextType | undefined>(undefined);
 
-export function RateLimitProvider({ children }: { children: React.ReactNode }) {
-  const [rateLimitData, setRateLimitData] = useState<RateLimitData | null>(null);
-  const [quotaError, setQuotaError] = useState<QuotaError | null>(null);
+interface RateLimitProviderProps {
+  children: React.ReactNode;
+  initialData?: RateLimitData | null;
+}
+
+export function RateLimitProvider({ children, initialData }: RateLimitProviderProps) {
+  const [rateLimitData, setRateLimitData] = useState<RateLimitData | null>(initialData ?? null);
+  const [quotaError, setQuotaError] = useState<QuotaError | null>(() => {
+    if (initialData && (initialData.remaining5h <= 0 || initialData.remainingWeek <= 0)) {
+      return {
+        message: initialData.remaining5h <= 0
+          ? 'Your 5-hour quota is exhausted (10/10 messages used).'
+          : 'Your weekly quota is exhausted (50/50 messages used).',
+        retryAfter: initialData.retryAfter,
+      };
+    }
+    return null;
+  });
 
   const checkQuotaStatus = useCallback(async () => {
     try {
@@ -50,6 +65,7 @@ export function RateLimitProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    if (initialData) return;
     let active = true;
     fetch('/api/user/rate-limit')
       .then((res) => (res.ok ? res.json() : null))
@@ -71,7 +87,7 @@ export function RateLimitProvider({ children }: { children: React.ReactNode }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [initialData]);
 
   const updateRateLimitData = useCallback((data: Partial<RateLimitData>) => {
     setRateLimitData((prev) => ({

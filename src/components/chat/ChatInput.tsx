@@ -405,8 +405,18 @@ export default function ChatInput({
             id="chat-submit-btn"
             type="submit"
             disabled={isLoading || !inputValue.trim() || isQuotaExhausted}
-            className="p-2 rounded-xl bg-primary hover:bg-primary-hover disabled:bg-surface-elevated disabled:opacity-40 shrink-0 transition-colors focus:outline-none cursor-pointer"
-            title={isQuotaExhausted ? "Quota limit reached" : "Send message"}
+            className={`p-2 rounded-xl shrink-0 transition-all focus:outline-none ${
+              isLoading || !inputValue.trim() || isQuotaExhausted
+                ? 'bg-surface-elevated opacity-40 cursor-not-allowed'
+                : 'bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
+            }`}
+            title={
+              isQuotaExhausted
+                ? 'Quota limit reached'
+                : !inputValue.trim()
+                ? 'Type a message to send'
+                : 'Send message'
+            }
           >
             <ArrowUp className="w-4 h-4 text-surface" />
           </button>

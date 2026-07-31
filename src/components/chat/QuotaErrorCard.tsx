@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { AlertCircle, Clock, X, RefreshCw } from 'lucide-react';
+import { AlertCircle, Clock, X } from 'lucide-react';
 
 interface QuotaErrorCardProps {
   error: {
@@ -9,10 +9,9 @@ interface QuotaErrorCardProps {
     retryAfter?: number;
   };
   onDismiss?: () => void;
-  onRetryCheck?: () => void;
 }
 
-export function QuotaErrorCard({ error, onDismiss, onRetryCheck }: QuotaErrorCardProps) {
+export function QuotaErrorCard({ error, onDismiss }: QuotaErrorCardProps) {
   const [secondsLeft, setSecondsLeft] = useState<number | undefined>(error.retryAfter);
 
   useEffect(() => {
@@ -77,16 +76,6 @@ export function QuotaErrorCard({ error, onDismiss, onRetryCheck }: QuotaErrorCar
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
-          {onRetryCheck && (
-            <button
-              type="button"
-              onClick={onRetryCheck}
-              className="p-1.5 rounded-lg hover:bg-surface-hover/70 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
-              title="Check quota status"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          )}
           {onDismiss && (
             <button
               type="button"

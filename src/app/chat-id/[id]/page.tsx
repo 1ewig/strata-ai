@@ -108,7 +108,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
                   onOpenDrawer={handleOpenDrawer}
                   quotaError={quotaError}
                   onDismissQuotaError={clearQuotaError}
-                  onRetryCheckQuota={checkQuotaStatus}
                 />
               </StickToBottom.Content>
 
