@@ -34,7 +34,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     streamingContent,
     isLoading,
     rateLimitData,
-    handleSubmit,
+    handleSendMessage,
     handleSelectFile,
     handleCreateFile,
     handleUpdateFile,
@@ -59,6 +59,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     window.addEventListener('open-workspace-drawer', handleCustomOpen);
     return () => {
       window.removeEventListener('open-resume-drawer', handleCustomOpen);
+      window.removeEventListener('open-workspace-drawer', handleCustomOpen);
     };
   }, [setIsWorkspaceDrawerOpen]);
 
@@ -118,7 +119,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30">
           <div className="max-w-2xl mx-auto pointer-events-auto">
             <ChatInput
-              onSendMessage={handleSubmit}
+              onSendMessage={handleSendMessage}
               isLoading={isLoading}
               model={model}
               thinkingLevel={thinkingLevel}

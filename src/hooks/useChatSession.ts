@@ -209,7 +209,7 @@ export function useChatSession(chatId: string) {
 
   const currentConvTitle = currentConv?.title;
 
-  const handleSubmit = useCallback(
+  const handleSendMessage = useCallback(
     (text: string) => {
       continuationCountRef.current = 0;
       const trimmed = text.trim();
@@ -238,7 +238,7 @@ export function useChatSession(chatId: string) {
     status: chat.status,
     isLoading,
     rateLimitData,
-    handleSubmit,
+    handleSendMessage,
     handleSelectFile: workspace.handleSelectFile,
     handleCreateFile: workspace.handleCreateFile,
     handleUpdateFile: workspace.handleUpdateFile,
