@@ -19,7 +19,7 @@ Always run `bun run lint` and `bun run build` after making changes — both must
 
 ## Styling — Milo Design System (CRITICAL)
 
-The app is light-mode only, built on the "Milo" EdTech palette defined in the `@theme` block in `src/app/globals.css`.
+The app ships light + dark themes (light default; dark via `theme-toggle.tsx` + the `.dark` token set), built on the "Milo" EdTech palette defined in the `@theme` block in `src/app/globals.css`.
 
 - **NEVER hardcode colors, hex values, arbitrary shadows, or Tailwind color names (e.g. `emerald`, `rose`, `red-*`, `amber`, `cyan`, `violet`, `slate`) in components.** Use semantic tokens only.
 - **Tokens** (see `globals.css` for full list):
@@ -35,7 +35,7 @@ The app is light-mode only, built on the "Milo" EdTech palette defined in the `@
 
 ## Architecture
 
-Read `docs/ARCHITECTURE.md` before touching core flow. Key rules:
+Read `docs/SUMMARY.md` (the canonical system-context & architecture guide) before touching core flow. Key rules:
 - **Adding a workspace tool:** define in `lib/ai/tools.ts` with `tool()` + explicit schemas, use the `WorkspaceToolsContext` closure pattern, register in `createWorkspaceTools()`, add a rule in `lib/ai/prompts.ts`, and add a config entry in `components/chat/tools/resolver.tsx`. **`ToolCallCard.tsx` requires zero modifications.**
 - **File persistence:** tool results returning `{ file }`, `{ files }`, or `{ deleted: true }` are auto-discovered by `lib/ai/message-extractor.ts` — no changes needed for new tools.
 - **Auto-scroll:** handled by `<StickToBottom>` in `app/chat-id/[id]/page.tsx`. Do not write manual `useEffect` + `scrollIntoView` loops.

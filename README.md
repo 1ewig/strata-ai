@@ -179,7 +179,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser. You'll be p
 
 For in-depth architectural breakdown, data flow details, and engineering design decisions:
 
-- [📄 Architecture & Engineering Guide (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md) — Comprehensive technical blueprint, client persistence, AI SDK 7 patterns, edit engine algorithms, and extension rules.
+- [📄 System Context & Architecture Guide (`docs/SUMMARY.md`)](docs/SUMMARY.md) — Canonical architecture guide: stack, data flow, domain models, routing, conventions, and extension recipes.
 
 ---
 
