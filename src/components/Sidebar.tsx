@@ -4,14 +4,19 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { MessageSquare, Plus, Trash2 } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, X } from 'lucide-react';
 import { db, deleteConversation } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
 import UserButton from '@/components/auth/user-button';
 import ThemeToggle from '@/components/theme-toggle';
 import { StrataIcon } from '@/components/ui/strata-icon';
 
-export default function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
 
@@ -23,6 +28,7 @@ export default function Sidebar() {
   const handleNewChat = () => {
     const newId = generateId();
     router.push(`/chat-id/${newId}`);
+    onClose?.();
   };
 
   const handleDelete = async (e: React.MouseEvent, id: string) => {
@@ -38,12 +44,24 @@ export default function Sidebar() {
         router.push(`/chat-id/${newId}`);
       }
     }
+    onClose?.();
   };
 
   return (
-    <aside className="w-64 bg-surface-raised/60 border-r border-edge-raised hidden md:flex flex-col h-screen sticky top-0 shrink-0 select-none">
+    <>
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm md:hidden"
+          onClick={onClose}
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface-raised border-r border-edge-raised flex flex-col h-screen shrink-0 select-none shadow-2xl transition-transform duration-300 md:static md:translate-x-0 md:shadow-none md:bg-surface-raised/60 ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
       {/* Brand Header */}
-      <div className="h-14 px-4 border-b border-edge-hover/50 flex items-center gap-2.5">
+      <div className="h-14 px-4 border-b border-edge-hover/50 flex items-center justify-between gap-2.5">
         <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-glow-primary">
             <StrataIcon className="w-4 h-4 text-surface" />
@@ -51,6 +69,13 @@ export default function Sidebar() {
           <h1 className="text-sm font-display font-bold tracking-tight text-text-bright">Strata AI</h1>
           <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised text-text-muted">WORKSPACE</span>
         </Link>
+        <button
+          onClick={onClose}
+          className="md:hidden p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+          aria-label="Close sidebar"
+        >
+          <X className="w-4 h-4" />
+        </button>
       </div>
 
       {/* New Chat Button */}
@@ -87,6 +112,7 @@ export default function Sidebar() {
               >
                 <Link
                   href={`/chat-id/${conv.id}`}
+                  onClick={() => onClose?.()}
                   className="flex-1 flex items-center gap-2.5 px-3 py-2.5 truncate"
                 >
                   <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-text-faint'}`} />
@@ -110,6 +136,7 @@ export default function Sidebar() {
         <ThemeToggle />
         <UserButton />
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }

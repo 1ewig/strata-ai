@@ -1,6 +1,6 @@
 'use client';
 
-import React, { use, useRef } from 'react';
+import React, { use, useRef, useState } from 'react';
 import { StickToBottom } from 'use-stick-to-bottom';
 import Sidebar from '@/components/Sidebar';
 import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
@@ -16,6 +16,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const router = useRouter();
   const { data: session, isPending: isSessionPending } = useSession();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   React.useEffect(() => {
     if (!isSessionPending && !session?.user) {
@@ -44,6 +45,10 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   } = useChatSession(chatId);
 
   const handleOpenDrawer = React.useCallback(() => setIsWorkspaceDrawerOpen(true), [setIsWorkspaceDrawerOpen]);
+
+  const handleOpenSidebar = React.useCallback(() => setIsSidebarOpen(true), []);
+
+  const handleCloseSidebar = React.useCallback(() => setIsSidebarOpen(false), []);
 
   const handleOpenFile = React.useCallback(
     (fileId: string) => {
@@ -77,7 +82,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
   return (
     <main className="h-screen max-h-screen bg-surface-base text-text-primary flex overflow-hidden font-sans">
-      <Sidebar />
+      <Sidebar isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
 
       <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 relative">
         <ChatHeader
@@ -85,6 +90,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
           activeFileId={activeFileId}
           onOpenFile={handleOpenFile}
           onOpenDrawer={handleOpenDrawer}
+          onOpenSidebar={handleOpenSidebar}
         />
 
         <StickToBottom className="flex-1 min-h-0" resize="smooth" initial="instant">

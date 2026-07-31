@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Folder, FileText, Plus } from 'lucide-react';
+import { ChevronDown, Folder, FileText, Menu, Plus } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
 
 interface ChatHeaderProps {
@@ -10,6 +10,7 @@ interface ChatHeaderProps {
   activeFileId: string | null;
   onOpenFile: (fileId: string) => void;
   onOpenDrawer: () => void;
+  onOpenSidebar?: () => void;
 }
 
 export default React.memo(function ChatHeader({
@@ -18,6 +19,7 @@ export default React.memo(function ChatHeader({
   activeFileId,
   onOpenFile,
   onOpenDrawer,
+  onOpenSidebar,
 }: ChatHeaderProps) {
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const fileMenuRef = useRef<HTMLDivElement>(null);
@@ -35,6 +37,15 @@ export default React.memo(function ChatHeader({
   return (
     <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40">
       <div className="flex items-center gap-2">
+        {onOpenSidebar && (
+          <button
+            onClick={onOpenSidebar}
+            className="md:hidden p-2 -ml-1 text-text-muted hover:text-text-primary hover:bg-surface-hover/60 rounded-lg transition-colors cursor-pointer"
+            aria-label="Open sidebar"
+          >
+            <Menu className="w-4 h-4" />
+          </button>
+        )}
         <span className="text-xs font-semibold text-text-secondary truncate max-w-xs sm:max-w-md">
           {title || 'Chat Workspace'}
         </span>
