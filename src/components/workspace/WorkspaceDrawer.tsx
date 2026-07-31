@@ -95,7 +95,7 @@ export default function WorkspaceDrawer({
           className="relative w-full max-w-2xl bg-surface-raised border-l border-edge-raised shadow-2xl h-full flex flex-col z-10"
         >
           {/* Top Bar / Navigation */}
-          <div className="h-14 px-6 border-b border-edge-raised flex items-center justify-between bg-surface-base/40 shrink-0 gap-4">
+          <div className="h-14 px-3 sm:px-6 border-b border-edge-raised flex items-center justify-between bg-surface-base/40 shrink-0 gap-4">
             {/* File Switcher Dropdown / Tabs */}
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <FileText className="w-4 h-4 text-primary shrink-0" />
@@ -133,7 +133,7 @@ export default function WorkspaceDrawer({
                   title="Copy content"
                 >
                   {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
-                  {copied ? 'Copied' : 'Copy'}
+                  <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
                 </button>
               )}
 
@@ -144,14 +144,14 @@ export default function WorkspaceDrawer({
                       onClick={handleSaveEdit}
                       className="flex items-center gap-1 text-xs font-semibold text-surface bg-primary hover:bg-primary-hover px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-button"
                     >
-                      <Check className="w-3.5 h-3.5" /> Save
+                      <Check className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Save</span>
                     </button>
                   ) : (
                     <button
                       onClick={handleStartEditing}
                       className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary px-2.5 py-1.5 rounded-lg border border-edge-raised hover:border-edge-hover transition-colors cursor-pointer"
                     >
-                      <Edit3 className="w-3.5 h-3.5" /> Edit
+                      <Edit3 className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Edit</span>
                     </button>
                   )}
 

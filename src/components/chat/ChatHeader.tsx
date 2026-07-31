@@ -33,7 +33,7 @@ export default React.memo(function ChatHeader({
   }, []);
 
   return (
-    <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-6 flex items-center justify-between shrink-0 z-40">
+    <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40">
       <div className="flex items-center gap-2">
         <span className="text-xs font-semibold text-text-secondary truncate max-w-xs sm:max-w-md">
           {title || 'Chat Workspace'}

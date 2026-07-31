@@ -41,7 +41,7 @@ export default function Sidebar() {
   };
 
   return (
-    <aside className="w-64 bg-surface-raised/60 border-r border-edge-raised flex flex-col h-screen sticky top-0 shrink-0 select-none">
+    <aside className="w-64 bg-surface-raised/60 border-r border-edge-raised hidden md:flex flex-col h-screen sticky top-0 shrink-0 select-none">
       {/* Brand Header */}
       <div className="h-14 px-4 border-b border-edge-hover/50 flex items-center gap-2.5">
         <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
