@@ -33,73 +33,74 @@
 
 ```
 .
-├── app/                          # Next.js App Router
-│   ├── layout.tsx                # Root layout, <html>/<body>, metadata
-│   ├── page.tsx                  # Home — redirects to latest or new chat (auth protected)
-│   ├── auth/
-│   │   ├── page.tsx              # Redirects to /auth/signin
-│   │   ├── signin/
-│   │   │   └── page.tsx          # Sign In page (session guard + form)
-│   │   └── signup/
-│   │       └── page.tsx          # Sign Up page (session guard + form)
-│   ├── not-found.tsx             # Custom 404 page
-│   ├── globals.css               # Tailwind import, scrollbar, animations
-│   ├── api/
-│   │   ├── agent/
-│   │   │   └── route.ts          # POST /api/agent — AI agent streaming endpoint (auth verified)
-│   │   └── auth/
-│   │       └── [...all]/
-│   │           └── route.ts      # Better Auth Next.js API catch-all handler
-│   └── chat-id/
-│       └── [id]/
-│           └── page.tsx          # Chat page (thin shell, auth protected)
-├── components/
-│   ├── Sidebar.tsx               # Conversation list, new/delete, UserButton footer
-│   ├── auth/
-│   │   ├── user-button.tsx       # User profile avatar & sign-out dropdown
-│   │   ├── loading-screen.tsx    # Full-screen spinner (session loading)
-│   │   ├── already-authenticated.tsx  # "Already Authenticated" card
-│   │   ├── auth-shell.tsx        # Shared layout (glow, card, header, footer)
-│   │   ├── sign-in-form.tsx      # Email + password form with error/success state
-│   │   └── sign-up-form.tsx      # Name + email + password form with error/success state
-│   ├── chat/
-│   │   ├── ChatPanel.tsx         # Message list, empty state, loading indicators
-│   │   ├── ChatBubble.tsx        # User/assistant message bubble
-│   │   ├── ChatInput.tsx         # Auto-resize textarea with Enter-to-send
-│   │   ├── ChatHeader.tsx        # Model selector + thinking level + workspace drawer
-│   │   ├── ToolCallCard.tsx      # Minimal accordion card — receives ToolCardProps
-│   │   ├── ThoughtAccordion.tsx  # Collapsible reasoning/thought display
-│   │   └── tools/
-│   │       └── resolver.tsx      # extractToolInfo + resolveToolDisplay → ToolCardProps
-│   ├── ui/                       # (empty — available for base UI primitives)
-│   └── workspace/
-│       └── WorkspaceDrawer.tsx   # Slide-over panel: file list, create, edit, delete
-├── hooks/
-│   ├── useChatSession.ts         # Central orchestration hook (core logic)
-│   ├── useWorkspaceFiles.ts      # Workspace file CRUD + Dexie persistence
-│   ├── useModelSettings.ts       # Model + thinking level state + localStorage
-│   └── use-mobile.ts             # Responsive breakpoint detection (768px)
-├── lib/
-│   ├── auth.ts                   # Better Auth server instance (pg Pool driver + search_path)
-│   ├── auth-client.ts            # Better Auth React client export (signIn, signUp, signOut, useSession)
-│   ├── rate-limit.ts             # Database-backed rate limiter (better_auth.message_log, 5h & 7d windows)
-│   ├── schemas.ts                # Zod types: WorkspaceFile, Resume (legacy), ChatMessage, ToolCall
-
-│   ├── models.ts                 # Model registry, thinking levels, localStorage
-│   ├── id.ts                     # ID generation (crypto.randomUUID)
-│   ├── edit-engine.ts            # ResumeEditEngine — 3-tier matching (exact / whitespace / anchor)
-│   ├── db/
-│   │   └── db.ts                 # Dexie schema v4, CRUD helpers
-│   └── ai/
-│       ├── index.ts              # Re-exports prompts + tools
-│       ├── prompts.ts            # buildSystemInstruction() — system prompt
-│       ├── tools.ts              # 6 workspace tool factories + createWorkspaceTools()
-│       └── message-extractor.ts  # extractFilesFromMessage / extractDeletedFilesFromMessage
+├── src/                          # Application source (Next.js auto-detects src/app)
+│   ├── app/                      # Next.js App Router
+│   │   ├── layout.tsx            # Root layout, <html>/<body>, metadata
+│   │   ├── page.tsx              # Home — redirects to latest or new chat (auth protected)
+│   │   ├── auth/
+│   │   │   ├── page.tsx          # Redirects to /auth/signin
+│   │   │   ├── signin/
+│   │   │   │   └── page.tsx      # Sign In page (session guard + form)
+│   │   │   └── signup/
+│   │   │       └── page.tsx      # Sign Up page (session guard + form)
+│   │   ├── not-found.tsx         # Custom 404 page
+│   │   ├── globals.css           # Tailwind import, scrollbar, animations
+│   │   ├── api/
+│   │   │   ├── agent/
+│   │   │   │   └── route.ts      # POST /api/agent — AI agent streaming endpoint (auth verified)
+│   │   │   └── auth/
+│   │   │       └── [...all]/
+│   │   │           └── route.ts  # Better Auth Next.js API catch-all handler
+│   │   └── chat-id/
+│   │       └── [id]/
+│   │           └── page.tsx      # Chat page (thin shell, auth protected)
+│   ├── components/
+│   │   ├── Sidebar.tsx           # Conversation list, new/delete, UserButton footer
+│   │   ├── auth/
+│   │   │   ├── user-button.tsx   # User profile avatar & sign-out dropdown
+│   │   │   ├── loading-screen.tsx# Full-screen spinner (session loading)
+│   │   │   ├── already-authenticated.tsx  # "Already Authenticated" card
+│   │   │   ├── auth-shell.tsx    # Shared layout (glow, card, header, footer)
+│   │   │   ├── sign-in-form.tsx  # Email + password form with error/success state
+│   │   │   └── sign-up-form.tsx  # Name + email + password form with error/success state
+│   │   ├── chat/
+│   │   │   ├── ChatPanel.tsx     # Message list, empty state, loading indicators
+│   │   │   ├── ChatBubble.tsx    # User/assistant message bubble
+│   │   │   ├── ChatInput.tsx     # Auto-resize textarea with Enter-to-send
+│   │   │   ├── ChatHeader.tsx    # Model selector + thinking level + workspace drawer
+│   │   │   ├── ToolCallCard.tsx  # Minimal accordion card — receives ToolCardProps
+│   │   │   ├── ThoughtAccordion.tsx  # Collapsible reasoning/thought display
+│   │   │   └── tools/
+│   │   │       └── resolver.tsx  # extractToolInfo + resolveToolDisplay → ToolCardProps
+│   │   ├── ui/                   # (empty — available for base UI primitives)
+│   │   └── workspace/
+│   │       └── WorkspaceDrawer.tsx  # Slide-over panel: file list, create, edit, delete
+│   ├── hooks/
+│   │   ├── useChatSession.ts     # Central orchestration hook (core logic)
+│   │   ├── useWorkspaceFiles.ts  # Workspace file CRUD + Dexie persistence
+│   │   ├── useModelSettings.ts   # Model + thinking level state + localStorage
+│   │   └── use-mobile.ts         # Responsive breakpoint detection (768px)
+│   ├── lib/
+│   │   ├── auth.ts               # Better Auth server instance (pg Pool driver + search_path)
+│   │   ├── auth-client.ts        # Better Auth React client export (signIn, signUp, signOut, useSession)
+│   │   ├── rate-limit.ts         # Database-backed rate limiter (better_auth.message_log, 5h & 7d windows)
+│   │   ├── schemas.ts            # Zod types: WorkspaceFile, Resume (legacy), ChatMessage, ToolCall
+│   │   ├── models.ts             # Model registry, thinking levels, localStorage
+│   │   ├── id.ts                 # ID generation (crypto.randomUUID)
+│   │   ├── edit-engine.ts        # ResumeEditEngine — 3-tier matching (exact / whitespace / anchor)
+│   │   ├── db/
+│   │   │   └── db.ts             # Dexie schema v4, CRUD helpers
+│   │   └── ai/
+│   │       ├── index.ts          # Re-exports prompts + tools
+│   │       ├── prompts.ts        # buildSystemInstruction() — system prompt
+│   │       ├── tools.ts          # 6 workspace tool factories + createWorkspaceTools()
+│   │       └── message-extractor.ts  # extractFilesFromMessage / extractDeletedFilesFromMessage
+│   └── proxy.ts                  # Next.js 16 proxy — edge-safe session cookie check + security headers
+├── public/                       # Static assets (required at project root)
 ├── scripts/
 │   ├── better-auth-schema.sql    # Raw SQL migration for better_auth schema & tables
 │   ├── migrate-better-auth-schema.ts # Automated TypeScript migration runner
 │   └── test-db.ts                # Database connection & schema healthcheck script
-├── proxy.ts                      # Next.js 16 proxy — edge-safe session cookie check + security headers
 ├── .env.example                  # Environment variables template
 ├── next.config.ts                # Standalone output, motion transpilation
 ├── package.json                  # Dependencies + scripts
