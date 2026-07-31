@@ -591,7 +591,7 @@ if (anchor.success) return anchor;
 | `BETTER_AUTH_URL` | No | `http://localhost:3000` | Better Auth server base URL |
 | `NEXT_PUBLIC_APP_URL` | No | `http://localhost:3000` | Public-facing app URL (auth client base URL) |
 
-## 11. Scripts & Commands
+## 13. Scripts & Commands
 
 | Command | Action |
 |---------|--------|
@@ -603,37 +603,7 @@ if (anchor.success) return anchor;
 | `bun run lint` | Run ESLint |
 | `bun run clean` | `next clean` |
 
-
-## 12. Key Architectural Decisions
-
-### Why Dexie (IndexedDB) instead of server-side DB?
-The app is designed for serverless and local-first containerized deployments with no persistent server-side database requirement. All conversation data lives in the browser's IndexedDB, making the app fully client-side persistent.
-
-### Why native UIMessage format in Dexie?
-Messages are stored in the native AI SDK `UIMessage` format (with `parts[]`) instead of a custom `ChatMessage` schema. This eliminates format conversion code and ensures compatibility with `useChat`'s message format. The `parts[]` array is the single source of truth for text, tool invocations, and reasoning content.
-
-### Why closure pattern instead of contextSchema?
-All six workspace tools use the **closure pattern** via `WorkspaceToolsContext` (`getCurrentFiles`, `onUpdateFile`, `onDeleteFile`). The API route creates a local `mutableFiles[]` array and passes closures that mutate it. This keeps the API route stateless at the HTTP layer while allowing multi-step tool calls within a single request to build on each other. The old `contextSchema` approach (used by the legacy resume tools) was dropped because it required separate context wiring per tool and couldn't handle multi-step mutations as cleanly.
-
-### Why metadata-only workspace listing in the system prompt?
-Full file content was previously injected into `<workspace_files>` tags for verbatim `searchString` anchoring. This bloated the context on every `prepareStep` — files with 10-50KB content were re-injected across potentially 10 steps. Current approach lists only `name`, `language`, `charCount`, and `id` in the system prompt. The model calls `readFile` to get the exact text needed for `editFile`'s `searchString`. This trades one extra tool call per edit for significantly smaller context per step.
-
-### Why smoothStream?
-`smoothStream` (`delayInMs: 15`, `chunking: "word"`) emits tokens at a controlled rate instead of dumping them as fast as the model produces them. This dramatically improves the perceived latency — the UI renders tokens smoothly rather than appearing stuck then suddenly receiving a wall of text. Essential for long responses where the generation time exceeds 5-10 seconds.
-
-### Why streamText over generateText?
-`streamText` enables real-time streaming of both text tokens and tool call invocations back to the client via `createUIMessageStreamResponse`. This gives the user immediate feedback while the agent iterates through multi-step tool calling loops.
-
-### Why DefaultChatTransport?
-`DefaultChatTransport` wraps the `useChat` ↔ API route communication, automatically handling message serialization, streaming via SSE, and reconnection. It's the standard AI SDK pattern for connecting `useChat` to a custom API endpoint.
-
-### Why `use-stick-to-bottom` instead of manual `useEffect` scroll?
-The initial scroll implementation used three `useEffect` hooks with `scrollIntoView` triggered by `displayMessages`, `status`, and `isAtBottom` state. This suffered from race conditions — React batches state updates from scroll events and streaming chunks unpredictably, so the user could never reliably "escape" the auto-scroll by scrolling up during streaming. `use-stick-to-bottom` replaces this with `ResizeObserver` and `MutationObserver` that intercept DOM mutations synchronously, making scroll decisions before React reconciles. The library also handles edge cases (scroll-to-bottom button visibility, instant/smooth/spring animations, preserve-scroll-position) that would require significant additional code to implement manually.
-
-### Why Response-Driven Rate Limit Quota Updates (Stream Headers)?
-Rate limit state (`X-RateLimit-Remaining-5h` & `X-RateLimit-Remaining-Week`) is calculated on `POST /api/agent` during prompt authorization and returned in HTTP response headers. `DefaultChatTransport`'s custom `fetch` wrapper intercepts these headers as soon as the SSE stream opens (~150ms), updating React state immediately. This eliminates redundant post-message `GET /api/user/rate-limit` HTTP round-trips and PostgreSQL queries after generation completes, reserving `/api/user/rate-limit` solely for initial page loads.
-
-## 13. Architectural Evolution
+## 14. Architectural Evolution
 
 ```
 Raw Google GenAI SDK  ──→  AI SDK 7 Migration  ──→  Native UIMessage  ──→  General-Purpose Workspace
@@ -644,17 +614,30 @@ Raw Google GenAI SDK  ──→  AI SDK 7 Migration  ──→  Native UIMessage
   - GEMINI_API_KEY           - GOOGLE_GENERATIVE_..   - onFinish persistence  - constrained rules + edge cases
                                                        - title auto-gen        - smoothStream
                                                        - refresh fix           - multi-file WorkspaceDrawer
-                                                                               - minimal accordion tool cards
+                                                                                - minimal accordion tool cards
 ```
 
-## 14. Notes for Future Agents
+## 15. Notes & Extension Rules for Future Agents
 
-- **Adding a new model:** add entry to `MODELS` array in `lib/models.ts`, set `MODEL_DESCRIPTIONS` and optionally `MODEL_THINKING_LEVELS`
-- **Adding a new tool:** define with `tool()` from `ai`, add `inputSchema` and `outputSchema`, then register in `createWorkspaceTools()` in `lib/ai/tools.ts` and update `lib/ai/prompts.ts` (add to the `## Tool Rules` section, not a verbose re-description). If the tool returns a `{ file }` or `{ files }` object, `extractFilesFromMessage` in `lib/ai/message-extractor.ts` will auto-discover it — no filter update needed. Finally add a config entry + summary builder in `components/chat/tools/resolver.tsx` — `ToolCallCard.tsx` needs zero changes.
-- **All tools use the closure pattern:** add the needed callback to `WorkspaceToolsContext` interface, pass it through `createWorkspaceTools()` in the route handler, and implement the callback in `useWorkspaceFiles.ts` if the operation needs Dexie persistence.
-- **Output schemas:** always add `outputSchema` to new tools — they enable type-safe results and better UI-part inference in AI SDK 7's `useChat`.
-- **Adding a new provider:** add `@ai-sdk/<provider>` to `package.json`, set as `model` parameter in `streamText` (e.g., `anthropic("claude-4")`), add models to registry
-- **Schema migrations:** increment the version number in `db.ts` constructor and define new `stores()` — Dexie handles the upgrade
-- **`contexts/` and `components/ui/` are empty** — available for shared state providers and base UI primitives
-- **Auto-scroll is handled by `<StickToBottom>` in `page.tsx`** — not by manual `useEffect` in `ChatPanel`. The library wraps the message list and scroll-to-bottom button. If you need to customize scroll behavior, expose `StickToBottomContext` via a render function (`{(context) => ...}`) or `useStickToBottomContext()` in a child component.
-- **Streaming UX lives in `ChatBubble.tsx` and `globals.css`** — the `animate-caret` and `animate-shimmer` keyframes are defined in the `@theme` block. The caret sits inside the prose div after `</ReactMarkdown>` to stay inline with the last text line. The shimmer overlay uses a `pointer-events-none` absolute div that sweeps across the last streaming segment.
+- **Adding a New Model:** Add entry to `MODELS` array in `lib/models.ts`, set `MODEL_DESCRIPTIONS`, and set `MODEL_THINKING_LEVELS` if the model supports reasoning parameters.
+- **Adding a New Workspace Tool:**
+  1. Define using `tool()` from `ai` in `lib/ai/tools.ts` with explicit `inputSchema` and `outputSchema`.
+  2. Add factory function accepting `WorkspaceToolsContext` callbacks (`getCurrentFiles`, `onUpdateFile`, `onDeleteFile`).
+  3. Register in `createWorkspaceTools()` aggregator in `lib/ai/tools.ts`.
+  4. Update `lib/ai/prompts.ts` (add concise tool rule under `## Tool Rules`).
+  5. Add config entry + summary builder in `components/chat/tools/resolver.tsx` — `ToolCallCard.tsx` requires zero modifications.
+  6. If tool output contains `{ file }`, `{ files }`, or `{ deleted: true }`, `lib/ai/message-extractor.ts` auto-discovers it for Dexie persistence.
+- **Rate Limit & Quota Tracking:**
+  - `checkAndIncrementRateLimit(userId)` runs on `POST /api/agent` against PostgreSQL `better_auth.message_log`.
+  - Quota response headers (`X-RateLimit-Remaining-5h` & `X-RateLimit-Remaining-Week`) are emitted in `createUIMessageStreamResponse`.
+  - Headers are intercepted directly in `DefaultChatTransport`'s custom `fetch` wrapper in `hooks/useChatSession.ts` to update `rateLimitData` state when streaming starts — avoid adding post-message refetch hooks in components.
+- **Client State & Dexie Persistence:**
+  - Messages are stored as native AI SDK `UIMessage` objects in Dexie IndexedDB.
+  - To upgrade Dexie schema, increment version number in `lib/db/db.ts` constructor and add a new `stores()` definition.
+- **Authentication & Security:**
+  - Auth is powered by Better Auth 1.6 connected to Supabase PostgreSQL pooler (`DATABASE_URL`).
+  - Protected API routes verify session via `auth.api.getSession({ headers: req.headers })`. Edge session guards live in `proxy.ts`.
+- **UI & Auto-Scroll Guidelines:**
+  - Auto-scroll is handled by `<StickToBottom>` in `app/chat-id/[id]/page.tsx` via DOM observers. Do not write manual `useEffect` + `scrollIntoView` loops in `ChatPanel`.
+  - Caret cursor (`animate-caret`) and shimmer overlay (`animate-shimmer`) keyframe styles live in `app/globals.css`.
+  - Empty directories (`contexts/` and `components/ui/`) are reserved for shared state providers and atomic UI primitives.
