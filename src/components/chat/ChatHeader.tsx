@@ -45,7 +45,7 @@ export default function ChatHeader({
         <div className="relative" ref={fileMenuRef}>
           <button
             onClick={() => setFileMenuOpen(prev => !prev)}
-            className="flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-all font-medium cursor-pointer"
+            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary-soft-strong transition-all font-medium cursor-pointer"
             title="Workspace Files"
           >
             <Folder className="w-3.5 h-3.5" />
@@ -75,15 +75,15 @@ export default function ChatHeader({
                           setFileMenuOpen(false);
                         }}
                         className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-surface-hover transition-colors cursor-pointer ${
-                          isActive ? 'bg-emerald-500/10 text-emerald-300 font-medium' : 'text-text-primary'
+                          isActive ? 'bg-primary-soft text-primary font-medium' : 'text-text-primary'
                         }`}
                       >
                         <div className="flex items-center gap-2 truncate">
-                          <FileText className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-emerald-400' : 'text-text-muted'}`} />
+                          <FileText className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-text-muted'}`} />
                           <span className="truncate">{file.name}</span>
                         </div>
                         {isActive && (
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                          <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
                         )}
                       </button>
                     );
@@ -97,7 +97,7 @@ export default function ChatHeader({
                     setFileMenuOpen(false);
                     onOpenDrawer();
                   }}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-emerald-400 hover:bg-emerald-500/10 font-medium transition-colors cursor-pointer"
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-primary hover:bg-primary-soft font-medium transition-colors cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
                   Manage Workspace Files

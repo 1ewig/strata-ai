@@ -43,10 +43,10 @@ export default function Sidebar() {
       {/* Brand Header */}
       <div className="h-14 px-4 border-b border-edge-hover/50 flex items-center gap-2.5">
         <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-emerald-600 to-emerald-400 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.2)]">
-            <BrainCircuit className="w-4 h-4 text-surface-base" />
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-glow-primary">
+            <BrainCircuit className="w-4 h-4 text-surface" />
           </div>
-          <h1 className="text-sm font-bold tracking-tight text-text-bright">Strata AI</h1>
+          <h1 className="text-sm font-display font-bold tracking-tight text-text-bright">Strata AI</h1>
           <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised text-text-muted">WORKSPACE</span>
         </Link>
       </div>
@@ -55,7 +55,7 @@ export default function Sidebar() {
       <div className="p-3 border-b border-edge-hover/50">
         <button
           onClick={handleNewChat}
-          className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-surface-base font-semibold px-3 py-2 rounded-lg text-xs transition-colors shadow-sm cursor-pointer"
+          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-surface font-semibold px-3 py-2 rounded-xl text-xs transition-colors shadow-button cursor-pointer"
         >
           <Plus className="w-4 h-4" />
           New Conversation
@@ -77,9 +77,9 @@ export default function Sidebar() {
             return (
               <div
                 key={conv.id}
-                className={`group relative flex items-center rounded-lg text-xs transition-colors ${
+                className={`group relative flex items-center rounded-xl text-xs transition-colors ${
                   isActive
-                    ? 'bg-surface-elevated/90 text-text-bright font-medium'
+                    ? 'bg-primary-soft text-text-bright font-medium'
                     : 'text-text-muted hover:bg-surface-hover/50 hover:text-text-primary'
                 }`}
               >
@@ -87,12 +87,12 @@ export default function Sidebar() {
                   href={`/chat-id/${conv.id}`}
                   className="flex-1 flex items-center gap-2.5 px-3 py-2.5 truncate"
                 >
-                  <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-emerald-400' : 'text-text-faint'}`} />
+                  <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-text-faint'}`} />
                   <span className="truncate flex-1">{conv.title || 'Untitled Chat'}</span>
                 </Link>
                 <button
                   onClick={(e) => handleDelete(e, conv.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 mr-1 hover:text-rose-400 text-text-muted rounded transition-opacity"
+                  className="opacity-0 group-hover:opacity-100 p-1.5 mr-1 hover:text-danger text-text-muted rounded transition-opacity"
                   title="Delete chat"
                 >
                   <Trash2 className="w-3.5 h-3.5" />

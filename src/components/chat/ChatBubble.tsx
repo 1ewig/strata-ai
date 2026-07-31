@@ -121,8 +121,8 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
           ${
             isUser
               ? 'bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-sm'
-              : `bg-gradient-to-tr from-emerald-600 via-emerald-500 to-cyan-400 text-surface-base
-                 ${isStreaming ? 'shadow-[0_0_20px_rgba(16,185,129,0.45)] scale-[1.03]' : 'shadow-[0_0_15px_rgba(16,185,129,0.25)]'}`
+              : `bg-gradient-to-tr from-primary to-secondary text-surface
+                 ${isStreaming ? 'shadow-glow-primary scale-[1.03]' : 'shadow-card'}`
           }
         `}
       >
@@ -130,14 +130,14 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
           <User className="w-4 h-4 text-text-secondary" />
         ) : (
           <BrainCircuit
-            className={`w-4.5 h-4.5 text-surface-base stroke-[2.5] transition-transform duration-700 ${
+            className={`w-4.5 h-4.5 text-surface stroke-[2.5] transition-transform duration-700 ${
               isStreaming ? 'animate-[spin_8s_linear_infinite]' : ''
             }`}
           />
         )}
 
         {!isUser && isStreaming && (
-          <span className="absolute inset-0 rounded-xl ring-2 ring-emerald-400/30 animate-ping opacity-40" />
+          <span className="absolute inset-0 rounded-xl ring-2 ring-primary/40 animate-ping opacity-40" />
         )}
       </div>
 
@@ -146,9 +146,9 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
         {!isUser && isStreaming && segments.length === 0 && (
           <div className="rounded-2xl px-4.5 py-3.5 bg-surface-overlay/70 border border-edge-raised/60 backdrop-blur-sm fade-in">
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 animate-bounce [animation-delay:-0.3s]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 animate-bounce [animation-delay:-0.15s]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/80 animate-bounce" />
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
+              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" />
             </div>
           </div>
         )}
@@ -160,7 +160,7 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
             return (
               <div
                 key={seg.key}
-                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-emerald-950/30 border border-emerald-800/30 text-emerald-100 rounded-tr-xs shadow-sm fade-in"
+                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-primary text-surface border border-primary rounded-tr-xs shadow-card fade-in"
               >
                 <p className="whitespace-pre-wrap leading-relaxed">{seg.content}</p>
               </div>
@@ -185,26 +185,26 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
                   transition-all duration-300 fade-in
                   bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs
                   shadow-md backdrop-blur-sm
-                  ${isStreaming && isLastSegment ? 'shadow-[0_0_24px_-6px_rgba(16,185,129,0.25)]' : ''}
+                  ${isStreaming && isLastSegment ? 'shadow-glow-primary' : ''}
                 `}
               >
                 {isStreaming && isLastSegment && (
                   <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
-                    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-emerald-400/5 to-transparent" />
+                    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-primary/8 to-transparent" />
                   </div>
                 )}
 
-                <div className="prose prose-invert max-w-none text-xs sm:text-sm text-text-primary leading-relaxed relative">
+                <div className="prose max-w-none text-xs sm:text-sm text-text-primary leading-relaxed relative">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ children }) => (
-                        <h1 className="text-base sm:text-lg font-bold text-text-bright mt-3 mb-2 border-b border-edge-raised/80 pb-1.5 flex items-center gap-2">
+                        <h1 className="text-base sm:text-lg font-display font-bold text-text-bright mt-3 mb-2 border-b border-edge-raised/80 pb-1.5 flex items-center gap-2">
                           {children}
                         </h1>
                       ),
                       h2: ({ children }) => (
-                        <h2 className="text-xs sm:text-sm font-bold text-text-bright mt-3 mb-1.5 text-emerald-400/90 tracking-wide uppercase">
+                        <h2 className="text-xs sm:text-sm font-bold text-primary/90 mt-3 mb-1.5 tracking-wide uppercase">
                           {children}
                         </h2>
                       ),
@@ -235,7 +235,7 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
 
                         if (isInline) {
                           return (
-                            <code className="bg-surface-elevated/90 text-emerald-300 font-mono px-1.5 py-0.5 rounded text-[11px] border border-edge-hover/60" {...props}>
+                            <code className="bg-surface-elevated/90 text-primary font-mono px-1.5 py-0.5 rounded text-[11px] border border-edge-hover/60" {...props}>
                               {children}
                             </code>
                           );
@@ -246,12 +246,12 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
                               <span className="text-text-muted">Code Snippet</span>
                               <button
                                 onClick={() => handleCopyCodeSnippet(rawCode, snippetId)}
-                                className="flex items-center gap-1 text-[10px] text-text-muted hover:text-emerald-400 transition-colors cursor-pointer"
+                                className="flex items-center gap-1 text-[10px] text-text-muted hover:text-primary transition-colors cursor-pointer"
                               >
                                 {copiedCodeId === snippetId ? (
                                   <>
-                                    <Check className="w-3 h-3 text-emerald-400" />
-                                    <span className="text-emerald-400">Copied</span>
+                                    <Check className="w-3 h-3 text-primary" />
+                                    <span className="text-primary">Copied</span>
                                   </>
                                 ) : (
                                   <>
@@ -281,7 +281,7 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
                         <td className="px-3 py-2 border-b border-edge-raised/40 hover:bg-surface-hover/20">{children}</td>
                       ),
                       blockquote: ({ children }) => (
-                        <blockquote className="border-l-2 border-emerald-500/60 pl-3 my-2 text-text-muted italic text-xs">
+                        <blockquote className="border-l-2 border-primary/60 pl-3 my-2 text-text-muted italic text-xs">
                           {children}
                         </blockquote>
                       ),
@@ -291,7 +291,7 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
                     {seg.content}
                   </ReactMarkdown>
                   {isStreaming && isLastSegment && (
-                    <span className="inline-block w-[1.5px] h-[1.05em] ml-0.5 -mb-0.5 bg-emerald-400/90 rounded-full animate-caret align-text-bottom" />
+                    <span className="inline-block w-[1.5px] h-[1.05em] ml-0.5 -mb-0.5 bg-primary/90 rounded-full animate-caret align-text-bottom" />
                   )}
                 </div>
               </div>

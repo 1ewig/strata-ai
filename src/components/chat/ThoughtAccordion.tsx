@@ -19,13 +19,13 @@ export default function ThoughtAccordion({ text, isThinking }: ThoughtAccordionP
     <div className="my-1.5 rounded-xl border border-edge-raised/40 bg-surface-overlay/30 overflow-hidden text-xs fade-in">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-surface-raised/60 hover:bg-surface-raised transition-colors text-left font-mono text-[11px] text-cyan-300 cursor-pointer"
+        className="w-full flex items-center justify-between px-3 py-2 bg-surface-raised/60 hover:bg-surface-raised transition-colors text-left font-mono text-[11px] text-info cursor-pointer"
       >
         <div className="flex items-center gap-2">
           {isThinking ? (
-            <Loader2 className="w-3.5 h-3.5 text-cyan-400 animate-spin" />
+            <Loader2 className="w-3.5 h-3.5 text-info animate-spin" />
           ) : (
-            <BrainCircuit className="w-3.5 h-3.5 text-cyan-400" />
+            <BrainCircuit className="w-3.5 h-3.5 text-info" />
           )}
           <span className="font-semibold">{isThinking ? 'Thinking...' : 'Thought Process'}</span>
           <span className="text-[10px] text-text-muted font-normal">({text.length.toLocaleString()} chars)</span>
@@ -44,9 +44,9 @@ export default function ThoughtAccordion({ text, isThinking }: ThoughtAccordionP
               ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-2 text-text-muted">{children}</ul>,
               ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-2 text-text-muted">{children}</ol>,
               li: ({ children }) => <li className="text-[11px] leading-relaxed">{children}</li>,
-              strong: ({ children }) => <strong className="font-semibold text-cyan-300">{children}</strong>,
+              strong: ({ children }) => <strong className="font-semibold text-info">{children}</strong>,
               code: ({ children }) => (
-                <code className="bg-surface-raised text-cyan-200 px-1 py-0.5 rounded text-[10px] font-mono border border-edge-raised">
+                <code className="bg-surface-raised text-info px-1 py-0.5 rounded text-[10px] font-mono border border-edge-raised">
                   {children}
                 </code>
               ),

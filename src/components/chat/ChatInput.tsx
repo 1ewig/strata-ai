@@ -196,7 +196,7 @@ export default function ChatInput({
                           )}
                         </div>
                         {m.id === model && (
-                          <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                          <Check className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                         )}
                       </button>
                     ))}
@@ -249,12 +249,12 @@ export default function ChatInput({
                                   }}
                                   className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs cursor-pointer transition-colors ${
                                     isSelected
-                                      ? 'bg-emerald-500/15 text-emerald-400 font-medium'
+                                      ? 'bg-primary-soft text-primary font-medium'
                                       : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
                                   }`}
                                 >
                                   <span className="capitalize">{label}</span>
-                                  {isSelected && <Check className="w-3.5 h-3.5 text-emerald-400" />}
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
                                 </button>
                               );
                             })}
@@ -311,7 +311,7 @@ export default function ChatInput({
                                 )}
                               </div>
                               {m.id === model && (
-                                <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                                <Check className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
                               )}
                             </button>
                           ))}
@@ -350,10 +350,10 @@ export default function ChatInput({
                       strokeLinecap="round"
                       className={`transition-all duration-500 ${
                         rateLimitData.remaining5h > 3
-                          ? 'text-emerald-400'
+                          ? 'text-primary'
                           : rateLimitData.remaining5h > 1
-                          ? 'text-amber-400'
-                          : 'text-rose-400'
+                          ? 'text-warning'
+                          : 'text-danger'
                       }`}
                     />
                   </svg>
@@ -369,11 +369,11 @@ export default function ChatInput({
                   <div className="space-y-1.5 text-[11px] text-text-muted">
                     <div className="flex items-center justify-between">
                       <span>5-hour window:</span>
-                      <span className="font-semibold text-emerald-400">{rateLimitData.remaining5h} of 10 left</span>
+                      <span className="font-semibold text-primary">{rateLimitData.remaining5h} of 10 left</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>7-day window:</span>
-                      <span className="font-semibold text-emerald-400">{rateLimitData.remainingWeek} of 50 left</span>
+                      <span className="font-semibold text-primary">{rateLimitData.remainingWeek} of 50 left</span>
                     </div>
                   </div>
                 </div>
@@ -390,7 +390,7 @@ export default function ChatInput({
             disabled={isLoading || !inputValue.trim()}
             className="p-2 rounded-xl bg-text-primary hover:bg-text-bright disabled:bg-surface-elevated disabled:opacity-40 shrink-0 transition-colors focus:outline-none cursor-pointer"
           >
-            <ArrowUp className="w-4 h-4 text-surface-base" />
+            <ArrowUp className="w-4 h-4 text-surface" />
           </button>
         </div>
 

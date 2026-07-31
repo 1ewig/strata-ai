@@ -15,7 +15,7 @@ export default function UserButton() {
   if (isPending) {
     return (
       <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
-        <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+        <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
         <span>Loading...</span>
       </div>
     );
@@ -27,7 +27,7 @@ export default function UserButton() {
         href="/auth/signin"
         className="w-full flex items-center justify-center gap-2 bg-surface-overlay hover:bg-surface-elevated text-text-bright border border-edge-raised px-3 py-2 rounded-lg text-xs font-semibold transition-all"
       >
-        <LogIn className="w-3.5 h-3.5 text-emerald-400" />
+        <LogIn className="w-3.5 h-3.5 text-primary" />
         <span>Sign In / Sign Up</span>
       </Link>
     );
@@ -53,7 +53,7 @@ export default function UserButton() {
               router.refresh();
             }}
             disabled={signingOut}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-rose-400 hover:bg-rose-500/10 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-danger hover:bg-danger-soft disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
             {signingOut ? (
               <>
@@ -77,7 +77,7 @@ export default function UserButton() {
         className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-base hover:bg-surface-hover/50 border border-edge-default transition-colors text-left"
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 font-bold text-xs flex items-center justify-center shrink-0">
+          <div className="w-7 h-7 rounded-full bg-primary-soft border border-primary/40 text-primary font-bold text-xs flex items-center justify-center shrink-0">
             {initial}
           </div>
           <div className="min-w-0 flex-1">

@@ -59,14 +59,14 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
   return (
     <>
       {error && (
-        <div className="p-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-xs flex items-start gap-2.5 animate-fade-in">
+        <div className="p-3.5 rounded-xl bg-danger-soft border border-danger/30 text-danger text-xs flex items-start gap-2.5 animate-fade-in">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span className="leading-relaxed font-medium">{error}</span>
         </div>
       )}
 
       {successMsg && (
-        <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs flex items-start gap-2.5 animate-fade-in">
+        <div className="p-3.5 rounded-xl bg-primary-soft border border-primary/30 text-primary text-xs flex items-start gap-2.5 animate-fade-in">
           <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
           <span className="leading-relaxed font-medium">{successMsg}</span>
         </div>
@@ -85,7 +85,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
               placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-surface-base border border-edge-default focus:border-emerald-500/50 rounded-xl text-sm text-text-bright placeholder:text-text-faint focus:outline-none transition-colors"
+              className="w-full pl-10 pr-4 py-2.5 bg-surface-base border border-edge-default focus:border-primary/60 rounded-xl text-sm text-text-bright placeholder:text-text-faint focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -102,7 +102,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 bg-surface-base border border-edge-default focus:border-emerald-500/50 rounded-xl text-sm text-text-bright placeholder:text-text-faint focus:outline-none transition-colors"
+              className="w-full pl-10 pr-10 py-2.5 bg-surface-base border border-edge-default focus:border-primary/60 rounded-xl text-sm text-text-bright placeholder:text-text-faint focus:outline-none transition-colors"
             />
             <button
               type="button"
@@ -117,7 +117,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full mt-2 py-3 px-4 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-surface-base font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-500/20"
+          className="w-full mt-2 py-3 px-4 bg-primary hover:bg-primary-hover disabled:opacity-50 text-surface font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-button"
         >
           {loading ? (
             <>
@@ -134,7 +134,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
 
         <p className="text-center text-xs text-text-muted">
           Don&apos;t have an account?{" "}
-          <Link href="/auth/signup" className="text-emerald-400 hover:text-emerald-300 font-semibold transition-colors">
+          <Link href="/auth/signup" className="text-primary hover:text-primary-hover font-semibold transition-colors">
             Sign up
           </Link>
         </p>

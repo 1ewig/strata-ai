@@ -32,92 +32,92 @@ const toolConfigs: Record<string, ToolConfig> = {
     label: 'Workspace Files Listed',
     badge: 'Listed',
     icon: Folder,
-    accent: 'blue-400',
-    accentBg: 'bg-blue-400/12',
-    accentBorder: 'border-blue-400/20',
-    accentText: 'text-blue-400',
+    accent: 'info',
+    accentBg: 'bg-accent-blue-soft',
+    accentBorder: 'border-accent-blue/60',
+    accentText: 'text-info',
   },
   readFile: {
     label: 'File Read',
     badge: 'Read',
     icon: Search,
-    accent: 'blue-400',
-    accentBg: 'bg-blue-400/12',
-    accentBorder: 'border-blue-400/20',
-    accentText: 'text-blue-400',
+    accent: 'info',
+    accentBg: 'bg-accent-blue-soft',
+    accentBorder: 'border-accent-blue/60',
+    accentText: 'text-info',
   },
   writeFile: {
     label: 'File Written',
     badge: 'Updated',
     icon: Sparkles,
-    accent: 'emerald-400',
-    accentBg: 'bg-emerald-400/12',
-    accentBorder: 'border-emerald-400/20',
-    accentText: 'text-emerald-400',
+    accent: 'primary',
+    accentBg: 'bg-primary-soft',
+    accentBorder: 'border-primary/40',
+    accentText: 'text-primary',
   },
   editFile: {
     label: 'File Edited',
     badge: 'Applied',
     icon: PencilLine,
-    accent: 'amber-400',
-    accentBg: 'bg-amber-400/12',
-    accentBorder: 'border-amber-400/20',
-    accentText: 'text-amber-400',
+    accent: 'warning',
+    accentBg: 'bg-warning-soft',
+    accentBorder: 'border-secondary/70',
+    accentText: 'text-warning',
   },
   renameFile: {
     label: 'File Renamed',
     badge: 'Renamed',
     icon: PenLine,
-    accent: 'violet-400',
-    accentBg: 'bg-violet-400/12',
-    accentBorder: 'border-violet-400/20',
-    accentText: 'text-violet-400',
+    accent: 'accent-pink-deep',
+    accentBg: 'bg-accent-pink-soft',
+    accentBorder: 'border-accent-pink/70',
+    accentText: 'text-accent-pink-deep',
   },
   deleteFile: {
     label: 'File Deleted',
     badge: 'Deleted',
     icon: Trash2,
-    accent: 'red-400',
-    accentBg: 'bg-red-400/12',
-    accentBorder: 'border-red-400/20',
-    accentText: 'text-red-400',
+    accent: 'danger',
+    accentBg: 'bg-danger-soft',
+    accentBorder: 'border-danger/40',
+    accentText: 'text-danger',
   },
   // Legacy aliases
   writeResume: {
     label: 'Resume Updated',
     badge: 'Updated',
     icon: Sparkles,
-    accent: 'emerald-400',
-    accentBg: 'bg-emerald-400/12',
-    accentBorder: 'border-emerald-400/20',
-    accentText: 'text-emerald-400',
+    accent: 'primary',
+    accentBg: 'bg-primary-soft',
+    accentBorder: 'border-primary/40',
+    accentText: 'text-primary',
   },
   readResume: {
     label: 'Resume Read',
     badge: 'Read',
     icon: Search,
-    accent: 'blue-400',
-    accentBg: 'bg-blue-400/12',
-    accentBorder: 'border-blue-400/20',
-    accentText: 'text-blue-400',
+    accent: 'info',
+    accentBg: 'bg-accent-blue-soft',
+    accentBorder: 'border-accent-blue/60',
+    accentText: 'text-info',
   },
   deleteResume: {
     label: 'Resume Deleted',
     badge: 'Cleared',
     icon: Trash2,
-    accent: 'red-400',
-    accentBg: 'bg-red-400/12',
-    accentBorder: 'border-red-400/20',
-    accentText: 'text-red-400',
+    accent: 'danger',
+    accentBg: 'bg-danger-soft',
+    accentBorder: 'border-danger/40',
+    accentText: 'text-danger',
   },
   editResume: {
     label: 'Resume Edited',
     badge: 'Applied',
     icon: PencilLine,
-    accent: 'amber-400',
-    accentBg: 'bg-amber-400/12',
-    accentBorder: 'border-amber-400/20',
-    accentText: 'text-amber-400',
+    accent: 'warning',
+    accentBg: 'bg-warning-soft',
+    accentBorder: 'border-secondary/70',
+    accentText: 'text-warning',
   },
 };
 
@@ -125,10 +125,10 @@ const defaultConfig: ToolConfig = {
   label: 'Tool Executed',
   badge: 'Executed',
   icon: Wrench,
-  accent: 'cyan-400',
-  accentBg: 'bg-cyan-400/12',
-  accentBorder: 'border-cyan-400/20',
-  accentText: 'text-cyan-400',
+  accent: 'info',
+  accentBg: 'bg-accent-blue-soft',
+  accentBorder: 'border-accent-blue/60',
+  accentText: 'text-info',
 };
 
 function normalizeToolName(raw: string): { normalized: string; isCustom: boolean } {
@@ -227,7 +227,7 @@ function buildReadFileSummary(args: any, result: any): ReactNode {
     <div className="py-1 space-y-0.5">
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium font-mono text-text-primary truncate">{fileName}</span>
-        {section && <span className="text-[10px] text-blue-400 font-mono shrink-0">section: {section}</span>}
+        {section && <span className="text-[10px] text-info font-mono shrink-0">section: {section}</span>}
       </div>
       <p className="text-[11px] text-text-muted truncate">
         {result?.exists === false
@@ -250,7 +250,7 @@ function buildWriteFileSummary(args: any, result: any): ReactNode {
     <div className="py-1 space-y-0.5">
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium font-mono text-text-primary truncate">{name}</span>
-        <span className="text-[10px] text-emerald-400/90 font-mono shrink-0">
+        <span className="text-[10px] text-primary/90 font-mono shrink-0">
           {charCount > 0 ? `${charCount.toLocaleString()} chars` : 'updated'}
         </span>
       </div>
@@ -266,7 +266,7 @@ function buildEditFileSummary(args: any, result: any): ReactNode {
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium font-mono text-text-primary truncate">{name}</span>
         {result?.strategyUsed && (
-          <span className="text-[10px] text-amber-400/90 font-mono shrink-0">
+          <span className="text-[10px] text-warning/90 font-mono shrink-0">
             {result.strategyUsed} match
           </span>
         )}
@@ -277,7 +277,7 @@ function buildEditFileSummary(args: any, result: any): ReactNode {
         </p>
       )}
       {result?.error && (
-        <p className="text-[11px] text-red-400 truncate">Error: {result.error}</p>
+        <p className="text-[11px] text-danger truncate">Error: {result.error}</p>
       )}
     </div>
   );
@@ -299,7 +299,7 @@ function buildDeleteFileSummary(args: any, result: any): ReactNode {
   const name = args?.nameOrId || result?.name || 'File';
   return (
     <div className="py-1 text-xs font-mono text-text-muted">
-      File <span className="text-red-400 font-medium">{name}</span> removed from workspace.
+      File <span className="text-danger font-medium">{name}</span> removed from workspace.
     </div>
   );
 }

@@ -31,12 +31,12 @@ export default function ToolCallCard({
           {isLoading ? (
             <Loader2 className={`w-3.5 h-3.5 ${accentText} animate-spin shrink-0`} />
           ) : isError ? (
-            <XCircle className="w-3.5 h-3.5 text-red-400 shrink-0" />
+            <XCircle className="w-3.5 h-3.5 text-danger shrink-0" />
           ) : (
             <Icon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
           )}
           <span className="font-medium text-text-primary truncate">{label}</span>
-          <span className={`text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded ${isError ? 'bg-red-500/10 text-red-400' : 'bg-surface-elevated text-text-muted'}`}>
+          <span className={`text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded ${isError ? 'bg-danger-soft text-danger' : 'bg-surface-elevated text-text-muted'}`}>
             {isLoading ? 'running...' : isError ? 'failed' : badge.toLowerCase()}
           </span>
         </button>

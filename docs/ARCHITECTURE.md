@@ -456,11 +456,11 @@ ChatBubble
         ├── ThoughtAccordion [collapsible reasoning display] — when reasoning present
         ├── Markdown content rendered with react-markdown + GFM
         │     └── Custom components for h1-h3, code blocks (with copy), tables, blockquotes
-        ├── Streaming cursor (thin emerald caret with shimmer overlay + glow shadow + fade-in)
+        ├── Streaming cursor (thin brand-orange caret with shimmer overlay + glow shadow + fade-in)
         └── ToolCallCard[] (accordion-style cards for tool invocation results)
               ├── listFiles → "Workspace Files Listed" (blue, file count + names)
               ├── readFile → "File Read" (blue, section name + content preview + Open Drawer)
-              ├── writeFile → "File Written" (emerald, file summary + char count + Open Drawer)
+              ├── writeFile → "File Written" (orange, file summary + char count + Open Drawer)
               ├── editFile → "File Edited" (amber, explanation + strategy + Open Drawer)
               ├── renameFile → "File Renamed" (violet, old name → new name)
               └── deleteFile → "File Deleted" (red, file name + cleared message)
@@ -570,12 +570,21 @@ if (anchor.success) return anchor;
 
 ## 11. Styling & Animation System (`app/globals.css`)
 
-- **Custom Surface Tokens:** 5-tier HSL surface scale (`base` → `raised` → `overlay` → `elevated` → `hover`).
+- **Milo Design Tokens:** Light cream/navy palette (light mode only) defined in `@theme`:
+  - **Surfaces** — 5-tier cream scale (`base` `#f5f3ed` → `raised` `#ffffff` → `overlay` `#fffefa` → `elevated` → `hover`), plus `surface` for on-brand text/icon fills.
+  - **Text** — navy scale (`bright` `#231f3a` → `faint` `#a6a1bc`).
+  - **Brand** — `primary` orange `#F15A2B` (+ `primary-hover`, `primary-soft`), `secondary` sunshine yellow `#FFC229` (+ `secondary-light`, `secondary-soft`).
+  - **Functional** — `danger`, `warning`, `info`, `scrim`, plus pastel `accent-blue`/`accent-pink`/`accent-olive` with `-soft`/deep variants.
+  - **Shadows** — playful hard offset `shadow-button` (`0 4px 0 #231F3A`), `shadow-card`, `shadow-card-lg`, and brand glows `shadow-glow-primary`/`shadow-glow-secondary`.
+  - **Radius remap** — `rounded-lg` 12px (badges/chips), `rounded-xl` 20px (buttons/inputs), `rounded-2xl` 32px (cards).
+  - **Fonts** — Fredoka (`font-display`) for headings/logo, Nunito (`font-sans`) for body, loaded via `next/font/google`.
+  - **Utilities** — `.highlight-marker` (rotated yellow highlight for key terms).
 - **Key Animations:**
   - `blink`: Bouncing typing loader dots with staggered animation delays.
   - `fadeIn`: Micro-animation (`translateY(4px) → 0`, `opacity 0 → 1`) for new messages.
   - `shimmer`: 2.8s sweeping linear gradient overlay on active streaming messages.
-  - `caret`: Blinking emerald terminal cursor positioned inline at the end of streaming prose.
+  - `caret`: Blinking brand-orange terminal cursor positioned inline at the end of streaming prose.
+- **Color mapping:** emerald → `primary` (CTAs, avatars, streaming indicators, spinners) or role token (`danger`/`warning`/`info`/`accent-pink-deep`); red → `danger`; amber → `warning`; cyan/blue → `info`; violet → `accent-pink-deep`; yellow → `secondary`; `bg-black/60` → `bg-scrim`; arbitrary `shadow-[...]` → shadow tokens. No hardcoded colors remain in components.
 - **Observer-Driven Auto-Scroll:** Synchronously tracks DOM mutations via `ResizeObserver`/`MutationObserver` through `<StickToBottom>` in `page.tsx`.
 
 ## 12. Environment Variables

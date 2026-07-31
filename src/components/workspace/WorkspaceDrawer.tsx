@@ -84,7 +84,7 @@ export default function WorkspaceDrawer({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+          className="absolute inset-0 bg-scrim backdrop-blur-sm"
         />
 
         {/* Drawer Panel */}
@@ -99,7 +99,7 @@ export default function WorkspaceDrawer({
           <div className="h-14 px-6 border-b border-edge-raised flex items-center justify-between bg-surface-base/40 shrink-0 gap-4">
             {/* File Switcher Dropdown / Tabs */}
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
+              <FileText className="w-4 h-4 text-primary shrink-0" />
               {files.length > 0 ? (
                 <select
                   value={activeFile?.id || ''}
@@ -118,7 +118,7 @@ export default function WorkspaceDrawer({
 
               <button
                 onClick={() => setIsCreatingNew(prev => !prev)}
-                className="p-1 text-text-muted hover:text-emerald-400 hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+                className="p-1 text-text-muted hover:text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
                 title="Create new file"
               >
                 <Plus className="w-4 h-4" />
@@ -133,7 +133,7 @@ export default function WorkspaceDrawer({
                   className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary px-2.5 py-1.5 rounded-lg border border-edge-raised hover:border-edge-hover transition-colors cursor-pointer"
                   title="Copy content"
                 >
-                  {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
                   {copied ? 'Copied' : 'Copy'}
                 </button>
               )}
@@ -143,7 +143,7 @@ export default function WorkspaceDrawer({
                   {isEditing ? (
                     <button
                       onClick={handleSaveEdit}
-                      className="flex items-center gap-1 text-xs font-semibold text-surface-base bg-emerald-400 hover:bg-emerald-300 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                      className="flex items-center gap-1 text-xs font-semibold text-surface bg-primary hover:bg-primary-hover px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-button"
                     >
                       <Check className="w-3.5 h-3.5" /> Save
                     </button>
@@ -158,7 +158,7 @@ export default function WorkspaceDrawer({
 
                   <button
                     onClick={() => onDeleteFile(activeFile.id)}
-                    className="p-1.5 text-text-muted hover:text-rose-400 hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-text-muted hover:text-danger hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
                     title="Delete file"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -185,12 +185,12 @@ export default function WorkspaceDrawer({
                 value={newFileName}
                 onChange={(e) => setNewFileName(e.target.value)}
                 placeholder="filename.md or note.txt"
-                className="flex-1 bg-surface-base border border-edge-raised rounded-lg px-3 py-1.5 text-xs text-text-primary focus:outline-none focus:border-emerald-500"
+                className="flex-1 bg-surface-base border border-edge-raised rounded-lg px-3 py-1.5 text-xs text-text-primary focus:outline-none focus:border-primary"
                 autoFocus
               />
               <button
                 type="submit"
-                className="text-xs font-medium bg-emerald-600 hover:bg-emerald-500 text-surface-base px-3 py-1.5 rounded-lg transition-colors"
+                className="text-xs font-medium bg-primary hover:bg-primary-hover text-surface px-3 py-1.5 rounded-lg transition-colors"
               >
                 Create
               </button>
@@ -215,7 +215,7 @@ export default function WorkspaceDrawer({
                 </p>
                 <button
                   onClick={() => setIsCreatingNew(true)}
-                  className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-surface-base text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
+                  className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-surface text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors cursor-pointer shadow-button"
                 >
                   <Plus className="w-4 h-4" /> Create New File
                 </button>
@@ -227,14 +227,14 @@ export default function WorkspaceDrawer({
                   value={fileName}
                   onChange={(e) => setFileName(e.target.value)}
                   placeholder="File name (e.g. document.md)"
-                  className="bg-surface-base border border-edge-raised rounded-lg px-3 py-2 text-xs font-semibold text-text-bright focus:outline-none focus:border-emerald-500"
+                  className="bg-surface-base border border-edge-raised rounded-lg px-3 py-2 text-xs font-semibold text-text-bright focus:outline-none focus:border-primary"
                 />
                 <textarea
                   value={contentValue}
                   onChange={(e) => setContentValue(e.target.value)}
                   rows={26}
                   placeholder="Type your markdown or text content here..."
-                  className="w-full flex-1 min-h-[450px] bg-surface-base border border-edge-raised rounded-xl p-4 text-xs text-text-primary font-mono focus:outline-none focus:border-emerald-500/60 leading-relaxed resize-y"
+                  className="w-full flex-1 min-h-[450px] bg-surface-base border border-edge-raised rounded-xl p-4 text-xs text-text-primary font-mono focus:outline-none focus:border-primary/60 leading-relaxed resize-y"
                 />
               </div>
             ) : !activeFile.content ? (
@@ -246,24 +246,24 @@ export default function WorkspaceDrawer({
                 </p>
                 <button
                   onClick={handleStartEditing}
-                  className="flex items-center gap-1.5 text-xs text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 hover:bg-emerald-500/20 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-xs text-primary border border-primary/30 bg-primary-soft hover:bg-primary-soft-strong px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                 >
                   <Edit3 className="w-3.5 h-3.5" /> Edit File
                 </button>
               </div>
             ) : isMarkdown ? (
-              <div className="bg-surface-base border border-edge-raised/80 rounded-xl p-8 shadow-2xl text-text-primary selection:bg-emerald-500/30">
-                <article className="prose prose-invert prose-emerald max-w-none space-y-4 text-xs leading-relaxed">
+              <div className="bg-surface-base border border-edge-raised/80 rounded-xl p-8 shadow-2xl text-text-primary selection:bg-secondary/50">
+                <article className="prose max-w-none space-y-4 text-xs leading-relaxed">
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ children }) => (
-                        <h1 className="text-2xl font-bold text-text-bright tracking-tight border-b border-edge-raised pb-2 mb-3">
+                        <h1 className="text-2xl font-display font-bold text-text-bright tracking-tight border-b border-edge-raised pb-2 mb-3">
                           {children}
                         </h1>
                       ),
                       h2: ({ children }) => (
-                        <h2 className="text-sm font-bold text-emerald-400 tracking-wider uppercase border-b border-edge-raised/60 pb-1 mt-6 mb-2">
+                        <h2 className="text-sm font-bold text-primary/90 tracking-wider uppercase border-b border-edge-raised/60 pb-1 mt-6 mb-2">
                           {children}
                         </h2>
                       ),
