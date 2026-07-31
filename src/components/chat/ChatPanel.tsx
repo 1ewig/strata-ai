@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import { BrainCircuit } from 'lucide-react';
 import ChatBubble from '@/components/chat/ChatBubble';
+import { StrataIcon } from '@/components/ui/strata-icon';
 
 interface ChatPanelProps {
   messages: any[];
@@ -24,7 +24,7 @@ export default React.memo(function ChatPanel({
       {messages.length === 0 && streamingContent === null && !isLoading && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary border border-secondary/50 flex items-center justify-center text-surface font-semibold text-lg shadow-glow-primary">
-            <BrainCircuit className="w-6 h-6 stroke-[2.5]" />
+            <StrataIcon className="w-6 h-6" />
           </div>
           <h3 className="text-sm font-semibold text-text-primary font-display">Strata AI Workspace</h3>
           <p className="text-xs text-text-muted max-w-sm leading-relaxed">
@@ -48,7 +48,7 @@ export default React.memo(function ChatPanel({
       {isLoading && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
         <div className="flex items-start gap-3.5 fade-in">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-surface shrink-0 mt-0.5 shadow-glow-primary">
-            <BrainCircuit className="w-4.5 h-4.5 stroke-[2.5]" />
+            <StrataIcon className="w-4.5 h-4.5" />
           </div>
           <div className="px-4 py-3 rounded-2xl rounded-tl-xs bg-surface-overlay/90 border border-edge-raised flex items-center gap-1.5 backdrop-blur-sm">
             <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />

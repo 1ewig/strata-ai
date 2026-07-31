@@ -4,11 +4,12 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { MessageSquare, Plus, Trash2, BrainCircuit } from 'lucide-react';
+import { MessageSquare, Plus, Trash2 } from 'lucide-react';
 import { db, deleteConversation } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
 import UserButton from '@/components/auth/user-button';
 import ThemeToggle from '@/components/theme-toggle';
+import { StrataIcon } from '@/components/ui/strata-icon';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -45,7 +46,7 @@ export default function Sidebar() {
       <div className="h-14 px-4 border-b border-edge-hover/50 flex items-center gap-2.5">
         <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-glow-primary">
-            <BrainCircuit className="w-4 h-4 text-surface" />
+            <StrataIcon className="w-4 h-4 text-surface" />
           </div>
           <h1 className="text-sm font-display font-bold tracking-tight text-text-bright">Strata AI</h1>
           <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised text-text-muted">WORKSPACE</span>

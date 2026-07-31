@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { UIMessage } from 'ai';
-import { Check, Code2, User, BrainCircuit } from 'lucide-react';
+import { Check, Code2, User } from 'lucide-react';
+import { StrataIcon } from '@/components/ui/strata-icon';
 import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
 import { resolveToolDisplay } from './tools/resolver';
@@ -129,11 +130,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
         {isUser ? (
           <User className="w-4 h-4 text-text-secondary" />
         ) : (
-          <BrainCircuit
-            className={`w-4.5 h-4.5 text-surface stroke-[2.5] transition-transform duration-700 ${
-              isStreaming ? 'animate-[spin_8s_linear_infinite]' : ''
-            }`}
-          />
+          <StrataIcon className="w-4.5 h-4.5 text-surface" />
         )}
 
         {!isUser && isStreaming && (
