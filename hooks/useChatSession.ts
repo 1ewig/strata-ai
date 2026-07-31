@@ -65,6 +65,25 @@ export function useChatSession(chatId: string) {
   const continuationCountRef = useRef<number>(0);
   const sendMessageRef = useRef<((msg: { text: string }) => void) | null>(null);
 
+  const [rateLimitData, setRateLimitData] = useState<{
+    remaining5h: number;
+    remainingWeek: number;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch('/api/user/rate-limit')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data) {
+          setRateLimitData({
+            remaining5h: data.remaining5h ?? 10,
+            remainingWeek: data.remainingWeek ?? 50,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   /* eslint-disable react-hooks/refs */
   const transport = useMemo(
     () =>
@@ -75,13 +94,22 @@ export function useChatSession(chatId: string) {
           thinkingLevel: thinkingLevelRef.current,
           files: filesRef.current,
         }),
+        fetch: async (url, options) => {
+          const res = await fetch(url, options);
+          const rem5h = res.headers.get('X-RateLimit-Remaining-5h');
+          const remWeek = res.headers.get('X-RateLimit-Remaining-Week');
+          if (rem5h !== null && remWeek !== null) {
+            setRateLimitData({
+              remaining5h: parseInt(rem5h, 10),
+              remainingWeek: parseInt(remWeek, 10),
+            });
+          }
+          return res;
+        },
       }),
     [],
   );
   /* eslint-enable react-hooks/refs */
-
-
-
 
   const chat = useChat({
     id: chatId,
@@ -221,6 +249,7 @@ export function useChatSession(chatId: string) {
     streamingContent: null,
     status: chat.status,
     isLoading,
+    rateLimitData,
     handleSendMessage,
     handleSubmit,
     handleSelectFile: workspace.handleSelectFile,

@@ -18,6 +18,10 @@ interface ChatInputProps {
   thinkingLevel: string;
   onModelSelect: (modelId: string) => void;
   onThinkingLevelChange: (level: string) => void;
+  rateLimitData?: {
+    remaining5h: number;
+    remainingWeek: number;
+  } | null;
 }
 
 export default function ChatInput({
@@ -29,6 +33,7 @@ export default function ChatInput({
   thinkingLevel,
   onModelSelect,
   onThinkingLevelChange,
+  rateLimitData: rateLimitDataProp,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -44,21 +49,21 @@ export default function ChatInput({
   const primaryModels = MODELS.length > 3 ? MODELS.slice(0, 3) : MODELS;
   const overflowModels = MODELS.length > 3 ? MODELS.slice(3) : MODELS;
 
-  // Rate limit quota tracking
-  const [rateLimitData, setRateLimitData] = useState<{
+  // Rate limit quota tracking (prefers passed prop, fallback to internal state if missing)
+  const [internalRateLimitData, setInternalRateLimitData] = useState<{
     remaining5h: number;
     remainingWeek: number;
   } | null>(null);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (rateLimitDataProp !== undefined) return;
     let isMounted = true;
 
     fetch('/api/user/rate-limit')
       .then(res => (res.ok ? res.json() : null))
       .then(data => {
         if (data && isMounted) {
-          setRateLimitData({
+          setInternalRateLimitData({
             remaining5h: data.remaining5h ?? 10,
             remainingWeek: data.remainingWeek ?? 50,
           });
@@ -69,7 +74,9 @@ export default function ChatInput({
     return () => {
       isMounted = false;
     };
-  }, [isLoading]);
+  }, [rateLimitDataProp]);
+
+  const rateLimitData = rateLimitDataProp !== undefined ? rateLimitDataProp : internalRateLimitData;
 
 
   // Handle outside clicks to close the menu

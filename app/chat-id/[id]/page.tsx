@@ -37,6 +37,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     streamingContent,
     status,
     isLoading,
+    rateLimitData,
     handleSendMessage,
     handleSubmit,
     handleSelectFile,
@@ -126,6 +127,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               thinkingLevel={thinkingLevel}
               onModelSelect={handleModelSelect}
               onThinkingLevelChange={handleThinkingLevelChange}
+              rateLimitData={rateLimitData}
             />
           </div>
         </div>
