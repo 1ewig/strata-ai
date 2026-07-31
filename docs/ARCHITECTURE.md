@@ -95,7 +95,7 @@
 │   │       ├── prompts.ts        # buildSystemInstruction() — system prompt
 │   │       ├── tools.ts          # 6 workspace tool factories + createWorkspaceTools()
 │   │       └── message-extractor.ts  # extractFilesFromMessage / extractDeletedFilesFromMessage
-│   └── proxy.ts                  # Next.js 16 proxy — edge-safe session cookie check + security headers
+│   └── proxy.ts                  # Next.js 16 proxy — pre-render session cookie check + security headers
 ├── public/                       # Static assets (required at project root)
 ├── scripts/
 │   ├── better-auth-schema.sql    # Raw SQL migration for better_auth schema & tables
@@ -637,7 +637,7 @@ Raw Google GenAI SDK  ──→  AI SDK 7 Migration  ──→  Native UIMessage
   - To upgrade Dexie schema, increment version number in `lib/db/db.ts` constructor and add a new `stores()` definition.
 - **Authentication & Security:**
   - Auth is powered by Better Auth 1.6 connected to Supabase PostgreSQL pooler (`DATABASE_URL`).
-  - Protected API routes verify session via `auth.api.getSession({ headers: req.headers })`. Edge session guards live in `proxy.ts`.
+  - Protected API routes verify session via `auth.api.getSession({ headers: req.headers })`. Pre-render session guards live in `proxy.ts`.
 - **UI & Auto-Scroll Guidelines:**
   - Auto-scroll is handled by `<StickToBottom>` in `app/chat-id/[id]/page.tsx` via DOM observers. Do not write manual `useEffect` + `scrollIntoView` loops in `ChatPanel`.
   - Caret cursor (`animate-caret`) and shimmer overlay (`animate-shimmer`) keyframe styles live in `app/globals.css`.

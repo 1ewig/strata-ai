@@ -26,13 +26,14 @@
 ## 🌟 Key Features & Capabilities
 
 - **Autonomous Agentic File Operations**: 6 schema-validated workspace tools enabling the AI to inspect, read, create, surgically edit, rename, and delete workspace documents on demand.
-- **75% Context Footprint Reduction**: System prompts inject lightweight file metadata (`name`, `language`, `charCount`, `id`) rather than raw content. The agent calls `readFile` only when precise code context is required.
+- **Significantly Reduced Context Footprint**: System prompts inject lightweight file metadata (`name`, `language`, `charCount`, `id`) rather than raw content. The agent calls `readFile` only when precise code context is required.
 - **3-Tier Surgical Edit Engine (`ResumeEditEngine`)**: Performs precise string manipulation through exact matching, whitespace normalization, and 2-point anchor bounded matching without breaking document structure.
-- **Local-First Client Persistence**: Complete conversation histories, dynamic file states, and user preferences persist client-side via **Dexie.js (IndexedDB v4)**—zero server DB dependencies required.
+- **Local-First Client Persistence**: Complete conversation histories, dynamic file states, and user preferences persist client-side via **Dexie.js (IndexedDB v4)**—no server round-trips for workspace state.
 - **Auto-Continuation Execution Loop**: Automatically detects step-limit finish reasons (`finishReason === 'step-limit'`) and dispatches multi-pass continuation requests for complex agent tasks up to 75 steps.
 - **Word-Paced Smooth Streaming**: Powered by `smoothStream` (15ms pacing) to ensure continuous, natural token flow without jarring chunk bursts.
 - **DOM-Observer Auto-Scroll**: Leverages `use-stick-to-bottom` (`ResizeObserver`/`MutationObserver`) for reliable, non-glitchy chat scrolling that respects manual user scroll interventions.
-- **Polymorphic Tool UI Resolver**: Isolates visual presentation logic in `components/chat/tools/resolver.tsx`, allowing instant addition of new tools with custom badges, summaries, and action triggers.
+- **Polymorphic Tool UI Resolver**: Isolates visual presentation logic in `src/components/chat/tools/resolver.tsx`, allowing instant addition of new tools with custom badges, summaries, and action triggers.
+- **Secure Email/Password Auth**: Better Auth 1.6 on Supabase PostgreSQL with proxy-level session guards, plus database-backed rate limiting with live quota headers.
 
 ---
 
@@ -45,6 +46,8 @@
 | **AI Engine** | `ai@^7.0.0` + `@ai-sdk/google@^4.0.0` | Vercel AI SDK 7 unified streaming, tool calling, and Gemini integration |
 | **React AI Hooks** | `@ai-sdk/react@^2.0.0` | `useChat` hook, `DefaultChatTransport`, and UI message stream handlers |
 | **Client Storage** | Dexie.js 4 + `dexie-react-hooks` | Local-first IndexedDB persistence (`conversations`, `messages`, `files`) |
+| **Authentication** | Better Auth 1.6 + `nextCookies` | Email/password auth, session management, proxy protection |
+| **Database** | Supabase PostgreSQL (pooler) | `better_auth` schema storage + database-backed rate limiting |
 | **Styling** | Tailwind CSS 4.1 | Modern utility CSS, `@theme` surface system, HSL color tokens |
 | **Animations** | `motion@^12` (Framer Motion) | Spring-based drawer transitions and interactive micro-animations |
 | **Markdown** | `react-markdown` + `remark-gfm` | Custom code blocks with copy triggers, markdown headers, and tables |
@@ -56,7 +59,7 @@
 
 ## 🤖 Workspace Tool Suite
 
-The agent interacts with user workspaces via 6 core tools registered in `lib/ai/tools.ts`:
+The agent interacts with user workspaces via 6 core tools registered in `src/lib/ai/tools.ts`:
 
 | Tool | Parameters | Output / Action |
 |------|------------|-----------------|
@@ -107,7 +110,7 @@ Strata AI supports dynamic hot-swapping between flagship Gemini models and open-
 
 - **Gemini Flagship Models**: `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3-flash-preview`
 - **Gemma Open-Weights Models**: `gemma-4-31b-it`, `gemma-4-26b-a4b-it`
-- **Configurable Thinking Levels**: Fine-tune agent reasoning depth (`minimal`, `low`, `medium`, `high`).
+- **Configurable Thinking Levels**: Fine-tune agent reasoning depth (`minimal`, `low`, `medium`, `high`, model-dependent — Gemma models support none).
 
 ---
 
@@ -129,6 +132,18 @@ Create a `.env.local` file in the root directory:
 # Required: Google Gemini API Key
 GOOGLE_GENERATIVE_AI_API_KEY="your-gemini-api-key-here"
 
+# Required: Supabase Project
+NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="your-supabase-publishable-key"
+
+# Required: Supabase PostgreSQL Pooler connection string
+DATABASE_URL="postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres"
+
+# Required: Better Auth
+BETTER_AUTH_SECRET="your-secret-min-32-chars"
+BETTER_AUTH_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
 # Optional: Default Model ID
 NEXT_PUBLIC_GEMINI_MODEL="gemini-3.5-flash-lite"
 
@@ -136,13 +151,27 @@ NEXT_PUBLIC_GEMINI_MODEL="gemini-3.5-flash-lite"
 APP_URL="http://localhost:3000"
 ```
 
-### 3. Run Development Server
+See `.env.example` for the full annotated reference.
+
+### 3. Set Up Database
+
+The app uses Supabase PostgreSQL for authentication and rate limiting:
+
+```bash
+# Create the Better Auth schema and tables
+bun run db:migrate
+
+# Optional: verify the database connection and schema
+bun run db:test
+```
+
+### 4. Run Development Server
 
 ```bash
 bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000) in your browser. You'll be prompted to sign up / sign in with email + password — no email verification required.
 
 ---
 
