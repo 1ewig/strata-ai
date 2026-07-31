@@ -70,10 +70,15 @@
   --animate-fade-in: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+:root {
+  --scrollbar-thumb: rgba(35, 31, 58, 0.12);
+  --scrollbar-thumb-hover: rgba(35, 31, 58, 0.22);
+}
+
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(35, 31, 58, 0.12); border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(35, 31, 58, 0.22); }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 
 body::before {
   content: '';
@@ -121,4 +126,65 @@ body::before {
 @keyframes caret {
   0%, 45% { opacity: 1; }
   50%, 100% { opacity: 0.15; }
+}
+
+/* Dark theme (subtle deep navy/charcoal) */
+.dark {
+  --color-surface-base: #14121f;
+  --color-surface-raised: #1c1a2c;
+  --color-surface-overlay: #1e1c30;
+  --color-surface-elevated: #262338;
+  --color-surface-hover: #302c44;
+  --color-surface: #ffffff;
+
+  --color-text-bright: #f5f3ed;
+  --color-text-primary: #e6e2d4;
+  --color-text-secondary: #c3bfd4;
+  --color-text-muted: #938fab;
+  --color-text-faint: #6f6b8a;
+
+  --color-edge-default: rgba(255, 255, 255, 0.1);
+  --color-edge-raised: rgba(255, 255, 255, 0.16);
+  --color-edge-hover: rgba(255, 255, 255, 0.26);
+
+  --color-primary: #ff6b3d;
+  --color-primary-hover: #ff8357;
+  --color-primary-soft: rgba(255, 107, 61, 0.16);
+  --color-primary-soft-strong: rgba(255, 107, 61, 0.26);
+  --color-secondary: #ffc229;
+  --color-secondary-light: #ffea9f;
+  --color-secondary-soft: rgba(255, 194, 41, 0.22);
+  --color-dark: #231f3a;
+  --color-dark-muted: #c3bfd4;
+
+  --color-accent-blue: #7db4dc;
+  --color-accent-blue-soft: rgba(125, 180, 220, 0.18);
+  --color-accent-pink: #f1b5e1;
+  --color-accent-pink-soft: rgba(241, 181, 225, 0.18);
+  --color-accent-olive: #aec452;
+  --color-accent-olive-soft: rgba(174, 196, 82, 0.16);
+
+  --color-danger: #ff6b6f;
+  --color-danger-soft: rgba(255, 107, 111, 0.16);
+  --color-warning: #f5a623;
+  --color-warning-soft: rgba(245, 166, 35, 0.24);
+  --color-info: #5ea8e8;
+  --color-accent-pink-deep: #e07bc8;
+  --color-scrim: rgba(8, 6, 15, 0.7);
+
+  --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-card-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-button: 0 4px 0 #0b0a14;
+  --shadow-glow-primary: 0 0 24px -6px rgba(255, 107, 61, 0.5);
+  --shadow-glow-secondary: 0 0 20px -6px rgba(255, 194, 41, 0.5);
+
+  --scrollbar-thumb: rgba(255, 255, 255, 0.12);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
+}
+
+.dark body::before {
+  background:
+    radial-gradient(ellipse 100% 60% at 50% -20%, rgba(255, 107, 61, 0.1), transparent),
+    radial-gradient(ellipse 80% 50% at 85% 85%, rgba(255, 194, 41, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(125, 180, 220, 0.07), transparent);
 }

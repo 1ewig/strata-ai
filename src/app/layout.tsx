@@ -20,7 +20,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('strata-theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',d)}catch(e){document.documentElement.classList.remove('dark')}})()`,
+          }}
+        />
+      </head>
       <body
         suppressHydrationWarning
         className={`${fredoka.variable} ${nunito.variable} bg-surface-base text-text-primary antialiased selection:bg-secondary selection:text-dark relative font-sans`}

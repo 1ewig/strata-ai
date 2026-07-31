@@ -8,6 +8,7 @@ import { MessageSquare, Plus, Trash2, BrainCircuit } from 'lucide-react';
 import { db, deleteConversation } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
 import UserButton from '@/components/auth/user-button';
+import ThemeToggle from '@/components/theme-toggle';
 
 export default function Sidebar() {
   const pathname = usePathname();
@@ -104,7 +105,8 @@ export default function Sidebar() {
       </div>
 
       {/* User Auth Footer */}
-      <div className="p-3 border-t border-edge-hover/50">
+      <div className="p-3 border-t border-edge-hover/50 space-y-2">
+        <ThemeToggle />
         <UserButton />
       </div>
     </aside>

@@ -388,7 +388,7 @@ export default function ChatInput({
             id="chat-submit-btn"
             type="submit"
             disabled={isLoading || !inputValue.trim()}
-            className="p-2 rounded-xl bg-text-primary hover:bg-text-bright disabled:bg-surface-elevated disabled:opacity-40 shrink-0 transition-colors focus:outline-none cursor-pointer"
+            className="p-2 rounded-xl bg-primary hover:bg-primary-hover disabled:bg-surface-elevated disabled:opacity-40 shrink-0 transition-colors focus:outline-none cursor-pointer"
           >
             <ArrowUp className="w-4 h-4 text-surface" />
           </button>
