@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { Sparkles } from "lucide-react";
 
 interface AuthShellProps {
   children: ReactNode;
@@ -17,7 +16,6 @@ export function AuthShell({ children, mode }: AuthShellProps) {
       <div className="w-full max-w-md bg-surface-raised/90 border border-edge-raised rounded-3xl p-8 shadow-card-lg backdrop-blur-xl relative z-10 space-y-6">
         <div className="text-center space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-soft border border-primary/30 text-primary text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5" />
             <span>Strata AI Auth</span>
           </div>
           <h1 className="text-2xl font-display font-bold text-text-bright tracking-tight">
