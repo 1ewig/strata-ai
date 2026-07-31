@@ -47,7 +47,10 @@
 │   │   ├── globals.css           # Tailwind import, scrollbar, animations
 │   │   ├── api/
 │   │   │   ├── agent/
-│   │   │   │   └── route.ts      # POST /api/agent — AI agent streaming endpoint (auth verified)
+│   │   │   │   └── route.ts      # POST /api/agent — AI agent streaming endpoint (auth verified + rate limited)
+│   │   │   ├── user/
+│   │   │   │   └── rate-limit/
+│   │   │   │       └── route.ts  # GET /api/user/rate-limit — Authenticated rate limit quota check
 │   │   │   └── auth/
 │   │   │       └── [...all]/
 │   │   │           └── route.ts  # Better Auth Next.js API catch-all handler
@@ -64,17 +67,21 @@
 │   │   │   ├── sign-in-form.tsx  # Email + password form with error/success state
 │   │   │   └── sign-up-form.tsx  # Name + email + password form with error/success state
 │   │   ├── chat/
-│   │   │   ├── ChatPanel.tsx     # Message list, empty state, loading indicators
+│   │   │   ├── ChatPanel.tsx     # Message list, empty state, loading indicators, QuotaErrorCard
 │   │   │   ├── ChatBubble.tsx    # User/assistant message bubble
-│   │   │   ├── ChatInput.tsx     # Auto-resize textarea with Enter-to-send
-│   │   │   ├── ChatHeader.tsx    # Model selector + thinking level + workspace drawer
+│   │   │   ├── ChatInput.tsx     # Auto-resize textarea with quota warning line + Enter-to-send
+│   │   │   ├── ChatHeader.tsx    # Model selector + thinking level + workspace drawer button
+│   │   │   ├── QuotaErrorCard.tsx# Alert card for exhausted message quota with reset timer
 │   │   │   ├── ToolCallCard.tsx  # Minimal accordion card — receives ToolCardProps
 │   │   │   ├── ThoughtAccordion.tsx  # Collapsible reasoning/thought display
 │   │   │   └── tools/
 │   │   │       └── resolver.tsx  # extractToolInfo + resolveToolDisplay → ToolCardProps
-│   │   ├── ui/                   # (empty — available for base UI primitives)
+│   │   ├── ui/
+│   │   │   └── strata-icon.tsx   # Strata AI brand SVG logo icon component
 │   │   └── workspace/
-│   │       └── WorkspaceDrawer.tsx  # Slide-over panel: file list, create, edit, delete
+│   │       └── WorkspaceDrawer.tsx  # Slide-over panel: file select/create top bar + sticky footer actions
+│   ├── contexts/
+│   │   └── RateLimitContext.tsx  # App-wide global rate limit context provider (SSR hydrated)
 │   ├── hooks/
 │   │   ├── useChatSession.ts     # Central orchestration hook (core logic)
 │   │   ├── useWorkspaceFiles.ts  # Workspace file CRUD + Dexie persistence
@@ -638,9 +645,11 @@ Raw Google GenAI SDK  ──→  AI SDK 7 Migration  ──→  Native UIMessage
   5. Add config entry + summary builder in `components/chat/tools/resolver.tsx` — `ToolCallCard.tsx` requires zero modifications.
   6. If tool output contains `{ file }`, `{ files }`, or `{ deleted: true }`, `lib/ai/message-extractor.ts` auto-discovers it for Dexie persistence.
 - **Rate Limit & Quota Tracking:**
-  - `checkAndIncrementRateLimit(userId)` runs on `POST /api/agent` against PostgreSQL `better_auth.message_log`.
-  - Quota response headers (`X-RateLimit-Remaining-5h` & `X-RateLimit-Remaining-Week`) are emitted in `createUIMessageStreamResponse`.
-  - Headers are intercepted directly in `DefaultChatTransport`'s custom `fetch` wrapper in `hooks/useChatSession.ts` to update `rateLimitData` state when streaming starts — avoid adding post-message refetch hooks in components.
+  - Database-backed sliding window rate limiter (`lib/rate-limit.ts`) evaluates user limits against PostgreSQL `better_auth.message_log` (10 messages per 5 hours, 50 messages per week).
+  - **Server-Side SSR Hydration**: `RootLayout` (`app/layout.tsx`) reads session headers on the server during SSR and passes `initialData` to `<RateLimitProvider>`, initializing quota state instantly without client fetch waterfalls.
+  - **Real-Time Streaming Synchronization**: `DefaultChatTransport` in `useChatSession.ts` extracts `X-RateLimit-Remaining-5h`, `X-RateLimit-Remaining-Week`, and `X-RateLimit-Retry-After` headers from streaming responses to update context in real time.
+  - **Quota Error Handling**: Upon HTTP 429 or quota limit detection, `chat.stop()` aborts the active stream, prunes empty assistant bubbles, displays `QuotaErrorCard` with live reset countdown, and renders warning overlay text on `ChatInput` with disabled submit state (`cursor-not-allowed`).
+  - Quota state resets upon sign-out and re-hydrates per user.
 - **Client State & Dexie Persistence:**
   - Messages are stored as native AI SDK `UIMessage` objects in Dexie IndexedDB.
   - To upgrade Dexie schema, increment version number in `lib/db/db.ts` constructor and add a new `stores()` definition.
@@ -650,4 +659,4 @@ Raw Google GenAI SDK  ──→  AI SDK 7 Migration  ──→  Native UIMessage
 - **UI & Auto-Scroll Guidelines:**
   - Auto-scroll is handled by `<StickToBottom>` in `app/chat-id/[id]/page.tsx` via DOM observers. Do not write manual `useEffect` + `scrollIntoView` loops in `ChatPanel`.
   - Caret cursor (`animate-caret`) and shimmer overlay (`animate-shimmer`) keyframe styles live in `app/globals.css`.
-  - Empty directories (`contexts/` and `components/ui/`) are reserved for shared state providers and atomic UI primitives.
+  - Shared state providers live in `src/contexts/` (`RateLimitContext.tsx`) and atomic brand components live in `src/components/ui/` (`strata-icon.tsx`).
