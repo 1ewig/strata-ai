@@ -637,6 +637,10 @@ Full file content previously bloated context across 10 `prepareStep` re-injectio
 
 Previous `scrollIntoView` approach with 3 `useEffects` suffered from React batch race conditions — users couldn't reliably escape auto-scroll during streaming. `use-stick-to-bottom` uses synchronous `ResizeObserver`/`MutationObserver` before React reconciliation.
 
+### Why Response-Driven Rate Limit Quota Updates?
+
+Rate limit counts (`X-RateLimit-Remaining-5h` & `X-RateLimit-Remaining-Week`) are calculated on `POST /api/agent` during prompt authorization and emitted in HTTP response headers. `DefaultChatTransport`'s custom `fetch` wrapper intercepts these headers as soon as the SSE stream opens (~150ms), updating React state immediately. This eliminates redundant post-message `GET /api/user/rate-limit` HTTP round-trips and PostgreSQL queries after generation completes.
+
 ---
 
 ## 14. Environment Configuration

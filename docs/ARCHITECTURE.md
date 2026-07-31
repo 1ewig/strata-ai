@@ -602,6 +602,9 @@ Full file content was previously injected into `<workspace_files>` tags for verb
 ### Why `use-stick-to-bottom` instead of manual `useEffect` scroll?
 The initial scroll implementation used three `useEffect` hooks with `scrollIntoView` triggered by `displayMessages`, `status`, and `isAtBottom` state. This suffered from race conditions — React batches state updates from scroll events and streaming chunks unpredictably, so the user could never reliably "escape" the auto-scroll by scrolling up during streaming. `use-stick-to-bottom` replaces this with `ResizeObserver` and `MutationObserver` that intercept DOM mutations synchronously, making scroll decisions before React reconciles. The library also handles edge cases (scroll-to-bottom button visibility, instant/smooth/spring animations, preserve-scroll-position) that would require significant additional code to implement manually.
 
+### Why Response-Driven Rate Limit Quota Updates (Stream Headers)?
+Rate limit state (`X-RateLimit-Remaining-5h` & `X-RateLimit-Remaining-Week`) is calculated on `POST /api/agent` during prompt authorization and returned in HTTP response headers. `DefaultChatTransport`'s custom `fetch` wrapper intercepts these headers as soon as the SSE stream opens (~150ms), updating React state immediately. This eliminates redundant post-message `GET /api/user/rate-limit` HTTP round-trips and PostgreSQL queries after generation completes, reserving `/api/user/rate-limit` solely for initial page loads.
+
 ## 13. Architectural Evolution
 
 ```
