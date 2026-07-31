@@ -10,9 +10,7 @@ import {
 } from '@/lib/models';
 
 interface ChatInputProps {
-  inputValue: string;
-  onInputChange: (value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSendMessage: (text: string) => void;
   isLoading: boolean;
   model: string;
   thinkingLevel: string;
@@ -25,9 +23,7 @@ interface ChatInputProps {
 }
 
 export default function ChatInput({
-  inputValue,
-  onInputChange,
-  onSubmit,
+  onSendMessage,
   isLoading,
   model,
   thinkingLevel,
@@ -36,6 +32,7 @@ export default function ChatInput({
   rateLimitData: rateLimitDataProp,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [inputValue, setInputValue] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeSubmenu, setActiveSubmenu] = useState<'none' | 'effort' | 'more-models'>('none');
 
@@ -97,7 +94,7 @@ export default function ChatInput({
   }, []);
 
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    onInputChange(e.target.value);
+    setInputValue(e.target.value);
   };
 
   useEffect(() => {
@@ -108,12 +105,18 @@ export default function ChatInput({
     }
   }, [inputValue]);
 
+  const handleSend = () => {
+    const text = inputValue.trim();
+    if (text && !isLoading) {
+      onSendMessage(text);
+      setInputValue('');
+    }
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      if (inputValue.trim() && !isLoading) {
-        onSubmit(e as unknown as React.FormEvent);
-      }
+      handleSend();
     }
   };
 
@@ -122,7 +125,13 @@ export default function ChatInput({
     : null;
 
   return (
-    <form onSubmit={onSubmit} className="relative z-10">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleSend();
+      }}
+      className="relative z-10"
+    >
       <div className="flex flex-col gap-2 bg-surface-raised border border-edge-hover/60 focus-within:border-edge-hover rounded-2xl p-3.5 transition-all shadow-lg">
 
         {/* Row 1: Text Field Input */}

@@ -9,11 +9,10 @@ interface ChatPanelProps {
   streamingContent: string | null;
   isLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  onSendMessage?: (text: string) => void;
   onOpenDrawer?: () => void;
 }
 
-export default function ChatPanel({
+export default React.memo(function ChatPanel({
   messages,
   streamingContent,
   isLoading,
@@ -62,4 +61,4 @@ export default function ChatPanel({
       <div ref={messagesEndRef} />
     </div>
   );
-}
+});

@@ -22,7 +22,7 @@ interface Segment {
   key: string;
 }
 
-export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
+function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
@@ -304,3 +304,5 @@ export default function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatB
     </div>
   );
 }
+
+export default React.memo(ChatBubble);

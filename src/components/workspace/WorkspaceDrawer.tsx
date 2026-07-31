@@ -16,7 +16,6 @@ interface WorkspaceDrawerProps {
   onUpdateFile: (file: WorkspaceFile) => void;
   onCreateFile: (name: string, content?: string) => void;
   onDeleteFile: (fileId: string) => void;
-  onSendMessage?: (msg: string) => void;
   isLoading?: boolean;
 }
 

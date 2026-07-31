@@ -20,8 +20,6 @@ import {
 } from '@/lib/ai/message-extractor';
 
 export function useChatSession(chatId: string) {
-  const [inputValue, setInputValue] = useState('');
-
   const dexieMessages = useLiveQuery(
     () => db.messages.where('chatId').equals(chatId).sortBy('timestamp'),
     [chatId],
@@ -211,7 +209,7 @@ export function useChatSession(chatId: string) {
 
   const currentConvTitle = currentConv?.title;
 
-  const handleSendMessage = useCallback(
+  const handleSubmit = useCallback(
     (text: string) => {
       continuationCountRef.current = 0;
       const trimmed = text.trim();
@@ -226,21 +224,11 @@ export function useChatSession(chatId: string) {
     [chat, chatId, currentConvTitle],
   );
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (inputValue.trim() && chat.status === 'ready') {
-      handleSendMessage(inputValue);
-      setInputValue('');
-    }
-  };
-
   const isLoading = chat.status !== 'ready';
 
   return {
     model: modelSettings.model,
     thinkingLevel: modelSettings.thinkingLevel,
-    inputValue,
-    setInputValue,
     isWorkspaceDrawerOpen: workspace.isWorkspaceDrawerOpen,
     setIsWorkspaceDrawerOpen: workspace.setIsWorkspaceDrawerOpen,
     files: workspace.files,
@@ -250,7 +238,6 @@ export function useChatSession(chatId: string) {
     status: chat.status,
     isLoading,
     rateLimitData,
-    handleSendMessage,
     handleSubmit,
     handleSelectFile: workspace.handleSelectFile,
     handleCreateFile: workspace.handleCreateFile,

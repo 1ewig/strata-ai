@@ -24,21 +24,16 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   }, [session, isSessionPending, chatId, router]);
 
   const {
-
     model,
     thinkingLevel,
-    inputValue,
-    setInputValue,
     isWorkspaceDrawerOpen,
     setIsWorkspaceDrawerOpen,
     files,
     activeFileId,
     displayMessages,
     streamingContent,
-    status,
     isLoading,
     rateLimitData,
-    handleSendMessage,
     handleSubmit,
     handleSelectFile,
     handleCreateFile,
@@ -48,7 +43,15 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     handleThinkingLevelChange,
   } = useChatSession(chatId);
 
-  const handleOpenDrawer = () => setIsWorkspaceDrawerOpen(true);
+  const handleOpenDrawer = React.useCallback(() => setIsWorkspaceDrawerOpen(true), [setIsWorkspaceDrawerOpen]);
+
+  const handleOpenFile = React.useCallback(
+    (fileId: string) => {
+      handleSelectFile(fileId);
+      setIsWorkspaceDrawerOpen(true);
+    },
+    [handleSelectFile, setIsWorkspaceDrawerOpen],
+  );
 
   React.useEffect(() => {
     const handleCustomOpen = () => setIsWorkspaceDrawerOpen(true);
@@ -79,10 +82,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         <ChatHeader
           files={files}
           activeFileId={activeFileId}
-          onOpenFile={(fileId) => {
-            handleSelectFile(fileId);
-            setIsWorkspaceDrawerOpen(true);
-          }}
+          onOpenFile={handleOpenFile}
           onOpenDrawer={handleOpenDrawer}
         />
 
@@ -95,7 +95,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
                   streamingContent={streamingContent}
                   isLoading={isLoading}
                   messagesEndRef={messagesEndRef}
-                  onSendMessage={handleSendMessage}
                   onOpenDrawer={handleOpenDrawer}
                 />
               </StickToBottom.Content>
@@ -119,9 +118,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30">
           <div className="max-w-2xl mx-auto pointer-events-auto">
             <ChatInput
-              inputValue={inputValue}
-              onInputChange={setInputValue}
-              onSubmit={handleSubmit}
+              onSendMessage={handleSubmit}
               isLoading={isLoading}
               model={model}
               thinkingLevel={thinkingLevel}
@@ -142,7 +139,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         onUpdateFile={handleUpdateFile}
         onCreateFile={handleCreateFile}
         onDeleteFile={handleDeleteFile}
-        onSendMessage={handleSendMessage}
         isLoading={isLoading}
       />
     </main>

@@ -12,7 +12,7 @@ interface ChatHeaderProps {
   onOpenDrawer: () => void;
 }
 
-export default function ChatHeader({
+export default React.memo(function ChatHeader({
   title,
   files,
   activeFileId,
@@ -109,4 +109,4 @@ export default function ChatHeader({
       </div>
     </header>
   );
-}
+});
