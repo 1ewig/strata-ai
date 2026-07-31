@@ -167,7 +167,7 @@ export default function ChatInput({
               {menuOpen && (
                 <div
                   ref={menuRef}
-                  className="absolute bottom-full left-0 mb-2 w-72 bg-surface-elevated border border-edge-hover rounded-2xl shadow-2xl p-1.5 text-sm z-50 animate-in fade-in zoom-in-95 duration-100"
+                  className="absolute bottom-full left-0 mb-2 w-72 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-2xl shadow-2xl p-1.5 text-sm z-50 animate-in fade-in zoom-in-95 duration-100"
                 >
                   {/* Featured Primary Models List */}
                   <div className="space-y-0.5">
@@ -230,7 +230,7 @@ export default function ChatInput({
 
                         {/* Effort Submenu Flyout Panel */}
                         {activeSubmenu === 'effort' && (
-                          <div className="absolute left-full bottom-0 ml-1.5 w-48 bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-1.5 space-y-0.5 z-50">
+                          <div className="absolute left-0 sm:left-full bottom-full sm:bottom-0 mb-1.5 sm:mb-0 sm:ml-1.5 w-48 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-1.5 space-y-0.5 z-50 animate-in fade-in zoom-in-95">
                             <div className="px-2.5 py-1 text-[10px] font-semibold text-text-faint uppercase tracking-wider">
                               Thinking Level
                             </div>
@@ -282,7 +282,7 @@ export default function ChatInput({
 
                       {/* More Models Submenu Flyout Panel */}
                       {activeSubmenu === 'more-models' && (
-                        <div className="absolute left-full bottom-0 ml-1.5 w-64 bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-1.5 space-y-0.5 z-50 max-h-64 overflow-y-auto">
+                        <div className="absolute left-0 sm:left-full bottom-full sm:bottom-0 mb-1.5 sm:mb-0 sm:ml-1.5 w-64 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-1.5 space-y-0.5 z-50 max-h-64 overflow-y-auto animate-in fade-in zoom-in-95">
                           <div className="px-2.5 py-1 text-[10px] font-semibold text-text-faint uppercase tracking-wider">
                             Other Models
                           </div>
@@ -364,7 +364,7 @@ export default function ChatInput({
                 </div>
 
                 {/* Popover Tooltip on Hover */}
-                <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-56 bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-2.5 text-xs text-text-primary z-50 animate-in fade-in zoom-in-95 pointer-events-none">
+                <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-56 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-2.5 text-xs text-text-primary z-50 animate-in fade-in zoom-in-95 pointer-events-none">
                   <div className="font-semibold text-text-bright mb-1.5 flex items-center justify-between">
                     <span>Remaining Messages</span>
                     <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${

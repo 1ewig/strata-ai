@@ -65,7 +65,7 @@ export default React.memo(function ChatHeader({
           </button>
 
           {fileMenuOpen && (
-            <div className="absolute mt-1 right-0 w-64 bg-surface-elevated border border-edge-hover rounded-xl shadow-xl overflow-hidden text-xs z-50">
+            <div className="absolute mt-1 right-0 w-64 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-xl overflow-hidden text-xs z-50">
               <div className="px-3 py-2 border-b border-edge-raised font-semibold text-text-muted">
                 Workspace Files
               </div>
