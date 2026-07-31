@@ -124,14 +124,28 @@ export default function WorkspaceDrawer({
               </button>
             </div>
 
-            {/* Top Right: Close Button */}
-            <button
-              onClick={onClose}
-              className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
-              title="Close drawer"
-            >
-              <X className="w-4.5 h-4.5" />
-            </button>
+            {/* Top Right: Delete Icon & Close Button */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              {activeFile && (
+                <button
+                  onClick={() => onDeleteFile(activeFile.id)}
+                  className="p-1.5 text-text-muted hover:text-danger hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+                  title="Delete file"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              )}
+
+              <div className="w-px h-4 bg-edge-raised" />
+
+              <button
+                onClick={onClose}
+                className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+                title="Close drawer"
+              >
+                <X className="w-4.5 h-4.5" />
+              </button>
+            </div>
           </div>
 
           {/* New File Inline Form */}
@@ -269,21 +283,12 @@ export default function WorkspaceDrawer({
           {/* Footer Bar */}
           {activeFile && (
             <div className="h-16 px-4 sm:px-6 border-t border-edge-raised flex items-center justify-between bg-surface-base/60 backdrop-blur-md shrink-0 gap-3">
-              {/* Left Side: Metadata & Delete Button */}
+              {/* Left Side: Metadata */}
               <div className="flex items-center gap-3 min-w-0">
                 <span className="text-[11px] text-text-muted font-medium truncate">
                   {activeFile.content ? `${activeFile.content.length.toLocaleString()} chars` : 'Empty'}
                   {activeFile.language ? ` · ${activeFile.language}` : ''}
                 </span>
-
-                <button
-                  onClick={() => onDeleteFile(activeFile.id)}
-                  className="flex items-center gap-1.5 text-xs text-text-muted hover:text-danger hover:bg-danger-soft/60 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer"
-                  title="Delete file"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Delete</span>
-                </button>
               </div>
 
               {/* Right Side: Action Buttons */}
