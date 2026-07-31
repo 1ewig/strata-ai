@@ -549,7 +549,35 @@ The `buildSystemInstruction(files)` function builds a structured 5-section syste
 4. **Response Style** — conciseness, GFM markdown, fenced code blocks, tool-first for workspace state
 5. **Edge Cases** — empty workspace (offer to create), ambiguous request (ask one clarifying question), off-topic (answer then redirect)
 
-## 10. Environment Variables
+## 10. Surgical Edit Engine (`lib/edit-engine.ts`)
+
+`ResumeEditEngine` performs 3-tier matching for surgical file editing via `editFile`:
+
+1. **Tier 1 — Exact Match:** Splits target content on `searchString`. Rejects if 0 matches, errors if >1 matches (ambiguous). Replaces verbatim on single exact match.
+2. **Tier 2 — Whitespace-Normalized Match:** Normalizes line breaks (`\r\n` → `\n`), collapses whitespace, and trims lines. Performs line-by-line comparison to locate search blocks regardless of indentation or formatting differences.
+3. **Tier 3 — Anchor-Bounded Match:** Extracts first and last non-empty lines from `searchString` as anchor points. Scans target text for a region bounded by first anchor...last anchor within a fuzzy line range and replaces the enclosed block.
+
+```typescript
+// ResumeEditEngine matching strategy cascade
+const exact = this.applyExactMatch(source, searchString, replaceString);
+if (exact.success) return exact;
+const normalized = this.applyNormalizedMatch(source, searchString, replaceString);
+if (normalized.success) return normalized;
+const anchor = this.applyAnchorMatch(source, searchString, replaceString);
+if (anchor.success) return anchor;
+```
+
+## 11. Styling & Animation System (`app/globals.css`)
+
+- **Custom Surface Tokens:** 5-tier HSL surface scale (`base` → `raised` → `overlay` → `elevated` → `hover`).
+- **Key Animations:**
+  - `blink`: Bouncing typing loader dots with staggered animation delays.
+  - `fadeIn`: Micro-animation (`translateY(4px) → 0`, `opacity 0 → 1`) for new messages.
+  - `shimmer`: 2.8s sweeping linear gradient overlay on active streaming messages.
+  - `caret`: Blinking emerald terminal cursor positioned inline at the end of streaming prose.
+- **Observer-Driven Auto-Scroll:** Synchronously tracks DOM mutations via `ResizeObserver`/`MutationObserver` through `<StickToBottom>` in `page.tsx`.
+
+## 12. Environment Variables
 
 | Variable | Required | Default | Purpose |
 |----------|----------|---------|---------|

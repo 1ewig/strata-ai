@@ -148,10 +148,9 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 
 ## 📚 Technical Documentation
 
-For in-depth architectural breakdown and engineering patterns, explore our documentation guides:
+For in-depth architectural breakdown, data flow details, and engineering design decisions:
 
-- [📄 Architecture Guide (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md) — Core data flow, persistence model, AI SDK patterns, and design decisions.
-- [🛠️ Engineering Guide (`docs/ENGINEERING.md`)](docs/ENGINEERING.md) — Technical specs, component trees, edit engine algorithms, and extension rules.
+- [📄 Architecture & Engineering Guide (`docs/ARCHITECTURE.md`)](docs/ARCHITECTURE.md) — Comprehensive technical blueprint, client persistence, AI SDK 7 patterns, edit engine algorithms, and extension rules.
 
 ---
 
