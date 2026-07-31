@@ -247,7 +247,7 @@ export function useChatSession(chatId: string) {
     [chat, chatId, currentConvTitle, rateLimitData, setQuotaError],
   );
 
-  const isLoading = chat.status !== 'ready';
+  const isLoading = chat.status !== 'ready' && !quotaError;
 
   return {
     model: modelSettings.model,
