@@ -19,7 +19,18 @@ import {
   extractFilesFromMessage,
 } from '@/lib/ai/message-extractor';
 
+import { useRateLimit } from '@/contexts/RateLimitContext';
+
 export function useChatSession(chatId: string) {
+  const {
+    rateLimitData,
+    quotaError,
+    updateRateLimitData,
+    setQuotaError,
+    clearQuotaError,
+    checkQuotaStatus,
+  } = useRateLimit();
+
   const dexieMessages = useLiveQuery(
     () => db.messages.where('chatId').equals(chatId).sortBy('timestamp'),
     [chatId],
@@ -63,62 +74,6 @@ export function useChatSession(chatId: string) {
   const continuationCountRef = useRef<number>(0);
   const sendMessageRef = useRef<((msg: { text: string }) => void) | null>(null);
 
-  const [rateLimitData, setRateLimitData] = useState<{
-    remaining5h: number;
-    remainingWeek: number;
-    retryAfter?: number;
-  } | null>(null);
-
-  const [quotaError, setQuotaError] = useState<{
-    message: string;
-    retryAfter?: number;
-  } | null>(null);
-
-  const checkQuotaStatus = useCallback(async () => {
-    try {
-      const res = await fetch('/api/user/rate-limit');
-      if (res.ok) {
-        const data = await res.json();
-        const rem5h = data.remaining5h ?? 10;
-        const remWeek = data.remainingWeek ?? 50;
-        setRateLimitData({
-          remaining5h: rem5h,
-          remainingWeek: remWeek,
-          retryAfter: data.retryAfter,
-        });
-        if (rem5h > 0 && remWeek > 0) {
-          setQuotaError(null);
-        }
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    fetch('/api/user/rate-limit')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data && active) {
-          const rem5h = data.remaining5h ?? 10;
-          const remWeek = data.remainingWeek ?? 50;
-          setRateLimitData({
-            remaining5h: rem5h,
-            remainingWeek: remWeek,
-            retryAfter: data.retryAfter,
-          });
-          if (rem5h > 0 && remWeek > 0) {
-            setQuotaError(null);
-          }
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
-
   /* eslint-disable react-hooks/refs */
   const transport = useMemo(
     () =>
@@ -139,7 +94,7 @@ export function useChatSession(chatId: string) {
           if (rem5h !== null && remWeek !== null) {
             const num5h = parseInt(rem5h, 10);
             const numWeek = parseInt(remWeek, 10);
-            setRateLimitData({
+            updateRateLimitData({
               remaining5h: num5h,
               remainingWeek: numWeek,
               retryAfter: retryAfterSec,
@@ -156,7 +111,7 @@ export function useChatSession(chatId: string) {
           return res;
         },
       }),
-    [],
+    [updateRateLimitData, setQuotaError],
   );
   /* eslint-enable react-hooks/refs */
 
@@ -169,7 +124,7 @@ export function useChatSession(chatId: string) {
           message: 'Usage quota reached (10 msgs / 5h, 50 msgs / week). Please wait before trying again.',
         });
       }
-    }, []),
+    }, [setQuotaError]),
     onFinish: useCallback(
       async ({
         message,
@@ -289,10 +244,8 @@ export function useChatSession(chatId: string) {
         chat.sendMessage({ text: trimmed });
       }
     },
-    [chat, chatId, currentConvTitle, rateLimitData],
+    [chat, chatId, currentConvTitle, rateLimitData, setQuotaError],
   );
-
-  const clearQuotaError = useCallback(() => setQuotaError(null), []);
 
   const isLoading = chat.status !== 'ready';
 

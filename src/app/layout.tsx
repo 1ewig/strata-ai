@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { Fredoka, Nunito } from 'next/font/google';
-import './globals.css';
+import { RateLimitProvider } from '@/contexts/RateLimitContext';
 
 const fredoka = Fredoka({
   subsets: ['latin'],
@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         suppressHydrationWarning
         className={`${fredoka.variable} ${nunito.variable} bg-surface-base text-text-primary antialiased selection:bg-secondary selection:text-dark relative font-sans`}
       >
-        {children}
+        <RateLimitProvider>{children}</RateLimitProvider>
       </body>
     </html>
   );

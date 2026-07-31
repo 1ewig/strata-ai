@@ -47,36 +47,7 @@ export default function ChatInput({
   const primaryModels = MODELS.length > 3 ? MODELS.slice(0, 3) : MODELS;
   const overflowModels = MODELS.length > 3 ? MODELS.slice(3) : MODELS;
 
-  // Rate limit quota tracking (prefers passed prop, fallback to internal state if missing)
-  const [internalRateLimitData, setInternalRateLimitData] = useState<{
-    remaining5h: number;
-    remainingWeek: number;
-    retryAfter?: number;
-  } | null>(null);
-
-  useEffect(() => {
-    if (rateLimitDataProp !== undefined) return;
-    let isMounted = true;
-
-    fetch('/api/user/rate-limit')
-      .then(res => (res.ok ? res.json() : null))
-      .then(data => {
-        if (data && isMounted) {
-          setInternalRateLimitData({
-            remaining5h: data.remaining5h ?? 10,
-            remainingWeek: data.remainingWeek ?? 50,
-            retryAfter: data.retryAfter,
-          });
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      isMounted = false;
-    };
-  }, [rateLimitDataProp]);
-
-  const rateLimitData = rateLimitDataProp !== undefined ? rateLimitDataProp : internalRateLimitData;
+  const rateLimitData = rateLimitDataProp ?? null;
   const isQuotaExhausted = rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
 
   // Handle outside clicks to close the menu
