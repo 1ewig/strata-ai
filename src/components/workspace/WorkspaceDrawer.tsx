@@ -96,14 +96,14 @@ export default function WorkspaceDrawer({
         >
           {/* Top Bar / Navigation */}
           <div className="h-14 px-3 sm:px-6 border-b border-edge-raised flex items-center justify-between bg-surface-base/40 shrink-0 gap-4">
-            {/* File Switcher Dropdown / Tabs */}
+            {/* File Switcher Dropdown & Add Button */}
             <div className="flex items-center gap-2 flex-1 min-w-0">
               <FileText className="w-4 h-4 text-primary shrink-0" />
               {files.length > 0 ? (
                 <select
                   value={activeFile?.id || ''}
                   onChange={(e) => onSelectFile(e.target.value)}
-                  className="bg-surface-elevated text-xs font-semibold text-text-bright border border-edge-raised rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-edge-hover max-w-[200px] truncate cursor-pointer"
+                  className="bg-surface-elevated text-xs font-semibold text-text-bright border border-edge-raised rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-edge-hover max-w-[220px] truncate cursor-pointer"
                 >
                   {files.map(f => (
                     <option key={f.id} value={f.id}>
@@ -117,63 +117,21 @@ export default function WorkspaceDrawer({
 
               <button
                 onClick={() => setIsCreatingNew(prev => !prev)}
-                className="p-1 text-text-muted hover:text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+                className="p-1.5 text-text-muted hover:text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
                 title="Create new file"
               >
                 <Plus className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Actions */}
-            <div className="flex items-center gap-2 shrink-0">
-              {activeFile?.content && (
-                <button
-                  onClick={handleCopy}
-                  className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary px-2.5 py-1.5 rounded-lg border border-edge-raised hover:border-edge-hover transition-colors cursor-pointer"
-                  title="Copy content"
-                >
-                  {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
-                  <span className="hidden sm:inline">{copied ? 'Copied' : 'Copy'}</span>
-                </button>
-              )}
-
-              {activeFile && (
-                <>
-                  {isEditing ? (
-                    <button
-                      onClick={handleSaveEdit}
-                      className="flex items-center gap-1 text-xs font-semibold text-surface bg-primary hover:bg-primary-hover px-3 py-1.5 rounded-lg transition-colors cursor-pointer shadow-button"
-                    >
-                      <Check className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Save</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleStartEditing}
-                      className="flex items-center gap-1 text-xs text-text-muted hover:text-text-primary px-2.5 py-1.5 rounded-lg border border-edge-raised hover:border-edge-hover transition-colors cursor-pointer"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Edit</span>
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => onDeleteFile(activeFile.id)}
-                    className="p-1.5 text-text-muted hover:text-danger hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
-                    title="Delete file"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </>
-              )}
-
-              <div className="w-px h-4 bg-edge-raised" />
-
-              <button
-                onClick={onClose}
-                className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+            {/* Top Right: Close Button */}
+            <button
+              onClick={onClose}
+              className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+              title="Close drawer"
+            >
+              <X className="w-4.5 h-4.5" />
+            </button>
           </div>
 
           {/* New File Inline Form */}
@@ -307,6 +265,68 @@ export default function WorkspaceDrawer({
               </div>
             )}
           </div>
+
+          {/* Footer Bar */}
+          {activeFile && (
+            <div className="h-16 px-4 sm:px-6 border-t border-edge-raised flex items-center justify-between bg-surface-base/60 backdrop-blur-md shrink-0 gap-3">
+              {/* Left Side: Metadata & Delete Button */}
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="text-[11px] text-text-muted font-medium truncate">
+                  {activeFile.content ? `${activeFile.content.length.toLocaleString()} chars` : 'Empty'}
+                  {activeFile.language ? ` · ${activeFile.language}` : ''}
+                </span>
+
+                <button
+                  onClick={() => onDeleteFile(activeFile.id)}
+                  className="flex items-center gap-1.5 text-xs text-text-muted hover:text-danger hover:bg-danger-soft/60 px-2.5 py-1.5 rounded-xl transition-colors cursor-pointer"
+                  title="Delete file"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Delete</span>
+                </button>
+              </div>
+
+              {/* Right Side: Action Buttons */}
+              <div className="flex items-center gap-2 shrink-0">
+                {activeFile.content && !isEditing && (
+                  <button
+                    onClick={handleCopy}
+                    className="flex items-center gap-1.5 text-xs font-medium text-text-muted hover:text-text-primary bg-surface-elevated hover:bg-surface-hover border border-edge-raised px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+                    title="Copy file content"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copied ? 'Copied' : 'Copy'}</span>
+                  </button>
+                )}
+
+                {isEditing ? (
+                  <>
+                    <button
+                      onClick={() => setIsEditing(false)}
+                      className="text-xs text-text-muted hover:text-text-primary px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveEdit}
+                      className="flex items-center gap-1.5 text-xs font-semibold text-surface bg-primary hover:bg-primary-hover px-4 py-1.5 rounded-xl transition-colors cursor-pointer shadow-button"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Save Changes</span>
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleStartEditing}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-text-bright bg-surface-elevated hover:bg-surface-hover border border-edge-raised hover:border-edge-hover px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm"
+                  >
+                    <Edit3 className="w-3.5 h-3.5 text-primary" />
+                    <span>Edit File</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </motion.div>
       </div>
     </AnimatePresence>
