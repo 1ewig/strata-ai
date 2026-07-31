@@ -2,6 +2,7 @@
 
 import React from 'react';
 import ChatBubble from '@/components/chat/ChatBubble';
+import { QuotaErrorCard } from '@/components/chat/QuotaErrorCard';
 import { StrataIcon } from '@/components/ui/strata-icon';
 
 interface ChatPanelProps {
@@ -10,6 +11,12 @@ interface ChatPanelProps {
   isLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   onOpenDrawer?: () => void;
+  quotaError?: {
+    message: string;
+    retryAfter?: number;
+  } | null;
+  onDismissQuotaError?: () => void;
+  onRetryCheckQuota?: () => void;
 }
 
 export default React.memo(function ChatPanel({
@@ -18,10 +25,13 @@ export default React.memo(function ChatPanel({
   isLoading,
   messagesEndRef,
   onOpenDrawer,
+  quotaError,
+  onDismissQuotaError,
+  onRetryCheckQuota,
 }: ChatPanelProps) {
   return (
     <div className="pt-4 space-y-4">
-      {messages.length === 0 && streamingContent === null && !isLoading && (
+      {messages.length === 0 && streamingContent === null && !isLoading && !quotaError && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary border border-secondary/50 flex items-center justify-center text-surface font-semibold text-lg shadow-glow-primary">
             <StrataIcon className="w-6 h-6" />
@@ -44,6 +54,15 @@ export default React.memo(function ChatPanel({
           />
         );
       })}
+
+      {quotaError && (
+        <QuotaErrorCard
+          key={`${quotaError.retryAfter ?? 0}-${quotaError.message}`}
+          error={quotaError}
+          onDismiss={onDismissQuotaError}
+          onRetryCheck={onRetryCheckQuota}
+        />
+      )}
 
       {isLoading && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
         <div className="flex items-start gap-3.5 fade-in">

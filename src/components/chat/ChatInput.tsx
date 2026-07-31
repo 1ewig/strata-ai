@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { ArrowUp, ChevronDown, ChevronRight, Check } from 'lucide-react';
+import { ArrowUp, ChevronDown, ChevronRight, Check, AlertCircle } from 'lucide-react';
 import {
   MODELS,
   MODEL_DESCRIPTIONS,
@@ -19,6 +19,7 @@ interface ChatInputProps {
   rateLimitData?: {
     remaining5h: number;
     remainingWeek: number;
+    retryAfter?: number;
   } | null;
 }
 
@@ -50,6 +51,7 @@ export default function ChatInput({
   const [internalRateLimitData, setInternalRateLimitData] = useState<{
     remaining5h: number;
     remainingWeek: number;
+    retryAfter?: number;
   } | null>(null);
 
   useEffect(() => {
@@ -63,6 +65,7 @@ export default function ChatInput({
           setInternalRateLimitData({
             remaining5h: data.remaining5h ?? 10,
             remainingWeek: data.remainingWeek ?? 50,
+            retryAfter: data.retryAfter,
           });
         }
       })
@@ -74,7 +77,7 @@ export default function ChatInput({
   }, [rateLimitDataProp]);
 
   const rateLimitData = rateLimitDataProp !== undefined ? rateLimitDataProp : internalRateLimitData;
-
+  const isQuotaExhausted = rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
 
   // Handle outside clicks to close the menu
   useEffect(() => {
@@ -107,7 +110,7 @@ export default function ChatInput({
 
   const handleSend = () => {
     const text = inputValue.trim();
-    if (text && !isLoading) {
+    if (text && !isLoading && !isQuotaExhausted) {
       onSendMessage(text);
       setInputValue('');
     }
@@ -132,20 +135,36 @@ export default function ChatInput({
       }}
       className="relative z-10"
     >
-      <div className="flex flex-col gap-2 bg-surface-raised border border-edge-hover/60 focus-within:border-edge-hover rounded-2xl p-3.5 transition-all shadow-lg">
+      <div className={`flex flex-col gap-2 bg-surface-raised border ${
+        isQuotaExhausted ? 'border-danger/40 bg-danger-soft/20' : 'border-edge-hover/60 focus-within:border-edge-hover'
+      } rounded-2xl p-3.5 transition-all shadow-lg`}>
 
-        {/* Row 1: Text Field Input */}
-        <textarea
-          ref={textareaRef}
-          id="chat-input-field"
-          rows={2}
-          disabled={isLoading}
-          placeholder="Message Strata AI..."
-          value={inputValue}
-          onChange={handleInput}
-          onKeyDown={handleKeyDown}
-          className="w-full bg-transparent text-text-primary placeholder-text-muted border-none text-sm focus:outline-none resize-none min-h-[48px] max-h-48 py-1 focus:ring-0 disabled:opacity-50"
-        />
+        {/* Row 1: Text Field Input or Quota Warning directly on the input field */}
+        {isQuotaExhausted ? (
+          <div className="w-full min-h-[48px] py-1 flex items-center gap-2 text-danger text-sm font-medium animate-in fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
+            <span>
+              {rateLimitData?.remaining5h === 0
+                ? '5-hour limit reached (10/10 msgs used).'
+                : 'Weekly limit reached (50/50 msgs used).'}
+              {rateLimitData?.retryAfter
+                ? ` Resets in ~${Math.ceil(rateLimitData.retryAfter / 60)} min.`
+                : ' Please wait before sending.'}
+            </span>
+          </div>
+        ) : (
+          <textarea
+            ref={textareaRef}
+            id="chat-input-field"
+            rows={2}
+            disabled={isLoading}
+            placeholder="Message Strata AI..."
+            value={inputValue}
+            onChange={handleInput}
+            onKeyDown={handleKeyDown}
+            className="w-full bg-transparent text-text-primary placeholder-text-muted border-none text-sm focus:outline-none resize-none min-h-[48px] max-h-48 py-1 focus:ring-0 disabled:opacity-50"
+          />
+        )}
 
         {/* Row 2: Bottom Toolbar (Model Dropdown & Quota Ring on Left, Send Button on Right) */}
         <div className="flex items-center justify-between pt-1">
@@ -336,7 +355,9 @@ export default function ChatInput({
             {/* Rate Limit Ring Indicator */}
             {rateLimitData !== null && (
               <div className="relative group flex items-center">
-                <div className="flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-surface-base border border-edge-raised text-xs font-medium cursor-help transition-colors">
+                <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-surface-base border text-xs font-medium cursor-help transition-colors ${
+                  isQuotaExhausted ? 'border-danger/40 bg-danger-soft/40' : 'border-edge-raised'
+                }`}>
                   <svg className="w-3.5 h-3.5 -rotate-90" viewBox="0 0 20 20">
                     <circle
                       cx="10"
@@ -366,24 +387,40 @@ export default function ChatInput({
                       }`}
                     />
                   </svg>
-                  <span className="text-[11px] text-text-muted font-medium">{rateLimitData.remaining5h} left</span>
+                  <span className={`text-[11px] font-medium ${isQuotaExhausted ? 'text-danger font-semibold' : 'text-text-muted'}`}>
+                    {rateLimitData.remaining5h} left
+                  </span>
                 </div>
 
                 {/* Popover Tooltip on Hover */}
-                <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-52 bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-2.5 text-xs text-text-primary z-50 animate-in fade-in zoom-in-95 pointer-events-none">
+                <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-56 bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-2.5 text-xs text-text-primary z-50 animate-in fade-in zoom-in-95 pointer-events-none">
                   <div className="font-semibold text-text-bright mb-1.5 flex items-center justify-between">
                     <span>Remaining Messages</span>
-                    <span className="text-[10px] font-normal text-text-faint uppercase">Quota</span>
+                    <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded ${
+                      isQuotaExhausted ? 'bg-danger/15 text-danger' : 'bg-surface-base text-text-faint'
+                    }`}>
+                      {isQuotaExhausted ? 'Exhausted' : 'Quota'}
+                    </span>
                   </div>
                   <div className="space-y-1.5 text-[11px] text-text-muted">
                     <div className="flex items-center justify-between">
                       <span>5-hour window:</span>
-                      <span className="font-semibold text-primary">{rateLimitData.remaining5h} of 10 left</span>
+                      <span className={`font-semibold ${rateLimitData.remaining5h === 0 ? 'text-danger' : 'text-primary'}`}>
+                        {rateLimitData.remaining5h} of 10 left
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span>7-day window:</span>
-                      <span className="font-semibold text-primary">{rateLimitData.remainingWeek} of 50 left</span>
+                      <span className={`font-semibold ${rateLimitData.remainingWeek === 0 ? 'text-danger' : 'text-primary'}`}>
+                        {rateLimitData.remainingWeek} of 50 left
+                      </span>
                     </div>
+                    {rateLimitData.retryAfter && (
+                      <div className="pt-1 border-t border-edge-default text-[10px] text-danger flex items-center justify-between font-medium">
+                        <span>Resets in:</span>
+                        <span>~{Math.ceil(rateLimitData.retryAfter / 60)} minutes</span>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -396,8 +433,9 @@ export default function ChatInput({
           <button
             id="chat-submit-btn"
             type="submit"
-            disabled={isLoading || !inputValue.trim()}
+            disabled={isLoading || !inputValue.trim() || isQuotaExhausted}
             className="p-2 rounded-xl bg-primary hover:bg-primary-hover disabled:bg-surface-elevated disabled:opacity-40 shrink-0 transition-colors focus:outline-none cursor-pointer"
+            title={isQuotaExhausted ? "Quota limit reached" : "Send message"}
           >
             <ArrowUp className="w-4 h-4 text-surface" />
           </button>

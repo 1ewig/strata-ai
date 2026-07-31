@@ -251,9 +251,8 @@ export default function WorkspaceDrawer({
                 </button>
               </div>
             ) : isMarkdown ? (
-              <div className="bg-surface-base border border-edge-raised/80 rounded-xl p-8 shadow-2xl text-text-primary selection:bg-secondary/50">
-                <article className="prose max-w-none space-y-4 text-xs leading-relaxed">
-                  <ReactMarkdown
+              <article className="prose max-w-none space-y-4 text-xs leading-relaxed text-text-primary selection:bg-secondary/50">
+                <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ children }) => (
@@ -302,9 +301,8 @@ export default function WorkspaceDrawer({
                     {activeFile.content}
                   </ReactMarkdown>
                 </article>
-              </div>
             ) : (
-              <div className="bg-surface-base border border-edge-raised/80 rounded-xl p-6 shadow-2xl font-mono text-xs text-text-primary whitespace-pre-wrap leading-relaxed">
+              <div className="font-mono text-xs text-text-primary whitespace-pre-wrap leading-relaxed">
                 {activeFile.content}
               </div>
             )}

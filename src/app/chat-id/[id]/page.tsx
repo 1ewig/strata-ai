@@ -35,6 +35,9 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     streamingContent,
     isLoading,
     rateLimitData,
+    quotaError,
+    clearQuotaError,
+    checkQuotaStatus,
     handleSendMessage,
     handleSelectFile,
     handleCreateFile,
@@ -103,6 +106,9 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
                   isLoading={isLoading}
                   messagesEndRef={messagesEndRef}
                   onOpenDrawer={handleOpenDrawer}
+                  quotaError={quotaError}
+                  onDismissQuotaError={clearQuotaError}
+                  onRetryCheckQuota={checkQuotaStatus}
                 />
               </StickToBottom.Content>
 

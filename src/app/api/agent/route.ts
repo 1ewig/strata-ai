@@ -38,6 +38,7 @@ export async function POST(req: Request) {
       JSON.stringify({
         error: "Rate limit exceeded",
         message: `Max 10 messages per 5 hours, 50 per week. Try again in ${Math.ceil(rateLimit.retryAfter! / 60)} min.`,
+        retryAfter: rateLimit.retryAfter,
       }),
       {
         status: 429,
@@ -46,6 +47,7 @@ export async function POST(req: Request) {
           "Retry-After": String(rateLimit.retryAfter),
           "X-RateLimit-Remaining-5h": "0",
           "X-RateLimit-Remaining-Week": String(rateLimit.remainingWeek),
+          "X-RateLimit-Retry-After": String(rateLimit.retryAfter || 0),
         },
       },
     );

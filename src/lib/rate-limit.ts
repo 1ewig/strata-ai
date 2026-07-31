@@ -102,10 +102,44 @@ export async function getRateLimitStatus(userId: string): Promise<RateLimitResul
     );
     const weekCount = parseInt(weekResult.rows[0].cnt, 10);
 
+    let retryAfter: number | undefined;
+    if (fiveHourCount >= MAX_5H) {
+      const oldest = await client.query(
+        `SELECT created_at FROM better_auth.message_log
+         WHERE user_id = $1 AND created_at > NOW() - INTERVAL '5 hours'
+         ORDER BY created_at ASC LIMIT 1`,
+        [userId],
+      );
+      if (oldest.rows.length > 0) {
+        retryAfter = Math.max(
+          1,
+          Math.ceil(
+            (new Date(oldest.rows[0].created_at).getTime() + FIVE_HOURS_MS - Date.now()) / 1000,
+          ),
+        );
+      }
+    } else if (weekCount >= MAX_WEEK) {
+      const oldest = await client.query(
+        `SELECT created_at FROM better_auth.message_log
+         WHERE user_id = $1 AND created_at > NOW() - INTERVAL '7 days'
+         ORDER BY created_at ASC LIMIT 1`,
+        [userId],
+      );
+      if (oldest.rows.length > 0) {
+        retryAfter = Math.max(
+          1,
+          Math.ceil(
+            (new Date(oldest.rows[0].created_at).getTime() + SEVEN_DAYS_MS - Date.now()) / 1000,
+          ),
+        );
+      }
+    }
+
     return {
       allowed: fiveHourCount < MAX_5H && weekCount < MAX_WEEK,
       remaining5h: Math.max(0, MAX_5H - fiveHourCount),
       remainingWeek: Math.max(0, MAX_WEEK - weekCount),
+      retryAfter,
     };
   } finally {
     client.release();

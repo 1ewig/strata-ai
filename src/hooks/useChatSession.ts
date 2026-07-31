@@ -66,20 +66,57 @@ export function useChatSession(chatId: string) {
   const [rateLimitData, setRateLimitData] = useState<{
     remaining5h: number;
     remainingWeek: number;
+    retryAfter?: number;
   } | null>(null);
 
+  const [quotaError, setQuotaError] = useState<{
+    message: string;
+    retryAfter?: number;
+  } | null>(null);
+
+  const checkQuotaStatus = useCallback(async () => {
+    try {
+      const res = await fetch('/api/user/rate-limit');
+      if (res.ok) {
+        const data = await res.json();
+        const rem5h = data.remaining5h ?? 10;
+        const remWeek = data.remainingWeek ?? 50;
+        setRateLimitData({
+          remaining5h: rem5h,
+          remainingWeek: remWeek,
+          retryAfter: data.retryAfter,
+        });
+        if (rem5h > 0 && remWeek > 0) {
+          setQuotaError(null);
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
+    let active = true;
     fetch('/api/user/rate-limit')
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
-        if (data) {
+        if (data && active) {
+          const rem5h = data.remaining5h ?? 10;
+          const remWeek = data.remainingWeek ?? 50;
           setRateLimitData({
-            remaining5h: data.remaining5h ?? 10,
-            remainingWeek: data.remainingWeek ?? 50,
+            remaining5h: rem5h,
+            remainingWeek: remWeek,
+            retryAfter: data.retryAfter,
           });
+          if (rem5h > 0 && remWeek > 0) {
+            setQuotaError(null);
+          }
         }
       })
       .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, []);
 
   /* eslint-disable react-hooks/refs */
@@ -96,10 +133,24 @@ export function useChatSession(chatId: string) {
           const res = await fetch(url, options);
           const rem5h = res.headers.get('X-RateLimit-Remaining-5h');
           const remWeek = res.headers.get('X-RateLimit-Remaining-Week');
+          const retryHeader = res.headers.get('X-RateLimit-Retry-After') || res.headers.get('Retry-After');
+          const retryAfterSec = retryHeader ? parseInt(retryHeader, 10) : undefined;
+
           if (rem5h !== null && remWeek !== null) {
+            const num5h = parseInt(rem5h, 10);
+            const numWeek = parseInt(remWeek, 10);
             setRateLimitData({
-              remaining5h: parseInt(rem5h, 10),
-              remainingWeek: parseInt(remWeek, 10),
+              remaining5h: num5h,
+              remainingWeek: numWeek,
+              retryAfter: retryAfterSec,
+            });
+          }
+
+          if (res.status === 429) {
+            const data = await res.clone().json().catch(() => null);
+            setQuotaError({
+              message: data?.message || 'Usage quota reached (10 msgs per 5 hours, 50 msgs per week). Please try again later.',
+              retryAfter: retryAfterSec || data?.retryAfter,
             });
           }
           return res;
@@ -112,6 +163,13 @@ export function useChatSession(chatId: string) {
   const chat = useChat({
     id: chatId,
     transport: transport as any,
+    onError: useCallback((err: Error) => {
+      if (err?.message?.includes('429') || err?.message?.toLowerCase().includes('rate limit')) {
+        setQuotaError((prev) => prev || {
+          message: 'Usage quota reached (10 msgs / 5h, 50 msgs / week). Please wait before trying again.',
+        });
+      }
+    }, []),
     onFinish: useCallback(
       async ({
         message,
@@ -214,6 +272,16 @@ export function useChatSession(chatId: string) {
       continuationCountRef.current = 0;
       const trimmed = text.trim();
       if (trimmed && chat.status === 'ready') {
+        if (rateLimitData && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0)) {
+          setQuotaError({
+            message: rateLimitData.remaining5h <= 0
+              ? 'Your 5-hour quota is exhausted (10/10 messages used).'
+              : 'Your weekly quota is exhausted (50/50 messages used).',
+            retryAfter: rateLimitData.retryAfter,
+          });
+          return;
+        }
+        setQuotaError(null);
         if (!currentConvTitle || currentConvTitle === 'New Chat') {
           const autoTitle = trimmed.length > 40 ? `${trimmed.slice(0, 40)}...` : trimmed;
           updateConversationTitle(chatId, autoTitle);
@@ -221,8 +289,10 @@ export function useChatSession(chatId: string) {
         chat.sendMessage({ text: trimmed });
       }
     },
-    [chat, chatId, currentConvTitle],
+    [chat, chatId, currentConvTitle, rateLimitData],
   );
+
+  const clearQuotaError = useCallback(() => setQuotaError(null), []);
 
   const isLoading = chat.status !== 'ready';
 
@@ -238,6 +308,9 @@ export function useChatSession(chatId: string) {
     status: chat.status,
     isLoading,
     rateLimitData,
+    quotaError,
+    clearQuotaError,
+    checkQuotaStatus,
     handleSendMessage,
     handleSelectFile: workspace.handleSelectFile,
     handleCreateFile: workspace.handleCreateFile,
