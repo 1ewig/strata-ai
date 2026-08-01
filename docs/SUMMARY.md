@@ -212,8 +212,6 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 
 | Model ID | Family | Thinking levels | Default level |
 |----------|--------|-----------------|---------------|
-| `gemini-3.6-flash` | Gemini 3.6 | minimal / low / medium / high | medium |
-| `gemini-3.5-flash` | Gemini 3.5 | minimal / low / medium / high | medium |
 | `gemini-3.5-flash-lite` | Gemini 3.5 | minimal / low / medium / high | low |
 | `gemini-3.1-flash-lite` | Gemini 3.1 | minimal / high | minimal |
 | `gemini-3-flash-preview` | Gemini 3 | minimal / low / medium / high | high |
