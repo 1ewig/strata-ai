@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react';
-import { type LucideIcon, Sparkles, Search, Trash2, PencilLine, PenLine, Wrench, FileText, ExternalLink, Folder } from 'lucide-react';
+import { type LucideIcon, Sparkles, Search, Trash2, PencilLine, PenLine, Wrench, FileText, ExternalLink, Folder, Globe } from 'lucide-react';
 import { Resume, WorkspaceFile } from '@/lib/schemas';
 
 export interface ToolCardProps {
@@ -82,6 +82,24 @@ const toolConfigs: Record<string, ToolConfig> = {
     accentBorder: 'border-danger/40',
     accentText: 'text-danger',
   },
+  webSearch: {
+    label: 'Web Search Executed',
+    badge: 'Searched',
+    icon: Globe,
+    accent: 'info',
+    accentBg: 'bg-accent-blue-soft',
+    accentBorder: 'border-accent-blue/60',
+    accentText: 'text-info',
+  },
+  extractUrl: {
+    label: 'Web Page Extracted',
+    badge: 'Extracted',
+    icon: FileText,
+    accent: 'info',
+    accentBg: 'bg-accent-blue-soft',
+    accentBorder: 'border-accent-blue/60',
+    accentText: 'text-info',
+  },
   // Legacy aliases
   writeResume: {
     label: 'Resume Updated',
@@ -141,6 +159,8 @@ function normalizeToolName(raw: string): { normalized: string; isCustom: boolean
   if (clean === 'editfile' || clean === 'editf') return { normalized: 'editFile', isCustom: false };
   if (clean === 'deletefile' || clean === 'deletef') return { normalized: 'deleteFile', isCustom: false };
   if (clean === 'renamefile' || clean === 'renamef') return { normalized: 'renameFile', isCustom: false };
+  if (clean === 'websearch' || clean === 'tavilysearch' || clean === 'tavily' || clean === 'search') return { normalized: 'webSearch', isCustom: false };
+  if (clean === 'extracturl' || clean === 'extractpage' || clean === 'extract' || clean === 'tavilyextract') return { normalized: 'extractUrl', isCustom: false };
 
   if (clean === 'writeresume') return { normalized: 'writeResume', isCustom: false };
   if (clean === 'readresume') return { normalized: 'readResume', isCustom: false };
@@ -304,6 +324,73 @@ function buildDeleteFileSummary(args: any, result: any): ReactNode {
   );
 }
 
+function buildWebSearchSummary(args: any, result: any): ReactNode {
+  const query = args?.query || result?.query || 'Web Search';
+  const resultsList = result?.results || [];
+  const count = resultsList.length;
+  const answer = result?.answer;
+
+  return (
+    <div className="py-1 space-y-0.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium font-mono text-text-primary truncate">&quot;{query}&quot;</span>
+        <span className="text-[10px] text-info font-mono shrink-0 font-medium">
+          {count} result{count === 1 ? '' : 's'}
+        </span>
+      </div>
+      {answer && (
+        <p className="text-[11px] text-text-muted line-clamp-2">
+          {answer}
+        </p>
+      )}
+      {result?.error ? (
+        <p className="text-[11px] text-danger truncate">Error: {result.error}</p>
+      ) : resultsList.length > 0 ? (
+        <p className="text-[10px] font-mono text-text-muted/80 truncate">
+          Sources:{' '}
+          {resultsList
+            .map((r: any) => {
+              try {
+                return new URL(r.url).hostname.replace(/^www\./, '');
+              } catch {
+                return r.title || r.url;
+              }
+            })
+            .filter(Boolean)
+            .slice(0, 3)
+            .join(', ')}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function buildExtractUrlSummary(args: any, result: any): ReactNode {
+  const urls: string[] = args?.urls || [];
+  const extracted = result?.extracted || [];
+  const count = extracted.length;
+
+  return (
+    <div className="py-1 space-y-0.5">
+      <div className="flex items-center justify-between text-xs">
+        <span className="font-medium font-mono text-text-primary truncate">
+          {urls.length > 0 ? urls.join(', ') : 'URL Extraction'}
+        </span>
+        <span className="text-[10px] text-info font-mono shrink-0 font-medium">
+          {count} page{count === 1 ? '' : 's'} extracted
+        </span>
+      </div>
+      {result?.error ? (
+        <p className="text-[11px] text-danger truncate">Error: {result.error}</p>
+      ) : extracted.length > 0 ? (
+        <p className="text-[11px] text-text-muted line-clamp-2 font-mono">
+          {extracted[0]?.rawContent?.slice(0, 150).replace(/\s+/g, ' ')}...
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function buildGenericSummary(args: any, rawName: string): ReactNode {
   return (
     <div className="py-1 text-xs">
@@ -348,6 +435,12 @@ export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): To
     case 'deleteFile':
     case 'deleteResume':
       summary = buildDeleteFileSummary(args, result);
+      break;
+    case 'webSearch':
+      summary = buildWebSearchSummary(args, result);
+      break;
+    case 'extractUrl':
+      summary = buildExtractUrlSummary(args, result);
       break;
     default:
       summary = buildGenericSummary(args, rawName);

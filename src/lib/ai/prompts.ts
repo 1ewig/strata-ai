@@ -42,6 +42,7 @@ ${hasFiles ? `Files:\n${formattedFilesList}\n(Call \`readFile\` to view contents
 4. **Post-mutation output**: After successful file edits, respond with a concise 1-2 sentence confirmation. **Never** re-print full file contents in the chat.
 5. **No false claims**: Never claim a file was created or modified unless the tool executed successfully.
 6. **Error handling**: On tool failure, retry once with corrected arguments. If it fails again, explain briefly to the user.
+7. **Web search & Extraction**: Call \`webSearch\` for search queries. When search snippets are thin or require deeper detail, call \`extractUrl\` with target URL(s) to fetch full web page contents before drafting or modifying workspace files.
 
 ## Output Style
 - Concise, clear, professional GitHub-Flavored Markdown.
