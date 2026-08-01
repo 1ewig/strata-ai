@@ -9,7 +9,7 @@ import {
 } from '@/lib/db/db';
 import { WorkspaceFile } from '@/lib/schemas';
 import { generateId } from '@/lib/id';
-import { MAX_FILE_CHARS } from '@/lib/limits';
+import { MAX_FILE_CHARS, MAX_FILES_PER_WORKSPACE } from '@/lib/limits';
 
 export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
   const [isWorkspaceDrawerOpen, setIsWorkspaceDrawerOpen] = useState(false);
@@ -34,6 +34,7 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
   };
 
   const handleCreateFile = async (name: string, content = '') => {
+    if (files.length >= MAX_FILES_PER_WORKSPACE) return;
     const safeContent = content.length > MAX_FILE_CHARS ? content.slice(0, MAX_FILE_CHARS) : content;
     const now = new Date().toISOString();
     const newFile: WorkspaceFile = {

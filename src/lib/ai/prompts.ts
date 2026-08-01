@@ -1,5 +1,5 @@
 import { Resume, WorkspaceFile } from "@/lib/schemas";
-import { MAX_FILE_CHARS, MAX_MESSAGE_CHARS, MAX_WORKSPACE_TOTAL_CHARS } from "@/lib/limits";
+import { MAX_FILE_CHARS, MAX_FILES_PER_WORKSPACE, MAX_MESSAGE_CHARS, MAX_WORKSPACE_TOTAL_CHARS } from "@/lib/limits";
 
 export function buildSystemInstruction(filesInput?: WorkspaceFile[] | Resume): string {
   let workspaceFiles: WorkspaceFile[] = [];
@@ -33,7 +33,7 @@ Status: ${hasFiles ? "Populated" : "Empty"}
 ${hasFiles ? `Files:\n${formattedFilesList}\n(Call \`readFile\` to view contents.)` : "No files present. Offer to create a starting file when relevant."}
 
 ## Workspace Constraints
-- Max file size: ${MAX_FILE_CHARS.toLocaleString()} chars | Max prompt: ${MAX_MESSAGE_CHARS.toLocaleString()} chars | Max total workspace: ${MAX_WORKSPACE_TOTAL_CHARS.toLocaleString()} chars.
+- Max files per workspace: ${MAX_FILES_PER_WORKSPACE} | Max file size: ${MAX_FILE_CHARS.toLocaleString()} chars | Max prompt: ${MAX_MESSAGE_CHARS.toLocaleString()} chars | Max total workspace: ${MAX_WORKSPACE_TOTAL_CHARS.toLocaleString()} chars.
 
 ## Tool Directives (Strict)
 1. **Read before edit**: Call \`readFile\` first to copy verbatim text before using \`editFile\`.

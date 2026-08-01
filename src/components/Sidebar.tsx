@@ -10,6 +10,7 @@ import { generateId } from '@/lib/id';
 import UserButton from '@/components/auth/user-button';
 import ThemeToggle from '@/components/theme-toggle';
 import { StrataIcon } from '@/components/ui/strata-icon';
+import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 
 interface SidebarProps {
   isOpen?: boolean;
@@ -25,7 +26,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     []
   );
 
+  const conversationCount = conversations?.length || 0;
+  const isMaxConversationsReached = conversationCount >= MAX_CONVERSATIONS_PER_USER;
+
   const handleNewChat = () => {
+    if (isMaxConversationsReached) return;
     const newId = generateId();
     router.push(`/chat-id/${newId}`);
     onClose?.();
@@ -82,7 +87,17 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
       <div className="p-3 border-b border-edge-hover/50">
         <button
           onClick={handleNewChat}
-          className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-surface font-semibold px-3 py-2 rounded-xl text-xs transition-colors shadow-button cursor-pointer"
+          disabled={isMaxConversationsReached}
+          className={`w-full flex items-center justify-center gap-2 font-semibold px-3 py-2 rounded-xl text-xs transition-colors ${
+            isMaxConversationsReached
+              ? 'bg-surface-elevated text-text-muted opacity-50 cursor-not-allowed border border-edge-raised'
+              : 'bg-primary hover:bg-primary-hover text-surface shadow-button cursor-pointer'
+          }`}
+          title={
+            isMaxConversationsReached
+              ? `Maximum ${MAX_CONVERSATIONS_PER_USER} conversations reached. Delete a chat to create a new one.`
+              : 'Create new conversation'
+          }
         >
           <Plus className="w-4 h-4" />
           New Conversation
@@ -91,8 +106,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
-        <div className="px-2 py-1 text-[10px] font-semibold text-text-muted uppercase tracking-wider">
-          Conversations
+        <div className="px-2 py-1 flex items-center justify-between text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+          <span>Conversations</span>
+          <span className={isMaxConversationsReached ? 'text-warning font-bold' : ''}>
+            {conversationCount} / {MAX_CONVERSATIONS_PER_USER}
+          </span>
         </div>
         {(!conversations || conversations.length === 0) ? (
           <div className="px-3 py-4 text-center text-xs text-text-faint">

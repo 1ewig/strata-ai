@@ -2,7 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { WorkspaceFile } from "@/lib/schemas";
 import { ResumeEditEngine } from "@/lib/edit-engine";
-import { MAX_FILE_CHARS, MAX_WORKSPACE_TOTAL_CHARS } from "@/lib/limits";
+import { MAX_FILE_CHARS, MAX_FILES_PER_WORKSPACE, MAX_WORKSPACE_TOTAL_CHARS } from "@/lib/limits";
 
 export interface WorkspaceToolsContext {
   getCurrentFiles: () => WorkspaceFile[];
@@ -129,6 +129,12 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: Workspace
       const existing = existingFiles.find(
         (f) => f.name.toLowerCase() === name.toLowerCase(),
       );
+
+      if (!existing && existingFiles.length >= MAX_FILES_PER_WORKSPACE) {
+        throw new Error(
+          `File creation rejected: Maximum ${MAX_FILES_PER_WORKSPACE} files allowed per workspace. Delete an existing file before creating a new one.`
+        );
+      }
 
       const safeContent = content.length > MAX_FILE_CHARS ? content.slice(0, MAX_FILE_CHARS) : content;
 

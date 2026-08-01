@@ -6,7 +6,7 @@ import { X, FileText, Copy, Edit3, Check, Plus, Trash2, Code } from 'lucide-reac
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { WorkspaceFile } from '@/lib/schemas';
-import { MAX_FILE_CHARS, formatCharCount } from '@/lib/limits';
+import { MAX_FILE_CHARS, MAX_FILES_PER_WORKSPACE, formatCharCount } from '@/lib/limits';
 
 interface WorkspaceDrawerProps {
   isOpen: boolean;
@@ -120,12 +120,28 @@ export default function WorkspaceDrawer({
               )}
 
               <button
-                onClick={() => setIsCreatingNew(prev => !prev)}
-                className="p-1.5 text-text-muted hover:text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
-                title="Create new file"
+                onClick={() => {
+                  if (files.length >= MAX_FILES_PER_WORKSPACE) return;
+                  setIsCreatingNew(prev => !prev);
+                }}
+                disabled={files.length >= MAX_FILES_PER_WORKSPACE}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  files.length >= MAX_FILES_PER_WORKSPACE
+                    ? 'text-text-muted opacity-40 cursor-not-allowed'
+                    : 'text-text-muted hover:text-primary hover:bg-surface-elevated cursor-pointer'
+                }`}
+                title={
+                  files.length >= MAX_FILES_PER_WORKSPACE
+                    ? `Maximum ${MAX_FILES_PER_WORKSPACE} files per workspace reached.`
+                    : 'Create new file'
+                }
               >
                 <Plus className="w-4 h-4" />
               </button>
+
+              <span className="text-[10px] font-semibold text-text-muted px-1.5 py-0.5 rounded bg-surface-elevated border border-edge-raised">
+                {files.length}/{MAX_FILES_PER_WORKSPACE} files
+              </span>
             </div>
 
             {/* Top Right: Delete Icon & Close Button */}

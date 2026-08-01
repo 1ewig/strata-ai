@@ -1,6 +1,8 @@
 export const MAX_MESSAGE_CHARS = 2000;
 export const MAX_FILE_CHARS = 10000;
 export const MAX_WORKSPACE_TOTAL_CHARS = 50000;
+export const MAX_CONVERSATIONS_PER_USER = 5;
+export const MAX_FILES_PER_WORKSPACE = 3;
 
 export function formatCharCount(count: number, max: number): string {
   return `${count.toLocaleString()} / ${max.toLocaleString()}`;
