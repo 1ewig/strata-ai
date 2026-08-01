@@ -25,10 +25,11 @@
 
 ## 🌟 Key Features & Capabilities
 
-- **Autonomous Agentic File Operations**: 6 schema-validated workspace tools enabling the AI to inspect, read, create, surgically edit, rename, and delete workspace documents on demand.
+- **Autonomous Agentic Workspace Tools**: 8 schema-validated tools enabling the AI to inspect, read, create, surgically edit, rename, and delete workspace documents, plus perform real-time Tavily web searches (`webSearch`, advanced depth) and deep Markdown page extraction (`extractUrl`).
 - **Significantly Reduced Context Footprint**: System prompts inject lightweight file metadata (`name`, `language`, `charCount`, `id`) rather than raw content. The agent calls `readFile` only when precise code context is required.
 - **3-Tier Surgical Edit Engine (`ResumeEditEngine`)**: Performs precise string manipulation through exact matching, whitespace normalization, and 2-point anchor bounded matching without breaking document structure.
 - **Local-First Client Persistence**: Complete conversation histories, dynamic file states, and user preferences persist client-side via **Dexie.js (IndexedDB v4)**—no server round-trips for workspace state.
+- **Enhanced Friendly Error Handling**: Technical API errors, session expirations, network drops, and character limits are captured and transformed into clean, polite assistant message bubbles that cleanly replace loading states.
 - **Auto-Continuation Execution Loop**: Automatically detects step-limit finish reasons (`finishReason === 'step-limit'`) and dispatches multi-pass continuation requests for complex agent tasks up to 75 steps.
 - **Word-Paced Smooth Streaming**: Powered by `smoothStream` (15ms pacing) to ensure continuous, natural token flow without jarring chunk bursts.
 - **DOM-Observer Auto-Scroll**: Leverages `use-stick-to-bottom` (`ResizeObserver`/`MutationObserver`) for reliable, non-glitchy chat scrolling that respects manual user scroll interventions.
@@ -37,29 +38,9 @@
 
 ---
 
-## 🛠️ Technology Stack
-
-| Layer | Technology | Rationale & Description |
-|-------|------------|-------------------------|
-| **Framework** | Next.js 16.2.10 (App Router) | High-performance SSR, API route streaming, and standalone builds |
-| **Language** | TypeScript 5.9.3 | Strict end-to-end type safety |
-| **AI Engine** | `ai@^7.0.0` + `@ai-sdk/google@^4.0.0` | Vercel AI SDK 7 unified streaming, tool calling, and Gemini integration |
-| **React AI Hooks** | `@ai-sdk/react@^2.0.0` | `useChat` hook, `DefaultChatTransport`, and UI message stream handlers |
-| **Client Storage** | Dexie.js 4 + `dexie-react-hooks` | Local-first IndexedDB persistence (`conversations`, `messages`, `files`) |
-| **Authentication** | Better Auth 1.6 + `nextCookies` | Email/password auth, session management, proxy protection |
-| **Database** | Supabase PostgreSQL (pooler) | `better_auth` schema storage + database-backed rate limiting |
-| **Styling** | Tailwind CSS 4.1 | Modern utility CSS, `@theme` surface system, HSL color tokens |
-| **Animations** | `motion@^12` (Framer Motion) | Spring-based drawer transitions and interactive micro-animations |
-| **Markdown** | `react-markdown` + `remark-gfm` | Custom code blocks with copy triggers, markdown headers, and tables |
-| **Validation** | `zod@^4.4.3` | Schema validation for API payloads and agent tools |
-| **Auto-Scroll** | `use-stick-to-bottom@^1.1` | Observer-driven chat auto-scrolling without React effect races |
-| **Runtime** | Bun | Lightning-fast JS/TS runtime and package manager |
-
----
-
 ## 🤖 Workspace Tool Suite
 
-The agent interacts with user workspaces via 6 core tools registered in `src/lib/ai/tools.ts`:
+The agent interacts with user workspaces and the web via 8 core tools registered in `src/lib/ai/tools.ts`:
 
 | Tool | Parameters | Output / Action |
 |------|------------|-----------------|
@@ -69,6 +50,8 @@ The agent interacts with user workspaces via 6 core tools registered in `src/lib
 | `editFile` | `nameOrId`, `searchString`, `replaceString`, `explanation` | Surgically edits code blocks using the 3-tier `ResumeEditEngine`. |
 | `renameFile` | `nameOrId`, `newName` | Renames an existing file with collision checking. |
 | `deleteFile` | `nameOrId` | Removes a target file from the current workspace collection. |
+| `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?` | Performs real-time web search via Tavily (`searchDepth: "advanced"`). |
+| `extractUrl` | `urls`, `extractDepth?` | Extracts clean Markdown content from target web pages via Tavily Extract. |
 
 ---
 
@@ -155,6 +138,9 @@ DATABASE_URL="postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supab
 BETTER_AUTH_SECRET="your-secret-min-32-chars"
 BETTER_AUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# Optional: Tavily API Key (for web search & page extraction)
+TAVILY_API_KEY="tvly-your-tavily-api-key-here"
 
 # Optional: Default Model ID
 NEXT_PUBLIC_GEMINI_MODEL="gemini-3.5-flash-lite"

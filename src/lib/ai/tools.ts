@@ -337,7 +337,7 @@ export function createWebSearchTool() {
       searchDepth: z
         .enum(["basic", "advanced"])
         .optional()
-        .default("basic")
+        .default("advanced")
         .describe("Search depth: 'basic' for quick results, 'advanced' for deeper analysis."),
       topic: z
         .enum(["general", "news"])
@@ -387,7 +387,7 @@ export function createWebSearchTool() {
           body: JSON.stringify({
             api_key: apiKey,
             query,
-            search_depth: searchDepth || "basic",
+            search_depth: searchDepth || "advanced",
             topic: topic || "general",
             max_results: Math.min(Math.max(maxResults || 5, 1), 10),
             include_answer: true,

@@ -5,11 +5,11 @@
 ## 1. Executive Summary & Domain Purpose
 
 - **What it is:** Strata AI is an AI-powered "agentic workspace studio" — a chat-first app where users create, edit, analyze, rename, and organize multi-file workspaces (documents, markdown notes, code snippets) through a conversational interface backed by Google Gemini models.
-- **Core mechanic:** The assistant executes 6 schema-validated workspace tools (list/read/write/edit/rename/delete file) in multi-step agentic loops, mutating files live. Content lives in files on a "canvas" (Workspace Drawer); chat is the control surface.
+- **Core mechanic:** The assistant executes 8 schema-validated tools (6 workspace tools + `webSearch` & `extractUrl`) in multi-step agentic loops, mutating files live. Content lives in files on a "canvas" (Workspace Drawer); chat is the control surface.
 - **Target audience:** Individual power users (job-seeker resume workflows were the original focus; the "resume" naming survives in legacy code) who want a local-first AI document studio without cloud sync complexity.
 - **Business problem solved:** (a) Putting durable, structured content into files instead of disposable chat messages; (b) precise, non-destructive AI edits via a surgical string-edit engine; (c) no-database-setup local persistence via IndexedDB.
 - **Core feature surface:**
-  - Multi-step agentic file operations — the model chains `readFile` → `editFile`/`writeFile` → confirm across up to 75 tool steps.
+  - Multi-step agentic file operations & web research — the model chains `readFile` → `editFile`/`writeFile` or `webSearch` → `extractUrl` across up to 75 tool steps.
   - Multi-file workspace canvas — a slide-over drawer to create, rename, edit, delete, and preview files; markdown rendered or edited as raw text.
   - Live streaming UX — word-paced tokens, reasoning/thought accordion, tool-execution cards, animated streaming caret.
   - Per-conversation model + thinking-level selection with localStorage memory and conversation-level override.
@@ -47,7 +47,7 @@
 | Build Tooling | ESLint 9 (`eslint-config-next`) | Linting | `bun run lint` = `eslint .` |
 | Testing | NONE | — | No test framework configured; no unit/integration tests in repo |
 
-**Environment variables** (`.env.example` is authoritative): `GOOGLE_GENERATIVE_AI_API_KEY` (required), `NEXT_PUBLIC_GEMINI_MODEL` (default model), `APP_URL`, `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Supabase project), `DATABASE_URL` (Postgres pooler), `BETTER_AUTH_SECRET` (min 32 chars), `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL` (auth client base URL).
+**Environment variables** (`.env.example` is authoritative): `GOOGLE_GENERATIVE_AI_API_KEY` (required), `NEXT_PUBLIC_GEMINI_MODEL` (default model), `APP_URL`, `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Supabase project), `DATABASE_URL` (Postgres pooler), `BETTER_AUTH_SECRET` (min 32 chars), `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL` (auth client base URL), `TAVILY_API_KEY` (optional, for web search & extraction).
 
 **Runtime scripts** (all via `bun run`):
 
@@ -66,14 +66,14 @@
 ### 3.1 End-to-end request flow (a user message)
 
 1. User types in `ChatInput` → `handleSendMessage` in `hooks/useChatSession.ts` (auto-title if new chat, local quota pre-check).
-2. `chat.sendMessage({ text })` on a `useChat` instance whose `transport` is a custom `DefaultChatTransport` targeting `POST /api/agent`; the transport's body closure snapshots current model, thinking level, and workspace files via refs.
+2. `chat.sendMessage({ text })` on a `useChat` instance whose `transport` is built via `useChatTransport`; the transport's body closure snapshots current model, thinking level, and workspace files via refs.
 3. Request passes through `src/proxy.ts` (Next.js 16 proxy, the middleware replacement): session-cookie check + security headers.
 4. `app/api/agent/route.ts` (Route Handler) verifies the session server-side with `auth.api.getSession`, then calls `checkAndIncrementRateLimit(userId)`.
 5. Body is parsed with Zod (`messages`, `files`, `resumes` legacy, `model`, `thinkingLevel`, `maxSteps`).
-6. `streamText()` is invoked with the Gemini model, a `buildSystemInstruction(files)` prompt, `convertToModelMessages(messages)`, and `createWorkspaceTools(...)` whose closures mutate a per-request `mutableFiles` array.
+6. `streamText()` is invoked with the Gemini model, a 6-section `buildSystemInstruction(files)` prompt, `convertToModelMessages(messages)`, and `createWorkspaceTools(...)` whose closures mutate a per-request `mutableFiles` array.
 7. The response is returned as an SSE UI-message stream (`createUIMessageStreamResponse` + `toUIMessageStream`), carrying `X-RateLimit-Remaining-5h` / `X-RateLimit-Remaining-Week` headers.
 8. `useChat` updates `chat.messages` + `chat.status` reactively; the UI renders streaming text, reasoning accordion, and tool cards.
-9. `onFinish` persists every message as a native AI SDK `UIMessage` into Dexie, extracts file create/edit/delete results from tool parts, merges them into the conversation's `files` array, and persists. Auto-continuation fires if `finishReason === 'step-limit'` (up to 2 more passes).
+9. `onFinish` (handled by `chat-reconciler.ts`) persists every message as a native AI SDK `UIMessage` into Dexie, extracts file create/edit/delete results from tool parts, merges them into the conversation's `files` array, and persists. Auto-continuation fires if `finishReason === 'step-limit'` (up to 2 more passes).
 
 ### 3.2 Server vs. Client boundary strategy
 
@@ -155,7 +155,8 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   └── ui/strata-icon.tsx    # Brand SVG logo (currentColor or gradient)
     │   ├── contexts/RateLimitContext.tsx # Global quota provider: SSR hydration, render-phase rehydration, fetch fallback, setQuotaError
     │   ├── hooks/
-    │   │   ├── useChatSession.ts     # Orchestration core: useChat + transport, Dexie hydration, onFinish persistence, auto-continuation
+    │   │   ├── useChatSession.ts     # Orchestration core: delegates to transport, error handler, reconciler, and sub-hooks
+    │   │   ├── useChatTransport.ts   # Custom DefaultChatTransport creation, rate-limit header parsing & error throwing
     │   │   ├── useWorkspaceFiles.ts  # Workspace file CRUD against Dexie conversation.files + activeFileId
     │   │   ├── useModelSettings.ts   # Model + thinking level state; per-conversation override + localStorage preference
     │   │   └── use-mobile.ts         # ORPHANED (unused) — 768px media-query hook
@@ -170,9 +171,11 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── db/db.ts              # Dexie ChatDatabase (v4), Conversation/DBMessage types, CRUD helpers
     │   │   └── ai/
     │   │       ├── index.ts          # Re-exports prompts + tools
-    │   │       ├── prompts.ts        # buildSystemInstruction(files) — 5-section system prompt
-    │   │       ├── tools.ts          # 6 workspace tool factories + WorkspaceToolsContext + createWorkspaceTools
-    │   │       └── message-extractor.ts # extractFilesFromMessage / extractDeletedFilesFromMessage from UI message parts
+    │   │       ├── prompts.ts        # buildSystemInstruction(files) — 6-section advanced system prompt
+    │   │       ├── tools.ts          # 8 tool factories (6 workspace + webSearch & extractUrl) + createWorkspaceTools
+    │   │       ├── message-extractor.ts # extractFilesFromMessage / extractDeletedFilesFromMessage from UI message parts
+    │   │       ├── chat-error-handler.ts # Error text mapping to friendly assistant error bubbles + Dexie sync
+    │   │       └── chat-reconciler.ts    # onFinish step message persistence, file delta extraction & auto-continuation loop
     │   └── utils/                    # EMPTY directory (reserved)
     ├── scripts/
     │   ├── better-auth-schema.sql    # Raw SQL: drop public auth tables, create better_auth schema + user/session/account/verification/message_log
