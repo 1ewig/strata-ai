@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import { Fredoka, Nunito } from 'next/font/google';
 import './globals.css';
@@ -16,6 +16,13 @@ const nunito = Nunito({
   subsets: ['latin'],
   variable: '--font-sans',
 });
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  interactiveWidget: 'resizes-visual',
+};
 
 export const metadata: Metadata = {
   title: 'Strata AI - Agentic Workspace & Document Studio',

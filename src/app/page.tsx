@@ -31,7 +31,7 @@ export default function Home() {
   }, [session, isPending, router]);
 
   return (
-    <main className="min-h-screen bg-surface-base flex items-center justify-center text-text-muted text-sm">
+    <main className="min-h-dvh bg-surface-base flex items-center justify-center text-text-muted text-sm">
       <div className="flex items-center gap-2">
         <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
         Loading workspace...

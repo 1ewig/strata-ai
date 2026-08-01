@@ -74,7 +74,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   if (isSessionPending || !session?.user) {
 
     return (
-      <main className="h-screen bg-surface-base flex items-center justify-center text-text-muted text-sm">
+      <main className="h-dvh bg-surface-base flex items-center justify-center text-text-muted text-sm">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           Verifying session...
@@ -84,10 +84,10 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   }
 
   return (
-    <main className="h-screen max-h-screen bg-surface-base text-text-primary flex overflow-hidden font-sans">
+    <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
       <Sidebar isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
 
-      <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0 relative">
+      <div className="flex-1 flex flex-col h-dvh overflow-hidden min-w-0 relative">
         <ChatHeader
           files={files}
           activeFileId={activeFileId}

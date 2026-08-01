@@ -43,6 +43,6 @@ Read `docs/SUMMARY.md` (the canonical system-context & architecture guide) befor
 
 ## General Conventions
 
-- Do not add code comments unless asked.
+- Write files with clear, helpful code comments.
 - No emojis in code or files.
 - Follow existing patterns and file conventions; check neighboring files before writing new code.
