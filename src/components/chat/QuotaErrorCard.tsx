@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Clock, X } from 'lucide-react';
 
+/**
+ * Props for the QuotaErrorCard component.
+ */
 interface QuotaErrorCardProps {
   error: {
     message: string;
@@ -11,9 +14,16 @@ interface QuotaErrorCardProps {
   onDismiss?: () => void;
 }
 
+/**
+ * Dismissible alert shown when the user's message quota is exhausted.
+ * Displays the error message and, when retryAfter is provided, a live countdown to the quota reset.
+ * @param error - Quota error payload; message is the user-facing text, retryAfter is seconds until reset.
+ * @param onDismiss - Optional callback fired when the user dismisses the card.
+ */
 export function QuotaErrorCard({ error, onDismiss }: QuotaErrorCardProps) {
   const [secondsLeft, setSecondsLeft] = useState<number | undefined>(error.retryAfter);
 
+  // Tick down once per second, stopping the interval when the countdown reaches zero.
   useEffect(() => {
     if (secondsLeft === undefined || secondsLeft <= 0) return;
     const timer = setInterval(() => {
@@ -28,6 +38,9 @@ export function QuotaErrorCard({ error, onDismiss }: QuotaErrorCardProps) {
     return () => clearInterval(timer);
   }, [secondsLeft]);
 
+  /**
+   * Converts seconds into a compact "Xm Ys" countdown, or null once the quota should have reset.
+   */
   const formatCountdown = (secs?: number) => {
     if (secs === undefined || secs <= 0) return null;
     const mins = Math.floor(secs / 60);
@@ -44,6 +57,7 @@ export function QuotaErrorCard({ error, onDismiss }: QuotaErrorCardProps) {
     <div className="my-3 p-4 rounded-2xl bg-danger-soft/90 border border-danger/30 text-text-primary shadow-card backdrop-blur-sm transition-all animate-in fade-in zoom-in-95">
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-start gap-3">
+          {/* Quota icon */}
           <div className="w-9 h-9 rounded-xl bg-danger/15 text-danger flex items-center justify-center shrink-0 mt-0.5 shadow-glow-primary">
             <AlertCircle className="w-5 h-5" />
           </div>
@@ -53,6 +67,7 @@ export function QuotaErrorCard({ error, onDismiss }: QuotaErrorCardProps) {
               <h4 className="text-xs font-semibold text-danger uppercase tracking-wider font-display">
                 Usage Quota Reached
               </h4>
+              {/* Live reset countdown, or a static "exhausted" pill when no retry time is known */}
               {formattedTime ? (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-base border border-danger/30 text-[11px] font-medium text-danger">
                   <Clock className="w-3 h-3 animate-pulse" />
@@ -76,6 +91,7 @@ export function QuotaErrorCard({ error, onDismiss }: QuotaErrorCardProps) {
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          {/* Dismiss button, only rendered when an onDismiss handler is supplied */}
           {onDismiss && (
             <button
               type="button"

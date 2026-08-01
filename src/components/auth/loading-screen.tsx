@@ -2,6 +2,9 @@
 
 import { Loader2 } from "lucide-react";
 
+/**
+ * Full-screen loading state shown while the authentication state resolves.
+ */
 export function LoadingScreen() {
   return (
     <div className="min-h-dvh bg-surface-base flex items-center justify-center">

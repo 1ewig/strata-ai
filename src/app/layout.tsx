@@ -17,6 +17,7 @@ const nunito = Nunito({
   variable: '--font-sans',
 });
 
+/** Mobile viewport config: device-width scale with resizable interactive widgets. */
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
@@ -24,13 +25,23 @@ export const viewport: Viewport = {
   interactiveWidget: 'resizes-visual',
 };
 
+/** Default document metadata for the app. */
 export const metadata: Metadata = {
   title: 'Strata AI - Agentic Workspace & Document Studio',
   description: 'Create, edit, and orchestrate documents with AI tools and live workspace canvas',
 };
 
+/**
+ * Root layout wrapping the app in the theme, fonts, and rate-limit provider.
+ * Resolves the user's rate-limit quota server-side so the provider can
+ * hydrate with data instead of fetching after mount.
+ *
+ * @param children - Page content rendered inside the app shell
+ * @returns The HTML document for the application
+ */
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   let initialRateLimit: RateLimitResult | null = null;
+  // Resolve the signed-in user's quota before rendering so the provider hydrates with real data.
   try {
     const reqHeaders = await headers();
     const session = await auth.api.getSession({ headers: reqHeaders });
@@ -44,6 +55,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Apply the saved theme (or OS preference) before React hydrates to avoid a theme flash */}
         <script
           dangerouslySetInnerHTML={{
             __html: `(function(){try{var t=localStorage.getItem('strata-theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',d)}catch(e){document.documentElement.classList.remove('dark')}})()`,

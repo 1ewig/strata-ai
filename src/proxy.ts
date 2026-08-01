@@ -1,8 +1,15 @@
+// Next.js middleware: session-gated routing plus security headers
 import { type NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
 const PUBLIC_ROUTES = ["/auth", "/api/auth"];
 
+/**
+ * Middleware entry point: lets public routes pass through, redirects or
+ * rejects unauthenticated requests, and hardens responses with security headers.
+ * @param request - The incoming Next.js request.
+ * @returns The response to serve: next(), a JSON 401, or a redirect to /auth.
+ */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -26,6 +33,7 @@ export async function proxy(request: NextRequest) {
         { status: 401 },
       );
     }
+    // Remember where the user was headed so we can return them after sign-in
     const authUrl = request.nextUrl.clone();
     authUrl.pathname = "/auth";
     authUrl.searchParams.set("callbackUrl", pathname);
@@ -41,6 +49,9 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+/**
+ * Route matcher scoping the middleware to the app shell and agent API only.
+ */
 export const config = {
   matcher: ["/", "/chat-id/:path*", "/api/agent"],
 };

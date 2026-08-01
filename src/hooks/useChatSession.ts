@@ -16,6 +16,13 @@ import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
 import { useRateLimit } from '@/contexts/RateLimitContext';
 import { useSession } from '@/lib/auth-client';
 
+/**
+ * Orchestrator hook for a single chat session.
+ * Owns the AI chat stream, model/workspace sub-hooks, Dexie persistence, and
+ * quota gating, returning everything a chat page needs to render and send.
+ * @param chatId - The Dexie id of the active conversation.
+ * @returns Chat state, workspace/model controls, and send/quota helpers.
+ */
 export function useChatSession(chatId: string) {
   const { data: session } = useSession();
   const userId = session?.user?.id;
@@ -43,6 +50,7 @@ export function useChatSession(chatId: string) {
   const modelSettings = useModelSettings(chatId, currentConv);
   const workspace = useWorkspaceFiles(chatId, currentConv);
 
+  // Refs mirror sub-hook values so the memoized transport always reads current state
   const filesRef = useRef(workspace.files);
   const modelRef = useRef(modelSettings.model);
   const thinkingLevelRef = useRef(modelSettings.thinkingLevel);
@@ -69,6 +77,7 @@ export function useChatSession(chatId: string) {
     });
   }, [chatId, modelSettings.model, modelSettings.thinkingLevel, userId]);
 
+  // Tracks how many times the assistant has been re-invoked for a single user turn
   const continuationCountRef = useRef<number>(0);
   const sendMessageRef = useRef<((msg: { text: string }) => void) | null>(null);
   const chatRef = useRef<any>(null);
@@ -127,6 +136,7 @@ export function useChatSession(chatId: string) {
     sendMessageRef.current = chat.sendMessage;
   }, [chat]);
 
+  // Drop the trailing empty assistant message produced when the stream was cut off by a quota error
   useEffect(() => {
     if (quotaError && chat.messages.length > 0) {
       const lastMsg: any = chat.messages[chat.messages.length - 1];
@@ -154,6 +164,10 @@ export function useChatSession(chatId: string) {
 
   const currentConvTitle = currentConv?.title;
 
+  /**
+   * Sends a user message after validating quota, auto-titling the conversation on its first message.
+   * @param text - The raw message text to send.
+   */
   const handleSendMessage = useCallback(
     (text: string) => {
       continuationCountRef.current = 0;

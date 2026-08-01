@@ -10,12 +10,17 @@ import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
 import { resolveToolDisplay } from './tools/resolver';
 
+/** Props for the ChatBubble message component. */
 interface ChatBubbleProps {
   message: UIMessage | { id: string; role: string; content?: string; parts?: any[] };
   isStreaming?: boolean;
   onOpenDrawer?: () => void;
 }
 
+/**
+ * A flattened, render-ready slice of a message: user text, markdown text,
+ * reasoning/thought content, or a tool invocation part.
+ */
 interface Segment {
   type: string;
   content?: string;
@@ -23,18 +28,39 @@ interface Segment {
   key: string;
 }
 
+/**
+ * Renders a single chat message as a bubble row: avatar, optional streaming
+ * states, markdown body, thinking accordions, and tool call cards.
+ *
+ * @param message - The message to render; user text is pulled from `parts`,
+ *   assistant content is split into text/reasoning/tool segments.
+ * @param isStreaming - True for the in-flight assistant message; drives glow,
+ *   shimmer, caret, and thinking animations.
+ * @param onOpenDrawer - Opens the workspace file drawer from tool call cards.
+ */
 function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
 
+  /**
+   * Copies a code snippet to the clipboard and flashes a temporary "Copied"
+   * confirmation on the matching snippet button.
+   *
+   * @param codeText - The raw code to copy.
+   * @param id - The snippet id used to highlight the button that was clicked.
+   */
   const handleCopyCodeSnippet = (codeText: string, id: string) => {
     navigator.clipboard.writeText(codeText);
     setCopiedCodeId(id);
     setTimeout(() => setCopiedCodeId(null), 2000);
   };
 
+  // Flatten the raw message into render-ready segments (user text, markdown
+  // text, reasoning, tool invocations) so each part can be rendered by its
+  // own sub-component below.
   const segments: Segment[] = React.useMemo(() => {
     if (isUser) {
+      // User bubbles show a single combined bubble: join every text part.
       let userText = '';
       if (Array.isArray(message.parts)) {
         userText = message.parts
@@ -48,6 +74,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       return [{ type: 'user-text', content: userText, key: 'user-text' }];
     }
 
+    // Legacy messages without parts fall back to the raw content string.
     if (!Array.isArray(message.parts) || message.parts.length === 0) {
       const text = typeof (message as any).content === 'string' ? (message as any).content : '';
       return text ? [{ type: 'text', content: text, key: 'text-0' }] : [];
@@ -56,6 +83,8 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
     const result: Segment[] = [];
     let currentText = '';
 
+    // Detect tool invocations and reasoning/thought parts across both the
+    // streaming parts schema and legacy shape variants.
     message.parts.forEach((p, idx) => {
       const isTool =
         p.type === 'tool-invocation' ||
@@ -101,6 +130,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       result.push({ type: 'text', content: currentText, key: `text-final` });
     }
 
+    // Last resort: render the raw content string if segmentation produced nothing.
     if (result.length === 0 && typeof (message as any).content === 'string' && (message as any).content) {
       result.push({ type: 'text', content: (message as any).content, key: 'text-fallback' });
     }
@@ -185,6 +215,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   ${isStreaming && isLastSegment ? 'shadow-glow-primary' : ''}
                 `}
               >
+                {/* Streaming glow: shimmer sweep across the newest text bubble */}
                 {isStreaming && isLastSegment && (
                   <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
                     <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-primary/8 to-transparent" />

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, Folder, FileText, Menu, Plus } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
 
+/** Props for the ChatHeader component. */
 interface ChatHeaderProps {
   title?: string;
   files: WorkspaceFile[];
@@ -13,6 +14,17 @@ interface ChatHeaderProps {
   onOpenSidebar?: () => void;
 }
 
+/**
+ * Sticky chat header with the workspace title, a mobile sidebar toggle, and a
+ * workspace files dropdown for opening or managing files.
+ *
+ * @param title - Optional chat/workspace title; falls back to "Chat Workspace".
+ * @param files - Workspace files listed in the dropdown.
+ * @param activeFileId - Id of the currently open file, highlighted in the list.
+ * @param onOpenFile - Called when the user selects a file from the dropdown.
+ * @param onOpenDrawer - Opens the workspace files drawer from the manage action.
+ * @param onOpenSidebar - Opens the mobile sidebar; hides the toggle when omitted.
+ */
 export default React.memo(function ChatHeader({
   title,
   files,
@@ -24,6 +36,7 @@ export default React.memo(function ChatHeader({
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const fileMenuRef = useRef<HTMLDivElement>(null);
 
+  // Close the files dropdown when clicking anywhere outside it.
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (fileMenuRef.current && !fileMenuRef.current.contains(e.target as Node)) {

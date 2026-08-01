@@ -6,10 +6,18 @@ import Link from "next/link";
 import { signUp } from "@/lib/auth-client";
 import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
+/**
+ * Props for the sign-up form.
+ */
 interface SignUpFormProps {
+  /** Destination to navigate to after a successful sign-up. */
   callbackUrl: string;
 }
 
+/**
+ * Email/password sign-up form backed by the Better Auth client.
+ * Validates input locally, surfaces provider errors, and redirects on success.
+ */
 export function SignUpForm({ callbackUrl }: SignUpFormProps) {
   const router = useRouter();
   const [name, setName] = useState("");
@@ -22,14 +30,17 @@ export function SignUpForm({ callbackUrl }: SignUpFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Clear any feedback from a previous attempt.
     setError(null);
     setSuccessMsg(null);
 
+    // Reject empty submissions before hitting the auth API.
     if (!email || !password || !name.trim()) {
       setError("Please fill in all required fields.");
       return;
     }
 
+    // Enforce the minimum password length client-side.
     if (password.length < 8) {
       setError("Password must be at least 8 characters long.");
       return;
@@ -41,17 +52,20 @@ export function SignUpForm({ callbackUrl }: SignUpFormProps) {
       const { error: signUpError } = await signUp.email({ email, password, name });
 
       if (signUpError) {
+        // Surface the provider's message so the user knows why sign-up failed.
         setError(signUpError.message || "Failed to create account. Please try again.");
         setLoading(false);
         return;
       }
 
+      // Pause briefly so the success message is visible before navigating.
       setSuccessMsg("Account created successfully! Redirecting...");
       setTimeout(() => {
         router.push(callbackUrl);
         router.refresh();
       }, 1000);
     } catch (err: any) {
+      // Network or unexpected failures fall back to a generic message.
       setError(err?.message || "An unexpected error occurred. Please try again.");
       setLoading(false);
     }
@@ -59,6 +73,7 @@ export function SignUpForm({ callbackUrl }: SignUpFormProps) {
 
   return (
     <>
+      {/* Error banner */}
       {error && (
         <div className="p-3.5 rounded-xl bg-danger-soft border border-danger/30 text-danger text-xs flex items-start gap-2.5 animate-fade-in">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -66,6 +81,7 @@ export function SignUpForm({ callbackUrl }: SignUpFormProps) {
         </div>
       )}
 
+      {/* Success banner */}
       {successMsg && (
         <div className="p-3.5 rounded-xl bg-primary-soft border border-primary/30 text-primary text-xs flex items-start gap-2.5 animate-fade-in">
           <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />

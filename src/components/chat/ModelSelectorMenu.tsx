@@ -9,6 +9,7 @@ import {
   THINKING_LEVEL_LABELS,
 } from '@/lib/models';
 
+/** Props for the ModelSelectorMenu dropdown. */
 interface ModelSelectorMenuProps {
   model: string;
   thinkingLevel: string;
@@ -16,6 +17,16 @@ interface ModelSelectorMenuProps {
   onThinkingLevelChange: (level: string) => void;
 }
 
+/**
+ * Dropdown for picking an AI model and, when the model supports it, its
+ * thinking effort level. The main view lists the primary models with drill-down
+ * submenus for "More models" and "Effort".
+ *
+ * @param model - Currently selected model id.
+ * @param thinkingLevel - Currently selected thinking effort level.
+ * @param onModelSelect - Called with the chosen model id.
+ * @param onThinkingLevelChange - Called with the chosen thinking effort level.
+ */
 export default function ModelSelectorMenu({
   model,
   thinkingLevel,
@@ -30,14 +41,20 @@ export default function ModelSelectorMenu({
   const currentModel = MODELS.find((m) => m.id === model);
   const currentModelThinkingConfig = MODEL_THINKING_LEVELS[model];
 
+  // First three models appear on the main view; the rest live in "More models".
   const primaryModels = MODELS.length > 3 ? MODELS.slice(0, 3) : MODELS;
   const overflowModels = MODELS.length > 3 ? MODELS.slice(3) : [];
 
+  // Show the effort chip only when the current model ships a thinking config;
+  // fall back to the raw level string if it has no registered label.
   const effortLabel =
     thinkingLevel && currentModelThinkingConfig
       ? THINKING_LEVEL_LABELS[thinkingLevel as keyof typeof THINKING_LEVEL_LABELS] || thinkingLevel
       : null;
 
+  /**
+   * Closes the popover and resets any drilled-down submenu back to the main view.
+   */
   const closeMenu = useCallback(() => {
     setIsOpen(false);
     setView('main');

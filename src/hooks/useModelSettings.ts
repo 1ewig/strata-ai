@@ -11,6 +11,11 @@ import {
 } from '@/lib/models';
 import { updateConversationModel, Conversation } from '@/lib/db/db';
 
+/**
+ * Owns the selected model and thinking level for a chat session.
+ * Initializes from stored preferences, re-syncs when the active conversation
+ * changes, and persists every change to local storage and the conversation row.
+ */
 export function useModelSettings(chatId: string, currentConv?: Conversation) {
   const defaultModel = process.env.NEXT_PUBLIC_GEMINI_MODEL || 'gemini-3.5-flash-lite';
   const [model, setModel] = useState(() => {
@@ -21,6 +26,7 @@ export function useModelSettings(chatId: string, currentConv?: Conversation) {
     return getValidThinkingLevelForModel(storedModel, getStoredThinkingLevel(storedModel));
   });
 
+  // Re-hydrate state from the conversation row when switching chats, during render
   const [prevConvId, setPrevConvId] = useState(currentConv?.id);
   if (currentConv?.id !== prevConvId) {
     setPrevConvId(currentConv?.id);
@@ -34,6 +40,10 @@ export function useModelSettings(chatId: string, currentConv?: Conversation) {
   }
 
 
+  /**
+   * Applies a model selection, clamping the thinking level to what that model supports.
+   * @param id - The model identifier to select.
+   */
   const handleModelSelect = (id: string) => {
     setModel(id);
     saveModelPreference(id);
@@ -44,6 +54,10 @@ export function useModelSettings(chatId: string, currentConv?: Conversation) {
     updateConversationModel(chatId, id, valid);
   };
 
+  /**
+   * Updates the thinking level for the current model.
+   * @param level - The new thinking level to apply.
+   */
   const handleThinkingLevelChange = (level: string) => {
     setThinkingLevel(level);
     saveThinkingLevel(level);

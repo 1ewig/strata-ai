@@ -1,6 +1,7 @@
 import React from 'react';
 import Link from 'next/link';
 
+/** Renders the 404 page with a link back to the workspace home. */
 export default function NotFound() {
   return (
     <div className="min-h-dvh bg-surface-base text-text-bright flex flex-col items-center justify-center p-4 text-center">

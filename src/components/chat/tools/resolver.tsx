@@ -2,6 +2,10 @@ import React, { type ReactNode } from 'react';
 import { type LucideIcon, Sparkles, Search, Trash2, PencilLine, PenLine, Wrench, FileText, ExternalLink, Folder, Globe } from 'lucide-react';
 import { Resume, WorkspaceFile } from '@/lib/schemas';
 
+/**
+ * Display-ready props consumed by ToolCallCard, produced by resolveToolDisplay().
+ * All visual details (label, icon, accent colors) are resolved here rather than in the card.
+ */
 export interface ToolCardProps {
   label: string;
   badge: string;
@@ -17,6 +21,9 @@ export interface ToolCardProps {
   onOpenDrawer?: () => void;
 }
 
+/**
+ * Visual configuration for one tool: the label, status badge, icon, and accent color classes.
+ */
 type ToolConfig = {
   label: string;
   badge: string;
@@ -27,6 +34,11 @@ type ToolConfig = {
   accentText: string;
 };
 
+/**
+ * Per-tool display configs keyed by normalized tool name.
+ * Config entry pattern for a new tool: add an entry here, register its (and any alias)
+ * names in normalizeToolName(), and add a matching summary case in resolveToolDisplay().
+ */
 const toolConfigs: Record<string, ToolConfig> = {
   listFiles: {
     label: 'Workspace Files Listed',
@@ -139,6 +151,9 @@ const toolConfigs: Record<string, ToolConfig> = {
   },
 };
 
+/**
+ * Fallback config used when no entry in toolConfigs matches the invoked tool.
+ */
 const defaultConfig: ToolConfig = {
   label: 'Tool Executed',
   badge: 'Executed',
@@ -149,6 +164,12 @@ const defaultConfig: ToolConfig = {
   accentText: 'text-info',
 };
 
+/**
+ * Maps a raw tool name (case, dashes, underscores ignored) to its canonical config key.
+ * Recognized tools return isCustom: false; anything else passes through unchanged as custom.
+ * @param raw - The tool name as it appears in the tool call payload.
+ * @returns The canonical config key and whether the tool is not part of the known set.
+ */
 function normalizeToolName(raw: string): { normalized: string; isCustom: boolean } {
   if (!raw) return { normalized: '', isCustom: true };
   const clean = raw.trim().toLowerCase().replace(/[-_]/g, '');
@@ -170,11 +191,18 @@ function normalizeToolName(raw: string): { normalized: string; isCustom: boolean
   return { normalized: raw, isCustom: true };
 }
 
+/**
+ * Extracts name, args, result, and state from a tool call, tolerating several message shapes
+ * (toolInvocation, toolCall, toolResult, or the call itself) and JSON-encoded string payloads.
+ * @param toolCall - The tool call object from the assistant message.
+ * @returns Normalized tool info, ready for config lookup and summary building.
+ */
 function extractToolInfo(toolCall: any) {
   if (!toolCall) return { name: '', rawName: '', args: {}, result: {}, state: 'result' as const, isCustom: true };
 
   const inv = toolCall.toolInvocation || toolCall.toolCall || toolCall.toolResult || toolCall;
 
+  // Prefer an explicit toolName/name field, falling back to a "tool-*" type prefix.
   const rawName =
     inv?.toolName ||
     inv?.name ||
@@ -204,6 +232,7 @@ function extractToolInfo(toolCall: any) {
     toolCall?.output ||
     {};
 
+  // Args and results may arrive as strings; parse them so summaries can read object fields.
   if (typeof args === 'string') {
     try { args = JSON.parse(args); } catch {}
   }
@@ -211,6 +240,7 @@ function extractToolInfo(toolCall: any) {
     try { result = JSON.parse(result); } catch {}
   }
 
+  // Infer the lifecycle state: explicit state wins, otherwise a non-empty result means "done".
   const state =
     inv?.state ||
     toolCall?.state ||
@@ -219,6 +249,9 @@ function extractToolInfo(toolCall: any) {
   return { name, rawName, args, result, state: state as 'call' | 'partial-call' | 'result', isCustom };
 }
 
+/**
+ * Summary for listFiles: file count plus comma-separated names.
+ */
 function buildListFilesSummary(args: any, result: any): ReactNode {
   const count = result?.count ?? (result?.files?.length || 0);
   const filesList = result?.files || [];
@@ -238,6 +271,10 @@ function buildListFilesSummary(args: any, result: any): ReactNode {
   );
 }
 
+/**
+ * Summary for readFile: the file name, optional section, and a preview of the content
+ * (or a "not found" message when the file or section does not exist).
+ */
 function buildReadFileSummary(args: any, result: any): ReactNode {
   const fileName = args?.nameOrId || result?.name || 'File';
   const section = args?.section || result?.section;
@@ -260,6 +297,9 @@ function buildReadFileSummary(args: any, result: any): ReactNode {
   );
 }
 
+/**
+ * Summary for writeFile: the target file name and the character count of the written content.
+ */
 function buildWriteFileSummary(args: any, result: any): ReactNode {
   const file: WorkspaceFile | null = result?.file || null;
   const name = args?.name || file?.name || 'document.md';
@@ -278,6 +318,9 @@ function buildWriteFileSummary(args: any, result: any): ReactNode {
   );
 }
 
+/**
+ * Summary for editFile: the edited file name, the match strategy used, and any explanation or error.
+ */
 function buildEditFileSummary(args: any, result: any): ReactNode {
   const name = args?.nameOrId || result?.file?.name || 'File';
 
@@ -303,6 +346,9 @@ function buildEditFileSummary(args: any, result: any): ReactNode {
   );
 }
 
+/**
+ * Summary for renameFile: the old name struck through, an arrow, and the new name.
+ */
 function buildRenameFileSummary(args: any, result: any): ReactNode {
   const oldName = args?.nameOrId || result?.oldName || 'File';
   const newName = result?.newName || args?.newName || '';
@@ -315,6 +361,9 @@ function buildRenameFileSummary(args: any, result: any): ReactNode {
   );
 }
 
+/**
+ * Summary for deleteFile: a short confirmation naming the removed file.
+ */
 function buildDeleteFileSummary(args: any, result: any): ReactNode {
   const name = args?.nameOrId || result?.name || 'File';
   return (
@@ -324,6 +373,10 @@ function buildDeleteFileSummary(args: any, result: any): ReactNode {
   );
 }
 
+/**
+ * Summary for webSearch: the query, result count, an optional AI answer, and up to three
+ * result sources shown as hostnames.
+ */
 function buildWebSearchSummary(args: any, result: any): ReactNode {
   const query = args?.query || result?.query || 'Web Search';
   const resultsList = result?.results || [];
@@ -365,6 +418,10 @@ function buildWebSearchSummary(args: any, result: any): ReactNode {
   );
 }
 
+/**
+ * Summary for extractUrl: the requested URLs, the number of pages extracted, and a
+ * content preview of the first extraction.
+ */
 function buildExtractUrlSummary(args: any, result: any): ReactNode {
   const urls: string[] = args?.urls || [];
   const extracted = result?.extracted || [];
@@ -391,6 +448,9 @@ function buildExtractUrlSummary(args: any, result: any): ReactNode {
   );
 }
 
+/**
+ * Fallback summary for tools without a dedicated builder: just the raw tool name.
+ */
 function buildGenericSummary(args: any, rawName: string): ReactNode {
   return (
     <div className="py-1 text-xs">
@@ -399,10 +459,19 @@ function buildGenericSummary(args: any, rawName: string): ReactNode {
   );
 }
 
+/**
+ * Turns an arbitrary tool call into display-ready ToolCardProps for ToolCallCard.
+ * Resolves the config, derives the status, picks the summary builder, and, for write tools,
+ * upgrades the badge to "Created"/"Replaced" when the result reports that action.
+ * @param toolCall - The tool call object from the assistant message.
+ * @param onOpenDrawer - Optional callback forwarded to the card for opening the details drawer.
+ * @returns ToolCardProps describing how to render this invocation.
+ */
 export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): ToolCardProps {
   const { name, rawName, args, result, state, isCustom } = extractToolInfo(toolCall);
 
   let cfg = toolConfigs[name] || defaultConfig;
+  // Custom tools have no config label, so surface their raw name instead.
   let label = !isCustom ? cfg.label : (rawName || cfg.label);
   const status = state === 'call' || state === 'partial-call' ? 'loading' : result?.success === false ? 'error' : 'success';
 
@@ -412,6 +481,7 @@ export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): To
     label = action === 'created' ? 'File Created' : 'File Replaced';
   }
 
+  // Route the tool to its dedicated summary builder; unknown tools fall back to the generic one.
   let summary: ReactNode;
   switch (name) {
     case 'listFiles':

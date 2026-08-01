@@ -9,6 +9,16 @@ import {
   extractFilesFromMessage,
 } from '@/lib/ai/message-extractor';
 
+/**
+ * Parameters needed to reconcile one finished agent step into Dexie.
+ * @property chatId - The conversation id the step belongs to.
+ * @property userId - Optional user id stamped on persisted messages.
+ * @property message - The final assistant message of the step, source of file deltas.
+ * @property allMessages - Every message of the conversation to persist.
+ * @property finishReason - The stream's finish reason (e.g. 'step-limit' triggers continuation).
+ * @property continuationCountRef - Tracks how many auto-continuations already ran.
+ * @property sendMessageRef - Ref to the send-message function used to continue the agent.
+ */
 export interface ReconcileStepParams {
   chatId: string;
   userId?: string;
@@ -19,6 +29,11 @@ export interface ReconcileStepParams {
   sendMessageRef: React.RefObject<((msg: { text: string }) => void) | null>;
 }
 
+/**
+ * Persists a finished agent step: writes all messages, merges workspace file
+ * deltas into the conversation, and auto-continues if the step limit was hit.
+ * @param params - The reconciliation parameters for this step.
+ */
 export async function reconcileFinishedStep({
   chatId,
   userId,
@@ -59,7 +74,7 @@ export async function reconcileFinishedStep({
       });
     }
 
-    // Apply creations or edits
+    // Apply creations or edits: replace by id/name, or append as a brand-new file.
     if (updatedFiles && updatedFiles.length > 0) {
       for (const newFile of updatedFiles) {
         const idx = currentFiles.findIndex(
@@ -73,6 +88,7 @@ export async function reconcileFinishedStep({
       }
     }
 
+    // Keep the first file as the drawer's active selection, if any remain.
     const activeId = currentFiles.length > 0 ? currentFiles[0].id : undefined;
     await updateConversationFiles(chatId, currentFiles, activeId);
   }
@@ -80,6 +96,7 @@ export async function reconcileFinishedStep({
   // Auto-continuation loop if step limit reached
   const currentCount = continuationCountRef.current ?? 0;
   if (finishReason === 'step-limit' && currentCount < 2) {
+    // Hand control back to the agent for up to 2 follow-up passes.
     continuationCountRef.current = currentCount + 1;
     console.log(
       `[useChatSession] Step limit reached. Auto-continuing pass ${continuationCountRef.current}/2...`,
@@ -90,6 +107,7 @@ export async function reconcileFinishedStep({
       });
     }, 300);
   } else {
+    // Normal finish (or max continuations): reset the counter for the next user turn.
     continuationCountRef.current = 0;
   }
 }

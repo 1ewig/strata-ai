@@ -1,6 +1,13 @@
 import { isToolUIPart, type UIMessage } from "ai";
 import type { WorkspaceFile } from "@/lib/schemas";
 
+/**
+ * Structural subset of a UI message, decoupled from the AI SDK's exact typing.
+ * @property id - Optional message identifier.
+ * @property role - Optional message role (e.g. 'assistant').
+ * @property content - Optional plain-text message content.
+ * @property parts - Optional array of message parts, including tool parts.
+ */
 export interface GenericUIMessage {
   id?: string;
   role?: string;
@@ -8,6 +15,7 @@ export interface GenericUIMessage {
   parts?: unknown[];
 }
 
+// Union of shapes a tool result can carry that describe workspace file changes.
 type FileResult = {
   file?: WorkspaceFile;
   files?: WorkspaceFile[];
@@ -23,6 +31,7 @@ type FileResult = {
   };
 };
 
+// Extracts the FileResult from a tool part, handling both the modern typed shape and legacy invocation shape.
 function getToolOutput(part: unknown): FileResult | undefined {
   if (!part || typeof part !== "object") return undefined;
 
@@ -41,6 +50,7 @@ function getToolOutput(part: unknown): FileResult | undefined {
   return res as FileResult | undefined;
 }
 
+// Converts a legacy resume tool result into a workspace file for downstream merging.
 function resumeToFile(resume: NonNullable<FileResult["resume"]>): WorkspaceFile {
   return {
     id: resume.id || "resume-file",
@@ -52,6 +62,11 @@ function resumeToFile(resume: NonNullable<FileResult["resume"]>): WorkspaceFile 
   };
 }
 
+/**
+ * Extracts workspace files created or updated by tool calls in a message.
+ * @param msg - The UI message whose tool parts to scan.
+ * @returns De-duplicated list of files found in tool results.
+ */
 export function extractFilesFromMessage(msg: UIMessage | GenericUIMessage): WorkspaceFile[] {
   if (!msg?.parts?.length) return [];
 
@@ -62,6 +77,7 @@ export function extractFilesFromMessage(msg: UIMessage | GenericUIMessage): Work
     const res = getToolOutput(part);
     if (!res) continue;
 
+    // De-dupe by file id so repeated tool calls on the same file merge into one entry.
     if (Array.isArray(res.files)) {
       for (const f of res.files) {
         if (f?.id && !seen.has(f.id) && typeof f.content === "string") {
@@ -86,6 +102,11 @@ export function extractFilesFromMessage(msg: UIMessage | GenericUIMessage): Work
   return files;
 }
 
+/**
+ * Extracts file deletions signalled by tool calls in a message.
+ * @param msg - The UI message whose tool parts to scan.
+ * @returns List of deleted-file identifiers (id and/or name) found in tool results.
+ */
 export function extractDeletedFilesFromMessage(
   msg: UIMessage | GenericUIMessage,
 ): { fileId?: string; name?: string }[] {

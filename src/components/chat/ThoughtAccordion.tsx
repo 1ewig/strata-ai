@@ -5,14 +5,24 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { BrainCircuit, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
 
+/**
+ * Props for the ThoughtAccordion component.
+ */
 interface ThoughtAccordionProps {
   text: string;
   isThinking?: boolean;
 }
 
+/**
+ * Collapsible panel that reveals a model's internal reasoning text, rendered as Markdown.
+ * Hidden entirely when text is empty; shows a spinner and "Thinking..." header while the model is mid-thought.
+ * @param text - The reasoning content shown inside the expanded body.
+ * @param isThinking - When true, renders a loading spinner and "Thinking..." label in the header.
+ */
 export default function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  // Hide the whole accordion when there is no reasoning content to display.
   if (!text || !text.trim()) return null;
 
   return (
@@ -37,6 +47,7 @@ export default function ThoughtAccordion({ text, isThinking }: ThoughtAccordionP
 
       {isOpen && (
         <div className="p-3 border-t border-edge-raised/60 text-[11px] text-text-secondary leading-relaxed max-h-56 overflow-y-auto bg-surface-base/90 font-mono">
+          {/* Reasoning content rendered as Markdown with custom-styled inline elements */}
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{

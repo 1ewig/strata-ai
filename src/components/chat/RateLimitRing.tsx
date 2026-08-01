@@ -2,6 +2,9 @@
 
 import React from 'react';
 
+/**
+ * Props for the RateLimitRing component.
+ */
 interface RateLimitRingProps {
   rateLimitData: {
     remaining5h: number;
@@ -11,6 +14,13 @@ interface RateLimitRingProps {
   isQuotaExhausted: boolean;
 }
 
+/**
+ * Compact quota indicator showing how many messages remain in the current 5-hour window.
+ * Renders a progress ring plus a hover popover with details for both quota windows.
+ * Renders nothing when rateLimitData is null.
+ * @param rateLimitData - Remaining message counts for the 5-hour and 7-day windows, plus an optional reset delay; null hides the indicator.
+ * @param isQuotaExhausted - When true, styles the badge and popover with danger colors and labels the quota as exhausted.
+ */
 export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateLimitRingProps) {
   if (!rateLimitData) return null;
 
@@ -29,6 +39,8 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
             strokeWidth="2.2"
             className="text-edge-default"
           />
+          {/* Foreground arc: full circle circumference is 43.98 (2 * PI * 7); the offset hides the
+              unused portion so the visible arc equals the fraction of the 10-message budget remaining */}
           <circle
             cx="10"
             cy="10"

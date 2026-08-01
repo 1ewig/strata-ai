@@ -1,3 +1,7 @@
+/**
+ * Result of a single edit attempt, reporting the strategy that succeeded
+ * or the reason the edit could not be applied.
+ */
 export interface EditResult {
   success: boolean;
   newContent?: string;
@@ -5,7 +9,20 @@ export interface EditResult {
   strategyUsed?: "exact" | "whitespace-normalized" | "anchor-matched";
 }
 
+/**
+ * Applies string-based edits to resume content using progressive matching
+ * strategies (exact, whitespace-normalized, then anchor-matched).
+ */
 export class ResumeEditEngine {
+  /**
+   * Attempts to replace `searchString` in `source`, trying each matching
+   * strategy in order until one succeeds.
+   * @param source - The current resume content.
+   * @param searchString - The text to find (verbatim lines preferred).
+   * @param replaceString - The text to substitute in its place.
+   * @returns An `EditResult` with the new content on success, or an error
+   * describing why matching failed.
+   */
   static applyEdit(source: string, searchString: string, replaceString: string): EditResult {
     if (!searchString.trim()) {
       return { success: false, error: "searchString cannot be empty." };
@@ -27,6 +44,12 @@ export class ResumeEditEngine {
     };
   }
 
+  /**
+   * Strategy 1: direct substring replacement. Rejected as ambiguous when
+   * the search string occurs more than once.
+   * @returns An `EditResult` using the "exact" strategy, or a failure with
+   * an ambiguity error when multiple matches exist.
+   */
   private static applyExactMatch(
     source: string,
     searchString: string,
@@ -49,11 +72,18 @@ export class ResumeEditEngine {
     };
   }
 
+  /**
+   * Strategy 2: line-by-line matching that ignores leading/trailing
+   * whitespace and blank lines, tolerating indentation differences.
+   * @returns An `EditResult` using the "whitespace-normalized" strategy,
+   * or a failure when no unique match is found.
+   */
   private static applyNormalizedMatch(
     source: string,
     searchString: string,
     replaceString: string,
   ): EditResult {
+    // Normalize CRLF endings and collapse whitespace runs before comparing
     const normalize = (str: string) => str.replace(/\r\n/g, "\n").replace(/[ \t]+/g, " ").trim();
     if (!normalize(source).includes(normalize(searchString))) {
       return { success: false };
@@ -101,6 +131,13 @@ export class ResumeEditEngine {
     return { success: false };
   }
 
+  /**
+   * Strategy 3: matches only the first and last search lines within a
+   * bounded window of the source, replacing the span between them when the
+   * middle content differs.
+   * @returns An `EditResult` using the "anchor-matched" strategy, or a
+   * failure when the anchors cannot be uniquely located.
+   */
   private static applyAnchorMatch(
     source: string,
     searchString: string,
@@ -118,6 +155,7 @@ export class ResumeEditEngine {
 
     for (let i = 0; i < sourceLines.length; i++) {
       if (sourceLines[i].trim() === firstAnchor) {
+        // Allow up to 5 extra lines between anchors to tolerate drift in the middle
         for (let j = i + 1; j < Math.min(i + searchLines.length + 5, sourceLines.length); j++) {
           if (sourceLines[j].trim() === lastAnchor) {
             if (candidateStart !== -1) {

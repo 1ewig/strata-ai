@@ -4,12 +4,19 @@ import { WorkspaceFile } from "@/lib/schemas";
 import { ResumeEditEngine } from "@/lib/edit-engine";
 import { MAX_FILE_CHARS, MAX_FILES_PER_WORKSPACE, MAX_WORKSPACE_TOTAL_CHARS } from "@/lib/limits";
 
+/**
+ * Closures wiring tools to the live workspace state of the current request.
+ * @property getCurrentFiles - Returns the current workspace files.
+ * @property onUpdateFile - Callback fired when a tool creates, edits, or renames a file.
+ * @property onDeleteFile - Callback fired when a tool deletes a file.
+ */
 export interface WorkspaceToolsContext {
   getCurrentFiles: () => WorkspaceFile[];
   onUpdateFile: (file: WorkspaceFile) => void;
   onDeleteFile: (fileIdOrName: string) => void;
 }
 
+// Metadata-only shape for file listings (deliberately excludes content).
 const fileMetadataSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -17,6 +24,7 @@ const fileMetadataSchema = z.object({
   charCount: z.number(),
 });
 
+// Full-file shape returned by write/edit tools so the client can persist the result.
 const workspaceFileSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -26,6 +34,11 @@ const workspaceFileSchema = z.object({
   updatedAt: z.string(),
 });
 
+/**
+ * Creates the listFiles tool reporting metadata for every workspace file.
+ * @param context - Workspace context providing current-file access.
+ * @returns An AI SDK tool for listing workspace files.
+ */
 export function createListFilesTool({ getCurrentFiles }: WorkspaceToolsContext) {
   return tool({
     description:
@@ -50,6 +63,11 @@ export function createListFilesTool({ getCurrentFiles }: WorkspaceToolsContext) 
   });
 }
 
+/**
+ * Creates the readFile tool for reading a file's full content or a single section.
+ * @param context - Workspace context providing current-file access.
+ * @returns An AI SDK tool for reading workspace files.
+ */
 export function createReadFileTool({ getCurrentFiles }: WorkspaceToolsContext) {
   return tool({
     description:
@@ -103,6 +121,11 @@ export function createReadFileTool({ getCurrentFiles }: WorkspaceToolsContext) {
   });
 }
 
+/**
+ * Creates the writeFile tool that creates new files or fully replaces existing ones.
+ * @param context - Workspace context providing current-file access and update callbacks.
+ * @returns An AI SDK tool for writing workspace files.
+ */
 export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceToolsContext) {
   return tool({
     description:
@@ -130,12 +153,14 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: Workspace
         (f) => f.name.toLowerCase() === name.toLowerCase(),
       );
 
+      // Only new files count against the per-workspace file cap.
       if (!existing && existingFiles.length >= MAX_FILES_PER_WORKSPACE) {
         throw new Error(
           `File creation rejected: Maximum ${MAX_FILES_PER_WORKSPACE} files allowed per workspace. Delete an existing file before creating a new one.`
         );
       }
 
+      // Hard cap on per-file size: silently truncate instead of rejecting.
       const safeContent = content.length > MAX_FILE_CHARS ? content.slice(0, MAX_FILE_CHARS) : content;
 
       const now = new Date().toISOString();
@@ -143,6 +168,7 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: Workspace
         id: existing?.id || crypto.randomUUID(),
         name,
         content: safeContent,
+        // Preserve an explicit language choice, else infer from the file extension.
         language: language || (name.endsWith(".txt") ? "text" : "markdown"),
         createdAt: existing?.createdAt || now,
         updatedAt: now,
@@ -158,6 +184,11 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: Workspace
   });
 }
 
+/**
+ * Creates the editFile tool that surgically replaces a verbatim text block in a file.
+ * @param context - Workspace context providing current-file access and update callbacks.
+ * @returns An AI SDK tool for editing workspace files.
+ */
 export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceToolsContext) {
   return tool({
     description:
@@ -212,6 +243,7 @@ export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceT
         };
       }
 
+      // Sum sizes of all other files so the whole workspace stays under the total cap.
       const otherFilesTotal = files.reduce((acc, f) => acc + (f.id === targetFile.id ? 0 : (f.content?.length || 0)), 0);
       if (otherFilesTotal + result.newContent.length > MAX_WORKSPACE_TOTAL_CHARS) {
         return {
@@ -239,6 +271,11 @@ export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceT
   });
 }
 
+/**
+ * Creates the renameFile tool that renames a file while preserving its content.
+ * @param context - Workspace context providing current-file access and update callbacks.
+ * @returns An AI SDK tool for renaming workspace files.
+ */
 export function createRenameFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceToolsContext) {
   return tool({
     description:
@@ -268,6 +305,7 @@ export function createRenameFileTool({ getCurrentFiles, onUpdateFile }: Workspac
         return { success: false, error: `File "${nameOrId}" not found. Call listFiles to see available files.` };
       }
 
+      // Reject renames that collide with an existing file (case-insensitive).
       const collision = files.find(
         (f) => f.id !== target.id && f.name.toLowerCase() === newName.toLowerCase(),
       );
@@ -293,6 +331,11 @@ export function createRenameFileTool({ getCurrentFiles, onUpdateFile }: Workspac
   });
 }
 
+/**
+ * Creates the deleteFile tool that removes a file from the workspace.
+ * @param context - Workspace context providing current-file access and delete callbacks.
+ * @returns An AI SDK tool for deleting workspace files.
+ */
 export function createDeleteFileTool({ getCurrentFiles, onDeleteFile }: WorkspaceToolsContext) {
   return tool({
     description: "Delete a file from the workspace canvas.",
@@ -326,6 +369,10 @@ export function createDeleteFileTool({ getCurrentFiles, onDeleteFile }: Workspac
   });
 }
 
+/**
+ * Creates the webSearch tool that queries the Tavily API for real-time information.
+ * @returns An AI SDK tool for web search, or a failure result if TAVILY_API_KEY is unset.
+ */
 export function createWebSearchTool() {
   return tool({
     description:
@@ -389,6 +436,7 @@ export function createWebSearchTool() {
             query,
             search_depth: searchDepth || "advanced",
             topic: topic || "general",
+            // Clamp the requested result count to Tavily's 1-10 supported range.
             max_results: Math.min(Math.max(maxResults || 5, 1), 10),
             include_answer: true,
           }),
@@ -431,6 +479,10 @@ export function createWebSearchTool() {
   });
 }
 
+/**
+ * Creates the extractUrl tool that pulls clean Markdown content from web pages via Tavily.
+ * @returns An AI SDK tool for URL content extraction, or a failure result if TAVILY_API_KEY is unset.
+ */
 export function createExtractUrlTool() {
   return tool({
     description:
@@ -499,6 +551,7 @@ export function createExtractUrlTool() {
         }
 
         const data = await response.json();
+        // Cap each page's raw content to keep tool results within context limits.
         const extracted = Array.isArray(data.results)
           ? data.results.map((r: any) => ({
               url: String(r.url || ""),
@@ -529,6 +582,11 @@ export function createExtractUrlTool() {
   });
 }
 
+/**
+ * Builds the full set of AI SDK tools exposed to the agent, bound to a workspace context.
+ * @param context - Workspace closures shared by all workspace tools.
+ * @returns A record of tool name to AI SDK tool instance.
+ */
 export function createWorkspaceTools(context: WorkspaceToolsContext) {
   return {
     listFiles: createListFilesTool(context),

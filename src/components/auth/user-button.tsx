@@ -6,12 +6,18 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut } from "@/lib/auth-client";
 import { User, LogOut, LogIn, Loader2, ChevronUp } from "lucide-react";
 
+/**
+ * Session-aware user menu: shows a loading state while the session resolves,
+ * a sign-in link for guests, and a profile bar with a sign-out dropdown for
+ * authenticated users.
+ */
 export default function UserButton() {
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
 
+  // Session request still in flight; show a lightweight pending state.
   if (isPending) {
     return (
       <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
@@ -21,6 +27,7 @@ export default function UserButton() {
     );
   }
 
+  // Guests get a sign-in link instead of the profile menu.
   if (!session?.user) {
     return (
       <Link
@@ -33,6 +40,7 @@ export default function UserButton() {
     );
   }
 
+  // Derive a display name and avatar initial from the session user.
   const displayName = session.user.name || session.user.email?.split("@")[0] || "User";
   const initial = displayName.charAt(0).toUpperCase();
 
@@ -48,6 +56,7 @@ export default function UserButton() {
 
           <button
             onClick={async () => {
+              // Clear the session, then refresh so the UI reflects the signed-out state.
               setSigningOut(true);
               await signOut();
               router.refresh();

@@ -5,6 +5,7 @@ import ChatBubble from '@/components/chat/ChatBubble';
 import { QuotaErrorCard } from '@/components/chat/QuotaErrorCard';
 import { StrataIcon } from '@/components/ui/strata-icon';
 
+/** Props for the ChatPanel message list orchestrator. */
 interface ChatPanelProps {
   messages: any[];
   streamingContent: string | null;
@@ -18,6 +19,19 @@ interface ChatPanelProps {
   onDismissQuotaError?: () => void;
 }
 
+/**
+ * Orchestrates the chat message area: an empty-state hero, the message
+ * bubbles, a quota error card, a typing indicator, and the scroll anchor.
+ *
+ * @param messages - Conversation messages rendered as ChatBubble rows.
+ * @param streamingContent - In-flight assistant text; suppresses the empty state
+ *   while a response is being generated.
+ * @param isLoading - Shows the typing indicator while the assistant responds.
+ * @param messagesEndRef - Scroll anchor appended after the last message.
+ * @param onOpenDrawer - Passed through to bubbles for tool card drawer actions.
+ * @param quotaError - Quota exhaustion banner shown above the composer.
+ * @param onDismissQuotaError - Dismisses the quota error card when called.
+ */
 export default React.memo(function ChatPanel({
   messages,
   streamingContent,
@@ -29,6 +43,7 @@ export default React.memo(function ChatPanel({
 }: ChatPanelProps) {
   return (
     <div className="pt-4 space-y-4">
+      {/* Empty-state hero welcoming the user to the workspace canvas. */}
       {messages.length === 0 && streamingContent === null && !isLoading && !quotaError && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary border border-secondary/50 flex items-center justify-center text-surface font-semibold text-lg shadow-glow-primary">
@@ -41,6 +56,7 @@ export default React.memo(function ChatPanel({
         </div>
       )}
 
+      {/* Only the final assistant message gets streaming effects while loading. */}
       {messages.map((message, idx) => {
         const isLastAssistant = isLoading && message.role === 'assistant' && idx === messages.length - 1;
         return (
@@ -61,6 +77,7 @@ export default React.memo(function ChatPanel({
         />
       )}
 
+      {/* Standalone typing bubble before the first assistant tokens arrive. */}
       {!quotaError && isLoading && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
         <div className="flex items-start gap-3.5 fade-in">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center text-surface shrink-0 mt-0.5 shadow-glow-primary">

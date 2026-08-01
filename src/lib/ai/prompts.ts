@@ -6,9 +6,15 @@ import {
   MAX_WORKSPACE_TOTAL_CHARS,
 } from "@/lib/limits";
 
+/**
+ * Builds the agent's system instruction, embedding workspace file metadata and constraints.
+ * @param filesInput - Workspace files to reference, or a legacy Resume to convert into a single file.
+ * @returns The complete system instruction string for the model.
+ */
 export function buildSystemInstruction(filesInput?: WorkspaceFile[] | Resume): string {
   let workspaceFiles: WorkspaceFile[] = [];
 
+  // Normalize a legacy Resume object into a single markdown workspace file.
   if (Array.isArray(filesInput)) {
     workspaceFiles = filesInput;
   } else if (filesInput && filesInput.markdownContent) {
@@ -24,6 +30,7 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[] | Resume): s
     ];
   }
 
+  // Only files with actual content are worth surfacing to the model.
   const activeFiles = workspaceFiles.filter((f) => f.content?.trim());
   const hasFiles = activeFiles.length > 0;
 

@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { DefaultChatTransport } from 'ai';
 
+/** Ref-based inputs passed by the parent session hook, so the transport can read latest values without re-creating itself. */
 interface UseChatTransportParams {
   filesRef: React.RefObject<any>;
   modelRef: React.RefObject<string>;
@@ -12,6 +13,11 @@ interface UseChatTransportParams {
   setQuotaError: (data: any) => void;
 }
 
+/**
+ * Builds the memoized streaming transport for the chat agent endpoint.
+ * Reads live values through refs (never re-created when they change) and parses
+ * rate-limit headers from every response, reporting quota state to the context.
+ */
 export function useChatTransport({
   filesRef,
   modelRef,
@@ -32,6 +38,7 @@ export function useChatTransport({
         }),
         fetch: async (url, options) => {
           const res = await fetch(url, options);
+          // Rate-limit state is returned on every response; surface it to the global quota context
           const rem5h = res.headers.get('X-RateLimit-Remaining-5h');
           const remWeek = res.headers.get('X-RateLimit-Remaining-Week');
           const retryHeader = res.headers.get('X-RateLimit-Retry-After') || res.headers.get('Retry-After');
@@ -53,6 +60,7 @@ export function useChatTransport({
               message: data?.message || 'Usage quota reached (10 msgs per 5 hours, 50 msgs per week). Please try again later.',
               retryAfter: retryAfterSec || data?.retryAfter,
             });
+            // Stop the in-flight stream on the next tick so the partial message is dropped
             setTimeout(() => {
               if (chatRef.current?.stop) {
                 chatRef.current.stop();

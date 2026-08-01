@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MAX_FILE_CHARS, MAX_FILES_PER_WORKSPACE, formatCharCount } from '@/lib/limits';
 
+/** Props for the WorkspaceDrawer component. */
 interface WorkspaceDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -20,6 +21,21 @@ interface WorkspaceDrawerProps {
   isLoading?: boolean;
 }
 
+/**
+ * Slide-in drawer panel for viewing and editing workspace files. Supports
+ * file switching, renaming/editing content, markdown rendering, copying,
+ * and creating or deleting files.
+ *
+ * @param props - Component props.
+ * @param isOpen - Whether the drawer is visible; when false nothing renders.
+ * @param onClose - Callback invoked when the drawer should close.
+ * @param files - Workspace files to display and manage.
+ * @param activeFileId - Id of the currently selected file.
+ * @param onSelectFile - Callback when the active file changes.
+ * @param onUpdateFile - Callback persisting an edited file.
+ * @param onCreateFile - Callback creating a new file.
+ * @param onDeleteFile - Callback deleting a file.
+ */
 export default function WorkspaceDrawer({
   isOpen,
   onClose,
@@ -30,8 +46,11 @@ export default function WorkspaceDrawer({
   onCreateFile,
   onDeleteFile,
 }: WorkspaceDrawerProps) {
+  // Fall back to the first file so the drawer never shows without content.
   const activeFile = files.find(f => f.id === activeFileId) || files[0] || null;
 
+  // Editor state: file name/content being edited, copy feedback, and the
+  // inline new-file form visibility.
   const [isEditing, setIsEditing] = useState(false);
   const [fileName, setFileName] = useState(activeFile?.name || '');
   const [contentValue, setContentValue] = useState(activeFile?.content || '');
@@ -47,6 +66,7 @@ export default function WorkspaceDrawer({
 
   if (!isOpen) return null;
 
+  // Hard cap on content length; warn once the edit passes 90% of it.
   const isFileOverLimit = isEditing && contentValue.length > MAX_FILE_CHARS;
   const isFileWarning = isEditing && contentValue.length > MAX_FILE_CHARS * 0.9 && !isFileOverLimit;
 
@@ -54,6 +74,7 @@ export default function WorkspaceDrawer({
     if (!activeFile || isFileOverLimit) return;
     onUpdateFile({
       ...activeFile,
+      // Fall back to the previous name if the input was trimmed to empty.
       name: fileName.trim() || activeFile.name,
       content: contentValue,
       updatedAt: new Date().toISOString(),
@@ -65,6 +86,7 @@ export default function WorkspaceDrawer({
     if (!activeFile?.content) return;
     navigator.clipboard.writeText(activeFile.content);
     setCopied(true);
+    // Revert the "Copied" feedback after a brief confirmation.
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -76,6 +98,7 @@ export default function WorkspaceDrawer({
     setIsCreatingNew(false);
   };
 
+  // Markdown files render as styled typography; everything else as plain text.
   const isMarkdown = activeFile?.name.endsWith('.md') || activeFile?.language === 'markdown';
 
   return (
@@ -245,6 +268,7 @@ export default function WorkspaceDrawer({
               </div>
             ) : isMarkdown ? (
               <article className="prose max-w-none space-y-4 text-xs leading-relaxed text-text-primary selection:bg-secondary/50">
+                {/* Markdown renders as styled typography; other files as plain text */}
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{

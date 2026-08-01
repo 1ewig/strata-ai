@@ -11,13 +11,23 @@ import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
 import { useChatSession } from '@/hooks/useChatSession';
 
+/**
+ * Main chat workspace for a conversation: chat panel, input, header, sidebar,
+ * and the file workspace drawer. Auto-scrolling is delegated to
+ * <StickToBottom>, which also renders the scroll-to-bottom affordance.
+ *
+ * @param params - Route params containing the conversation id
+ * @returns The chat workspace UI
+ */
 export default function ChatIdPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: chatId } = use(params);
   const router = useRouter();
   const { data: session, isPending: isSessionPending } = useSession();
+  // Anchor div passed to ChatPanel for the message list scroll position.
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Redirect unauthenticated visitors to auth, preserving the return URL.
   React.useEffect(() => {
     if (!isSessionPending && !session?.user) {
       router.replace(`/auth?callbackUrl=/chat-id/${chatId}`);
@@ -61,6 +71,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     [handleSelectFile, setIsWorkspaceDrawerOpen],
   );
 
+  // Open the workspace drawer when other components dispatch these custom events.
   React.useEffect(() => {
     const handleCustomOpen = () => setIsWorkspaceDrawerOpen(true);
     window.addEventListener('open-resume-drawer', handleCustomOpen);
@@ -71,6 +82,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     };
   }, [setIsWorkspaceDrawerOpen]);
 
+  // Show a spinner while the session is still being verified.
   if (isSessionPending || !session?.user) {
 
     return (
@@ -111,6 +123,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
                 />
               </StickToBottom.Content>
 
+              {/* Floating button appears when scrolled up - clicks snap back to the bottom */}
               {!context.isAtBottom && (
                 <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-40">
                   <button

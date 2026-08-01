@@ -15,6 +15,10 @@ import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
 import { auth } from "@/lib/auth";
 import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
 
+/**
+ * Schema for the agent request body: conversation messages plus optional
+ * workspace files, legacy resumes, and model/step configuration.
+ */
 const bodySchema = z.object({
   messages: z.array(z.any()),
   files: z.array(z.any()).optional(),
@@ -24,8 +28,18 @@ const bodySchema = z.object({
   maxSteps: z.number().optional(),
 });
 
+/**
+ * POST /api/agent - streams an agent reply using the AI SDK UI message
+ * protocol. Requires an authenticated session and consumes the user's
+ * rate-limit quota. Responds with JSON errors (401/400/429) or a UI message
+ * stream carrying X-RateLimit-* headers.
+ *
+ * @param req - The incoming request with the chat session headers and body
+ * @returns A streaming text/plain response or a JSON error response
+ */
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: req.headers });
+  // Reject unauthenticated requests before touching the model or quota.
   if (!session) {
     return new Response(JSON.stringify({ error: "Unauthorized. Please sign in." }), {
       status: 401,
@@ -33,6 +47,7 @@ export async function POST(req: Request) {
     });
   }
 
+  // Enforce the quota (10 messages / 5 hours, 50 / week) before streaming.
   const rateLimit = await checkAndIncrementRateLimit(session.user.id);
   if (!rateLimit.allowed) {
     return new Response(
@@ -54,8 +69,10 @@ export async function POST(req: Request) {
     );
   }
 
+  // Validate the body shape before use.
   const parsed = bodySchema.safeParse(await req.json());
 
+  // Return zod validation failures as a 400 with flattened details.
   if (!parsed.success) {
     return new Response(
       JSON.stringify({ error: "Invalid request", details: parsed.error.flatten() }),
@@ -76,6 +93,7 @@ export async function POST(req: Request) {
     );
   }
 
+  // Clamp the requested step limit to the 1-30 range, defaulting to 25.
   const maxStepsLimit = Math.min(Math.max(maxSteps || 25, 1), 30);
   const mutableFiles: WorkspaceFile[] = parsed.data.files || [];
 
@@ -103,6 +121,7 @@ export async function POST(req: Request) {
     }
   };
 
+  // Stream the agent run, wiring the workspace tools to the mutable file list.
   const result = streamText({
     model: google(model || "gemini-3.5-flash-lite"),
     system: buildSystemInstruction(mutableFiles),
@@ -130,6 +149,7 @@ export async function POST(req: Request) {
     }),
     prepareStep: async ({ stepNumber }) => {
       console.log(`[agent] Preparing step ${stepNumber}. Active workspace files: ${mutableFiles.length}`);
+      // Rebuild the system prompt per step so the model sees live file state.
       return {
         system: buildSystemInstruction(mutableFiles),
       };
@@ -151,10 +171,13 @@ export async function POST(req: Request) {
     onError({ error }) {
       console.error("[agent] Stream error:", error);
     },
+    // Bound the run to the step limit so tool loops cannot run forever.
     stopWhen: isStepCount(maxStepsLimit),
+    // Use provider-default thinking unless the client requested a level.
     reasoning: thinkingLevel ? (thinkingLevel as any) : "provider-default",
     providerOptions: {
       google: {
+        // Include reasoning thoughts in the stream so the UI can display them.
         thinkingConfig: {
           includeThoughts: true,
         },
@@ -162,6 +185,7 @@ export async function POST(req: Request) {
     },
   });
 
+  // Wrap the AI SDK stream in the UI message protocol and attach quota headers.
   return createUIMessageStreamResponse({
     stream: toUIMessageStream({ stream: result.stream }),
     headers: {

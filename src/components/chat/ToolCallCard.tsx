@@ -4,6 +4,20 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Loader2, XCircle, ExternalLink } from 'lucide-react';
 import type { ToolCardProps } from './tools/resolver';
 
+/**
+ * Card rendering a single AI tool invocation: status icon and badge in the header, plus a
+ * collapsible body showing the pre-built summary and the raw arguments and result.
+ * Presentation only - all display data is prepared by the resolver in `tools/resolver.tsx`.
+ * @param label - Display name of the tool.
+ * @param badge - Short status label shown next to the tool name (e.g. "Read", "Updated").
+ * @param icon - Lucide icon component representing the tool.
+ * @param accentText - Tailwind color class applied to icons and accent text.
+ * @param status - Lifecycle state of the invocation: loading, success, or error.
+ * @param summary - Pre-built ReactNode describing the invocation outcome, shown in the expanded body.
+ * @param rawArgs - Original tool arguments, pretty-printed in the details block.
+ * @param rawResult - Original tool result, pretty-printed in the details block.
+ * @param onOpenDrawer - Optional callback that opens the full details drawer for successful calls.
+ */
 export default function ToolCallCard({
   label,
   badge,
@@ -18,6 +32,7 @@ export default function ToolCallCard({
   const [isOpen, setIsOpen] = useState(false);
   const isLoading = status === 'loading';
   const isError = status === 'error';
+  // An empty object counts as "no result" so the details block can hide the Result section.
   const hasResult = rawResult != null && (typeof rawResult !== 'object' || Object.keys(rawResult as object).length > 0);
 
   return (
@@ -28,6 +43,7 @@ export default function ToolCallCard({
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-2 text-left min-w-0 flex-1 cursor-pointer hover:opacity-90 transition-opacity"
         >
+          {/* Icon switches by status: spinner while loading, error icon on failure, tool icon otherwise */}
           {isLoading ? (
             <Loader2 className={`w-3.5 h-3.5 ${accentText} animate-spin shrink-0`} />
           ) : isError ? (
@@ -42,6 +58,7 @@ export default function ToolCallCard({
         </button>
 
         <div className="flex items-center gap-2 shrink-0">
+          {/* "Open" action, only available for successful calls with a details drawer */}
           {onOpenDrawer && status === 'success' && (
             <button
               onClick={onOpenDrawer}
@@ -66,6 +83,7 @@ export default function ToolCallCard({
         <div className="px-3 pb-3 pt-1 border-t border-edge-raised/30 space-y-2 text-xs">
           {summary}
 
+          {/* Raw parameters and result rendered as pretty-printed JSON */}
           <div className="mt-2 bg-surface-base/80 p-2 rounded border border-edge-raised/50 font-mono text-[10px] text-text-muted max-h-40 overflow-y-auto space-y-1.5">
             <div>
               <span className="text-text-muted font-semibold block mb-0.5">Parameters:</span>

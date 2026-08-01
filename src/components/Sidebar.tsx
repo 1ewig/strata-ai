@@ -14,17 +14,29 @@ import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 
 import { useSession } from '@/lib/auth-client';
 
+/** Props for the Sidebar component. */
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
 }
 
+/**
+ * Application sidebar showing the brand header, new chat creation, and the
+ * current user's conversation list. Renders as a fixed rail on desktop and
+ * an off-canvas drawer with a scrim backdrop on mobile.
+ *
+ * @param props - Component props.
+ * @param isOpen - Whether the mobile drawer is expanded.
+ * @param onClose - Callback invoked when the drawer should close.
+ */
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const { data: session } = useSession();
   const userId = session?.user?.id;
 
+  // Load the user's conversations (legacy chats without a userId included),
+  // most recently updated first. Reacts live to IndexedDB changes.
   const conversations = useLiveQuery(
     async () => {
       if (!userId) return [];
@@ -37,6 +49,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   );
 
   const conversationCount = conversations?.length || 0;
+  // Enforce the per-user conversation cap on the new chat action.
   const isMaxConversationsReached = conversationCount >= MAX_CONVERSATIONS_PER_USER;
 
   const handleNewChat = () => {
@@ -50,6 +63,8 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     e.preventDefault();
     e.stopPropagation();
     await deleteConversation(id);
+    // If the deleted chat is the one being viewed, navigate to the most
+    // recently updated remaining chat, or open a fresh chat if none remain.
     if (pathname === `/chat-id/${id}`) {
       const all = await db.conversations.toArray();
       const remaining = all
@@ -68,6 +83,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
   return (
     <>
+      {/* Mobile scrim backdrop that closes the drawer on tap */}
       {isOpen && (
         <div
           className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm md:hidden"

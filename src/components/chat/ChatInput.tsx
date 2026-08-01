@@ -6,6 +6,7 @@ import { MAX_MESSAGE_CHARS } from '@/lib/limits';
 import ModelSelectorMenu from './ModelSelectorMenu';
 import RateLimitRing from './RateLimitRing';
 
+/** Props for the ChatInput composer. */
 interface ChatInputProps {
   onSendMessage: (text: string) => void;
   isLoading: boolean;
@@ -20,6 +21,19 @@ interface ChatInputProps {
   } | null;
 }
 
+/**
+ * Renders the message composer: auto-growing textarea, model/thinking-level
+ * selector, quota ring, and send button. Sending is blocked while streaming,
+ * when over the character cap, or when a quota is exhausted.
+ *
+ * @param onSendMessage - Fires with the trimmed text when the user submits.
+ * @param isLoading - Disables the textarea and send button while streaming.
+ * @param model - Currently selected model id.
+ * @param thinkingLevel - Currently selected thinking effort level.
+ * @param onModelSelect - Called when the user picks a model.
+ * @param onThinkingLevelChange - Called when the user changes thinking effort.
+ * @param rateLimitData - Remaining 5-hour/weekly message quota and optional retry window.
+ */
 export default function ChatInput({
   onSendMessage,
   isLoading,
@@ -32,13 +46,17 @@ export default function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState('');
 
+  // Coerce the optional quota payload to null so all downstream checks can be null-based.
   const rateLimitData = rateLimitDataProp ?? null;
+  // Sending is blocked once either the 5-hour or weekly quota is exhausted.
   const isQuotaExhausted = rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
 
+  /** Keeps the input state in sync with the textarea value. */
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
   };
 
+  // Auto-grow the textarea up to a 160px cap as the user types.
   useEffect(() => {
     const ta = textareaRef.current;
     if (ta) {
@@ -47,8 +65,13 @@ export default function ChatInput({
     }
   }, [inputValue]);
 
+  // Guard flag: input exceeds the hard character cap.
   const isCharOverLimit = inputValue.length > MAX_MESSAGE_CHARS;
 
+  /**
+   * Validates the trimmed input against the loading/quota/limit guards,
+   * submits the message, and clears the composer on success.
+   */
   const handleSend = () => {
     const text = inputValue.trim();
     if (text && !isLoading && !isQuotaExhausted && !isCharOverLimit) {
@@ -57,6 +80,7 @@ export default function ChatInput({
     }
   };
 
+  /** Enter submits the message; Shift+Enter inserts a newline instead. */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();

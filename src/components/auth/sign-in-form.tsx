@@ -6,10 +6,18 @@ import Link from "next/link";
 import { signIn } from "@/lib/auth-client";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
+/**
+ * Props for the sign-in form.
+ */
 interface SignInFormProps {
+  /** Destination to navigate to after a successful sign-in. */
   callbackUrl: string;
 }
 
+/**
+ * Email/password sign-in form backed by the Better Auth client.
+ * Validates input locally, surfaces provider errors, and redirects on success.
+ */
 export function SignInForm({ callbackUrl }: SignInFormProps) {
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -21,14 +29,17 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    // Clear any feedback from a previous attempt.
     setError(null);
     setSuccessMsg(null);
 
+    // Reject empty submissions before hitting the auth API.
     if (!email || !password) {
       setError("Please fill in all required fields.");
       return;
     }
 
+    // Enforce the minimum password length client-side.
     if (password.length < 8) {
       setError("Password must be at least 8 characters long.");
       return;
@@ -40,17 +51,20 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
       const { error: signInError } = await signIn.email({ email, password });
 
       if (signInError) {
+        // Surface the provider's message so the user knows why sign-in failed.
         setError(signInError.message || "Invalid email or password.");
         setLoading(false);
         return;
       }
 
+      // Pause briefly so the success message is visible before navigating.
       setSuccessMsg("Signed in successfully! Redirecting...");
       setTimeout(() => {
         router.push(callbackUrl);
         router.refresh();
       }, 1000);
     } catch (err: any) {
+      // Network or unexpected failures fall back to a generic message.
       setError(err?.message || "An unexpected error occurred. Please try again.");
       setLoading(false);
     }
@@ -58,6 +72,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
 
   return (
     <>
+      {/* Error banner */}
       {error && (
         <div className="p-3.5 rounded-xl bg-danger-soft border border-danger/30 text-danger text-xs flex items-start gap-2.5 animate-fade-in">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -65,6 +80,7 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
         </div>
       )}
 
+      {/* Success banner */}
       {successMsg && (
         <div className="p-3.5 rounded-xl bg-primary-soft border border-primary/30 text-primary text-xs flex items-start gap-2.5 animate-fade-in">
           <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />

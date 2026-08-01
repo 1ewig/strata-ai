@@ -2,14 +2,24 @@
 
 import type { ReactNode } from "react";
 
+/**
+ * Props for the shared auth page shell.
+ */
 interface AuthShellProps {
+  /** Content rendered inside the card, typically the sign-in or sign-up form. */
   children: ReactNode;
+  /** Which auth mode the shell is presenting, drives the heading and supporting copy. */
   mode: "signin" | "signup";
 }
 
+/**
+ * Full-screen layout wrapper shared by the sign-in and sign-up pages.
+ * Renders decorative background accents, the branded auth card, and its children.
+ */
 export function AuthShell({ children, mode }: AuthShellProps) {
   return (
     <div className="min-h-dvh bg-surface-base flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative background accents */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-72 h-72 bg-accent-blue-soft rounded-full blur-3xl pointer-events-none" />
 
