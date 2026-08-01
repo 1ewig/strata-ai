@@ -412,9 +412,9 @@ For **PostgreSQL (server DB, e.g. the planned migration):**
 
 ## Appendix: Known Discrepancies & Dead Code
 
-- **`README.md` is partially stale** (e.g., older model table). Treat this file + source as ground truth.
+- **`README.md` is partially stale** (e.g., the TypeScript badge says 5.9; `package.json` pins 6.0.3). Treat this file + source as ground truth.
 - **`implementation_plan.md` is aspirational, not implemented** — no `public.conversations/messages/workspace_files` tables, no 4K/50K char limits, no `pg-db.ts`.
 - **Dark mode is live despite AGENTS.md's "light-mode only" claim** (`theme-toggle.tsx`, `.dark` tokens, layout bootstrap script).
-- **Orphaned files:** `components/chat/SuggestionChips.tsx`, `hooks/use-mobile.ts`, and the empty `src/utils/` directory — importable but unused.
-- **`metadata.json` is stale** (lists Gemini 2.5 ids not present in `MODELS`).
+- **Orphaned file:** `hooks/use-mobile.ts` — importable but unused.
+- **`metadata.json` is stale** (lists Gemini 2.5 ids not present in `MODELS` and is missing `gemini-3.5-flash-lite` / `gemini-3-flash-preview`).
 - **No tests, no error boundary, no Sentry/analytics** — verification is `bun run lint` + `bun run build` only.
