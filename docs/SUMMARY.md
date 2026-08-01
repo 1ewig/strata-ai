@@ -78,7 +78,7 @@
 ### 3.2 Server vs. Client boundary strategy
 
 - **The boundary sits at the route handlers / API surface.** There are essentially no shared Server Components: `app/layout.tsx` is async (SSR rate-limit hydration), `app/auth/page.tsx` is a server redirect, `app/not-found.tsx` is static, and the three route handlers are server code.
-- Every interactive page (`/`, `/auth/signin`, `/auth/signup`, `/chat-id/[id]`) is `'use client'`. `chat-id/[id]/page.tsx` is intentionally a **thin shell** (~158 lines): it reads `use(params)` for the id, wires props, and delegates all logic to `useChatSession`.
+- Every interactive page (`/`, `/auth/signin`, `/auth/signup`, `/chat-id/[id]`) is `'use client'`. `chat-id/[id]/page.tsx` is intentionally a **thin shell** (~200 lines): it reads `use(params)` for the id, calls the feature hooks (`useChatSession`, `useConversations`, `useSignOut`, `useTheme`), and threads the results to child components as props. Components themselves are purely presentational — no database queries, session fetching, or auth calls inside them.
 - **Why this shape:** the entire product is a client-side, local-first interaction (IndexedDB, streaming chat, drawer editing). SSR is used only where it pays off: auth redirects, metadata, and hydrating the rate-limit quota without a client fetch waterfall.
 - Rule of thumb: server code never imports Dexie; client code never imports the `pg` Pool. The shared seam is `lib/schemas.ts` (Zod types) used on both sides.
 
@@ -131,14 +131,14 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   │   ├── page.tsx          # Server redirect → /auth/signin
     │   │   │   ├── signin/page.tsx   # Client: session-guarded sign-in form (Suspense-wrapped for useSearchParams)
     │   │   │   └── signup/page.tsx   # Client: session-guarded sign-up form
-    │   │   ├── chat-id/[id]/page.tsx # Client: thin chat shell — wires useChatSession to Sidebar/Header/Panel/Input/Drawer
+    │   │   ├── chat-id/[id]/page.tsx # Client: thin chat shell — wires useChatSession/useConversations/useSignOut/useTheme to Sidebar/Header/Panel/Input/Drawer
     │   │   └── api/
     │   │       ├── agent/route.ts    # POST /api/agent — streaming agent endpoint (auth + rate limit + streamText + SSE)
     │   │       ├── auth/[...all]/route.ts  # Better Auth Next.js catch-all (GET/POST from toNextJsHandler)
     │   │       └── user/rate-limit/route.ts # GET quota status (auth-verified)
     │   ├── components/
     │   │   ├── Sidebar.tsx           # Pure presentational sidebar component (receives conversations, active ID, new/delete/signOut handlers)
-    │   │   ├── theme-toggle.tsx      # Dark-mode toggle via useSyncExternalStore + 'strata-theme' localStorage
+    │   │   ├── theme-toggle.tsx      # Pure presentational dark-mode toggle (isDark/onToggle props; logic in useTheme hook)
     │   │   ├── auth/                 # auth-shell (card layout), loading-screen, sign-in-form, sign-up-form, user-button (profile + sign-out)
     │   │   ├── chat/
     │   │   │   ├── ChatPanel.tsx     # Message list, empty state, typing dots, QuotaErrorCard slot
@@ -157,8 +157,12 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   ├── hooks/
     │   │   ├── useChatSession.ts     # Orchestration core: delegates to transport, error handler, reconciler, and sub-hooks
     │   │   ├── useChatTransport.ts   # Custom DefaultChatTransport creation, rate-limit header parsing & error throwing
-    │   │   ├── useConversations.ts   # Custom hook fetching & filtering user conversations from Dexie IndexedDB (v5)
-    │   │   ├── useLatestConversationRedirect.ts # Custom hook redirecting landing page to latest user conversation
+    │   │   ├── useConversations.ts   # Conversation list + create/delete with navigation (Dexie v5 live query, cap enforcement)
+    │   │   ├── useLatestConversationRedirect.ts # Landing-page redirect to latest user conversation or a fresh chat
+    │   │   ├── useSignIn.ts          # Sign-in form state: validation, auth call, error/success feedback, redirect
+    │   │   ├── useSignUp.ts          # Sign-up form state: validation, auth call, error/success feedback, redirect
+    │   │   ├── useSignOut.ts         # Sign-out action: auth call + router refresh, pending state
+    │   │   ├── useTheme.ts           # Light/dark theme state: .dark class toggle, localStorage + cross-tab sync
     │   │   ├── useWorkspaceFiles.ts  # Workspace file CRUD against Dexie conversation.files + activeFileId
     │   │   ├── useModelSettings.ts   # Model + thinking level state; per-conversation override + localStorage preference
     │   │   └── use-mobile.ts         # ORPHANED (unused) — 768px media-query hook
@@ -235,7 +239,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 | Chat Prompt Length | `MAX_MESSAGE_CHARS = 2000` | `ChatInput.tsx`, `/api/agent` | `maxLength={2000}` on textarea + HTTP 400 validation |
 | File Character Limit | `MAX_FILE_CHARS = 10000` | `WorkspaceDrawer.tsx`, `useWorkspaceFiles.ts`, `tools.ts` | Truncates/clamps file content on creation & update |
 | Total Workspace Limit | `MAX_WORKSPACE_TOTAL_CHARS = 50000` | `tools.ts`, `prompts.ts` | Clamps total workspace characters in agent tools |
-| Max Conversations | `MAX_CONVERSATIONS_PER_USER = 5` | `Sidebar.tsx` | Disables "New Conversation" button & displays header count |
+| Max Conversations | `MAX_CONVERSATIONS_PER_USER = 5` | `useConversations.ts` | Cap check blocks `handleNewChat`; `Sidebar.tsx` renders the disabled button & header count from props |
 | Max Files per Workspace | `MAX_FILES_PER_WORKSPACE = 3` | `WorkspaceDrawer.tsx`, `useWorkspaceFiles.ts`, `tools.ts` | Disables creation button + throws agent tool error |
 
 ## 6. Routing & Page Architecture (App Router)
@@ -314,14 +318,14 @@ This is the single reconciliation point that turns a streamed assistant message 
 ### 8.1 State layers
 
 - **React Context (server-crossed):** `RateLimitContext` (`src/contexts/RateLimitContext.tsx`) is the single app-wide provider. `RootLayout` (async server component) reads the session headers via `auth.api.getSession` and passes `initialData` to the provider, eliminating a client fetch waterfall. A render-phase `if` block (not an effect) re-hydrates `rateLimitData`/`quotaError` when the signed-in user or SSR payload changes and clears state on sign-out.
-- **IndexedDB as reactive source of truth:** `useLiveQuery` (dexie-react-hooks) drives the conversation list (Sidebar), per-chat messages, and conversation document (files, model, title). UI updates are pushed by Dexie change events.
-- **localStorage preferences:** `selectedModel` and `selectedThinkingLevel` (via `lib/models.ts` helpers). Per-conversation `model`/`thinkingLevel` stored on the conversation record takes priority on load.
-- **Per-chat UI state:** `useWorkspaceFiles` (files, activeFileId, drawer open flag) and `useModelSettings` live inside `useChatSession`; the page shell holds `isSidebarOpen`.
+- **IndexedDB as reactive source of truth:** `useLiveQuery` (dexie-react-hooks) drives the conversation list (via `useConversations`, consumed by the Sidebar), per-chat messages, and conversation document (files, model, title). UI updates are pushed by Dexie change events.
+- **localStorage preferences:** `selectedModel` and `selectedThinkingLevel` (via `lib/models.ts` helpers) and `strata-theme` (via `useTheme`). Per-conversation `model`/`thinkingLevel` stored on the conversation record takes priority on load.
+- **Per-chat UI state:** `useWorkspaceFiles` (files, activeFileId, drawer open flag) and `useModelSettings` live inside `useChatSession`; the page shell holds `isSidebarOpen`, the conversation list, sign-out, and theme state from its feature hooks and threads everything to presentational children.
 - **Refs as the streaming transport bridge:** `modelRef`/`thinkingLevelRef`/`filesRef` are kept in sync via effects so the `DefaultChatTransport` body closure always reads current values without re-creating the transport.
 
 ### 8.2 Forms & validation
 
-- Plain controlled React forms with inline `useState` (no RHF/form lib): `sign-in-form.tsx`, `sign-up-form.tsx` (manual email/password/name validation, min 8-char password), `WorkspaceDrawer` inline create/edit forms.
+- Plain controlled React forms with inline `useState` (no RHF/form lib): `sign-in-form.tsx`, `sign-up-form.tsx` render fields and local UI state while validation, auth calls, and redirects live in the `useSignIn`/`useSignUp` hooks; `WorkspaceDrawer` inline create/edit forms.
 - Server-side: Zod for the `/api/agent` body and every tool input/output schema.
 
 ### 8.3 Error handling & telemetry

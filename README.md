@@ -34,7 +34,7 @@
 - **Word-Paced Smooth Streaming**: Powered by `smoothStream` (15ms pacing) to ensure continuous, natural token flow without jarring chunk bursts.
 - **DOM-Observer Auto-Scroll**: Leverages `use-stick-to-bottom` (`ResizeObserver`/`MutationObserver`) for reliable, non-glitchy chat scrolling that respects manual user scroll interventions.
 - **Polymorphic Tool UI Resolver**: Isolates visual presentation logic in `src/components/chat/tools/resolver.tsx`, allowing instant addition of new tools with custom badges, summaries, and action triggers.
-- **Decoupled Pure Presentation Components**: Refactored UI components (`Sidebar.tsx`, `page.tsx`) to delegate database state, session queries, and routing logic into specialized custom React hooks (`useConversations`, `useLatestConversationRedirect`).
+- **Decoupled Pure Presentation Components**: UI components (`Sidebar.tsx`, `theme-toggle.tsx`, auth forms, `user-button.tsx`) contain zero business logic — pages call specialized custom React hooks (`useConversations`, `useLatestConversationRedirect`, `useSignIn`, `useSignUp`, `useSignOut`, `useTheme`) and pass data + callbacks down as props.
 - **Secure Email/Password Auth & Quota Enforcement**: Better Auth 1.6 on Supabase PostgreSQL with proxy-level session guards, plus database-backed 5-hour/7-day sliding window rate limiting (10 msgs / 5h, 50 msgs / week) with server-side SSR initial hydration, real-time streaming header sync, live countdown reset timers, and inline input alerts.
 
 ---
@@ -105,7 +105,7 @@ Centralized in `src/lib/limits.ts` for client-side UX enforcement, API validatio
 - **Max Prompt Input**: 2,000 characters per message (`maxLength={2000}` on `<textarea>` + API HTTP 400 validation).
 - **Max File Size**: 10,000 characters per workspace document (`WorkspaceDrawer` + tool clamping).
 - **Max Total Workspace Size**: 50,000 characters total across all workspace files.
-- **Max Conversations per User**: 5 active conversations (`Sidebar` button guard and list counter).
+- **Max Conversations per User**: 5 active conversations (cap enforced in the `useConversations` hook; `Sidebar` renders the disabled button and list counter).
 - **Max Files per Workspace**: 3 files per workspace (`WorkspaceDrawer` creation guard and AI tool rejection).
 
 ---
