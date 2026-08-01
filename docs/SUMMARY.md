@@ -224,6 +224,16 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 - Preference storage: `localStorage` keys `selectedModel` / `selectedThinkingLevel`; on conversation load the conversation record's own `model`/`thinkingLevel` wins over stored preferences.
 - The default model falls back to `NEXT_PUBLIC_GEMINI_MODEL`, then `gemini-3.5-flash-lite`.
 
+### 5.5 Application Limits & Guardrails (`lib/limits.ts`)
+
+| Constraint | Limit Constant | Enforced In | Behavior |
+|------------|----------------|-------------|----------|
+| Chat Prompt Length | `MAX_MESSAGE_CHARS = 2000` | `ChatInput.tsx`, `/api/agent` | `maxLength={2000}` on textarea + HTTP 400 validation |
+| File Character Limit | `MAX_FILE_CHARS = 10000` | `WorkspaceDrawer.tsx`, `useWorkspaceFiles.ts`, `tools.ts` | Truncates/clamps file content on creation & update |
+| Total Workspace Limit | `MAX_WORKSPACE_TOTAL_CHARS = 50000` | `tools.ts`, `prompts.ts` | Clamps total workspace characters in agent tools |
+| Max Conversations | `MAX_CONVERSATIONS_PER_USER = 5` | `Sidebar.tsx` | Disables "New Conversation" button & displays header count |
+| Max Files per Workspace | `MAX_FILES_PER_WORKSPACE = 3` | `WorkspaceDrawer.tsx`, `useWorkspaceFiles.ts`, `tools.ts` | Disables creation button + throws agent tool error |
+
 ## 6. Routing & Page Architecture (App Router)
 
 | Path / Route | Route Type | Access Control | Page Purpose | Key Child Components |

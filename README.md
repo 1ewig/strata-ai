@@ -108,9 +108,21 @@ onFinish(message, allMessages)
 
 Strata AI supports dynamic hot-swapping between flagship Gemini models and open-weights models:
 
-- **Gemini Flagship Models**: `gemini-3.6-flash`, `gemini-3.5-flash`, `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3-flash-preview`
+- **Gemini Flagship Models**: `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3-flash-preview`
 - **Gemma Open-Weights Models**: `gemma-4-31b-it`, `gemma-4-26b-a4b-it`
 - **Configurable Thinking Levels**: Fine-tune agent reasoning depth (`minimal`, `low`, `medium`, `high`, model-dependent — Gemma models support none).
+
+---
+
+## 🔒 Free-Tier Guardrails & Limits
+
+Centralized in `src/lib/limits.ts` for client-side UX enforcement, API validation, and tool safety:
+
+- **Max Prompt Input**: 2,000 characters per message (`maxLength={2000}` on `<textarea>` + API HTTP 400 validation).
+- **Max File Size**: 10,000 characters per workspace document (`WorkspaceDrawer` + tool clamping).
+- **Max Total Workspace Size**: 50,000 characters total across all workspace files.
+- **Max Conversations per User**: 5 active conversations (`Sidebar` button guard and list counter).
+- **Max Files per Workspace**: 3 files per workspace (`WorkspaceDrawer` creation guard and AI tool rejection).
 
 ---
 
