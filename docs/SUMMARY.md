@@ -137,7 +137,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │       ├── auth/[...all]/route.ts  # Better Auth Next.js catch-all (GET/POST from toNextJsHandler)
     │   │       └── user/rate-limit/route.ts # GET quota status (auth-verified)
     │   ├── components/
-    │   │   ├── Sidebar.tsx           # Conversation list (live query, updatedAt desc), new/delete chat, theme toggle + user button footer
+    │   │   ├── Sidebar.tsx           # Pure presentational sidebar component (receives conversations, active ID, new/delete/signOut handlers)
     │   │   ├── theme-toggle.tsx      # Dark-mode toggle via useSyncExternalStore + 'strata-theme' localStorage
     │   │   ├── auth/                 # auth-shell (card layout), loading-screen, sign-in-form, sign-up-form, user-button (profile + sign-out)
     │   │   ├── chat/
@@ -157,6 +157,8 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   ├── hooks/
     │   │   ├── useChatSession.ts     # Orchestration core: delegates to transport, error handler, reconciler, and sub-hooks
     │   │   ├── useChatTransport.ts   # Custom DefaultChatTransport creation, rate-limit header parsing & error throwing
+    │   │   ├── useConversations.ts   # Custom hook fetching & filtering user conversations from Dexie IndexedDB (v5)
+    │   │   ├── useLatestConversationRedirect.ts # Custom hook redirecting landing page to latest user conversation
     │   │   ├── useWorkspaceFiles.ts  # Workspace file CRUD against Dexie conversation.files + activeFileId
     │   │   ├── useModelSettings.ts   # Model + thinking level state; per-conversation override + localStorage preference
     │   │   └── use-mobile.ts         # ORPHANED (unused) — 768px media-query hook
@@ -168,7 +170,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── schemas.ts            # Zod: WorkspaceFile, Resume, ToolCall, ChatMessage (legacy)
     │   │   ├── id.ts                 # crypto.randomUUID with fallback
     │   │   ├── edit-engine.ts        # ResumeEditEngine: 3-tier surgical string matching
-    │   │   ├── db/db.ts              # Dexie ChatDatabase (v4), Conversation/DBMessage types, CRUD helpers
+    │   │   ├── db/db.ts              # Dexie ChatDatabase (v5), Conversation/DBMessage types, CRUD helpers
     │   │   └── ai/
     │   │       ├── index.ts          # Re-exports prompts + tools
     │   │       ├── prompts.ts        # buildSystemInstruction(files) — 6-section advanced system prompt

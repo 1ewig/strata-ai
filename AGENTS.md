@@ -40,6 +40,7 @@ Read `docs/SUMMARY.md` (the canonical system-context & architecture guide) befor
 - **File persistence:** tool results returning `{ file }`, `{ files }`, or `{ deleted: true }` are auto-discovered by `lib/ai/message-extractor.ts` — no changes needed for new tools.
 - **Chat architecture hooks:** `useChatSession.ts` is a modular orchestrator delegating to `useChatTransport.ts`, `chat-error-handler.ts` (friendly error message mapping), `chat-reconciler.ts` (message & file delta persistence), `useModelSettings.ts`, and `useWorkspaceFiles.ts`.
 - **Dexie Database:** IndexedDB v5 schema (`db.ts`) with indexed `userId` fields on `conversations` and `messages` for per-user session isolation.
+- **Component & Hook Separation:** Keep UI components pure/presentational where possible (e.g., `Sidebar.tsx`). Delegate database queries, session fetching, and navigation logic into custom hooks (`useConversations.ts`, `useLatestConversationRedirect.ts`).
 - **Auto-scroll:** handled by `<StickToBottom>` in `app/chat-id/[id]/page.tsx`. Do not write manual `useEffect` + `scrollIntoView` loops.
 - **Auth:** Better Auth 1.6 on Supabase Postgres pooler; session via `auth.api.getSession({ headers })`; pre-render guards in `proxy.ts`.
 
