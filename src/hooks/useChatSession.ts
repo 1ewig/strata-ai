@@ -14,8 +14,12 @@ import { useChatTransport } from './useChatTransport';
 import { handleChatError } from '@/lib/ai/chat-error-handler';
 import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
 import { useRateLimit } from '@/contexts/RateLimitContext';
+import { useSession } from '@/lib/auth-client';
 
 export function useChatSession(chatId: string) {
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
+
   const {
     rateLimitData,
     quotaError,
@@ -60,10 +64,10 @@ export function useChatSession(chatId: string) {
     if (!chatId) return;
     db.conversations.get(chatId).then((existing) => {
       if (!existing) {
-        createConversation(chatId, 'New Chat', modelSettings.model, modelSettings.thinkingLevel);
+        createConversation(chatId, 'New Chat', modelSettings.model, modelSettings.thinkingLevel, userId);
       }
     });
-  }, [chatId, modelSettings.model, modelSettings.thinkingLevel]);
+  }, [chatId, modelSettings.model, modelSettings.thinkingLevel, userId]);
 
   const continuationCountRef = useRef<number>(0);
   const sendMessageRef = useRef<((msg: { text: string }) => void) | null>(null);
@@ -87,11 +91,12 @@ export function useChatSession(chatId: string) {
         handleChatError({
           err,
           chatId,
+          userId,
           chatRef,
           setQuotaError,
         });
       },
-      [chatId, setQuotaError],
+      [chatId, userId, setQuotaError],
     ),
     onFinish: useCallback(
       ({
@@ -105,6 +110,7 @@ export function useChatSession(chatId: string) {
       }) => {
         return reconcileFinishedStep({
           chatId,
+          userId,
           message,
           allMessages,
           finishReason,
@@ -112,7 +118,7 @@ export function useChatSession(chatId: string) {
           sendMessageRef,
         });
       },
-      [chatId],
+      [chatId, userId],
     ),
   });
 

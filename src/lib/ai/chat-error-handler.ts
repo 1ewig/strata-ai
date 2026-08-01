@@ -21,11 +21,13 @@ export function getFriendlyErrorMessage(err: Error): string {
 export async function handleChatError({
   err,
   chatId,
+  userId,
   chatRef,
   setQuotaError,
 }: {
   err: Error;
   chatId: string;
+  userId?: string;
   chatRef: React.RefObject<any>;
   setQuotaError: (val: any) => void;
 }) {
@@ -75,6 +77,7 @@ export async function handleChatError({
       await db.messages.put({
         ...msg,
         chatId,
+        ...(userId ? { userId } : {}),
         timestamp: new Date().toISOString(),
       });
     }

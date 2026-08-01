@@ -35,7 +35,7 @@
 | AI SDK | `ai@^7.0.0` | Unified LLM streaming, tool calling, message streams | `streamText`, `tool()`, `smoothStream`, `isStepCount`, `toUIMessageStream`, `createUIMessageStreamResponse`, `convertToModelMessages` |
 | Google Provider | `@ai-sdk/google@^4.0.0` | Gemini model access | `google(modelId)`; `thinkingConfig.includeThoughts` reasoning; key `GOOGLE_GENERATIVE_AI_API_KEY` |
 | React AI Hooks | `@ai-sdk/react@^2.0.0` | `useChat` + `DefaultChatTransport` on the client | Custom transport wraps `fetch` to capture rate-limit headers |
-| Client Database | Dexie 4 + `dexie-react-hooks` | Local-first IndexedDB persistence: conversations, messages, files | Schema v4; `useLiveQuery` for reactive lists |
+| Client Database | Dexie 4 + `dexie-react-hooks` | Local-first IndexedDB persistence: conversations, messages, files | Schema v5 (`userId` indexing for per-user session isolation); `useLiveQuery` for reactive lists |
 | Server Database | Supabase PostgreSQL via `pg` Pool | Better Auth identity + rate-limit log | Connection string `DATABASE_URL` (pooler :6543); `search_path=better_auth,public` |
 | Auth | Better Auth 1.6.25 + `nextCookies()` plugin | Email/password sessions, cookies, session cache | Server instance `lib/auth.ts`; client instance `lib/auth-client.ts`; `BETTER_AUTH_SECRET`; no email verification |
 | Styling | Tailwind CSS 4.1 (`@tailwindcss/postcss` + autoprefixer) | Utility-first UI on "Milo" design tokens | `@theme` block in `globals.css`; light + dark token sets |
@@ -191,12 +191,12 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 
 ### 5.1 Client-side (Dexie IndexedDB — the product database)
 
-- **`conversations`** table (keyPath `id`; indexes `id, updatedAt, createdAt`):
-  - `id` (UUID, matches the `/chat-id/:id` URL), `title` (auto-title from first message or "New Chat"), `model` (Gemini model id), `thinkingLevel?` ("minimal"|"low"|"medium"|"high"), `files?` (embedded array of WorkspaceFile — the active workspace snapshot), `activeFileId?`, `resume?` (legacy single-resume object, migration fallback), `createdAt`/`updatedAt` (ISO strings).
-- **`messages`** table (keyPath `id`; indexes `id, chatId, timestamp`):
-  - `DBMessage` extends AI SDK `UIMessage` (native parts array) with `chatId` (indexed FK to conversations) + `timestamp`. Stored as native UI messages — no shape conversion.
+- **`conversations`** table (keyPath `id`; indexes `id, userId, updatedAt, createdAt`):
+  - `id` (UUID, matches the `/chat-id/:id` URL), `userId?` (Better Auth user ID), `title` (auto-title from first message or "New Chat"), `model` (Gemini model id), `thinkingLevel?` ("minimal"|"low"|"medium"|"high"), `files?` (embedded array of WorkspaceFile — the active workspace snapshot), `activeFileId?`, `resume?` (legacy single-resume object, migration fallback), `createdAt`/`updatedAt` (ISO strings).
+- **`messages`** table (keyPath `id`; indexes `id, chatId, userId, timestamp`):
+  - `DBMessage` extends AI SDK `UIMessage` (native parts array) with `chatId` (indexed FK to conversations), `userId?` (Better Auth user ID) + `timestamp`. Stored as native UI messages — no shape conversion.
 - **`WorkspaceFile`** entity (embedded in conversations.files): `id`, `name`, `content`, `language` (default "markdown"), `createdAt`, `updatedAt`. Note: no per-file indexes; the whole array is read/written as one column.
-- **Schema version history:** v1 (custom ChatMessage) → v2 (+thinkingLevel) → v3 (type updates) → v4 (native UIMessage; +files/activeFileId on conversations). To bump: increment version in `db.ts` constructor and add a `stores()` definition.
+- **Schema version history:** v1 (custom ChatMessage) → v2 (+thinkingLevel) → v3 (type updates) → v4 (native UIMessage; +files/activeFileId on conversations) → v5 (+userId indexing on conversations and messages for per-user session isolation). To bump: increment version in `db.ts` constructor and add a `stores()` definition.
 
 ### 5.2 Server-side (Supabase PostgreSQL, `better_auth` schema — auth + abuse control only)
 

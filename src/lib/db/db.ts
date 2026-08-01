@@ -4,6 +4,7 @@ import { Resume, WorkspaceFile } from '@/lib/schemas';
 
 export interface Conversation {
   id: string;
+  userId?: string;
   title: string;
   model: string;
   thinkingLevel?: string;
@@ -16,6 +17,7 @@ export interface Conversation {
 
 export interface DBMessage extends UIMessage {
   chatId: string;
+  userId?: string;
   timestamp: string;
 }
 
@@ -28,6 +30,10 @@ export class ChatDatabase extends Dexie {
     this.version(4).stores({
       conversations: 'id, updatedAt, createdAt',
       messages: 'id, chatId, timestamp',
+    });
+    this.version(5).stores({
+      conversations: 'id, userId, updatedAt, createdAt',
+      messages: 'id, chatId, userId, timestamp',
     });
   }
 }
@@ -59,12 +65,14 @@ export async function createConversation(
   id: string,
   initialTitle = 'New Chat',
   model = 'gemini-3.5-flash-lite',
-  thinkingLevel?: string
+  thinkingLevel?: string,
+  userId?: string
 ): Promise<Conversation> {
   const now = new Date().toISOString();
 
   const conv: Conversation = {
     id,
+    ...(userId ? { userId } : {}),
     title: initialTitle,
     model,
     thinkingLevel,
@@ -143,10 +151,11 @@ export async function deleteConversation(id: string): Promise<void> {
   });
 }
 
-export async function saveMessage(chatId: string, message: UIMessage): Promise<void> {
+export async function saveMessage(chatId: string, message: UIMessage, userId?: string): Promise<void> {
   const dbMsg: DBMessage = {
     ...message,
     chatId,
+    ...(userId ? { userId } : {}),
     timestamp: new Date().toISOString(),
   };
   await db.messages.put(dbMsg);

@@ -19,9 +19,14 @@ export default function Home() {
     }
 
     async function initOrRedirect() {
-      const latest = await db.conversations.orderBy('updatedAt').reverse().first();
-      if (latest) {
-        router.replace(`/chat-id/${latest.id}`);
+      const userId = session?.user?.id;
+      const all = await db.conversations.toArray();
+      const userConvs = all
+        .filter((c) => !c.userId || c.userId === userId)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+      if (userConvs.length > 0) {
+        router.replace(`/chat-id/${userConvs[0].id}`);
       } else {
         const newId = generateId();
         router.replace(`/chat-id/${newId}`);

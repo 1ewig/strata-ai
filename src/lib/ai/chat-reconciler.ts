@@ -11,6 +11,7 @@ import {
 
 export interface ReconcileStepParams {
   chatId: string;
+  userId?: string;
   message: unknown;
   allMessages: unknown[];
   finishReason?: string;
@@ -20,6 +21,7 @@ export interface ReconcileStepParams {
 
 export async function reconcileFinishedStep({
   chatId,
+  userId,
   message,
   allMessages,
   finishReason,
@@ -31,6 +33,7 @@ export async function reconcileFinishedStep({
     await db.messages.put({
       ...msg,
       chatId,
+      ...(userId ? { userId } : {}),
       timestamp: new Date().toISOString(),
     });
   }

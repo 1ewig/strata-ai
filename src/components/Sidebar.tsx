@@ -12,6 +12,8 @@ import ThemeToggle from '@/components/theme-toggle';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 
+import { useSession } from '@/lib/auth-client';
+
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
@@ -20,10 +22,18 @@ interface SidebarProps {
 export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: session } = useSession();
+  const userId = session?.user?.id;
 
   const conversations = useLiveQuery(
-    () => db.conversations.orderBy('updatedAt').reverse().toArray(),
-    []
+    async () => {
+      if (!userId) return [];
+      const list = await db.conversations.toArray();
+      return list
+        .filter((c) => !c.userId || c.userId === userId)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    },
+    [userId]
   );
 
   const conversationCount = conversations?.length || 0;
@@ -41,7 +51,11 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
     e.stopPropagation();
     await deleteConversation(id);
     if (pathname === `/chat-id/${id}`) {
-      const remaining = await db.conversations.orderBy('updatedAt').reverse().toArray();
+      const all = await db.conversations.toArray();
+      const remaining = all
+        .filter((c) => !c.userId || c.userId === userId)
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
       if (remaining.length > 0) {
         router.push(`/chat-id/${remaining[0].id}`);
       } else {

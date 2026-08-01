@@ -28,7 +28,7 @@
 - **Autonomous Agentic Workspace Tools**: 8 schema-validated tools enabling the AI to inspect, read, create, surgically edit, rename, and delete workspace documents, plus perform real-time Tavily web searches (`webSearch`, advanced depth) and deep Markdown page extraction (`extractUrl`).
 - **Significantly Reduced Context Footprint**: System prompts inject lightweight file metadata (`name`, `language`, `charCount`, `id`) rather than raw content. The agent calls `readFile` only when precise code context is required.
 - **3-Tier Surgical Edit Engine (`ResumeEditEngine`)**: Performs precise string manipulation through exact matching, whitespace normalization, and 2-point anchor bounded matching without breaking document structure.
-- **Local-First Client Persistence**: Complete conversation histories, dynamic file states, and user preferences persist client-side via **Dexie.js (IndexedDB v4)**—no server round-trips for workspace state.
+- **Local-First Client Persistence**: Complete conversation histories, dynamic file states, and user preferences persist client-side via **Dexie.js (IndexedDB v5)** with per-user session isolation—no server round-trips for workspace state.
 - **Enhanced Friendly Error Handling**: Technical API errors, session expirations, network drops, and character limits are captured and transformed into clean, polite assistant message bubbles that cleanly replace loading states.
 - **Auto-Continuation Execution Loop**: Automatically detects step-limit finish reasons (`finishReason === 'step-limit'`) and dispatches multi-pass continuation requests for complex agent tasks up to 75 steps.
 - **Word-Paced Smooth Streaming**: Powered by `smoothStream` (15ms pacing) to ensure continuous, natural token flow without jarring chunk bursts.
