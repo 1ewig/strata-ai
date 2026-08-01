@@ -1,74 +1,36 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signUp } from "@/lib/auth-client";
 import { Mail, Lock, User, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
-/**
- * Props for the sign-up form.
- */
+/** Props for the sign-up form. */
 interface SignUpFormProps {
-  /** Destination to navigate to after a successful sign-up. */
-  callbackUrl: string;
+  /** Submits the registration fields; the parent owns validation, auth, and navigation. */
+  onSubmit: (name: string, email: string, password: string) => Promise<void>;
+  /** Error message to display, if any. */
+  error: string | null;
+  /** Success message to display, if any. */
+  successMsg: string | null;
+  /** Whether the auth request is in flight. */
+  isPending: boolean;
 }
 
 /**
- * Email/password sign-up form backed by the Better Auth client.
- * Validates input locally, surfaces provider errors, and redirects on success.
+ * Email/password sign-up form. Rendering and local field state only — the
+ * submission flow (validation, auth call, redirect) lives in the parent.
+ *
+ * @param props - Component props.
  */
-export function SignUpForm({ callbackUrl }: SignUpFormProps) {
-  const router = useRouter();
+export function SignUpForm({ onSubmit, error, successMsg, isPending }: SignUpFormProps) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Clear any feedback from a previous attempt.
-    setError(null);
-    setSuccessMsg(null);
-
-    // Reject empty submissions before hitting the auth API.
-    if (!email || !password || !name.trim()) {
-      setError("Please fill in all required fields.");
-      return;
-    }
-
-    // Enforce the minimum password length client-side.
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const { error: signUpError } = await signUp.email({ email, password, name });
-
-      if (signUpError) {
-        // Surface the provider's message so the user knows why sign-up failed.
-        setError(signUpError.message || "Failed to create account. Please try again.");
-        setLoading(false);
-        return;
-      }
-
-      // Pause briefly so the success message is visible before navigating.
-      setSuccessMsg("Account created successfully! Redirecting...");
-      setTimeout(() => {
-        router.push(callbackUrl);
-        router.refresh();
-      }, 1000);
-    } catch (err: any) {
-      // Network or unexpected failures fall back to a generic message.
-      setError(err?.message || "An unexpected error occurred. Please try again.");
-      setLoading(false);
-    }
+    onSubmit(name, email, password);
   };
 
   return (
@@ -150,10 +112,10 @@ export function SignUpForm({ callbackUrl }: SignUpFormProps) {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={isPending}
           className="w-full mt-2 py-3 px-4 bg-primary hover:bg-primary-hover disabled:opacity-50 text-surface font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-button"
         >
-          {loading ? (
+          {isPending ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Creating account...</span>

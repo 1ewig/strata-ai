@@ -2,30 +2,31 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useSession, signOut } from "@/lib/auth-client";
+import type { authClient } from "@/lib/auth-client";
 import { User, LogOut, LogIn, Loader2, ChevronUp } from "lucide-react";
 
-/**
- * Session-aware user menu: shows a loading state while the session resolves,
- * a sign-in link for guests, and a profile bar with a sign-out dropdown for
- * authenticated users.
- */
-export default function UserButton() {
-  const { data: session, isPending } = useSession();
-  const router = useRouter();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [signingOut, setSigningOut] = useState(false);
+/** The resolved session shape produced by the auth client. */
+type Session = typeof authClient.$Infer.Session;
 
-  // Session request still in flight; show a lightweight pending state.
-  if (isPending) {
-    return (
-      <div className="flex items-center gap-2 px-3 py-2 text-xs text-text-muted">
-        <Loader2 className="w-3.5 h-3.5 animate-spin text-primary" />
-        <span>Loading...</span>
-      </div>
-    );
-  }
+/** Props for the user button. */
+interface UserButtonProps {
+  /** The signed-in user's session (null for guests). */
+  session: Session;
+  /** Whether a sign-out request is in flight. */
+  isSigningOut: boolean;
+  /** Clears the session and refreshes the UI. */
+  onSignOut: () => Promise<void>;
+}
+
+/**
+ * Session-aware user menu: shows a sign-in link for guests and a profile bar
+ * with a sign-out dropdown for authenticated users. Rendering only — session
+ * and sign-out are provided by the parent.
+ *
+ * @param props - Component props.
+ */
+export default function UserButton({ session, isSigningOut, onSignOut }: UserButtonProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Guests get a sign-in link instead of the profile menu.
   if (!session?.user) {
@@ -55,16 +56,11 @@ export default function UserButton() {
           </div>
 
           <button
-            onClick={async () => {
-              // Clear the session, then refresh so the UI reflects the signed-out state.
-              setSigningOut(true);
-              await signOut();
-              router.refresh();
-            }}
-            disabled={signingOut}
+            onClick={() => onSignOut()}
+            disabled={isSigningOut}
             className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-danger hover:bg-danger-soft disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
-            {signingOut ? (
+            {isSigningOut ? (
               <>
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 <span>Signing out...</span>

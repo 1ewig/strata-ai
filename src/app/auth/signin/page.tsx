@@ -3,6 +3,7 @@
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
+import { useSignIn } from "@/hooks/useSignIn";
 import { LoadingScreen } from "@/components/auth/loading-screen";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { SignInForm } from "@/components/auth/sign-in-form";
@@ -16,6 +17,7 @@ function SignInPage() {
   const callbackUrl = searchParams.get("callbackUrl") || "/";
   const { data: session, isPending } = useSession();
   const router = useRouter();
+  const { error, successMsg, isPending: isAuthPending, handleSubmit } = useSignIn(callbackUrl);
 
   // Already signed in - forward to the callback URL immediately.
   useEffect(() => {
@@ -27,7 +29,12 @@ function SignInPage() {
 
   return (
     <AuthShell mode="signin">
-      <SignInForm callbackUrl={callbackUrl} />
+      <SignInForm
+        onSubmit={handleSubmit}
+        error={error}
+        successMsg={successMsg}
+        isPending={isAuthPending}
+      />
     </AuthShell>
   );
 }

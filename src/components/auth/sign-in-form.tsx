@@ -1,73 +1,35 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "@/lib/auth-client";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2, AlertCircle, CheckCircle2 } from "lucide-react";
 
-/**
- * Props for the sign-in form.
- */
+/** Props for the sign-in form. */
 interface SignInFormProps {
-  /** Destination to navigate to after a successful sign-in. */
-  callbackUrl: string;
+  /** Submits credentials; the parent owns validation, auth, and navigation. */
+  onSubmit: (email: string, password: string) => Promise<void>;
+  /** Error message to display, if any. */
+  error: string | null;
+  /** Success message to display, if any. */
+  successMsg: string | null;
+  /** Whether the auth request is in flight. */
+  isPending: boolean;
 }
 
 /**
- * Email/password sign-in form backed by the Better Auth client.
- * Validates input locally, surfaces provider errors, and redirects on success.
+ * Email/password sign-in form. Rendering and local field state only — the
+ * submission flow (validation, auth call, redirect) lives in the parent.
+ *
+ * @param props - Component props.
  */
-export function SignInForm({ callbackUrl }: SignInFormProps) {
-  const router = useRouter();
+export function SignInForm({ onSubmit, error, successMsg, isPending }: SignInFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Clear any feedback from a previous attempt.
-    setError(null);
-    setSuccessMsg(null);
-
-    // Reject empty submissions before hitting the auth API.
-    if (!email || !password) {
-      setError("Please fill in all required fields.");
-      return;
-    }
-
-    // Enforce the minimum password length client-side.
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long.");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const { error: signInError } = await signIn.email({ email, password });
-
-      if (signInError) {
-        // Surface the provider's message so the user knows why sign-in failed.
-        setError(signInError.message || "Invalid email or password.");
-        setLoading(false);
-        return;
-      }
-
-      // Pause briefly so the success message is visible before navigating.
-      setSuccessMsg("Signed in successfully! Redirecting...");
-      setTimeout(() => {
-        router.push(callbackUrl);
-        router.refresh();
-      }, 1000);
-    } catch (err: any) {
-      // Network or unexpected failures fall back to a generic message.
-      setError(err?.message || "An unexpected error occurred. Please try again.");
-      setLoading(false);
-    }
+    onSubmit(email, password);
   };
 
   return (
@@ -132,10 +94,10 @@ export function SignInForm({ callbackUrl }: SignInFormProps) {
 
         <button
           type="submit"
-          disabled={loading}
+          disabled={isPending}
           className="w-full mt-2 py-3 px-4 bg-primary hover:bg-primary-hover disabled:opacity-50 text-surface font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-button"
         >
-          {loading ? (
+          {isPending ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
               <span>Signing in...</span>

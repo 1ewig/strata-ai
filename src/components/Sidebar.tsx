@@ -2,22 +2,45 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useLiveQuery } from 'dexie-react-hooks';
 import { MessageSquare, Plus, Trash2, X } from 'lucide-react';
-import { db, deleteConversation } from '@/lib/db/db';
-import { generateId } from '@/lib/id';
+import type { Conversation } from '@/lib/db/db';
+import type { authClient } from '@/lib/auth-client';
 import UserButton from '@/components/auth/user-button';
 import ThemeToggle from '@/components/theme-toggle';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 
-import { useSession } from '@/lib/auth-client';
+/** The resolved session shape produced by the auth client. */
+type Session = typeof authClient.$Infer.Session;
 
 /** Props for the Sidebar component. */
 interface SidebarProps {
+  /** The user's conversations, most recently updated first. */
+  conversations: Conversation[] | undefined;
+  /** Number of conversations the user has. */
+  conversationCount: number;
+  /** Whether the per-user conversation cap has been reached. */
+  isMaxConversationsReached: boolean;
+  /** The id of the conversation currently open, used to highlight it. */
+  activeConversationId: string;
+  /** Whether the mobile drawer is expanded. */
   isOpen?: boolean;
+  /** Callback invoked when the drawer should close. */
   onClose?: () => void;
+  /** Creates a new conversation and navigates to it. */
+  onNewChat: () => void;
+  /** Deletes a conversation, navigating away if it was the open one. */
+  onDelete: (id: string) => Promise<void>;
+  /** The signed-in user's session, forwarded to the user button. */
+  session: Session;
+  /** Whether a sign-out request is in flight, forwarded to the user button. */
+  isSigningOut: boolean;
+  /** Clears the session, forwarded to the user button. */
+  onSignOut: () => Promise<void>;
+  /** Whether dark mode is active, forwarded to the theme toggle. */
+  isDark: boolean;
+  /** Toggles the theme, forwarded to the theme toggle. */
+  onToggleTheme: () => void;
 }
 
 /**
@@ -26,58 +49,32 @@ interface SidebarProps {
  * an off-canvas drawer with a scrim backdrop on mobile.
  *
  * @param props - Component props.
- * @param isOpen - Whether the mobile drawer is expanded.
- * @param onClose - Callback invoked when the drawer should close.
  */
-export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
-  const pathname = usePathname();
-  const router = useRouter();
-  const { data: session } = useSession();
-  const userId = session?.user?.id;
-
-  // Load the user's conversations (legacy chats without a userId included),
-  // most recently updated first. Reacts live to IndexedDB changes.
-  const conversations = useLiveQuery(
-    async () => {
-      if (!userId) return [];
-      const list = await db.conversations.toArray();
-      return list
-        .filter((c) => !c.userId || c.userId === userId)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-    },
-    [userId]
-  );
-
-  const conversationCount = conversations?.length || 0;
-  // Enforce the per-user conversation cap on the new chat action.
-  const isMaxConversationsReached = conversationCount >= MAX_CONVERSATIONS_PER_USER;
-
-  const handleNewChat = () => {
-    if (isMaxConversationsReached) return;
-    const newId = generateId();
-    router.push(`/chat-id/${newId}`);
-    onClose?.();
-  };
-
+export default function Sidebar({
+  conversations,
+  conversationCount,
+  isMaxConversationsReached,
+  activeConversationId,
+  isOpen = false,
+  onClose,
+  onNewChat,
+  onDelete,
+  session,
+  isSigningOut,
+  onSignOut,
+  isDark,
+  onToggleTheme,
+}: SidebarProps) {
+  // Stop the event from bubbling (e.g. into a Link) before delegating.
   const handleDelete = async (e: React.MouseEvent, id: string) => {
     e.preventDefault();
     e.stopPropagation();
-    await deleteConversation(id);
-    // If the deleted chat is the one being viewed, navigate to the most
-    // recently updated remaining chat, or open a fresh chat if none remain.
-    if (pathname === `/chat-id/${id}`) {
-      const all = await db.conversations.toArray();
-      const remaining = all
-        .filter((c) => !c.userId || c.userId === userId)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    await onDelete(id);
+    onClose?.();
+  };
 
-      if (remaining.length > 0) {
-        router.push(`/chat-id/${remaining[0].id}`);
-      } else {
-        const newId = generateId();
-        router.push(`/chat-id/${newId}`);
-      }
-    }
+  const handleNewChat = () => {
+    onNewChat();
     onClose?.();
   };
 
@@ -148,7 +145,7 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
           </div>
         ) : (
           conversations.map((conv) => {
-            const isActive = pathname === `/chat-id/${conv.id}`;
+            const isActive = activeConversationId === conv.id;
             return (
               <div
                 key={conv.id}
@@ -181,8 +178,8 @@ export default function Sidebar({ isOpen = false, onClose }: SidebarProps) {
 
       {/* User Auth Footer */}
       <div className="p-3 border-t border-edge-hover/50 space-y-2">
-        <ThemeToggle />
-        <UserButton />
+        <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
+        <UserButton session={session} isSigningOut={isSigningOut} onSignOut={onSignOut} />
       </div>
       </aside>
     </>

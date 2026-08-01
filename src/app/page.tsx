@@ -3,8 +3,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
-import { db } from '@/lib/db/db';
-import { generateId } from '@/lib/id';
+import { useLatestConversationRedirect } from '@/hooks/useLatestConversationRedirect';
 
 /**
  * Landing page that routes users based on their session. Unauthenticated
@@ -14,34 +13,15 @@ import { generateId } from '@/lib/id';
 export default function Home() {
   const router = useRouter();
   const { data: session, isPending } = useSession();
+  const userId = session?.user?.id;
 
+  // Redirect signed-in users to their latest (or a fresh) conversation.
+  useLatestConversationRedirect(userId);
+
+  // Redirect unauthenticated visitors to the auth page once the session resolves.
   useEffect(() => {
-    if (isPending) return;
-
-    // Redirect unauthenticated visitors to the auth page.
-    if (!session?.user) {
-      router.replace('/auth');
-      return;
-    }
-
-    async function initOrRedirect() {
-      const userId = session?.user?.id;
-      const all = await db.conversations.toArray();
-      // Pick the most recently updated conversation belonging to this user.
-      const userConvs = all
-        .filter((c) => !c.userId || c.userId === userId)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-
-      // Resume the latest conversation, otherwise start a fresh chat with a new id.
-      if (userConvs.length > 0) {
-        router.replace(`/chat-id/${userConvs[0].id}`);
-      } else {
-        const newId = generateId();
-        router.replace(`/chat-id/${newId}`);
-      }
-    }
-    initOrRedirect();
-  }, [session, isPending, router]);
+    if (!isPending && !session?.user) router.replace('/auth');
+  }, [isPending, session, router]);
 
   return (
     <main className="min-h-dvh bg-surface-base flex items-center justify-center text-text-muted text-sm">

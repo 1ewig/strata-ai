@@ -10,6 +10,9 @@ import ChatHeader from '@/components/chat/ChatHeader';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
 import { useChatSession } from '@/hooks/useChatSession';
+import { useConversations } from '@/hooks/useConversations';
+import { useSignOut } from '@/hooks/useSignOut';
+import { useTheme } from '@/hooks/useTheme';
 
 /**
  * Main chat workspace for a conversation: chat panel, input, header, sidebar,
@@ -23,6 +26,12 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const { id: chatId } = use(params);
   const router = useRouter();
   const { data: session, isPending: isSessionPending } = useSession();
+  // Conversations for the signed-in user; guards are below so the sidebar
+  // only renders after the session has resolved.
+  const { conversations, conversationCount, isMaxConversationsReached, handleNewChat, handleDeleteConversation } =
+    useConversations(session?.user?.id, chatId);
+  const { isPending: isSigningOut, handleSignOut } = useSignOut();
+  const { isDark, toggle: toggleTheme } = useTheme();
   // Anchor div passed to ChatPanel for the message list scroll position.
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -97,7 +106,21 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
   return (
     <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
-      <Sidebar isOpen={isSidebarOpen} onClose={handleCloseSidebar} />
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={handleCloseSidebar}
+        conversations={conversations}
+        conversationCount={conversationCount}
+        isMaxConversationsReached={isMaxConversationsReached}
+        activeConversationId={chatId}
+        onNewChat={handleNewChat}
+        onDelete={handleDeleteConversation}
+        session={session}
+        isSigningOut={isSigningOut}
+        onSignOut={handleSignOut}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+      />
 
       <div className="flex-1 flex flex-col h-dvh overflow-hidden min-w-0 relative">
         <ChatHeader
