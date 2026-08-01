@@ -143,12 +143,13 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── chat/
     │   │   │   ├── ChatPanel.tsx     # Message list, empty state, typing dots, QuotaErrorCard slot
     │   │   │   ├── ChatBubble.tsx    # Per-message renderer: user bubble / markdown + ThoughtAccordion + ToolCallCard segments
-    │   │   │   ├── ChatInput.tsx     # Auto-resizing textarea, model/effort popover menus, quota ring + tooltip, send button
+    │   │   │   ├── ChatInput.tsx     # Shell for textarea input, auto-resizing, submit handling & composition
+    │   │   │   ├── ModelSelectorMenu.tsx # Model dropdown trigger, featured models, effort flyout & overflow submenus
+    │   │   │   ├── RateLimitRing.tsx # Quota progress SVG ring & hover popover tooltip
     │   │   │   ├── ChatHeader.tsx    # Mobile hamburger, title, workspace Files dropdown
     │   │   │   ├── QuotaErrorCard.tsx# Alert with live countdown when quota exhausted
     │   │   │   ├── ThoughtAccordion.tsx  # Collapsible reasoning/thought display
     │   │   │   ├── ToolCallCard.tsx  # Generic accordion tool-card chrome — NEVER needs edits when tools change
-    │   │   │   ├── SuggestionChips.tsx   # ORPHANED (unused) — suggested prompt chips
     │   │   │   └── tools/resolver.tsx    # extractToolInfo + resolveToolDisplay → ToolCardProps (per-tool UI config + summaries)
     │   │   ├── workspace/WorkspaceDrawer.tsx # Slide-over: file switcher, create/edit/delete, markdown preview vs raw editor, footer actions
     │   │   └── ui/strata-icon.tsx    # Brand SVG logo (currentColor or gradient)
