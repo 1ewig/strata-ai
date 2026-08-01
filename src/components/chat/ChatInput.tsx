@@ -8,6 +8,7 @@ import {
   MODEL_THINKING_LEVELS,
   THINKING_LEVEL_LABELS,
 } from '@/lib/models';
+import { MAX_MESSAGE_CHARS, formatCharCount } from '@/lib/limits';
 
 interface ChatInputProps {
   onSendMessage: (text: string) => void;
@@ -79,9 +80,12 @@ export default function ChatInput({
     }
   }, [inputValue]);
 
+  const isCharOverLimit = inputValue.length > MAX_MESSAGE_CHARS;
+  const isCharWarning = inputValue.length > MAX_MESSAGE_CHARS * 0.9 && !isCharOverLimit;
+
   const handleSend = () => {
     const text = inputValue.trim();
-    if (text && !isLoading && !isQuotaExhausted) {
+    if (text && !isLoading && !isQuotaExhausted && !isCharOverLimit) {
       onSendMessage(text);
       setInputValue('');
     }
@@ -129,6 +133,7 @@ export default function ChatInput({
             id="chat-input-field"
             rows={2}
             disabled={isLoading}
+            maxLength={MAX_MESSAGE_CHARS}
             placeholder="Message Strata AI..."
             value={inputValue}
             onChange={handleInput}
@@ -400,26 +405,50 @@ export default function ChatInput({
 
           </div>
 
-          {/* Send Button */}
-          <button
-            id="chat-submit-btn"
-            type="submit"
-            disabled={isLoading || !inputValue.trim() || isQuotaExhausted}
-            className={`p-2 rounded-xl shrink-0 transition-all focus:outline-none ${
-              isLoading || !inputValue.trim() || isQuotaExhausted
-                ? 'bg-surface-elevated opacity-40 cursor-not-allowed'
-                : 'bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
-            }`}
-            title={
-              isQuotaExhausted
-                ? 'Quota limit reached'
-                : !inputValue.trim()
-                ? 'Type a message to send'
-                : 'Send message'
-            }
-          >
-            <ArrowUp className="w-4 h-4 text-surface" />
-          </button>
+          {/* Right Side Controls: Character Badge & Send Button */}
+          <div className="flex items-center gap-2 shrink-0">
+            {inputValue.length > 0 && (
+              <span
+                className={`text-[11px] font-mono px-2 py-1 rounded-lg border transition-colors ${
+                  isCharOverLimit
+                    ? 'text-danger bg-danger-soft/30 border-danger/40 font-semibold'
+                    : isCharWarning
+                    ? 'text-warning bg-warning-soft/20 border-warning/30'
+                    : 'text-text-muted bg-surface-base border-edge-raised'
+                }`}
+                title={
+                  isCharOverLimit
+                    ? `Message exceeds maximum allowed limit of ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
+                    : `${inputValue.length.toLocaleString()} characters typed`
+                }
+              >
+                {formatCharCount(inputValue.length, MAX_MESSAGE_CHARS)}
+              </span>
+            )}
+
+            {/* Send Button */}
+            <button
+              id="chat-submit-btn"
+              type="submit"
+              disabled={isLoading || !inputValue.trim() || isQuotaExhausted || isCharOverLimit}
+              className={`p-2 rounded-xl shrink-0 transition-all focus:outline-none ${
+                isLoading || !inputValue.trim() || isQuotaExhausted || isCharOverLimit
+                  ? 'bg-surface-elevated opacity-40 cursor-not-allowed'
+                  : 'bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
+              }`}
+              title={
+                isQuotaExhausted
+                  ? 'Quota limit reached'
+                  : isCharOverLimit
+                  ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
+                  : !inputValue.trim()
+                  ? 'Type a message to send'
+                  : 'Send message'
+              }
+            >
+              <ArrowUp className="w-4 h-4 text-surface" />
+            </button>
+          </div>
         </div>
 
       </div>

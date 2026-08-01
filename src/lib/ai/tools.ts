@@ -2,6 +2,7 @@ import { tool } from "ai";
 import { z } from "zod";
 import { WorkspaceFile } from "@/lib/schemas";
 import { ResumeEditEngine } from "@/lib/edit-engine";
+import { MAX_FILE_CHARS, MAX_WORKSPACE_TOTAL_CHARS } from "@/lib/limits";
 
 export interface WorkspaceToolsContext {
   getCurrentFiles: () => WorkspaceFile[];
@@ -129,11 +130,13 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: Workspace
         (f) => f.name.toLowerCase() === name.toLowerCase(),
       );
 
+      const safeContent = content.length > MAX_FILE_CHARS ? content.slice(0, MAX_FILE_CHARS) : content;
+
       const now = new Date().toISOString();
       const updatedFile: WorkspaceFile = {
         id: existing?.id || crypto.randomUUID(),
         name,
-        content,
+        content: safeContent,
         language: language || (name.endsWith(".txt") ? "text" : "markdown"),
         createdAt: existing?.createdAt || now,
         updatedAt: now,
@@ -194,6 +197,21 @@ export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceT
 
       if (!result.success || !result.newContent) {
         return { success: false, error: result.error };
+      }
+
+      if (result.newContent.length > MAX_FILE_CHARS) {
+        return {
+          success: false,
+          error: `Edit rejected: Resulting file size (${result.newContent.length.toLocaleString()} chars) exceeds maximum allowed limit of ${MAX_FILE_CHARS.toLocaleString()} characters.`,
+        };
+      }
+
+      const otherFilesTotal = files.reduce((acc, f) => acc + (f.id === targetFile.id ? 0 : (f.content?.length || 0)), 0);
+      if (otherFilesTotal + result.newContent.length > MAX_WORKSPACE_TOTAL_CHARS) {
+        return {
+          success: false,
+          error: `Edit rejected: Total workspace content size (${(otherFilesTotal + result.newContent.length).toLocaleString()} chars) would exceed maximum workspace limit of ${MAX_WORKSPACE_TOTAL_CHARS.toLocaleString()} characters.`,
+        };
       }
 
       const updatedFile: WorkspaceFile = {

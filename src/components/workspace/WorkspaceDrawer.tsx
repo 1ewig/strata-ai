@@ -6,6 +6,7 @@ import { X, FileText, Copy, Edit3, Check, Plus, Trash2, Code } from 'lucide-reac
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { WorkspaceFile } from '@/lib/schemas';
+import { MAX_FILE_CHARS, formatCharCount } from '@/lib/limits';
 
 interface WorkspaceDrawerProps {
   isOpen: boolean;
@@ -46,8 +47,11 @@ export default function WorkspaceDrawer({
 
   if (!isOpen) return null;
 
+  const isFileOverLimit = isEditing && contentValue.length > MAX_FILE_CHARS;
+  const isFileWarning = isEditing && contentValue.length > MAX_FILE_CHARS * 0.9 && !isFileOverLimit;
+
   const handleSaveEdit = () => {
-    if (!activeFile) return;
+    if (!activeFile || isFileOverLimit) return;
     onUpdateFile({
       ...activeFile,
       name: fileName.trim() || activeFile.name,
@@ -203,6 +207,7 @@ export default function WorkspaceDrawer({
                 <textarea
                   value={contentValue}
                   onChange={(e) => setContentValue(e.target.value)}
+                  maxLength={MAX_FILE_CHARS}
                   rows={26}
                   placeholder="Type your markdown or text content here..."
                   className="w-full flex-1 min-h-[450px] bg-surface-base border border-edge-raised rounded-xl p-4 text-xs text-text-primary font-mono focus:outline-none focus:border-primary/60 leading-relaxed resize-y"
@@ -283,12 +288,26 @@ export default function WorkspaceDrawer({
           {/* Footer Bar */}
           {activeFile && (
             <div className="h-16 px-4 sm:px-6 border-t border-edge-raised flex items-center justify-between bg-surface-base/60 backdrop-blur-md shrink-0 gap-3">
-              {/* Left Side: Metadata */}
-              <div className="flex items-center gap-3 min-w-0">
-                <span className="text-[11px] text-text-muted font-medium truncate">
-                  {activeFile.content ? `${activeFile.content.length.toLocaleString()} chars` : 'Empty'}
-                  {activeFile.language ? ` · ${activeFile.language}` : ''}
-                </span>
+              {/* Left Side: Metadata & Character Counter */}
+              <div className="flex items-center gap-2 min-w-0">
+                {isEditing ? (
+                  <span
+                    className={`text-[11px] font-mono px-2 py-0.5 rounded border transition-colors ${
+                      isFileOverLimit
+                        ? 'text-danger bg-danger-soft/30 border-danger/40 font-semibold'
+                        : isFileWarning
+                        ? 'text-warning bg-warning-soft/20 border-warning/30'
+                        : 'text-text-muted bg-surface-elevated border-edge-raised'
+                    }`}
+                  >
+                    {formatCharCount(contentValue.length, MAX_FILE_CHARS)} chars
+                  </span>
+                ) : (
+                  <span className="text-[11px] text-text-muted font-medium truncate">
+                    {activeFile.content ? `${activeFile.content.length.toLocaleString()} chars` : 'Empty'}
+                    {activeFile.language ? ` · ${activeFile.language}` : ''}
+                  </span>
+                )}
               </div>
 
               {/* Right Side: Action Buttons */}
@@ -314,7 +333,17 @@ export default function WorkspaceDrawer({
                     </button>
                     <button
                       onClick={handleSaveEdit}
-                      className="flex items-center gap-1.5 text-xs font-semibold text-surface bg-primary hover:bg-primary-hover px-4 py-1.5 rounded-xl transition-colors cursor-pointer shadow-button"
+                      disabled={isFileOverLimit}
+                      className={`flex items-center gap-1.5 text-xs font-semibold rounded-xl transition-colors shrink-0 ${
+                        isFileOverLimit
+                          ? 'bg-surface-elevated text-text-muted opacity-40 cursor-not-allowed border border-edge-raised'
+                          : 'text-surface bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
+                      } px-4 py-1.5`}
+                      title={
+                        isFileOverLimit
+                          ? `File content exceeds ${MAX_FILE_CHARS.toLocaleString()} characters`
+                          : 'Save changes'
+                      }
                     >
                       <Check className="w-3.5 h-3.5" />
                       <span>Save Changes</span>

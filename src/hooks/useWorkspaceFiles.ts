@@ -9,6 +9,7 @@ import {
 } from '@/lib/db/db';
 import { WorkspaceFile } from '@/lib/schemas';
 import { generateId } from '@/lib/id';
+import { MAX_FILE_CHARS } from '@/lib/limits';
 
 export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
   const [isWorkspaceDrawerOpen, setIsWorkspaceDrawerOpen] = useState(false);
@@ -33,11 +34,12 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
   };
 
   const handleCreateFile = async (name: string, content = '') => {
+    const safeContent = content.length > MAX_FILE_CHARS ? content.slice(0, MAX_FILE_CHARS) : content;
     const now = new Date().toISOString();
     const newFile: WorkspaceFile = {
       id: generateId(),
       name: name.endsWith('.md') || name.endsWith('.txt') ? name : `${name}.md`,
-      content,
+      content: safeContent,
       language: name.endsWith('.txt') ? 'text' : 'markdown',
       createdAt: now,
       updatedAt: now,
@@ -48,7 +50,10 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
   };
 
   const handleUpdateFile = async (updatedFile: WorkspaceFile) => {
-    await saveWorkspaceFile(chatId, updatedFile);
+    const safeFile = updatedFile.content.length > MAX_FILE_CHARS
+      ? { ...updatedFile, content: updatedFile.content.slice(0, MAX_FILE_CHARS) }
+      : updatedFile;
+    await saveWorkspaceFile(chatId, safeFile);
   };
 
   const handleDeleteFile = async (fileId: string) => {

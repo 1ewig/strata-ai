@@ -9,6 +9,7 @@ import {
 } from "ai";
 import { z } from "zod";
 import { Resume, WorkspaceFile } from "@/lib/schemas";
+import { MAX_MESSAGE_CHARS } from "@/lib/limits";
 import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
 
 import { auth } from "@/lib/auth";
@@ -63,6 +64,18 @@ export async function POST(req: Request) {
   }
 
   const { messages, model, thinkingLevel, maxSteps } = parsed.data;
+
+  // Validate latest user message character length
+  const lastUserMsg = Array.isArray(messages) ? [...messages].reverse().find((m: { role?: string; content?: unknown }) => m?.role === "user") : null;
+  if (lastUserMsg && typeof lastUserMsg.content === "string" && lastUserMsg.content.length > MAX_MESSAGE_CHARS) {
+    return new Response(
+      JSON.stringify({
+        error: `Message exceeds maximum character limit of ${MAX_MESSAGE_CHARS.toLocaleString()} characters.`,
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
   const maxStepsLimit = Math.min(Math.max(maxSteps || 25, 1), 30);
   const mutableFiles: WorkspaceFile[] = parsed.data.files || [];
 
