@@ -22,7 +22,7 @@
   - **Performance:** Word-paced streaming (`smoothStream`, 15ms), metadata-only system prompt to minimize token context, observer-driven auto-scroll, `React.memo` on hot chat components.
   - **Compliance:** No PII stored server-side beyond auth identity; all workspace data is client-local in the browser's IndexedDB.
 - **Deployment:** Standalone Next.js output (`next build` → `node .next/standalone/server.js`), hosted on Vercel; live at strata-ai-five.vercel.app.
-- **Known evolution gap:** `implementation_plan.md` (unimplemented) specifies a Dexie → PostgreSQL migration for conversations/messages/files plus 4K-char message / 50K-char file limits. Only auth + rate-limit tables live in Postgres today.
+- **Known evolution gap:** Only auth + rate-limit tables live in Postgres; conversations/messages/files remain client-local (Dexie). A server-side persistence migration is a possible future direction but is not planned in-repo.
 
 ## 2. Technical Stack & Infrastructure
 
@@ -181,7 +181,6 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   ├── better-auth-schema.sql    # Raw SQL: drop public auth tables, create better_auth schema + user/session/account/verification/message_log
     │   ├── migrate-better-auth-schema.ts # bun-run migration runner (reads the .sql, runs against DATABASE_URL)
     │   └── test-db.ts                # Connection + schema healthcheck (lists better_auth tables, asserts public is clean)
-    ├── implementation_plan.md        # PLANNED, UNIMPLEMENTED: Dexie → Postgres migration + char limits
     ├── public/                       # hero.webp, agent-in-action.webp (README screenshots)
     ├── next.config.ts                # standalone output, motion transpile, picsum image remote pattern
     ├── eslint.config.mjs             # eslint-config-next flat config
@@ -362,7 +361,7 @@ This is the single reconciliation point that turns a streamed assistant message 
 13. **System prompt discipline:** inject metadata-only file listings into the prompt (name/language/charCount/id); never dump full file content — the model must call `readFile`.
 14. **No emojis in code/files.** (README/docs may differ; code must not.)
 15. **Never reintroduce removed/migrated patterns** (e.g., the `already-authenticated` component or custom `ChatMessage` shapes). The message model is native AI SDK `UIMessage`; the file model is the workspace `files` array.
-16. **Keep `/api/agent` stateless.** Do not persist workspace state server-side; workspace lives in the request body + Dexie. If `implementation_plan.md`'s Postgres migration is ever built, it changes this rule by design — until then it holds.
+16. **Keep `/api/agent` stateless.** Do not persist workspace state server-side; workspace lives in the request body + Dexie. A future server-side persistence migration would change this rule by design — until then it holds.
 17. **Respect the proxy matcher.** Adding a protected page means adding it to `config.matcher` in `src/proxy.ts`; do not widen bypass lists (`/auth`, `/api/auth`) without explicit approval.
 18. **SSR hydration is the norm for signed-in data.** Follow the `RootLayout` → provider `initialData` pattern for any new per-user server state instead of client-only fetches.
 
@@ -413,7 +412,7 @@ For **PostgreSQL (server DB, e.g. the planned migration):**
 ## Appendix: Known Discrepancies & Dead Code
 
 - **`README.md` is partially stale** (e.g., the TypeScript badge says 5.9; `package.json` pins 6.0.3). Treat this file + source as ground truth.
-- **`implementation_plan.md` is aspirational, not implemented** — no `public.conversations/messages/workspace_files` tables, no 4K/50K char limits, no `pg-db.ts`.
+- **Postgres holds auth + rate-limit only** — no app tables (`conversations`/`messages`/`workspace_files`) exist server-side.
 - **Dark mode is live despite AGENTS.md's "light-mode only" claim** (`theme-toggle.tsx`, `.dark` tokens, layout bootstrap script).
 - **Orphaned file:** `hooks/use-mobile.ts` — importable but unused.
 - **`metadata.json` is stale** (lists Gemini 2.5 ids not present in `MODELS` and is missing `gemini-3.5-flash-lite` / `gemini-3-flash-preview`).
