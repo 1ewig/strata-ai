@@ -1,24 +1,18 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { DefaultChatTransport } from 'ai';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   db,
   createConversation,
   updateConversationTitle,
-  getWorkspaceFiles,
-  updateConversationFiles,
 } from '@/lib/db/db';
 import { useModelSettings } from './useModelSettings';
 import { useWorkspaceFiles } from './useWorkspaceFiles';
-import {
-  GenericUIMessage,
-  extractDeletedFilesFromMessage,
-  extractFilesFromMessage,
-} from '@/lib/ai/message-extractor';
-
+import { useChatTransport } from './useChatTransport';
+import { handleChatError } from '@/lib/ai/chat-error-handler';
+import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
 import { useRateLimit } from '@/contexts/RateLimitContext';
 
 export function useChatSession(chatId: string) {
@@ -41,7 +35,7 @@ export function useChatSession(chatId: string) {
     [chatId],
   );
 
-  // Modular specialized hooks
+  // Modular specialized sub-hooks
   const modelSettings = useModelSettings(chatId, currentConv);
   const workspace = useWorkspaceFiles(chatId, currentConv);
 
@@ -75,67 +69,32 @@ export function useChatSession(chatId: string) {
   const sendMessageRef = useRef<((msg: { text: string }) => void) | null>(null);
   const chatRef = useRef<any>(null);
 
-  /* eslint-disable react-hooks/refs */
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: '/api/agent',
-        body: () => ({
-          model: modelRef.current,
-          thinkingLevel: thinkingLevelRef.current,
-          files: filesRef.current,
-        }),
-        fetch: async (url, options) => {
-          const res = await fetch(url, options);
-          const rem5h = res.headers.get('X-RateLimit-Remaining-5h');
-          const remWeek = res.headers.get('X-RateLimit-Remaining-Week');
-          const retryHeader = res.headers.get('X-RateLimit-Retry-After') || res.headers.get('Retry-After');
-          const retryAfterSec = retryHeader ? parseInt(retryHeader, 10) : undefined;
-
-          if (rem5h !== null && remWeek !== null) {
-            const num5h = parseInt(rem5h, 10);
-            const numWeek = parseInt(remWeek, 10);
-            updateRateLimitData({
-              remaining5h: num5h,
-              remainingWeek: numWeek,
-              retryAfter: retryAfterSec,
-            });
-          }
-
-          if (res.status === 429) {
-            const data = await res.clone().json().catch(() => null);
-            setQuotaError({
-              message: data?.message || 'Usage quota reached (10 msgs per 5 hours, 50 msgs per week). Please try again later.',
-              retryAfter: retryAfterSec || data?.retryAfter,
-            });
-            setTimeout(() => {
-              if (chatRef.current?.stop) {
-                chatRef.current.stop();
-              }
-            }, 0);
-          }
-          return res;
-        },
-      }),
-    [updateRateLimitData, setQuotaError],
-  );
-  /* eslint-enable react-hooks/refs */
+  // Modular transport creation hook
+  const transport = useChatTransport({
+    filesRef,
+    modelRef,
+    thinkingLevelRef,
+    chatRef,
+    updateRateLimitData,
+    setQuotaError,
+  });
 
   const chat = useChat({
     id: chatId,
     transport: transport as any,
-    onError: useCallback((err: Error) => {
-      if (chatRef.current?.stop) {
-        chatRef.current.stop();
-      }
-      if (err?.message?.includes('429') || err?.message?.toLowerCase().includes('rate limit')) {
-        setQuotaError((prev) => prev || {
-          message: 'Usage quota reached (10 msgs / 5h, 50 msgs / week). Please wait before trying again.',
+    onError: useCallback(
+      (err: Error) => {
+        handleChatError({
+          err,
+          chatId,
+          chatRef,
+          setQuotaError,
         });
-      }
-    }, [setQuotaError]),
+      },
+      [chatId, setQuotaError],
+    ),
     onFinish: useCallback(
-      async ({
+      ({
         message,
         messages: allMessages,
         finishReason,
@@ -144,68 +103,14 @@ export function useChatSession(chatId: string) {
         messages: unknown[];
         finishReason?: string;
       }) => {
-        // Persist all messages to Dexie
-        for (const msg of allMessages as any[]) {
-          await db.messages.put({
-            ...msg,
-            chatId,
-            timestamp: new Date().toISOString(),
-          });
-        }
-        await db.conversations.update(chatId, { updatedAt: new Date().toISOString() });
-
-        // Process workspace file updates/deletions ONLY from the current assistant message
-        const currentMsg = message as GenericUIMessage;
-        const deletions = extractDeletedFilesFromMessage(currentMsg);
-        const updatedFiles = extractFilesFromMessage(currentMsg);
-
-        if (deletions.length > 0 || (updatedFiles && updatedFiles.length > 0)) {
-          const conv = await db.conversations.get(chatId);
-          let currentFiles = getWorkspaceFiles(conv);
-
-          // Apply deletions
-          if (deletions.length > 0) {
-            currentFiles = currentFiles.filter((f) => {
-              for (const del of deletions) {
-                if (del.fileId && f.id === del.fileId) return false;
-                if (del.name && f.name.toLowerCase() === del.name.toLowerCase()) return false;
-              }
-              return true;
-            });
-          }
-
-          // Apply creations or edits
-          if (updatedFiles && updatedFiles.length > 0) {
-            for (const newFile of updatedFiles) {
-              const idx = currentFiles.findIndex(
-                (f) => f.id === newFile.id || f.name.toLowerCase() === newFile.name.toLowerCase(),
-              );
-              if (idx >= 0) {
-                currentFiles[idx] = newFile;
-              } else {
-                currentFiles.push(newFile);
-              }
-            }
-          }
-
-          const activeId = currentFiles.length > 0 ? currentFiles[0].id : undefined;
-          await updateConversationFiles(chatId, currentFiles, activeId);
-        }
-
-        // Auto-continuation loop if step limit reached
-        if (finishReason === 'step-limit' && continuationCountRef.current < 2) {
-          continuationCountRef.current += 1;
-          console.log(
-            `[useChatSession] Step limit reached. Auto-continuing pass ${continuationCountRef.current}/2...`,
-          );
-          setTimeout(() => {
-            sendMessageRef.current?.({
-              text: 'Please continue completing the task where you left off.',
-            });
-          }, 300);
-        } else {
-          continuationCountRef.current = 0;
-        }
+        return reconcileFinishedStep({
+          chatId,
+          message,
+          allMessages,
+          finishReason,
+          continuationCountRef,
+          sendMessageRef,
+        });
       },
       [chatId],
     ),
