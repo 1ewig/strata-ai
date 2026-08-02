@@ -35,6 +35,71 @@ const workspaceFileSchema = z.object({
 });
 
 /**
+ * Case-insensitive comparison of two filenames.
+ */
+function isSameFilename(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
+
+/**
+ * Finds a workspace file by ID or case-insensitive name match.
+ */
+function findWorkspaceFile(files: WorkspaceFile[], nameOrId: string): WorkspaceFile | undefined {
+  return files.find((f) => f.id === nameOrId || isSameFilename(f.name, nameOrId));
+}
+
+interface TavilyApiResponse<T> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
+/**
+ * Helper to perform authenticated calls to Tavily API endpoints.
+ */
+async function callTavilyApi<T = any>(
+  endpoint: string,
+  payload: Record<string, unknown>,
+): Promise<TavilyApiResponse<T>> {
+  const apiKey = process.env.TAVILY_API_KEY;
+  if (!apiKey) {
+    return {
+      success: false,
+      error: "Tavily API key is not configured. Set TAVILY_API_KEY in environment variables.",
+    };
+  }
+
+  try {
+    const response = await fetch(`https://api.tavily.com/${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        api_key: apiKey,
+        ...payload,
+      }),
+    });
+
+    if (!response.ok) {
+      const errText = await response.text().catch(() => response.statusText);
+      return {
+        success: false,
+        error: `Tavily API error (${response.status}): ${errText}`,
+      };
+    }
+
+    const data = (await response.json()) as T;
+    return { success: true, data };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: `Network error calling Tavily API: ${err?.message || String(err)}`,
+    };
+  }
+}
+
+/**
  * Creates the listFiles tool reporting metadata for every workspace file.
  * @param context - Workspace context providing current-file access.
  * @returns An AI SDK tool for listing workspace files.
@@ -92,9 +157,7 @@ export function createReadFileTool({ getCurrentFiles }: WorkspaceToolsContext) {
     }),
     execute: async ({ nameOrId, section }) => {
       const files = getCurrentFiles();
-      const file = files.find(
-        (f) => f.id === nameOrId || f.name.toLowerCase() === nameOrId.toLowerCase(),
-      );
+      const file = findWorkspaceFile(files, nameOrId);
 
       if (!file || !file.content?.trim()) {
         return { exists: false, error: `File "${nameOrId}" not found or empty.` };
@@ -149,9 +212,7 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: Workspace
     }),
     execute: async ({ name, content, language }) => {
       const existingFiles = getCurrentFiles();
-      const existing = existingFiles.find(
-        (f) => f.name.toLowerCase() === name.toLowerCase(),
-      );
+      const existing = existingFiles.find((f) => isSameFilename(f.name, name));
 
       // Only new files count against the per-workspace file cap.
       if (!existing && existingFiles.length >= MAX_FILES_PER_WORKSPACE) {
@@ -219,9 +280,7 @@ export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceT
     }),
     execute: async ({ nameOrId, searchString, replaceString, explanation }) => {
       const files = getCurrentFiles();
-      const targetFile = files.find(
-        (f) => f.id === nameOrId || f.name.toLowerCase() === nameOrId.toLowerCase(),
-      );
+      const targetFile = findWorkspaceFile(files, nameOrId);
 
       if (!targetFile) {
         return {
@@ -297,9 +356,7 @@ export function createRenameFileTool({ getCurrentFiles, onUpdateFile }: Workspac
     }),
     execute: async ({ nameOrId, newName }) => {
       const files = getCurrentFiles();
-      const target = files.find(
-        (f) => f.id === nameOrId || f.name.toLowerCase() === nameOrId.toLowerCase(),
-      );
+      const target = findWorkspaceFile(files, nameOrId);
 
       if (!target) {
         return { success: false, error: `File "${nameOrId}" not found. Call listFiles to see available files.` };
@@ -307,7 +364,7 @@ export function createRenameFileTool({ getCurrentFiles, onUpdateFile }: Workspac
 
       // Reject renames that collide with an existing file (case-insensitive).
       const collision = files.find(
-        (f) => f.id !== target.id && f.name.toLowerCase() === newName.toLowerCase(),
+        (f) => f.id !== target.id && isSameFilename(f.name, newName),
       );
       if (collision) {
         return { success: false, error: `A file named "${newName}" already exists.` };
@@ -350,9 +407,7 @@ export function createDeleteFileTool({ getCurrentFiles, onDeleteFile }: Workspac
     }),
     execute: async ({ nameOrId }) => {
       const files = getCurrentFiles();
-      const targetFile = files.find(
-        (f) => f.id === nameOrId || f.name.toLowerCase() === nameOrId.toLowerCase(),
-      );
+      const targetFile = findWorkspaceFile(files, nameOrId);
 
       if (!targetFile) {
         return { deleted: false, error: `File "${nameOrId}" not found.` };
@@ -415,66 +470,39 @@ export function createWebSearchTool() {
       error: z.string().optional(),
     }),
     execute: async ({ query, searchDepth, topic, maxResults }) => {
-      const apiKey = process.env.TAVILY_API_KEY;
-      if (!apiKey) {
+      const apiRes = await callTavilyApi<any>("search", {
+        query,
+        search_depth: searchDepth || "advanced",
+        topic: topic || "general",
+        max_results: Math.min(Math.max(maxResults || 5, 1), 10),
+        include_answer: true,
+      });
+
+      if (!apiRes.success || !apiRes.data) {
         return {
           success: false,
           query,
-          error:
-            "Tavily API key is not configured. Set TAVILY_API_KEY in environment variables.",
+          error: apiRes.error || "Web search failed",
         };
       }
 
-      try {
-        const response = await fetch("https://api.tavily.com/search", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            api_key: apiKey,
-            query,
-            search_depth: searchDepth || "advanced",
-            topic: topic || "general",
-            // Clamp the requested result count to Tavily's 1-10 supported range.
-            max_results: Math.min(Math.max(maxResults || 5, 1), 10),
-            include_answer: true,
-          }),
-        });
+      const data = apiRes.data;
+      const results = Array.isArray(data.results)
+        ? data.results.map((r: any) => ({
+            title: String(r.title || ""),
+            url: String(r.url || ""),
+            content: String(r.content || ""),
+            score: typeof r.score === "number" ? r.score : undefined,
+            publishedDate: r.published_date ? String(r.published_date) : undefined,
+          }))
+        : [];
 
-        if (!response.ok) {
-          const errText = await response.text().catch(() => response.statusText);
-          return {
-            success: false,
-            query,
-            error: `Tavily API error (${response.status}): ${errText}`,
-          };
-        }
-
-        const data = await response.json();
-        const results = Array.isArray(data.results)
-          ? data.results.map((r: any) => ({
-              title: String(r.title || ""),
-              url: String(r.url || ""),
-              content: String(r.content || ""),
-              score: typeof r.score === "number" ? r.score : undefined,
-              publishedDate: r.published_date ? String(r.published_date) : undefined,
-            }))
-          : [];
-
-        return {
-          success: true,
-          query,
-          answer: data.answer ? String(data.answer) : undefined,
-          results,
-        };
-      } catch (err: any) {
-        return {
-          success: false,
-          query,
-          error: `Network error performing web search: ${err?.message || String(err)}`,
-        };
-      }
+      return {
+        success: true,
+        query,
+        answer: data.answer ? String(data.answer) : undefined,
+        results,
+      };
     },
   });
 }
@@ -496,7 +524,7 @@ export function createExtractUrlTool() {
       extractDepth: z
         .enum(["basic", "advanced"])
         .optional()
-        .default("basic")
+        .default("advanced")
         .describe("Extraction depth: 'basic' for fast extraction, 'advanced' for JavaScript-rendered sites."),
     }),
     outputSchema: z.object({
@@ -518,66 +546,39 @@ export function createExtractUrlTool() {
       error: z.string().optional(),
     }),
     execute: async ({ urls, extractDepth }) => {
-      const apiKey = process.env.TAVILY_API_KEY;
-      if (!apiKey) {
+      const apiRes = await callTavilyApi<any>("extract", {
+        urls,
+        extract_depth: extractDepth || "advanced",
+      });
+
+      if (!apiRes.success || !apiRes.data) {
         return {
           success: false,
           extracted: [],
-          error:
-            "Tavily API key is not configured. Set TAVILY_API_KEY in environment variables.",
+          error: apiRes.error || "URL extraction failed",
         };
       }
 
-      try {
-        const response = await fetch("https://api.tavily.com/extract", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            api_key: apiKey,
-            urls,
-            extract_depth: extractDepth || "basic",
-          }),
-        });
+      const data = apiRes.data;
+      const extracted = Array.isArray(data.results)
+        ? data.results.map((r: any) => ({
+            url: String(r.url || ""),
+            rawContent: String(r.raw_content || r.content || "").slice(0, 10000),
+          }))
+        : [];
 
-        if (!response.ok) {
-          const errText = await response.text().catch(() => response.statusText);
-          return {
-            success: false,
-            extracted: [],
-            error: `Tavily Extract API error (${response.status}): ${errText}`,
-          };
-        }
+      const failed = Array.isArray(data.failed_results)
+        ? data.failed_results.map((f: any) => ({
+            url: String(f.url || ""),
+            error: String(f.error || "Failed to extract content"),
+          }))
+        : [];
 
-        const data = await response.json();
-        // Cap each page's raw content to keep tool results within context limits.
-        const extracted = Array.isArray(data.results)
-          ? data.results.map((r: any) => ({
-              url: String(r.url || ""),
-              rawContent: String(r.raw_content || r.content || "").slice(0, 10000),
-            }))
-          : [];
-
-        const failed = Array.isArray(data.failed_results)
-          ? data.failed_results.map((f: any) => ({
-              url: String(f.url || ""),
-              error: String(f.error || "Failed to extract content"),
-            }))
-          : [];
-
-        return {
-          success: true,
-          extracted,
-          failed: failed.length > 0 ? failed : undefined,
-        };
-      } catch (err: any) {
-        return {
-          success: false,
-          extracted: [],
-          error: `Network error extracting web page content: ${err?.message || String(err)}`,
-        };
-      }
+      return {
+        success: true,
+        extracted,
+        failed: failed.length > 0 ? failed : undefined,
+      };
     },
   });
 }
@@ -599,5 +600,3 @@ export function createWorkspaceTools(context: WorkspaceToolsContext) {
     extractUrl: createExtractUrlTool(),
   };
 }
-
-
