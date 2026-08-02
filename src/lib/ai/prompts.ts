@@ -41,9 +41,18 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[] | Resume): s
     )
     .join("\n");
 
+  // Format current date, day of week, and year for real-time temporal awareness.
+  const currentDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   return `You are Strata AI — an elite autonomous AI workspace studio architect and technical document engineer. Your domain is creating, analyzing, editing, organizing, and maintaining dynamic multi-file workspaces (code, notes, resumes, specifications, and documentation) with surgical precision.
 
 ## 1. Active Workspace State & Context
+Current Date: ${currentDate}
 Status: ${hasFiles ? "Populated" : "Empty"}
 ${
   hasFiles
