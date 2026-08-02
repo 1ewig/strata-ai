@@ -377,11 +377,29 @@ function buildDeleteFileSummary(args: any, result: any): ReactNode {
  * Summary for webSearch: the query, result count, an optional AI answer, and up to three
  * result sources shown as hostnames.
  */
-function buildWebSearchSummary(args: any, result: any): ReactNode {
+function buildWebSearchSummary(args: any, result: any, status?: string): ReactNode {
   const query = args?.query || result?.query || 'Web Search';
   const resultsList = result?.results || [];
   const count = resultsList.length;
   const answer = result?.answer;
+  const isLoading = status === 'loading' || (!result || Object.keys(result).length === 0);
+
+  if (isLoading && !result?.error) {
+    return (
+      <div className="py-1 space-y-1">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium font-mono text-text-primary truncate">&quot;{query}&quot;</span>
+          <span className="text-[10px] text-info font-mono shrink-0 font-medium flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-info animate-ping" />
+            searching...
+          </span>
+        </div>
+        <p className="text-[11px] text-text-muted animate-pulse">
+          Querying Tavily search API and retrieving web sources...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="py-1 space-y-0.5">
@@ -422,11 +440,31 @@ function buildWebSearchSummary(args: any, result: any): ReactNode {
  * Summary for extractUrl: the requested URLs, the number of pages extracted, and a
  * content preview of the first extraction.
  */
-function buildExtractUrlSummary(args: any, result: any): ReactNode {
+function buildExtractUrlSummary(args: any, result: any, status?: string): ReactNode {
   const urls: string[] = args?.urls || [];
   const extracted = result?.extracted || [];
   const count = extracted.length;
   const firstTitle = extracted[0]?.title;
+  const isLoading = status === 'loading' || (!result || Object.keys(result).length === 0);
+
+  if (isLoading && !result?.error) {
+    return (
+      <div className="py-1 space-y-1">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-medium font-mono text-text-primary truncate">
+            {urls.length > 0 ? urls.join(', ') : 'URL Extraction'}
+          </span>
+          <span className="text-[10px] text-info font-mono shrink-0 font-medium flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-info animate-ping" />
+            extracting...
+          </span>
+        </div>
+        <p className="text-[11px] text-text-muted animate-pulse">
+          Parsing clean Markdown content from {urls.length || 1} web page{urls.length === 1 ? '' : 's'}...
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="py-1 space-y-0.5">
@@ -508,10 +546,10 @@ export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): To
       summary = buildDeleteFileSummary(args, result);
       break;
     case 'webSearch':
-      summary = buildWebSearchSummary(args, result);
+      summary = buildWebSearchSummary(args, result, status);
       break;
     case 'extractUrl':
-      summary = buildExtractUrlSummary(args, result);
+      summary = buildExtractUrlSummary(args, result, status);
       break;
     default:
       summary = buildGenericSummary(args, rawName);
