@@ -59,11 +59,11 @@ async function callTavilyApi<T = any>(
 export function createWebSearchTool() {
   return tool({
     description:
-      "Search the web using Tavily for real-time information, current facts, latest news, documentation, or online references.",
+      "Search the web using Tavily for real-time information, current facts, latest news, documentation, or online references. Returns an AI answer summary and ranked results with content snippets (and optional raw page content).",
     inputSchema: z.object({
       query: z
         .string()
-        .describe("The search query string (e.g., 'Next.js 16 features', 'latest tech news')."),
+        .describe("Search query string (e.g., 'Next.js 16 features', 'latest tech news'). Be specific for better results."),
       searchDepth: z
         .enum(["basic", "advanced"])
         .optional()
@@ -76,9 +76,33 @@ export function createWebSearchTool() {
         .describe("Topic focus: 'general' or 'news'."),
       maxResults: z
         .number()
+        .min(1)
+        .max(10)
         .optional()
-        .default(5)
-        .describe("Maximum number of search results to return (1-10)."),
+        .default(6)
+        .describe("Number of search results to return (1-10)."),
+      includeRawContent: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe("If true, includes full page text for top results (much richer context, higher token usage)."),
+      includeImages: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe("If true, includes image URLs returned by Tavily."),
+      timeRange: z
+        .enum(["day", "week", "month", "year"])
+        .optional()
+        .describe("Restrict search results to content published within this recent window."),
+      includeDomains: z
+        .array(z.string())
+        .optional()
+        .describe("Only include results from these specific domains (e.g. ['docs.nextjs.org', 'github.com'])."),
+      excludeDomains: z
+        .array(z.string())
+        .optional()
+        .describe("Exclude results from these specific domains."),
     }),
     outputSchema: z.object({
       success: z.boolean(),
@@ -90,21 +114,41 @@ export function createWebSearchTool() {
             title: z.string(),
             url: z.string(),
             content: z.string(),
+            rawContent: z.string().optional(),
             score: z.number().optional(),
             publishedDate: z.string().optional(),
           }),
         )
         .optional(),
+      images: z.array(z.string()).optional(),
       error: z.string().optional(),
     }),
-    execute: async ({ query, searchDepth, topic, maxResults }) => {
-      const apiRes = await callTavilyApi<any>("search", {
+    execute: async ({
+      query,
+      searchDepth = "advanced",
+      topic = "general",
+      maxResults = 6,
+      includeRawContent = false,
+      includeImages = false,
+      timeRange,
+      includeDomains,
+      excludeDomains,
+    }) => {
+      const payload: Record<string, unknown> = {
         query,
-        search_depth: searchDepth || "advanced",
-        topic: topic || "general",
-        max_results: Math.min(Math.max(maxResults || 5, 1), 10),
+        search_depth: searchDepth,
+        topic,
+        max_results: Math.min(Math.max(maxResults, 1), 10),
         include_answer: true,
-      });
+        include_raw_content: includeRawContent,
+        include_images: includeImages,
+      };
+
+      if (timeRange) payload.time_range = timeRange;
+      if (includeDomains?.length) payload.include_domains = includeDomains;
+      if (excludeDomains?.length) payload.exclude_domains = excludeDomains;
+
+      const apiRes = await callTavilyApi<any>("search", payload);
 
       if (!apiRes.success || !apiRes.data) {
         return {
@@ -120,16 +164,22 @@ export function createWebSearchTool() {
             title: String(r.title || ""),
             url: String(r.url || ""),
             content: String(r.content || ""),
+            rawContent: r.raw_content ? String(r.raw_content).slice(0, 12000) : undefined,
             score: typeof r.score === "number" ? r.score : undefined,
             publishedDate: r.published_date ? String(r.published_date) : undefined,
           }))
         : [];
+
+      const images = Array.isArray(data.images)
+        ? data.images.map((img: any) => String(typeof img === "string" ? img : img?.url || ""))
+        : undefined;
 
       return {
         success: true,
         query,
         answer: data.answer ? String(data.answer) : undefined,
         results,
+        images: images && images.length > 0 ? images : undefined,
       };
     },
   });
@@ -142,7 +192,7 @@ export function createWebSearchTool() {
 export function createExtractUrlTool() {
   return tool({
     description:
-      "Extract full, clean Markdown content from specific web page URLs using Tavily Extract API. Call this tool when webSearch snippet results are too brief or thin.",
+      "Extract full, clean Markdown content from specific web page URLs using Tavily Extract API. Call this tool when webSearch snippets are too brief or when complete article/documentation context is required.",
     inputSchema: z.object({
       urls: z
         .array(z.string())
@@ -154,12 +204,18 @@ export function createExtractUrlTool() {
         .optional()
         .default("advanced")
         .describe("Extraction depth: 'basic' for fast extraction, 'advanced' for JavaScript-rendered sites."),
+      includeImages: z
+        .boolean()
+        .optional()
+        .default(false)
+        .describe("If true, includes images extracted from the web pages."),
     }),
     outputSchema: z.object({
       success: z.boolean(),
       extracted: z.array(
         z.object({
           url: z.string(),
+          title: z.string().optional(),
           rawContent: z.string(),
         }),
       ),
@@ -173,10 +229,11 @@ export function createExtractUrlTool() {
         .optional(),
       error: z.string().optional(),
     }),
-    execute: async ({ urls, extractDepth }) => {
+    execute: async ({ urls, extractDepth = "advanced", includeImages = false }) => {
       const apiRes = await callTavilyApi<any>("extract", {
         urls,
-        extract_depth: extractDepth || "advanced",
+        extract_depth: extractDepth,
+        include_images: includeImages,
       });
 
       if (!apiRes.success || !apiRes.data) {
@@ -191,7 +248,8 @@ export function createExtractUrlTool() {
       const extracted = Array.isArray(data.results)
         ? data.results.map((r: any) => ({
             url: String(r.url || ""),
-            rawContent: String(r.raw_content || r.content || "").slice(0, 10000),
+            title: r.title ? String(r.title) : undefined,
+            rawContent: String(r.raw_content || r.content || "").slice(0, 18000),
           }))
         : [];
 

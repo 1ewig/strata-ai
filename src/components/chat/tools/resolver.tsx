@@ -426,12 +426,13 @@ function buildExtractUrlSummary(args: any, result: any): ReactNode {
   const urls: string[] = args?.urls || [];
   const extracted = result?.extracted || [];
   const count = extracted.length;
+  const firstTitle = extracted[0]?.title;
 
   return (
     <div className="py-1 space-y-0.5">
       <div className="flex items-center justify-between text-xs">
         <span className="font-medium font-mono text-text-primary truncate">
-          {urls.length > 0 ? urls.join(', ') : 'URL Extraction'}
+          {firstTitle || (urls.length > 0 ? urls.join(', ') : 'URL Extraction')}
         </span>
         <span className="text-[10px] text-info font-mono shrink-0 font-medium">
           {count} page{count === 1 ? '' : 's'} extracted

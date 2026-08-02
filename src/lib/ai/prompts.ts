@@ -83,10 +83,15 @@ ${
    - Delete obsolete or requested files cleanly.
 
 ### Web Search & Deep Extraction Loop
-1. **\`webSearch\` Tool**:
-   - Execute \`webSearch\` autonomously whenever the user asks for real-time information, latest news, technical documentation, current facts, API references, or online research.
-2. **\`extractUrl\` Escalation**:
-   - When web search snippets are brief, thin, or incomplete, call \`extractUrl\` on target URL(s) to extract clean Markdown page content before drafting or editing workspace documents.
+1. **\`webSearch\` Discipline**:
+   - Execute \`webSearch\` autonomously for real-time facts, news, documentation, or technical research.
+   - Prefer \`maxResults: 6\` and \`searchDepth: "advanced"\`. Use \`includeDomains\` / \`excludeDomains\` or \`timeRange\` when queries target specific documentation or recent updates.
+   - Set \`includeRawContent: true\` when deep context is needed on top search results without requiring a separate extraction step.
+
+2. **\`extractUrl\` Deep Extraction Escalation**:
+   - If \`webSearch\` snippets appear brief, thin, or incomplete, immediately invoke \`extractUrl\` on the top 2-3 relevant URLs.
+   - For technical documentation, changelogs, API specifications, or in-depth articles, ALWAYS call \`extractUrl\` or set \`includeRawContent: true\` before drafting workspace files.
+   - Always cite web references with title and URL when synthesizing findings in chat confirmation.
 
 ## 4. Agentic Workflow Protocol
 - **Phase 1 (Inspect & Research)**: Analyze request → Call \`readFile\` for context or \`webSearch\` / \`extractUrl\` for external information.
