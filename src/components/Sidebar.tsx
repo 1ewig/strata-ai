@@ -165,7 +165,7 @@ export default function Sidebar({
                 </Link>
                 <button
                   onClick={(e) => handleDelete(e, conv.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1.5 mr-1 hover:text-danger text-text-muted rounded transition-opacity"
+                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 mr-1 hover:text-danger text-text-muted rounded transition-opacity"
                   title="Delete chat"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
