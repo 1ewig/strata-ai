@@ -53,7 +53,7 @@ The agent interacts with user workspaces and the web via 8 core tools — factor
 | `renameFile` | `nameOrId`, `newName` | Renames an existing file with collision checking. |
 | `deleteFile` | `nameOrId` | Removes a target file from the current workspace collection. |
 | `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?`, `includeRawContent?`, `includeImages?`, `timeRange?`, `includeDomains?`, `excludeDomains?` | Real-time web search via Tavily (`searchDepth: "advanced"` default) — AI answer summary + ranked results with content snippets, optional raw page content, images, and publish dates. |
-| `extractUrl` | `urls` (1–5), `extractDepth?`, `includeImages?` | Extracts clean Markdown content from target web pages via Tavily Extract (up to 5 URLs per call). |
+| `extractUrl` | `urls` (1–3), `extractDepth?` | Extracts clean Markdown content from target web pages via Tavily Extract (up to 3 URLs per call, 30s timeout). |
 
 ---
 

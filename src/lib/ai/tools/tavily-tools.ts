@@ -9,10 +9,14 @@ interface TavilyApiResponse<T> {
 
 /**
  * Helper to perform authenticated calls to Tavily API endpoints.
+ * @param endpoint - Tavily API endpoint (e.g. 'search', 'extract').
+ * @param payload - Request body sent alongside the API key.
+ * @param timeoutMs - Abort the fetch after this many milliseconds.
  */
 async function callTavilyApi<T = any>(
   endpoint: string,
   payload: Record<string, unknown>,
+  timeoutMs = 30000,
 ): Promise<TavilyApiResponse<T>> {
   const apiKey = process.env.TAVILY_API_KEY;
   if (!apiKey) {
@@ -28,6 +32,7 @@ async function callTavilyApi<T = any>(
       headers: {
         "Content-Type": "application/json",
       },
+      signal: AbortSignal.timeout(timeoutMs),
       body: JSON.stringify({
         api_key: apiKey,
         ...payload,
@@ -148,7 +153,7 @@ export function createWebSearchTool() {
       if (includeDomains?.length) payload.include_domains = includeDomains;
       if (excludeDomains?.length) payload.exclude_domains = excludeDomains;
 
-      const apiRes = await callTavilyApi<any>("search", payload);
+      const apiRes = await callTavilyApi<any>("search", payload, 15000);
 
       if (!apiRes.success || !apiRes.data) {
         return {
@@ -197,18 +202,13 @@ export function createExtractUrlTool() {
       urls: z
         .array(z.string())
         .min(1)
-        .max(5)
-        .describe("List of target web page URLs to extract full content from."),
+        .max(3)
+        .describe("List of target web page URLs to extract full content from (1-3)."),
       extractDepth: z
         .enum(["basic", "advanced"])
         .optional()
         .default("advanced")
         .describe("Extraction depth: 'basic' for fast extraction, 'advanced' for JavaScript-rendered sites."),
-      includeImages: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe("If true, includes images extracted from the web pages."),
     }),
     outputSchema: z.object({
       success: z.boolean(),
@@ -229,12 +229,15 @@ export function createExtractUrlTool() {
         .optional(),
       error: z.string().optional(),
     }),
-    execute: async ({ urls, extractDepth = "advanced", includeImages = false }) => {
-      const apiRes = await callTavilyApi<any>("extract", {
-        urls,
-        extract_depth: extractDepth,
-        include_images: includeImages,
-      });
+    execute: async ({ urls, extractDepth = "advanced" }) => {
+      const apiRes = await callTavilyApi<any>(
+        "extract",
+        {
+          urls,
+          extract_depth: extractDepth,
+        },
+        30000,
+      );
 
       if (!apiRes.success || !apiRes.data) {
         return {

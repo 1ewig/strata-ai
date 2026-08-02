@@ -89,8 +89,8 @@ ${
    - Set \`includeRawContent: true\` when deep context is needed on top search results without requiring a separate extraction step.
 
 2. **\`extractUrl\` Deep Extraction Escalation**:
-   - If \`webSearch\` snippets appear brief, thin, or incomplete, immediately invoke \`extractUrl\` on the top 2-3 relevant URLs.
-   - For technical documentation, changelogs, API specifications, or in-depth articles, ALWAYS call \`extractUrl\` or set \`includeRawContent: true\` before drafting workspace files.
+   - If \`webSearch\` snippets appear brief, thin, or incomplete, immediately invoke \`extractUrl\` on the top 1-2 relevant URLs.
+   - For technical documentation, changelogs, API specifications, or in-depth articles, ALWAYS call \`extractUrl\` (top 1-2 URLs) or set \`includeRawContent: true\` before drafting workspace files.
    - Always cite web references with title and URL when synthesizing findings in chat confirmation.
 
 ## 4. Agentic Workflow Protocol
