@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import { ArrowUp, AlertCircle } from 'lucide-react';
+import { ArrowUp, AlertCircle, Square } from 'lucide-react';
 import { MAX_MESSAGE_CHARS } from '@/lib/limits';
 import ModelSelectorMenu from './ModelSelectorMenu';
 import RateLimitRing from './RateLimitRing';
@@ -9,6 +9,7 @@ import RateLimitRing from './RateLimitRing';
 /** Props for the ChatInput composer. */
 interface ChatInputProps {
   onSendMessage: (text: string) => void;
+  onStop?: () => void;
   isLoading: boolean;
   model: string;
   thinkingLevel: string;
@@ -23,11 +24,12 @@ interface ChatInputProps {
 
 /**
  * Renders the message composer: auto-growing textarea, model/thinking-level
- * selector, quota ring, and send button. Sending is blocked while streaming,
- * when over the character cap, or when a quota is exhausted.
+ * selector, quota ring, and send button. When streaming is active, the send
+ * button is swapped for an interactive Stop button to cancel inference.
  *
  * @param onSendMessage - Fires with the trimmed text when the user submits.
- * @param isLoading - Disables the textarea and send button while streaming.
+ * @param onStop - Fires when the user clicks the stop button during inference.
+ * @param isLoading - Indicates an active streaming response; swaps send for stop button.
  * @param model - Currently selected model id.
  * @param thinkingLevel - Currently selected thinking effort level.
  * @param onModelSelect - Called when the user picks a model.
@@ -36,6 +38,7 @@ interface ChatInputProps {
  */
 export default function ChatInput({
   onSendMessage,
+  onStop,
   isLoading,
   model,
   thinkingLevel,
@@ -92,7 +95,11 @@ export default function ChatInput({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        handleSend();
+        if (isLoading && onStop) {
+          onStop();
+        } else {
+          handleSend();
+        }
       }}
       className="relative z-10"
     >
@@ -128,7 +135,7 @@ export default function ChatInput({
           />
         )}
 
-        {/* Row 2: Bottom Toolbar (Model Dropdown & Quota Ring on Left, Send Button on Right) */}
+        {/* Row 2: Bottom Toolbar (Model Dropdown & Quota Ring on Left, Send/Stop Button on Right) */}
         <div className="flex items-center justify-between pt-1">
 
           {/* Left Side Controls: Model Dropdown & Quota Ring */}
@@ -146,29 +153,41 @@ export default function ChatInput({
             />
           </div>
 
-          {/* Right Side Controls: Send Button */}
+          {/* Right Side Controls: Send / Stop Button */}
           <div className="flex items-center gap-2 shrink-0">
-            <button
-              id="chat-submit-btn"
-              type="submit"
-              disabled={isLoading || !inputValue.trim() || isQuotaExhausted || isCharOverLimit}
-              className={`p-2 rounded-xl shrink-0 transition-all focus:outline-none ${
-                isLoading || !inputValue.trim() || isQuotaExhausted || isCharOverLimit
-                  ? 'bg-surface-elevated opacity-40 cursor-not-allowed'
-                  : 'bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
-              }`}
-              title={
-                isQuotaExhausted
-                  ? 'Quota limit reached'
-                  : isCharOverLimit
-                  ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
-                  : !inputValue.trim()
-                  ? 'Type a message to send'
-                  : 'Send message'
-              }
-            >
-              <ArrowUp className="w-4 h-4 text-surface" />
-            </button>
+            {isLoading ? (
+              <button
+                id="chat-stop-btn"
+                type="button"
+                onClick={onStop}
+                className="p-2 rounded-xl shrink-0 transition-all focus:outline-none bg-danger hover:bg-danger/90 cursor-pointer shadow-button text-surface animate-in fade-in"
+                title="Stop generating"
+              >
+                <Square className="w-4 h-4 fill-surface text-surface" />
+              </button>
+            ) : (
+              <button
+                id="chat-submit-btn"
+                type="submit"
+                disabled={!inputValue.trim() || isQuotaExhausted || isCharOverLimit}
+                className={`p-2 rounded-xl shrink-0 transition-all focus:outline-none ${
+                  !inputValue.trim() || isQuotaExhausted || isCharOverLimit
+                    ? 'bg-surface-elevated opacity-40 cursor-not-allowed'
+                    : 'bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
+                }`}
+                title={
+                  isQuotaExhausted
+                    ? 'Quota limit reached'
+                    : isCharOverLimit
+                    ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
+                    : !inputValue.trim()
+                    ? 'Type a message to send'
+                    : 'Send message'
+                }
+              >
+                <ArrowUp className="w-4 h-4 text-surface" />
+              </button>
+            )}
           </div>
         </div>
 

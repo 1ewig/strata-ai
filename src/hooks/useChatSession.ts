@@ -193,6 +193,12 @@ export function useChatSession(chatId: string) {
     [chat, chatId, currentConvTitle, rateLimitData, setQuotaError],
   );
 
+  const handleStop = useCallback(() => {
+    if (chat.stop) {
+      chat.stop();
+    }
+  }, [chat]);
+
   const isLoading = chat.status !== 'ready' && !quotaError;
 
   return {
@@ -211,6 +217,7 @@ export function useChatSession(chatId: string) {
     clearQuotaError,
     checkQuotaStatus,
     handleSendMessage,
+    handleStop,
     handleSelectFile: workspace.handleSelectFile,
     handleCreateFile: workspace.handleCreateFile,
     handleUpdateFile: workspace.handleUpdateFile,

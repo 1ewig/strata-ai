@@ -58,6 +58,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     clearQuotaError,
     checkQuotaStatus,
     handleSendMessage,
+    handleStop,
     handleSelectFile,
     handleCreateFile,
     handleUpdateFile,
@@ -167,6 +168,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
           <div className="max-w-2xl mx-auto pointer-events-auto">
             <ChatInput
               onSendMessage={handleSendMessage}
+              onStop={handleStop}
               isLoading={isLoading}
               model={model}
               thinkingLevel={thinkingLevel}
