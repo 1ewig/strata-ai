@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0.3-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind-v4.1-38BDF8?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 
-**Strata AI** is a state-of-the-art, local-first agentic workspace studio designed for creating, analyzing, editing, and managing dynamic multi-file workspaces. Powered by **Google Gemini** models via **Vercel AI SDK 7**, Strata AI combines autonomous multi-step tool execution with local IndexedDB persistence, a 3-tier surgical string edit engine, and a fluid, non-glitchy streaming UX.
+**Strata AI** is a state-of-the-art, local-first agentic workspace studio designed for creating, analyzing, editing, and managing dynamic multi-file workspaces. Powered by **Google Gemini** and **Fireworks-hosted open-weight models** (e.g. DeepSeek V4 Flash) via **Vercel AI SDK 7**, Strata AI combines autonomous multi-step tool execution with local IndexedDB persistence, a 3-tier surgical string edit engine, and a fluid, non-glitchy streaming UX.
 
 🚀 **Live Production App:** [strata-ai-five.vercel.app](https://strata-ai-five.vercel.app)  
 📁 **Repository:** [github.com/1ewig/strata-ai](https://github.com/1ewig/strata-ai)
@@ -91,11 +91,12 @@ onFinish(message, allMessages)
 
 ## ⚙️ Model Support & Thinking Levels
 
-Strata AI supports dynamic hot-swapping between flagship Gemini models and open-weights models:
+Strata AI supports dynamic hot-swapping between flagship Gemini models and open-weights models across multiple providers:
 
 - **Gemini Flagship Models**: `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3-flash-preview`
 - **Gemma Open-Weights Models**: `gemma-4-31b-it`, `gemma-4-26b-a4b-it`
-- **Configurable Thinking Levels**: Fine-tune agent reasoning depth (`minimal`, `low`, `medium`, `high`, model-dependent — Gemma models support none).
+- **Fireworks-Hosted Models**: `accounts/fireworks/models/deepseek-v4-flash-0731` (DeepSeek V4 Flash 0731 — fast open-weight reasoning via Fireworks AI; requires `FIREWORKS_API_KEY`)
+- **Configurable Thinking Levels**: Fine-tune agent reasoning depth (`minimal`, `low`, `medium`, `high`, model-dependent — Gemma models support none, DeepSeek V4 Flash exposes `low`/`high`).
 
 ---
 
@@ -128,6 +129,9 @@ Create a `.env.local` file in the root directory:
 ```env
 # Required: Google Gemini API Key
 GOOGLE_GENERATIVE_AI_API_KEY="your-gemini-api-key-here"
+
+# Required: Fireworks API Key (for Fireworks-hosted models like DeepSeek V4 Flash)
+FIREWORKS_API_KEY="your-fireworks-api-key-here"
 
 # Required: Supabase Project
 NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"

@@ -1,4 +1,3 @@
-import { google } from "@ai-sdk/google";
 import {
   streamText,
   isStepCount,
@@ -11,6 +10,7 @@ import { z } from "zod";
 import { Resume, WorkspaceFile } from "@/lib/schemas";
 import { MAX_MESSAGE_CHARS } from "@/lib/limits";
 import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
+import { resolveAgentModel } from "@/lib/ai/providers";
 
 import { auth } from "@/lib/auth";
 import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
@@ -121,9 +121,17 @@ export async function POST(req: Request) {
     }
   };
 
+  // Resolve the requested model to its provider-specific config (Google or Fireworks).
+  const resolvedModel = resolveAgentModel(model || "gemini-3.5-flash-lite", thinkingLevel);
+
   // Stream the agent run, wiring the workspace tools to the mutable file list.
   const result = streamText({
-    model: google(model || "gemini-3.5-flash-lite"),
+    model: resolvedModel.model,
+    // Spread conditionally so provider branches can omit unsupported options.
+    ...(resolvedModel.reasoning !== undefined
+      ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
+      : {}),
+    ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
     system: buildSystemInstruction(mutableFiles),
     messages: await convertToModelMessages(messages),
     tools: createWorkspaceTools({
@@ -173,16 +181,6 @@ export async function POST(req: Request) {
     },
     // Bound the run to the step limit so tool loops cannot run forever.
     stopWhen: isStepCount(maxStepsLimit),
-    // Use provider-default thinking unless the client requested a level.
-    reasoning: thinkingLevel ? (thinkingLevel as any) : "provider-default",
-    providerOptions: {
-      google: {
-        // Include reasoning thoughts in the stream so the UI can display them.
-        thinkingConfig: {
-          includeThoughts: true,
-        },
-      },
-    },
   });
 
   // Wrap the AI SDK stream in the UI message protocol and attach quota headers.

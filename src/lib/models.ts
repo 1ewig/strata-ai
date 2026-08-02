@@ -3,6 +3,8 @@ export interface ModelOption {
   id: string;
   label: string;
   family: string;
+  /** Backend provider that serves this model (defaults to 'google'). */
+  provider?: 'google' | 'fireworks';
 }
 
 /** The catalog of AI models available for chat. */
@@ -12,6 +14,12 @@ export const MODELS: ModelOption[] = [
   { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview', family: 'Gemini 3' },
   { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', family: 'Gemma 4' },
   { id: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B IT', family: 'Gemma 4' },
+  {
+    id: 'accounts/fireworks/models/deepseek-v4-flash-0731',
+    label: 'DeepSeek V4 Flash 0731',
+    family: 'DeepSeek',
+    provider: 'fireworks',
+  },
 ];
 
 /** One-line descriptions keyed by model id, for tooltips and detail views. */
@@ -21,6 +29,7 @@ export const MODEL_DESCRIPTIONS: Record<string, string> = {
   'gemini-3-flash-preview': 'Preview of latest Gemini 3',
   'gemma-4-31b-it': 'Open-weight, fully private',
   'gemma-4-26b-a4b-it': 'Efficient open model',
+  'accounts/fireworks/models/deepseek-v4-flash-0731': 'Fast open-weight reasoning model',
 };
 
 /** Unique family names derived from MODELS, preserving insertion order. */
@@ -48,6 +57,9 @@ export const MODEL_THINKING_LEVELS: Record<string, ModelThinkingConfig> = {
   'gemini-3.5-flash-lite': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'low' },
   'gemini-3.1-flash-lite': { levels: ['minimal', 'high'], defaultLevel: 'minimal' },
   'gemini-3-flash-preview': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'high' },
+  // DeepSeek V4 Flash supports low/high/max reasoning effort; the app maps to low/high
+  // because the AI SDK's top-level reasoning option cannot express 'max'.
+  'accounts/fireworks/models/deepseek-v4-flash-0731': { levels: ['low', 'high'], defaultLevel: 'high' },
 };
 
 // localStorage keys for persisting the user's model and thinking-level choices

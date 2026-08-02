@@ -34,6 +34,7 @@
 | Runtime / Package Manager | bun | Dev server, build, lint, scripts | Never use npm/yarn/npx (AGENTS.md rule) |
 | AI SDK | `ai@^7.0.0` | Unified LLM streaming, tool calling, message streams | `streamText`, `tool()`, `smoothStream`, `isStepCount`, `toUIMessageStream`, `createUIMessageStreamResponse`, `convertToModelMessages` |
 | Google Provider | `@ai-sdk/google@^4.0.0` | Gemini model access | `google(modelId)`; `thinkingConfig.includeThoughts` reasoning; key `GOOGLE_GENERATIVE_AI_API_KEY` |
+| Fireworks Provider | `@ai-sdk/fireworks@^3.0.0` | Fireworks-hosted model access (DeepSeek V4 Flash) | `fireworks(modelId)`; top-level `reasoning` → `reasoning_effort`; native `reasoning_content` parsing; key `FIREWORKS_API_KEY` |
 | Web Search | Tavily REST API (direct `fetch`) | Real-time search + page extraction tools (`webSearch`, `extractUrl`) | No SDK — shared `callTavilyApi` helper in `lib/ai/tools/tavily-tools.ts`; key `TAVILY_API_KEY` (optional) |
 | React AI Hooks | `@ai-sdk/react@^2.0.0` | `useChat` + `DefaultChatTransport` on the client | Custom transport wraps `fetch` to capture rate-limit headers |
 | Client Database | Dexie 4 + `dexie-react-hooks` | Local-first IndexedDB persistence: conversations, messages, files | Schema v5 (`userId` indexing for per-user session isolation); `useLiveQuery` for reactive lists |
@@ -71,7 +72,7 @@
 3. Request passes through `src/proxy.ts` (Next.js 16 proxy, the middleware replacement): session-cookie check + security headers.
 4. `app/api/agent/route.ts` (Route Handler) verifies the session server-side with `auth.api.getSession`, then calls `checkAndIncrementRateLimit(userId)`.
 5. Body is parsed with Zod (`messages`, `files`, `resumes` legacy, `model`, `thinkingLevel`, `maxSteps`).
-6. `streamText()` is invoked with the Gemini model, a 6-section `buildSystemInstruction(files)` prompt, `convertToModelMessages(messages)`, and `createWorkspaceTools(...)` whose closures mutate a per-request `mutableFiles` array.
+6. `streamText()` is invoked with the provider-resolved model (Google or Fireworks, via `lib/ai/providers.ts`), a 6-section `buildSystemInstruction(files)` prompt, `convertToModelMessages(messages)`, and `createWorkspaceTools(...)` whose closures mutate a per-request `mutableFiles` array.
 7. The response is returned as an SSE UI-message stream (`createUIMessageStreamResponse` + `toUIMessageStream`), carrying `X-RateLimit-Remaining-5h` / `X-RateLimit-Remaining-Week` headers.
 8. `useChat` updates `chat.messages` + `chat.status` reactively; the UI renders streaming text, reasoning accordion, and tool cards.
 9. `onFinish` (handled by `chat-reconciler.ts`) persists every message as a native AI SDK `UIMessage` into Dexie, extracts file create/edit/delete results from tool parts, merges them into the conversation's `files` array, and persists. Auto-continuation fires if `finishReason === 'step-limit'` (up to 2 more passes).
@@ -179,6 +180,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   └── ai/
     │   │       ├── index.ts          # Re-exports prompts + tools
     │   │       ├── prompts.ts        # buildSystemInstruction(files) — 6-section advanced system prompt
+    │   │       ├── providers.ts      # SERVER-ONLY model→provider resolver (google/fireworks streamText config)
     │   │       ├── tools.ts          # Barrel: re-exports tool factories + createWorkspaceTools (8 tools)
     │   │       ├── tools/            # Tool factory submodules (split by domain)
     │   │       │   ├── types.ts          # WorkspaceToolsContext, Zod file schemas, findWorkspaceFile/isSameFilename
@@ -231,8 +233,11 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 | `gemini-3-flash-preview` | Gemini 3 | minimal / low / medium / high | high |
 | `gemma-4-31b-it` | Gemma 4 | none (provider default) | — |
 | `gemma-4-26b-a4b-it` | Gemma 4 | none (provider default) | — |
+| `accounts/fireworks/models/deepseek-v4-flash-0731` | DeepSeek (Fireworks) | low / high | high |
 
 - Each entry also has a user-facing label + one-line description (`MODEL_DESCRIPTIONS`) shown in the ChatInput model popover.
+- Model entries may declare a `provider` ('google' or 'fireworks'); the server routes to the matching provider via `lib/ai/providers.ts` (`resolveAgentModel`). The model selector menu and transport are provider-agnostic.
+- DeepSeek V4 Flash reasoning maps to Fireworks' `reasoning_effort` (low/high — the model's `max` effort is not expressible via the AI SDK's top-level `reasoning` option); reasoning text arrives as native reasoning parts from `reasoning_content`, feeding the same ThoughtAccordion.
 - `ChatInput` renders the first 3 models as "featured" and the rest under a "More models" submenu; a separate "Effort" submenu lists the active model's thinking levels.
 - Preference storage: `localStorage` keys `selectedModel` / `selectedThinkingLevel`; on conversation load the conversation record's own `model`/`thinkingLevel` wins over stored preferences.
 - The default model falls back to `NEXT_PUBLIC_GEMINI_MODEL`, then `gemini-3.5-flash-lite`.
@@ -292,7 +297,7 @@ The two web tools (`lib/ai/tools/tavily-tools.ts`, shared `callTavilyApi` helper
 
 - **Validation:** `bodySchema` (Zod): `messages` (any[]), `files?`, `resumes?` (legacy), `model?`, `thinkingLevel?`, `maxSteps?`; `maxSteps` clamped to 1–30.
 - **Error handling:** 401 (no session), 429 (quota — with `Retry-After` + `X-RateLimit-*` headers and a human message), 400 (Zod failure, flattened details). Stream errors only `console.error` (no rethrow).
-- **`streamText` config:** Gemini model; system prompt rebuilt on every `prepareStep` (so the model always sees current file state); `smoothStream({ delayInMs: 15, chunking: "word" })`; `stopWhen: isStepCount(maxSteps)`; `reasoning` mapped from thinkingLevel (Gemma models pass provider-default); `providerOptions.google.thinkingConfig.includeThoughts: true` (feeds ThoughtAccordion); lifecycle `onStart`/`onStepEnd`/`onEnd`/`onError` logging.
+- **`streamText` config:** model + reasoning + `providerOptions` are resolved per-provider by `lib/ai/providers.ts` (`resolveAgentModel`); system prompt rebuilt on every `prepareStep` (so the model always sees current file state); `smoothStream({ delayInMs: 15, chunking: "word" })`; `stopWhen: isStepCount(maxSteps)`; Google models pass `reasoning` mapped from thinkingLevel (Gemma models pass provider-default) + `providerOptions.google.thinkingConfig.includeThoughts: true` (feeds ThoughtAccordion); Fireworks models pass `reasoning` mapped to `reasoning_effort` (low/high) + `providerOptions.fireworks` `thinking: { type: "enabled" }` and `reasoningHistory: "interleaved"` (keeps reasoning across tool calls); lifecycle `onStart`/`onStepEnd`/`onEnd`/`onError` logging.
 - **Auto-continuation:** client-side, in `useChatSession` — `finishReason === 'step-limit'` triggers up to 2 follow-up "please continue" sends (max ~75 effective steps), reset on manual send.
 - **Rate limiting:** `checkAndIncrementRateLimit(userId)` runs before streaming; success response headers carry remaining quota; 429 branch zeroes the 5h header.
 
@@ -300,7 +305,8 @@ The two web tools (`lib/ai/tools/tavily-tools.ts`, shared `callTavilyApi` helper
 
 | Integration | Interface | Where it lives | Notes |
 |-------------|-----------|----------------|-------|
-| Google Gemini | `@ai-sdk/google` `google(model)` | `/api/agent` route | Key `GOOGLE_GENERATIVE_AI_API_KEY`; model ids in `lib/models.ts` |
+| Google Gemini | `@ai-sdk/google` `google(model)` | `/api/agent` route via `lib/ai/providers.ts` | Key `GOOGLE_GENERATIVE_AI_API_KEY`; model ids in `lib/models.ts` |
+| Fireworks AI | `@ai-sdk/fireworks` `fireworks(model)` | `/api/agent` route via `lib/ai/providers.ts` | Key `FIREWORKS_API_KEY`; hosts DeepSeek V4 Flash 0731; native `reasoning_content` parsing |
 | Tavily | REST API via direct `fetch` | `lib/ai/tools/tavily-tools.ts` | Key `TAVILY_API_KEY` (optional); powers `webSearch` + `extractUrl`; no SDK dependency |
 | Supabase Postgres | `pg` Pool | `lib/auth.ts`, `lib/rate-limit.ts`, `scripts/*` | Two separate Pools (auth vs rate-limit), both `search_path=better_auth,public`; pooler port 6543 |
 | Better Auth | HTTP (catch-all route) + server/client SDK | `api/auth/[...all]`, `lib/auth*.ts` | Cookie-based sessions; `nextCookies` plugin; 5-min session cookie cache |
@@ -375,7 +381,7 @@ This is the single reconciliation point that turns a streamed assistant message 
 8. **No manual auto-scroll effects.** `<StickToBottom>` in `chat-id/[id]/page.tsx` owns scrolling; do not add `useEffect` + `scrollIntoView` loops.
 9. **Auth flow is fixed:** Better Auth server in `lib/auth.ts`, client in `lib/auth-client.ts`, catch-all route in `api/auth/[...all]`, pre-render guards in `proxy.ts`, double-verified in route handlers via `auth.api.getSession`.
 10. **Rate-limit rules:** quotas are 10 msgs / 5h and 50 msgs / week (constants `MAX_5H`, `MAX_WEEK` in `lib/rate-limit.ts`). Increment logic lives only server-side; the UI mirrors via SSR hydration + response headers + `/api/user/rate-limit`.
-11. **Adding a model:** extend `MODELS` + `MODEL_DESCRIPTIONS` in `lib/models.ts` and add a `MODEL_THINKING_LEVELS` entry if it supports reasoning. Gemma open models have no thinking levels.
+11. **Adding a model:** extend `MODELS` + `MODEL_DESCRIPTIONS` in `lib/models.ts` (declare `provider: 'google' | 'fireworks'` for non-Google models) and add a `MODEL_THINKING_LEVELS` entry if it supports reasoning. Gemma open models have no thinking levels. Provider-specific `streamText` wiring (reasoning mapping, `providerOptions`) goes in `lib/ai/providers.ts` — never in the route or client code.
 12. **Dexie schema upgrades:** bump the version in `lib/db/db.ts` constructor and add a `stores()` definition; keep messages as native `UIMessage` shape (`DBMessage`).
 13. **System prompt discipline:** inject metadata-only file listings into the prompt (name/language/charCount/id); never dump full file content — the model must call `readFile`.
 14. **No emojis in code/files.** (README/docs may differ; code must not.)

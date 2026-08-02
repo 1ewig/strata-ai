@@ -12,6 +12,7 @@
     "db:test": "bun run scripts/test-db.ts"
   },
   "dependencies": {
+    "@ai-sdk/fireworks": "^3.0.22",
     "@ai-sdk/google": "^4.0.0",
     "@ai-sdk/react": "^2.0.0",
     "@supabase/ssr": "^0.12.4",
