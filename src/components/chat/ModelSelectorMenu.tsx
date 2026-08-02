@@ -95,20 +95,24 @@ export default function ModelSelectorMenu({
             setIsOpen(true);
           }
         }}
-        className={`flex items-center gap-1.5 text-xs font-medium transition-all rounded-lg px-2.5 py-1.5 cursor-pointer shrink-0 border select-none ${isOpen
+        className={`flex items-center gap-1.5 text-xs font-medium transition-all rounded-xl px-2 py-1 h-7 cursor-pointer shrink-0 border select-none ${
+          isOpen
             ? 'bg-surface-hover text-text-primary border-edge-hover'
             : 'text-text-muted hover:text-text-primary bg-surface-base hover:bg-surface-hover/60 border-edge-raised'
-          }`}
+        }`}
       >
-        <span className="font-semibold text-text-primary">{currentModel?.label || 'Model'}</span>
+        <span className="font-semibold text-text-primary truncate max-w-[110px] sm:max-w-[160px]">
+          {currentModel?.label || 'Model'}
+        </span>
         {effortLabel && (
-          <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-surface-hover text-text-muted font-normal capitalize border border-edge-default">
+          <span className="text-[10px] px-1 py-0.5 rounded-md bg-surface-hover text-text-muted font-normal capitalize">
             {effortLabel}
           </span>
         )}
         <ChevronDown
-          className={`w-3.5 h-3.5 text-text-muted transition-transform duration-200 ${isOpen ? 'rotate-180 text-text-primary' : ''
-            }`}
+          className={`w-3.5 h-3.5 text-text-muted shrink-0 transition-transform duration-200 ${
+            isOpen ? 'rotate-180 text-text-primary' : ''
+          }`}
         />
       </button>
 
