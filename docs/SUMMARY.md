@@ -34,6 +34,7 @@
 | Runtime / Package Manager | bun | Dev server, build, lint, scripts | Never use npm/yarn/npx (AGENTS.md rule) |
 | AI SDK | `ai@^7.0.0` | Unified LLM streaming, tool calling, message streams | `streamText`, `tool()`, `smoothStream`, `isStepCount`, `toUIMessageStream`, `createUIMessageStreamResponse`, `convertToModelMessages` |
 | Google Provider | `@ai-sdk/google@^4.0.0` | Gemini model access | `google(modelId)`; `thinkingConfig.includeThoughts` reasoning; key `GOOGLE_GENERATIVE_AI_API_KEY` |
+| Web Search | Tavily REST API (direct `fetch`) | Real-time search + page extraction tools (`webSearch`, `extractUrl`) | No SDK — shared `callTavilyApi` helper in `lib/ai/tools/tavily-tools.ts`; key `TAVILY_API_KEY` (optional) |
 | React AI Hooks | `@ai-sdk/react@^2.0.0` | `useChat` + `DefaultChatTransport` on the client | Custom transport wraps `fetch` to capture rate-limit headers |
 | Client Database | Dexie 4 + `dexie-react-hooks` | Local-first IndexedDB persistence: conversations, messages, files | Schema v5 (`userId` indexing for per-user session isolation); `useLiveQuery` for reactive lists |
 | Server Database | Supabase PostgreSQL via `pg` Pool | Better Auth identity + rate-limit log | Connection string `DATABASE_URL` (pooler :6543); `search_path=better_auth,public` |
@@ -178,7 +179,11 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   └── ai/
     │   │       ├── index.ts          # Re-exports prompts + tools
     │   │       ├── prompts.ts        # buildSystemInstruction(files) — 6-section advanced system prompt
-    │   │       ├── tools.ts          # 8 tool factories (6 workspace + webSearch & extractUrl) + createWorkspaceTools
+    │   │       ├── tools.ts          # Barrel: re-exports tool factories + createWorkspaceTools (8 tools)
+    │   │       ├── tools/            # Tool factory submodules (split by domain)
+    │   │       │   ├── types.ts          # WorkspaceToolsContext, Zod file schemas, findWorkspaceFile/isSameFilename
+    │   │       │   ├── workspace-tools.ts # 6 workspace factories: list/read/write/edit/rename/delete
+    │   │       │   └── tavily-tools.ts    # webSearch + extractUrl factories, callTavilyApi helper
     │   │       ├── message-extractor.ts # extractFilesFromMessage / extractDeletedFilesFromMessage from UI message parts
     │   │       ├── chat-error-handler.ts # Error text mapping to friendly assistant error bubbles + Dexie sync
     │   │       └── chat-reconciler.ts    # onFinish step message persistence, file delta extraction & auto-continuation loop
@@ -261,9 +266,9 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 
 ## 7. Data Flow, Server Actions & API Map
 
-### 7.1 Workspace tools (`lib/ai/tools.ts`) — the only "server actions" in the product
+### 7.1 Workspace tools (`lib/ai/tools/`) — the only "server actions" in the product
 
-All tools are `ai.tool()` definitions registered by `createWorkspaceTools(context)`, where `context: WorkspaceToolsContext` = `{ getCurrentFiles, onUpdateFile, onDeleteFile }`. **No `contextSchema`** — state flows through closures captured at creation. Tools mutate the per-request `mutableFiles` array via callbacks; results flow back to the client as tool-result parts.
+All tools are `ai.tool()` definitions registered by `createWorkspaceTools(context)` (in the `lib/ai/tools.ts` barrel), where `context: WorkspaceToolsContext` = `{ getCurrentFiles, onUpdateFile, onDeleteFile }` (defined in `lib/ai/tools/types.ts`). **No `contextSchema`** — state flows through closures captured at creation. Workspace factories live in `lib/ai/tools/workspace-tools.ts`; the web pair lives in `lib/ai/tools/tavily-tools.ts`. Tools mutate the per-request `mutableFiles` array via callbacks; results flow back to the client as tool-result parts.
 
 | Tool | Input (Zod) | Output (Zod) | Behavior / Notes |
 |------|-------------|--------------|------------------|
@@ -275,6 +280,13 @@ All tools are `ai.tool()` definitions registered by `createWorkspaceTools(contex
 | `deleteFile` | `nameOrId` | `{ deleted, fileId?, name?, error? }` | Matches by id or case-insensitive name |
 
 **Persistence contract:** tool outputs containing `{ file }`, `{ files: [...] }`, or `{ deleted: true, fileId/name }` are auto-discovered by `lib/ai/message-extractor.ts` (`extractFilesFromMessage` / `extractDeletedFilesFromMessage`) and merged into Dexie on `onFinish`. Adding a new file-mutating tool needs zero changes to message extraction.
+
+The two web tools (`lib/ai/tools/tavily-tools.ts`, shared `callTavilyApi` helper):
+
+| Tool | Input (Zod) | Output (Zod) | Behavior / Notes |
+|------|-------------|--------------|------------------|
+| `webSearch` | `query`, `searchDepth?` (basic\|advanced, default advanced), `topic?` (general\|news), `maxResults?` (1–10, default 6), `includeRawContent?`, `includeImages?`, `timeRange?` (day\|week\|month\|year), `includeDomains?`, `excludeDomains?` | `{ success, query, answer?, results? [{title,url,content,rawContent?,score?,publishedDate?}], images?, error? }` | Tavily `/search`; `include_answer: true`; raw content capped at 12k chars per result |
+| `extractUrl` | `urls` (1–5), `extractDepth?` (default advanced), `includeImages?` | `{ success, extracted [{url,title?,rawContent}], failed? [{url,error}], error? }` | Tavily `/extract`; content capped at 18k chars per URL |
 
 ### 7.2 Agent endpoint configuration (`/api/agent`)
 
@@ -289,6 +301,7 @@ All tools are `ai.tool()` definitions registered by `createWorkspaceTools(contex
 | Integration | Interface | Where it lives | Notes |
 |-------------|-----------|----------------|-------|
 | Google Gemini | `@ai-sdk/google` `google(model)` | `/api/agent` route | Key `GOOGLE_GENERATIVE_AI_API_KEY`; model ids in `lib/models.ts` |
+| Tavily | REST API via direct `fetch` | `lib/ai/tools/tavily-tools.ts` | Key `TAVILY_API_KEY` (optional); powers `webSearch` + `extractUrl`; no SDK dependency |
 | Supabase Postgres | `pg` Pool | `lib/auth.ts`, `lib/rate-limit.ts`, `scripts/*` | Two separate Pools (auth vs rate-limit), both `search_path=better_auth,public`; pooler port 6543 |
 | Better Auth | HTTP (catch-all route) + server/client SDK | `api/auth/[...all]`, `lib/auth*.ts` | Cookie-based sessions; `nextCookies` plugin; 5-min session cookie cache |
 | Vercel (deploy) | `next build` standalone output | `next.config.ts`, package.json `start` | — |
@@ -397,8 +410,8 @@ For **PostgreSQL (server DB, e.g. the planned migration):**
 
 ### 10.3 Add a new workspace tool (most common feature)
 
-1. Create a factory `createXTool({ ...context })` in `lib/ai/tools.ts` using `tool()` with explicit Zod `inputSchema`/`outputSchema`.
-2. Register it in the `createWorkspaceTools()` return object.
+1. Create a factory `createXTool({ ...context })` in `lib/ai/tools/workspace-tools.ts` (or `lib/ai/tools/tavily-tools.ts` for web tools) using `tool()` with explicit Zod `inputSchema`/`outputSchema`.
+2. Register it in the `createWorkspaceTools()` return object (barrel `lib/ai/tools.ts`).
 3. Add a numbered rule under `## Tool Rules` in `lib/ai/prompts.ts` (read-before-edit, verbatim copy, etc.).
 4. Add a `toolConfigs` entry (icon/label/badge/accent) + a summary builder + a `case` in `resolveToolDisplay` in `components/chat/tools/resolver.tsx`. Do NOT touch `ToolCallCard.tsx`.
 5. If the tool mutates files, return `{ file }`, `{ files }`, or `{ deleted: true, fileId }` so `message-extractor.ts` persists it automatically.

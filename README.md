@@ -25,7 +25,7 @@
 
 ## 🌟 Key Features & Capabilities
 
-- **Autonomous Agentic Workspace Tools**: 8 schema-validated tools enabling the AI to inspect, read, create, surgically edit, rename, and delete workspace documents, plus perform real-time Tavily web searches (`webSearch`, advanced depth) and deep Markdown page extraction (`extractUrl`).
+- **Autonomous Agentic Workspace Tools**: 8 schema-validated tools enabling the AI to inspect, read, create, surgically edit, rename, and delete workspace documents, plus perform real-time Tavily web searches (`webSearch`, advanced depth, domain/time filters, raw-content mode) and deep Markdown page extraction (`extractUrl`).
 - **Significantly Reduced Context Footprint**: System prompts inject lightweight file metadata (`name`, `language`, `charCount`, `id`) rather than raw content. The agent calls `readFile` only when precise code context is required.
 - **3-Tier Surgical Edit Engine (`ResumeEditEngine`)**: Performs precise string manipulation through exact matching, whitespace normalization, and 2-point anchor bounded matching without breaking document structure.
 - **Local-First Client Persistence**: Complete conversation histories, dynamic file states, and user preferences persist client-side via **Dexie.js (IndexedDB v5)** with per-user session isolation—no server round-trips for workspace state.
@@ -33,7 +33,8 @@
 - **Auto-Continuation Execution Loop**: Automatically detects step-limit finish reasons (`finishReason === 'step-limit'`) and dispatches multi-pass continuation requests for complex agent tasks up to 75 steps.
 - **Word-Paced Smooth Streaming**: Powered by `smoothStream` (15ms pacing) to ensure continuous, natural token flow without jarring chunk bursts.
 - **DOM-Observer Auto-Scroll**: Leverages `use-stick-to-bottom` (`ResizeObserver`/`MutationObserver`) for reliable, non-glitchy chat scrolling that respects manual user scroll interventions.
-- **Polymorphic Tool UI Resolver**: Isolates visual presentation logic in `src/components/chat/tools/resolver.tsx`, allowing instant addition of new tools with custom badges, summaries, and action triggers.
+- **Polymorphic Tool UI Resolver**: Isolates visual presentation logic in `src/components/chat/tools/resolver.tsx`, allowing instant addition of new tools with custom badges, summaries, and action triggers — including in-flight research pulse states and an animated shimmer loader on tool cards.
+- **Streaming Stop Control**: The send button morphs into a stop button while the agent is streaming, letting users cancel long inference runs mid-flight.
 - **Decoupled Pure Presentation Components**: UI components (`Sidebar.tsx`, `theme-toggle.tsx`, auth forms, `user-button.tsx`) contain zero business logic — pages call specialized custom React hooks (`useConversations`, `useLatestConversationRedirect`, `useSignIn`, `useSignUp`, `useSignOut`, `useTheme`) and pass data + callbacks down as props.
 - **Secure Email/Password Auth & Quota Enforcement**: Better Auth 1.6 on Supabase PostgreSQL with proxy-level session guards, plus database-backed 5-hour/7-day sliding window rate limiting (10 msgs / 5h, 50 msgs / week) with server-side SSR initial hydration, real-time streaming header sync, live countdown reset timers, and inline input alerts.
 
@@ -41,7 +42,7 @@
 
 ## 🤖 Workspace Tool Suite
 
-The agent interacts with user workspaces and the web via 8 core tools registered in `src/lib/ai/tools.ts`:
+The agent interacts with user workspaces and the web via 8 core tools — factories live in `src/lib/ai/tools/` (`workspace-tools.ts`, `tavily-tools.ts`), bundled by the `src/lib/ai/tools.ts` barrel:
 
 | Tool | Parameters | Output / Action |
 |------|------------|-----------------|
@@ -51,8 +52,8 @@ The agent interacts with user workspaces and the web via 8 core tools registered
 | `editFile` | `nameOrId`, `searchString`, `replaceString`, `explanation` | Surgically edits code blocks using the 3-tier `ResumeEditEngine`. |
 | `renameFile` | `nameOrId`, `newName` | Renames an existing file with collision checking. |
 | `deleteFile` | `nameOrId` | Removes a target file from the current workspace collection. |
-| `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?` | Performs real-time web search via Tavily (`searchDepth: "advanced"`). |
-| `extractUrl` | `urls`, `extractDepth?` | Extracts clean Markdown content from target web pages via Tavily Extract. |
+| `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?`, `includeRawContent?`, `includeImages?`, `timeRange?`, `includeDomains?`, `excludeDomains?` | Real-time web search via Tavily (`searchDepth: "advanced"` default) — AI answer summary + ranked results with content snippets, optional raw page content, images, and publish dates. |
+| `extractUrl` | `urls` (1–5), `extractDepth?`, `includeImages?` | Extracts clean Markdown content from target web pages via Tavily Extract (up to 5 URLs per call). |
 
 ---
 
