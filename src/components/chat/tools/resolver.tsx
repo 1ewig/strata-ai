@@ -1,6 +1,6 @@
 import React, { type ReactNode } from 'react';
-import { type LucideIcon, Sparkles, Search, Trash2, PencilLine, PenLine, Wrench, FileText, ExternalLink, Folder, Globe } from 'lucide-react';
-import { Resume, WorkspaceFile } from '@/lib/schemas';
+import { type LucideIcon, Sparkles, Search, Trash2, PencilLine, PenLine, Wrench, FileText, Folder, Globe } from 'lucide-react';
+import { WorkspaceFile } from '@/lib/schemas';
 
 /**
  * Display-ready props consumed by ToolCallCard, produced by resolveToolDisplay().
@@ -36,8 +36,6 @@ type ToolConfig = {
 
 /**
  * Per-tool display configs keyed by normalized tool name.
- * Config entry pattern for a new tool: add an entry here, register its (and any alias)
- * names in normalizeToolName(), and add a matching summary case in resolveToolDisplay().
  */
 const toolConfigs: Record<string, ToolConfig> = {
   listFiles: {
@@ -112,44 +110,13 @@ const toolConfigs: Record<string, ToolConfig> = {
     accentBorder: 'border-accent-blue/60',
     accentText: 'text-info',
   },
-  // Legacy aliases
-  writeResume: {
-    label: 'Resume Updated',
-    badge: 'Updated',
-    icon: Sparkles,
-    accent: 'primary',
-    accentBg: 'bg-primary-soft',
-    accentBorder: 'border-primary/40',
-    accentText: 'text-primary',
-  },
-  readResume: {
-    label: 'Resume Read',
-    badge: 'Read',
-    icon: Search,
-    accent: 'info',
-    accentBg: 'bg-accent-blue-soft',
-    accentBorder: 'border-accent-blue/60',
-    accentText: 'text-info',
-  },
-  deleteResume: {
-    label: 'Resume Deleted',
-    badge: 'Cleared',
-    icon: Trash2,
-    accent: 'danger',
-    accentBg: 'bg-danger-soft',
-    accentBorder: 'border-danger/40',
-    accentText: 'text-danger',
-  },
-  editResume: {
-    label: 'Resume Edited',
-    badge: 'Applied',
-    icon: PencilLine,
-    accent: 'warning',
-    accentBg: 'bg-warning-soft',
-    accentBorder: 'border-secondary/70',
-    accentText: 'text-warning',
-  },
 };
+
+// Map legacy resume aliases directly to canonical tool configs
+toolConfigs.writeResume = { ...toolConfigs.writeFile, label: 'Resume Updated' };
+toolConfigs.readResume = { ...toolConfigs.readFile, label: 'Resume Read' };
+toolConfigs.deleteResume = { ...toolConfigs.deleteFile, label: 'Resume Deleted', badge: 'Cleared' };
+toolConfigs.editResume = { ...toolConfigs.editFile, label: 'Resume Edited' };
 
 /**
  * Fallback config used when no entry in toolConfigs matches the invoked tool.
@@ -163,6 +130,54 @@ const defaultConfig: ToolConfig = {
   accentBorder: 'border-accent-blue/60',
   accentText: 'text-info',
 };
+
+/**
+ * Reusable summary header component for consistent title and badge formatting across tools.
+ */
+interface SummaryHeaderProps {
+  title: ReactNode;
+  badge?: ReactNode;
+  badgeColorClass?: string;
+}
+
+function SummaryHeader({ title, badge, badgeColorClass = 'text-info' }: SummaryHeaderProps) {
+  return (
+    <div className="flex items-center justify-between text-xs gap-2">
+      <span className="font-medium font-mono text-text-primary truncate">{title}</span>
+      {badge && (
+        <span className={`text-[10px] font-mono shrink-0 font-medium ${badgeColorClass}`}>
+          {badge}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Reusable in-flight loading summary for running tools.
+ */
+interface InFlightSummaryProps {
+  title: ReactNode;
+  badgeText: string;
+  loadingText: string;
+}
+
+function InFlightSummary({ title, badgeText, loadingText }: InFlightSummaryProps) {
+  return (
+    <div className="py-1 space-y-1">
+      <SummaryHeader
+        title={title}
+        badge={
+          <span className="flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-info animate-ping" />
+            {badgeText}
+          </span>
+        }
+      />
+      <p className="text-[11px] text-text-muted animate-pulse">{loadingText}</p>
+    </div>
+  );
+}
 
 /**
  * Maps a raw tool name (case, dashes, underscores ignored) to its canonical config key.
@@ -258,10 +273,11 @@ function buildListFilesSummary(args: any, result: any): ReactNode {
 
   return (
     <div className="py-1 space-y-0.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium text-text-primary">Workspace Files</span>
-        <span className="text-[10px] font-mono text-text-muted">{count} file{count === 1 ? '' : 's'}</span>
-      </div>
+      <SummaryHeader
+        title="Workspace Files"
+        badge={`${count} file${count === 1 ? '' : 's'}`}
+        badgeColorClass="text-text-muted"
+      />
       <p className="text-[11px] text-text-muted font-mono truncate">
         {filesList.length > 0
           ? filesList.map((f: any) => f.name).join(', ')
@@ -282,10 +298,10 @@ function buildReadFileSummary(args: any, result: any): ReactNode {
 
   return (
     <div className="py-1 space-y-0.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium font-mono text-text-primary truncate">{fileName}</span>
-        {section && <span className="text-[10px] text-info font-mono shrink-0">section: {section}</span>}
-      </div>
+      <SummaryHeader
+        title={fileName}
+        badge={section ? `section: ${section}` : undefined}
+      />
       <p className="text-[11px] text-text-muted truncate">
         {result?.exists === false
           ? result?.error || 'File or section not found'
@@ -308,12 +324,11 @@ function buildWriteFileSummary(args: any, result: any): ReactNode {
 
   return (
     <div className="py-1 space-y-0.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium font-mono text-text-primary truncate">{name}</span>
-        <span className="text-[10px] text-primary/90 font-mono shrink-0">
-          {charCount > 0 ? `${charCount.toLocaleString()} chars` : 'updated'}
-        </span>
-      </div>
+      <SummaryHeader
+        title={name}
+        badge={charCount > 0 ? `${charCount.toLocaleString()} chars` : 'updated'}
+        badgeColorClass="text-primary/90"
+      />
     </div>
   );
 }
@@ -326,14 +341,11 @@ function buildEditFileSummary(args: any, result: any): ReactNode {
 
   return (
     <div className="py-1 space-y-0.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium font-mono text-text-primary truncate">{name}</span>
-        {result?.strategyUsed && (
-          <span className="text-[10px] text-warning/90 font-mono shrink-0">
-            {result.strategyUsed} match
-          </span>
-        )}
-      </div>
+      <SummaryHeader
+        title={name}
+        badge={result?.strategyUsed ? `${result.strategyUsed} match` : undefined}
+        badgeColorClass="text-warning/90"
+      />
       {(args?.explanation || result?.explanation) && (
         <p className="text-[11px] text-text-muted truncate">
           {args?.explanation || result?.explanation}
@@ -386,29 +398,20 @@ function buildWebSearchSummary(args: any, result: any, status?: string): ReactNo
 
   if (isLoading && !result?.error) {
     return (
-      <div className="py-1 space-y-1">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-medium font-mono text-text-primary truncate">&quot;{query}&quot;</span>
-          <span className="text-[10px] text-info font-mono shrink-0 font-medium flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-info animate-ping" />
-            searching...
-          </span>
-        </div>
-        <p className="text-[11px] text-text-muted animate-pulse">
-          Querying Tavily search API and retrieving web sources...
-        </p>
-      </div>
+      <InFlightSummary
+        title={`"${query}"`}
+        badgeText="searching..."
+        loadingText="Querying Tavily search API and retrieving web sources..."
+      />
     );
   }
 
   return (
     <div className="py-1 space-y-0.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium font-mono text-text-primary truncate">&quot;{query}&quot;</span>
-        <span className="text-[10px] text-info font-mono shrink-0 font-medium">
-          {count} result{count === 1 ? '' : 's'}
-        </span>
-      </div>
+      <SummaryHeader
+        title={`"${query}"`}
+        badge={`${count} result${count === 1 ? '' : 's'}`}
+      />
       {answer && (
         <p className="text-[11px] text-text-muted line-clamp-2">
           {answer}
@@ -445,37 +448,25 @@ function buildExtractUrlSummary(args: any, result: any, status?: string): ReactN
   const extracted = result?.extracted || [];
   const count = extracted.length;
   const firstTitle = extracted[0]?.title;
+  const displayTitle = firstTitle || (urls.length > 0 ? urls.join(', ') : 'URL Extraction');
   const isLoading = status === 'loading' || (!result || Object.keys(result).length === 0);
 
   if (isLoading && !result?.error) {
     return (
-      <div className="py-1 space-y-1">
-        <div className="flex items-center justify-between text-xs">
-          <span className="font-medium font-mono text-text-primary truncate">
-            {urls.length > 0 ? urls.join(', ') : 'URL Extraction'}
-          </span>
-          <span className="text-[10px] text-info font-mono shrink-0 font-medium flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-info animate-ping" />
-            extracting...
-          </span>
-        </div>
-        <p className="text-[11px] text-text-muted animate-pulse">
-          Parsing clean Markdown content from {urls.length || 1} web page{urls.length === 1 ? '' : 's'}...
-        </p>
-      </div>
+      <InFlightSummary
+        title={urls.length > 0 ? urls.join(', ') : 'URL Extraction'}
+        badgeText="extracting..."
+        loadingText={`Parsing clean Markdown content from ${urls.length || 1} web page${urls.length === 1 ? '' : 's'}...`}
+      />
     );
   }
 
   return (
     <div className="py-1 space-y-0.5">
-      <div className="flex items-center justify-between text-xs">
-        <span className="font-medium font-mono text-text-primary truncate">
-          {firstTitle || (urls.length > 0 ? urls.join(', ') : 'URL Extraction')}
-        </span>
-        <span className="text-[10px] text-info font-mono shrink-0 font-medium">
-          {count} page{count === 1 ? '' : 's'} extracted
-        </span>
-      </div>
+      <SummaryHeader
+        title={displayTitle}
+        badge={`${count} page${count === 1 ? '' : 's'} extracted`}
+      />
       {result?.error ? (
         <p className="text-[11px] text-danger truncate">Error: {result.error}</p>
       ) : extracted.length > 0 ? (
