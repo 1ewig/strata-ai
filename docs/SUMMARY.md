@@ -112,9 +112,9 @@ The API route is intentionally **stateless**: it reconstructs workspace state fr
 
 1. `streamText` output is wrapped as `toUIMessageStream` → `createUIMessageStreamResponse` → an SSE stream of UI message deltas consumed by `useChat`.
 2. `smoothStream({ delayInMs: 15, chunking: "word" })` paces token delivery so the UI reads as continuous prose, not bursty chunks. The `prepareStep` hook re-injects `buildSystemInstruction(mutableFiles)` before each agent step so the model's file-state view is always current.
-3. Reasoning/thinking text (enabled via `thinkingConfig.includeThoughts`) arrives as reasoning parts; `ChatBubble` renders them inside a collapsible `ThoughtAccordion` ("Thought Process", spinner while in progress).
-4. Tool invocations arrive as tool parts; `resolveToolDisplay` normalizes each into `ToolCardProps` and `ToolCallCard` renders the chrome (loading spinner → success/error icon + summary + expandable raw args/result + optional "Open File" action).
-5. `useChat` `status` (streaming / submitted / ready) drives `isLoading`, the typing-dots loader, the streaming caret + shimmer overlay, and `<StickToBottom>`-based auto-scroll.
+3. Reasoning/thinking text (enabled via `thinkingConfig.includeThoughts`) arrives as reasoning parts; `ChatBubble` renders them inside a collapsible `ThoughtAccordion` ("Thought Process", spinner while in progress). While actively thinking (`isThinking === true`), expanded thinking text renders as plain pre-wrap font-mono to eliminate 60 Hz Markdown AST re-parsing, upgrading to formatted `ReactMarkdown` once thinking completes.
+4. Tool invocations arrive as tool parts; `resolveToolDisplay` normalizes each into `ToolCardProps` and `ToolCallCard` renders a minimal, lightweight UI (unique Lucide icon, tool name, `loading` / `success` / `fail` status badge, and a concise file or search URL summary in the dropdown). `ToolCallCard` uses a custom `areToolCallCardPropsEqual` comparator in `React.memo` that skips intermediate re-renders while multi-KB argument strings (e.g. `writeFile`/`editFile` content) stream in.
+5. `useChat` `status` (streaming / submitted / ready) drives `isLoading`, the typing-dots loader, the streaming caret + shimmer overlay, and `<StickToBottom resize="auto">`-based auto-scroll.
 6. `stopWhen: isStepCount(maxSteps)` caps agentic tool loops; on `step-limit` finish the client auto-continues (see §7.4).
 
 ## 4. Directory Structure Map
@@ -317,7 +317,7 @@ The two web tools (`lib/ai/tools/tavily-tools.ts`, shared `callTavilyApi` helper
 
 This is the single reconciliation point that turns a streamed assistant message into durable state:
 
-1. Persist **every** message in the conversation (not just the last) as a `DBMessage` (native `UIMessage` + `chatId` + `timestamp`) into Dexie; touch the conversation's `updatedAt`.
+1. Persist **every** message in the conversation (not just the last) via batched `db.messages.bulkPut` inside a single atomic Dexie transaction (`db.transaction('rw', [db.messages, db.conversations], ...)`), touching the conversation's `updatedAt`.
 2. Extract deletions (`extractDeletedFilesFromMessage`) and file updates (`extractFilesFromMessage`) from the **current** assistant message's tool-result parts only.
 3. If any deletions exist, filter them out of the conversation's current `files` (match by `fileId` or case-insensitive name).
 4. Merge extracted file objects into `files` — replace by `id` or case-insensitive name, else append; dedupe by id.
