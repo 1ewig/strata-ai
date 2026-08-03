@@ -130,7 +130,7 @@ export default React.memo(function WorkspaceDrawer({
                 <select
                   value={activeFile?.id || ''}
                   onChange={(e) => onSelectFile(e.target.value)}
-                  className="bg-surface-elevated text-xs font-semibold text-text-bright border border-edge-raised rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-edge-hover max-w-[220px] truncate cursor-pointer"
+                  className="bg-surface-elevated text-label font-semibold text-text-bright border border-edge-raised rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-edge-hover max-w-[220px] truncate cursor-pointer"
                 >
                   {files.map(f => (
                     <option key={f.id} value={f.id}>
@@ -139,7 +139,7 @@ export default React.memo(function WorkspaceDrawer({
                   ))}
                 </select>
               ) : (
-                <span className="text-xs font-semibold text-text-muted">No Files</span>
+                <span className="text-label font-semibold text-text-muted">No Files</span>
               )}
 
               <button
@@ -162,7 +162,7 @@ export default React.memo(function WorkspaceDrawer({
                 <Plus className="w-4 h-4" />
               </button>
 
-              <span className="text-[10px] font-semibold text-text-muted px-1.5 py-0.5 rounded bg-surface-elevated border border-edge-raised">
+              <span className="text-micro font-semibold text-text-muted px-1.5 py-0.5 rounded bg-surface-elevated border border-edge-raised">
                 {files.length}/{MAX_FILES_PER_WORKSPACE} files
               </span>
             </div>
@@ -199,19 +199,19 @@ export default React.memo(function WorkspaceDrawer({
                 value={newFileName}
                 onChange={(e) => setNewFileName(e.target.value)}
                 placeholder="filename.md or note.txt"
-                className="flex-1 bg-surface-base border border-edge-raised rounded-lg px-3 py-1.5 text-xs text-text-primary focus:outline-none focus:border-primary"
+                className="flex-1 bg-surface-base border border-edge-raised rounded-lg px-3 py-1.5 text-label text-text-primary focus:outline-none focus:border-primary"
                 autoFocus
               />
               <button
                 type="submit"
-                className="text-xs font-medium bg-primary hover:bg-primary-hover text-surface px-3 py-1.5 rounded-lg transition-colors"
+                className="text-label font-medium bg-primary hover:bg-primary-hover text-surface px-3 py-1.5 rounded-lg transition-colors"
               >
                 Create
               </button>
               <button
                 type="button"
                 onClick={() => setIsCreatingNew(false)}
-                className="text-xs text-text-muted hover:text-text-primary px-2 py-1.5"
+                className="text-label text-text-muted hover:text-text-primary px-2 py-1.5"
               >
                 Cancel
               </button>
@@ -223,13 +223,13 @@ export default React.memo(function WorkspaceDrawer({
             {!activeFile ? (
               <div className="h-full flex flex-col items-center justify-center border border-dashed border-edge-raised/80 rounded-2xl p-8 text-center bg-surface-base/20">
                 <FileText className="w-10 h-10 text-text-faint mb-3" />
-                <h4 className="text-text-secondary font-semibold text-sm">Workspace Drawer Empty</h4>
-                <p className="text-xs text-text-muted max-w-sm mt-1 mb-4">
+                <h4 className="text-text-secondary font-semibold text-subheading">Workspace Drawer Empty</h4>
+                <p className="text-body text-text-muted max-w-sm mt-1 mb-4">
                   Create a file or ask the AI to generate documents for your workspace.
                 </p>
                 <button
                   onClick={() => setIsCreatingNew(true)}
-                  className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-surface text-xs font-semibold px-3.5 py-2 rounded-lg transition-colors cursor-pointer shadow-button"
+                  className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-surface text-label font-semibold px-3.5 py-2 rounded-lg transition-colors cursor-pointer shadow-button"
                 >
                   <Plus className="w-4 h-4" /> Create New File
                 </button>
@@ -241,7 +241,7 @@ export default React.memo(function WorkspaceDrawer({
                   value={fileName}
                   onChange={(e) => setFileName(e.target.value)}
                   placeholder="File name (e.g. document.md)"
-                  className="bg-surface-base border border-edge-raised rounded-lg px-3 py-2 text-xs font-semibold text-text-bright focus:outline-none focus:border-primary"
+                  className="bg-surface-base border border-edge-raised rounded-lg px-3 py-2 text-label font-semibold text-text-bright focus:outline-none focus:border-primary"
                 />
                 <textarea
                   value={contentValue}
@@ -249,56 +249,56 @@ export default React.memo(function WorkspaceDrawer({
                   maxLength={MAX_FILE_CHARS}
                   rows={26}
                   placeholder="Type your markdown or text content here..."
-                  className="w-full flex-1 min-h-[450px] bg-surface-base border border-edge-raised rounded-xl p-4 text-xs text-text-primary font-mono focus:outline-none focus:border-primary/60 leading-relaxed resize-y"
+                  className="w-full flex-1 min-h-[450px] bg-surface-base border border-edge-raised rounded-xl p-4 text-label text-text-primary font-mono focus:outline-none focus:border-primary/60 leading-relaxed resize-y"
                 />
               </div>
             ) : !activeFile.content ? (
               <div className="h-full flex flex-col items-center justify-center border border-dashed border-edge-raised/80 rounded-2xl p-8 text-center bg-surface-base/20">
                 <Code className="w-10 h-10 text-text-faint mb-3" />
-                <h4 className="text-text-secondary font-semibold text-sm">{activeFile.name} is Empty</h4>
-                <p className="text-xs text-text-muted max-w-sm mt-1 mb-4">
+                <h4 className="text-text-secondary font-semibold text-subheading">{activeFile.name} is Empty</h4>
+                <p className="text-body text-text-muted max-w-sm mt-1 mb-4">
                   Click Edit to add content or prompt the AI assistant.
                 </p>
                 <button
                   onClick={handleStartEditing}
-                  className="flex items-center gap-1.5 text-xs text-primary border border-primary/30 bg-primary-soft hover:bg-primary-soft-strong px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  className="flex items-center gap-1.5 text-label text-primary border border-primary/30 bg-primary-soft hover:bg-primary-soft-strong px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                 >
                   <Edit3 className="w-3.5 h-3.5" /> Edit File
                 </button>
               </div>
             ) : isMarkdown ? (
-              <article className="prose max-w-none space-y-4 text-xs leading-relaxed text-text-primary selection:bg-secondary/50">
+              <article className="text-body text-text-primary leading-relaxed selection:bg-secondary/50">
                 {/* Markdown renders as styled typography; other files as plain text */}
                 <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
                       h1: ({ children }) => (
-                        <h1 className="text-2xl font-display font-bold text-text-bright tracking-tight border-b border-edge-raised pb-2 mb-3">
+                        <h1 className="text-title font-display font-bold text-text-bright tracking-tight border-b border-edge-raised pb-2 mb-3">
                           {children}
                         </h1>
                       ),
                       h2: ({ children }) => (
-                        <h2 className="text-sm font-bold text-primary/90 tracking-wider uppercase border-b border-edge-raised/60 pb-1 mt-6 mb-2">
+                        <h2 className="text-heading font-display font-bold text-primary/90 tracking-wide border-b border-edge-raised/60 pb-1 mt-6 mb-2">
                           {children}
                         </h2>
                       ),
                       h3: ({ children }) => (
-                        <h3 className="text-xs font-semibold text-text-primary mt-3 mb-1 flex items-center justify-between">
+                        <h3 className="text-subheading font-semibold text-text-primary mt-3 mb-1">
                           {children}
                         </h3>
                       ),
                       p: ({ children }) => (
-                        <p className="text-xs text-text-secondary leading-normal my-1">
+                        <p className="text-body text-text-secondary leading-normal my-1">
                           {children}
                         </p>
                       ),
                       ul: ({ children }) => (
-                        <ul className="list-disc list-outside pl-4 space-y-1.5 my-2 text-xs text-text-secondary">
+                        <ul className="list-disc list-outside pl-4 space-y-1.5 my-2 text-body text-text-secondary">
                           {children}
                         </ul>
                       ),
                       li: ({ children }) => (
-                        <li className="text-xs text-text-secondary leading-normal">
+                        <li className="text-body text-text-secondary leading-normal">
                           {children}
                         </li>
                       ),
@@ -308,7 +308,7 @@ export default React.memo(function WorkspaceDrawer({
                         </strong>
                       ),
                       em: ({ children }) => (
-                        <em className="text-text-muted not-italic text-[11px]">
+                        <em className="text-text-muted not-italic text-caption">
                           {children}
                         </em>
                       ),
@@ -319,7 +319,7 @@ export default React.memo(function WorkspaceDrawer({
                   </ReactMarkdown>
                 </article>
             ) : (
-              <div className="font-mono text-xs text-text-primary whitespace-pre-wrap leading-relaxed">
+              <div className="font-mono text-label text-text-primary whitespace-pre-wrap leading-relaxed">
                 {activeFile.content}
               </div>
             )}
@@ -332,7 +332,7 @@ export default React.memo(function WorkspaceDrawer({
               <div className="flex items-center gap-2 min-w-0">
                 {isEditing ? (
                   <span
-                    className={`text-[11px] font-mono px-2 py-0.5 rounded border transition-colors ${
+                    className={`text-caption font-mono px-2 py-0.5 rounded border transition-colors ${
                       isFileOverLimit
                         ? 'text-danger bg-danger-soft/30 border-danger/40 font-semibold'
                         : isFileWarning
@@ -343,7 +343,7 @@ export default React.memo(function WorkspaceDrawer({
                     {formatCharCount(contentValue.length, MAX_FILE_CHARS)} chars
                   </span>
                 ) : (
-                  <span className="text-[11px] text-text-muted font-medium truncate">
+                  <span className="text-caption text-text-muted font-medium truncate">
                     {activeFile.content ? `${activeFile.content.length.toLocaleString()} chars` : 'Empty'}
                     {activeFile.language ? ` · ${activeFile.language}` : ''}
                   </span>
@@ -355,7 +355,7 @@ export default React.memo(function WorkspaceDrawer({
                 {activeFile.content && !isEditing && (
                   <button
                     onClick={handleCopy}
-                    className="flex items-center gap-1.5 text-xs font-medium text-text-muted hover:text-text-primary bg-surface-elevated hover:bg-surface-hover border border-edge-raised px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 text-label font-medium text-text-muted hover:text-text-primary bg-surface-elevated hover:bg-surface-hover border border-edge-raised px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
                     title="Copy file content"
                   >
                     {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
@@ -367,14 +367,14 @@ export default React.memo(function WorkspaceDrawer({
                   <>
                     <button
                       onClick={() => setIsEditing(false)}
-                      className="text-xs text-text-muted hover:text-text-primary px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+                      className="text-label text-text-muted hover:text-text-primary px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleSaveEdit}
                       disabled={isFileOverLimit}
-                      className={`flex items-center gap-1.5 text-xs font-semibold rounded-xl transition-colors shrink-0 ${
+                      className={`flex items-center gap-1.5 text-label font-semibold rounded-xl transition-colors shrink-0 ${
                         isFileOverLimit
                           ? 'bg-surface-elevated text-text-muted opacity-40 cursor-not-allowed border border-edge-raised'
                           : 'text-surface bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
@@ -392,7 +392,7 @@ export default React.memo(function WorkspaceDrawer({
                 ) : (
                   <button
                     onClick={handleStartEditing}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-text-bright bg-surface-elevated hover:bg-surface-hover border border-edge-raised hover:border-edge-hover px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm"
+                    className="flex items-center gap-1.5 text-label font-semibold text-text-bright bg-surface-elevated hover:bg-surface-hover border border-edge-raised hover:border-edge-hover px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm"
                   >
                     <Edit3 className="w-3.5 h-3.5 text-primary" />
                     <span>Edit File</span>

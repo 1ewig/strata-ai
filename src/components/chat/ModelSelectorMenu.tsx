@@ -95,7 +95,7 @@ export default function ModelSelectorMenu({
             setIsOpen(true);
           }
         }}
-        className={`flex items-center gap-1.5 text-xs font-medium transition-all rounded-xl px-2 py-1 h-7 cursor-pointer shrink-0 border select-none ${
+        className={`flex items-center gap-1.5 text-label font-medium transition-all rounded-xl px-2 py-1 h-7 cursor-pointer shrink-0 border select-none ${
           isOpen
             ? 'bg-surface-hover text-text-primary border-edge-hover'
             : 'text-text-muted hover:text-text-primary bg-surface-base hover:bg-surface-hover/60 border-edge-raised'
@@ -105,7 +105,7 @@ export default function ModelSelectorMenu({
           {currentModel?.label || 'Model'}
         </span>
         {effortLabel && (
-          <span className="text-[10px] px-1 py-0.5 rounded-md bg-surface-hover text-text-muted font-normal capitalize">
+          <span className="text-micro px-1 py-0.5 rounded-md bg-surface-hover text-text-muted font-normal capitalize">
             {effortLabel}
           </span>
         )}
@@ -118,7 +118,7 @@ export default function ModelSelectorMenu({
 
       {/* UNIFIED POPOVER MENU (For Mobile & Desktop) */}
       {isOpen && (
-        <div className="absolute bottom-full mb-2 left-0 w-72 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-2xl shadow-2xl p-1.5 text-sm z-50 animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute bottom-full mb-2 left-0 w-72 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-2xl shadow-2xl p-1.5 text-label z-50 animate-in fade-in zoom-in-95 duration-100">
 
           {/* SUBMENU HEADER (When drilled down into Effort or More Models) */}
           {view !== 'main' && (
@@ -126,12 +126,12 @@ export default function ModelSelectorMenu({
               <button
                 type="button"
                 onClick={() => setView('main')}
-                className="flex items-center gap-1 text-xs font-semibold text-text-muted hover:text-text-primary px-2 py-1 rounded-lg hover:bg-surface-hover transition-colors"
+                className="flex items-center gap-1 text-caption font-semibold text-text-muted hover:text-text-primary px-2 py-1 rounded-lg hover:bg-surface-hover transition-colors"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Back</span>
               </button>
-              <span className="text-xs font-semibold text-text-primary uppercase tracking-wider pr-2">
+              <span className="text-caption font-semibold text-text-primary uppercase tracking-wider pr-2">
                 {view === 'effort' ? 'Thinking Effort' : 'More Models'}
               </span>
             </div>
@@ -154,11 +154,11 @@ export default function ModelSelectorMenu({
                       }`}
                   >
                     <div className="flex flex-col gap-0.5">
-                      <span className="text-xs font-semibold text-text-primary group-hover:text-text-bright">
+                      <span className="text-label font-semibold text-text-primary group-hover:text-text-bright">
                         {m.label}
                       </span>
                       {MODEL_DESCRIPTIONS[m.id] && (
-                        <span className="text-[11px] text-text-muted line-clamp-1">
+                        <span className="text-caption text-text-muted line-clamp-1">
                           {MODEL_DESCRIPTIONS[m.id]}
                         </span>
                       )}
@@ -181,7 +181,7 @@ export default function ModelSelectorMenu({
                   <button
                     type="button"
                     onClick={() => setView('effort')}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover cursor-pointer transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-label font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover cursor-pointer transition-colors"
                   >
                     <span>Effort</span>
                     <div className="flex items-center gap-1">
@@ -196,7 +196,7 @@ export default function ModelSelectorMenu({
                   <button
                     type="button"
                     onClick={() => setView('more-models')}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover cursor-pointer transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-label font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover cursor-pointer transition-colors"
                   >
                     <span>More models</span>
                     <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
@@ -221,7 +221,7 @@ export default function ModelSelectorMenu({
                       onThinkingLevelChange(level);
                       closeMenu();
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-xs cursor-pointer transition-colors ${isSelected
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-label cursor-pointer transition-colors ${isSelected
                         ? 'bg-primary-soft text-primary font-medium'
                         : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
                       }`}
@@ -249,11 +249,11 @@ export default function ModelSelectorMenu({
                     }`}
                 >
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-xs font-semibold text-text-primary group-hover:text-text-bright">
+                    <span className="text-label font-semibold text-text-primary group-hover:text-text-bright">
                       {m.label}
                     </span>
                     {MODEL_DESCRIPTIONS[m.id] && (
-                      <span className="text-[11px] text-text-muted line-clamp-1">
+                      <span className="text-caption text-text-muted line-clamp-1">
                         {MODEL_DESCRIPTIONS[m.id]}
                       </span>
                     )}

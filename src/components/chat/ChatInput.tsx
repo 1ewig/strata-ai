@@ -109,7 +109,7 @@ export default React.memo(function ChatInput({
 
         {/* Row 1: Text Field Input or Quota Warning directly on the input field */}
         {isQuotaExhausted ? (
-          <div className="w-full min-h-[48px] py-1 flex items-center gap-2 text-danger text-sm font-medium animate-in fade-in">
+          <div className="w-full min-h-[48px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
             <span>
               {rateLimitData?.remaining5h === 0
@@ -131,7 +131,7 @@ export default React.memo(function ChatInput({
             value={inputValue}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            className="w-full bg-transparent text-text-primary placeholder-text-muted border-none text-sm focus:outline-none resize-none min-h-[48px] max-h-48 py-1 focus:ring-0 disabled:opacity-50"
+            className="w-full bg-transparent text-text-primary placeholder-text-muted border-none text-label focus:outline-none resize-none min-h-[48px] max-h-48 py-1 focus:ring-0 disabled:opacity-50"
           />
         )}
 

@@ -141,21 +141,21 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
   const markdownComponents = React.useMemo(
     () => ({
       h1: ({ children }: any) => (
-        <h1 className="text-base sm:text-lg font-display font-bold text-text-bright mt-3 mb-2 border-b border-edge-raised/80 pb-1.5 flex items-center gap-2">
+        <h1 className="text-title font-display font-bold text-text-bright mt-3 mb-2 border-b border-edge-raised/80 pb-1.5 flex items-center gap-2">
           {children}
         </h1>
       ),
       h2: ({ children }: any) => (
-        <h2 className="text-xs sm:text-sm font-bold text-primary/90 mt-3 mb-1.5 tracking-wide uppercase">
+        <h2 className="text-heading font-display font-bold text-primary/90 mt-3 mb-1.5 tracking-wide">
           {children}
         </h2>
       ),
       h3: ({ children }: any) => (
-        <h3 className="text-xs font-semibold text-text-primary mt-2 mb-1">
+        <h3 className="text-subheading font-semibold text-text-primary mt-2 mb-1">
           {children}
         </h3>
       ),
-      p: ({ children }: any) => <p className="mb-2.5 leading-relaxed last:mb-0">{children}</p>,
+      p: ({ children }: any) => <p className="text-body mb-2.5 leading-relaxed last:mb-0">{children}</p>,
       ul: ({ children }: any) => (
         <ul className="list-disc list-inside space-y-1.5 mb-3 text-text-secondary">
           {children}
@@ -166,7 +166,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           {children}
         </ol>
       ),
-      li: ({ children }: any) => <li className="text-xs sm:text-sm leading-relaxed">{children}</li>,
+      li: ({ children }: any) => <li className="text-body leading-relaxed">{children}</li>,
       strong: ({ children }: any) => (
         <strong className="font-semibold text-text-bright">{children}</strong>
       ),
@@ -177,18 +177,18 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
 
         if (isInline) {
           return (
-            <code className="bg-surface-elevated/90 text-primary font-mono px-1.5 py-0.5 rounded text-[11px] border border-edge-hover/60" {...props}>
+            <code className="bg-surface-elevated/90 text-primary font-mono px-1.5 py-0.5 rounded text-micro border border-edge-hover/60" {...props}>
               {children}
             </code>
           );
         }
         return (
-          <div className="my-2.5 rounded-xl bg-surface-base border border-edge-raised/80 overflow-hidden font-mono text-[11px] shadow-sm">
-            <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-[10px] text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
+          <div className="my-2.5 rounded-xl bg-surface-base border border-edge-raised/80 overflow-hidden font-mono text-micro shadow-sm">
+            <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-micro text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
               <span className="text-text-muted">Code Snippet</span>
               <button
                 onClick={() => handleCopyCodeSnippet(rawCode, snippetId)}
-                className="flex items-center gap-1 text-[10px] text-text-muted hover:text-primary transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-micro text-text-muted hover:text-primary transition-colors cursor-pointer"
               >
                 {copiedCodeId === snippetId ? (
                   <>
@@ -211,7 +211,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       },
       table: ({ children }: any) => (
         <div className="overflow-x-auto my-3 rounded-xl border border-edge-raised/80 bg-surface-base/40">
-          <table className="min-w-full text-xs text-left text-text-secondary">{children}</table>
+          <table className="min-w-full text-caption text-left text-text-secondary">{children}</table>
         </div>
       ),
       th: ({ children }: any) => (
@@ -223,7 +223,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
         <td className="px-3 py-2 border-b border-edge-raised/40 hover:bg-surface-hover/20">{children}</td>
       ),
       blockquote: ({ children }: any) => (
-        <blockquote className="border-l-2 border-primary/60 pl-3 my-2 text-text-muted italic text-xs">
+        <blockquote className="border-l-2 border-primary/60 pl-3 my-2 text-text-muted italic text-caption">
           {children}
         </blockquote>
       ),
@@ -241,7 +241,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       {/* Avatar Container: hidden on mobile (< sm) to give messages maximum width */}
       <div
         className={`
-          hidden sm:flex relative w-8 h-8 rounded-xl items-center justify-center text-sm font-semibold shrink-0 mt-0.5
+          hidden sm:flex relative w-8 h-8 rounded-xl items-center justify-center text-label font-semibold shrink-0 mt-0.5
           transition-all duration-500
           ${
             isUser
@@ -286,7 +286,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
             return (
               <div
                 key={seg.key}
-                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-primary text-surface border border-primary rounded-tr-xs shadow-card fade-in w-fit max-w-full"
+                className="relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all bg-primary text-surface border border-primary rounded-tr-xs shadow-card fade-in w-fit max-w-full"
               >
                 <p className="whitespace-pre-wrap leading-relaxed">{seg.content}</p>
               </div>
@@ -307,7 +307,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
               <div
                 key={seg.key}
                 className={`
-                  relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed
+                  relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed
                   transition-all duration-300 fade-in
                   bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs
                   shadow-md backdrop-blur-sm w-fit max-w-full
@@ -321,7 +321,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   </div>
                 )}
 
-                <div className="prose max-w-none text-xs sm:text-sm text-text-primary leading-relaxed relative">
+                <div className="text-body text-text-primary leading-relaxed relative">
                   {isStreamingActiveSegment ? (
                     <p className="whitespace-pre-wrap leading-relaxed font-sans">
                       {seg.content}

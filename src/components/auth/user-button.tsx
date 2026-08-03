@@ -33,7 +33,7 @@ export default function UserButton({ session, isSigningOut, onSignOut }: UserBut
     return (
       <Link
         href="/auth/signin"
-        className="w-full flex items-center justify-center gap-2 bg-surface-overlay hover:bg-surface-elevated text-text-bright border border-edge-raised px-3 py-2 rounded-lg text-xs font-semibold transition-all"
+        className="w-full flex items-center justify-center gap-2 bg-surface-overlay hover:bg-surface-elevated text-text-bright border border-edge-raised px-3 py-2 rounded-lg text-label font-semibold transition-all"
       >
         <LogIn className="w-3.5 h-3.5 text-primary" />
         <span>Sign In / Sign Up</span>
@@ -51,14 +51,14 @@ export default function UserButton({ session, isSigningOut, onSignOut }: UserBut
       {menuOpen && (
         <div className="absolute bottom-full left-0 right-0 mb-2 p-1.5 bg-surface-overlay border border-edge-raised rounded-xl shadow-xl space-y-1 animate-fade-in z-50">
           <div className="px-2.5 py-1.5 border-b border-edge-default">
-            <p className="text-xs font-semibold text-text-bright truncate">{displayName}</p>
-            <p className="text-[10px] text-text-muted truncate">{session.user.email}</p>
+            <p className="text-label font-semibold text-text-bright truncate">{displayName}</p>
+            <p className="text-micro text-text-muted truncate">{session.user.email}</p>
           </div>
 
           <button
             onClick={() => onSignOut()}
             disabled={isSigningOut}
-            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-danger hover:bg-danger-soft disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+            className="w-full flex items-center gap-2 px-2.5 py-1.5 text-label text-danger hover:bg-danger-soft disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
           >
             {isSigningOut ? (
               <>
@@ -82,12 +82,12 @@ export default function UserButton({ session, isSigningOut, onSignOut }: UserBut
         className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-base hover:bg-surface-hover/50 border border-edge-default transition-colors text-left"
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <div className="w-7 h-7 rounded-full bg-primary-soft border border-primary/40 text-primary font-bold text-xs flex items-center justify-center shrink-0">
+          <div className="w-7 h-7 rounded-full bg-primary-soft border border-primary/40 text-primary font-bold text-label flex items-center justify-center shrink-0">
             {initial}
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-xs font-semibold text-text-bright truncate leading-none">{displayName}</p>
-            <p className="text-[10px] text-text-muted truncate mt-0.5 leading-none">{session.user.email}</p>
+            <p className="text-label font-semibold text-text-bright truncate leading-none">{displayName}</p>
+            <p className="text-micro text-text-muted truncate mt-0.5 leading-none">{session.user.email}</p>
           </div>
         </div>
         <ChevronUp className={`w-3.5 h-3.5 text-text-muted transition-transform shrink-0 ${menuOpen ? "rotate-180" : ""}`} />

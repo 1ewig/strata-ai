@@ -62,7 +62,7 @@ function ToolCallCard({
     : 'bg-primary-soft text-primary font-medium';
 
   return (
-    <div className="my-1.5 rounded-2xl border border-edge-raised/40 bg-surface-raised/40 hover:border-edge-raised/70 transition-all text-xs overflow-hidden fade-in relative">
+    <div className="my-1.5 rounded-2xl border border-edge-raised/40 bg-surface-raised/40 hover:border-edge-raised/70 transition-all text-caption overflow-hidden fade-in relative">
       {isLoading && (
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-secondary to-primary animate-pulse" />
       )}
@@ -83,7 +83,7 @@ function ToolCallCard({
             <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
           ) : null}
           <span className="font-medium text-text-primary truncate">{label}</span>
-          <span className={`text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded-lg capitalize ${statusBadgeStyle}`}>
+          <span className={`text-micro font-mono shrink-0 px-1.5 py-0.5 rounded-lg capitalize ${statusBadgeStyle}`}>
             {statusText}
           </span>
         </button>
@@ -101,7 +101,7 @@ function ToolCallCard({
 
       {/* Expanded content showing minimal summary */}
       {isOpen && (
-        <div className="px-3 pb-2.5 pt-1 border-t border-edge-raised/30 text-xs">
+        <div className="px-3 pb-2.5 pt-1 border-t border-edge-raised/30 text-caption">
           {summary}
         </div>
       )}

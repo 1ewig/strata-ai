@@ -25,13 +25,13 @@ export function AuthShell({ children, mode }: AuthShellProps) {
 
       <div className="w-full max-w-md bg-surface-raised/90 border border-edge-raised rounded-3xl p-8 shadow-card-lg backdrop-blur-xl relative z-10 space-y-6">
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-soft border border-primary/30 text-primary text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary-soft border border-primary/30 text-primary text-caption font-semibold">
             <span>Strata AI Auth</span>
           </div>
-          <h1 className="text-2xl font-display font-bold text-text-bright tracking-tight">
+          <h1 className="text-display font-display font-bold text-text-bright tracking-tight">
             {mode === "signin" ? "Welcome back" : "Create your account"}
           </h1>
-          <p className="text-sm text-text-secondary">
+          <p className="text-body text-text-secondary">
             {mode === "signin"
               ? "Sign in to access your agentic document studio"
               : "Get started with your AI-powered workspace"}
@@ -41,7 +41,7 @@ export function AuthShell({ children, mode }: AuthShellProps) {
         {children}
 
         <div className="text-center pt-2">
-          <p className="text-xs text-text-muted">
+          <p className="text-label text-text-muted">
             Instant authentication enabled — no email verification needed.
           </p>
         </div>

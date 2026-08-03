@@ -36,7 +36,7 @@ export function SignInForm({ onSubmit, error, successMsg, isPending }: SignInFor
     <>
       {/* Error banner */}
       {error && (
-        <div className="p-3.5 rounded-xl bg-danger-soft border border-danger/30 text-danger text-xs flex items-start gap-2.5 animate-fade-in">
+        <div className="p-3.5 rounded-xl bg-danger-soft border border-danger/30 text-danger text-caption flex items-start gap-2.5 animate-fade-in">
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span className="leading-relaxed font-medium">{error}</span>
         </div>
@@ -44,7 +44,7 @@ export function SignInForm({ onSubmit, error, successMsg, isPending }: SignInFor
 
       {/* Success banner */}
       {successMsg && (
-        <div className="p-3.5 rounded-xl bg-primary-soft border border-primary/30 text-primary text-xs flex items-start gap-2.5 animate-fade-in">
+        <div className="p-3.5 rounded-xl bg-primary-soft border border-primary/30 text-primary text-caption flex items-start gap-2.5 animate-fade-in">
           <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
           <span className="leading-relaxed font-medium">{successMsg}</span>
         </div>
@@ -52,7 +52,7 @@ export function SignInForm({ onSubmit, error, successMsg, isPending }: SignInFor
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-text-secondary">Email Address</label>
+          <label className="block text-label font-semibold text-text-secondary">Email Address</label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-muted">
               <Mail className="w-4 h-4" />
@@ -63,13 +63,13 @@ export function SignInForm({ onSubmit, error, successMsg, isPending }: SignInFor
               placeholder="name@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-surface-base border border-edge-default focus:border-primary/60 rounded-xl text-sm text-text-bright placeholder:text-text-faint focus:outline-none transition-colors"
+              className="w-full pl-10 pr-4 py-2.5 bg-surface-base border border-edge-default focus:border-primary/60 rounded-xl text-label text-text-bright placeholder:text-text-faint focus:outline-none transition-colors"
             />
           </div>
         </div>
 
         <div className="space-y-1.5">
-          <label className="block text-xs font-semibold text-text-secondary">Password</label>
+          <label className="block text-label font-semibold text-text-secondary">Password</label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-muted">
               <Lock className="w-4 h-4" />
@@ -80,7 +80,7 @@ export function SignInForm({ onSubmit, error, successMsg, isPending }: SignInFor
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 bg-surface-base border border-edge-default focus:border-primary/60 rounded-xl text-sm text-text-bright placeholder:text-text-faint focus:outline-none transition-colors"
+              className="w-full pl-10 pr-10 py-2.5 bg-surface-base border border-edge-default focus:border-primary/60 rounded-xl text-label text-text-bright placeholder:text-text-faint focus:outline-none transition-colors"
             />
             <button
               type="button"
@@ -110,7 +110,7 @@ export function SignInForm({ onSubmit, error, successMsg, isPending }: SignInFor
           )}
         </button>
 
-        <p className="text-center text-xs text-text-muted">
+        <p className="text-center text-label text-text-muted">
           Don&apos;t have an account?{" "}
           <Link href="/auth/signup" className="text-primary hover:text-primary-hover font-semibold transition-colors">
             Sign up

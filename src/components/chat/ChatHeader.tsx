@@ -59,7 +59,7 @@ export default React.memo(function ChatHeader({
             <Menu className="w-4 h-4" />
           </button>
         )}
-        <span className="text-xs font-semibold text-text-secondary truncate max-w-xs sm:max-w-md">
+        <span className="text-label font-semibold text-text-secondary truncate max-w-xs sm:max-w-md">
           {title || 'Chat Workspace'}
         </span>
       </div>
@@ -69,7 +69,7 @@ export default React.memo(function ChatHeader({
         <div className="relative" ref={fileMenuRef}>
           <button
             onClick={() => setFileMenuOpen(prev => !prev)}
-            className="flex items-center gap-1.5 text-xs text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary-soft-strong transition-all font-medium cursor-pointer"
+            className="flex items-center gap-1.5 text-label text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary-soft-strong transition-all font-medium cursor-pointer"
             title="Workspace Files"
           >
             <Folder className="w-3.5 h-3.5" />
@@ -78,14 +78,14 @@ export default React.memo(function ChatHeader({
           </button>
 
           {fileMenuOpen && (
-            <div className="absolute mt-1 right-0 w-64 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-xl overflow-hidden text-xs z-50">
-              <div className="px-3 py-2 border-b border-edge-raised font-semibold text-text-muted">
+            <div className="absolute mt-1 right-0 w-64 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-xl overflow-hidden text-caption z-50">
+              <div className="px-3 py-2 border-b border-edge-raised font-semibold text-text-muted text-label">
                 Workspace Files
               </div>
 
               <div className="py-1 max-h-56 overflow-y-auto">
                 {files.length === 0 ? (
-                  <div className="px-3 py-3 text-center text-text-faint text-[11px]">
+                  <div className="px-3 py-3 text-center text-text-faint text-caption">
                     No files in workspace yet
                   </div>
                 ) : (

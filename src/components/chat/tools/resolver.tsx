@@ -142,10 +142,10 @@ interface SummaryHeaderProps {
 
 function SummaryHeader({ title, badge, badgeColorClass = 'text-info' }: SummaryHeaderProps) {
   return (
-    <div className="flex items-center justify-between text-xs gap-2">
+    <div className="flex items-center justify-between text-caption gap-2">
       <span className="font-medium font-mono text-text-primary truncate">{title}</span>
       {badge && (
-        <span className={`text-[10px] font-mono shrink-0 font-medium ${badgeColorClass}`}>
+        <span className={`text-micro font-mono shrink-0 font-medium ${badgeColorClass}`}>
           {badge}
         </span>
       )}
@@ -174,7 +174,7 @@ function InFlightSummary({ title, badgeText, loadingText }: InFlightSummaryProps
           </span>
         }
       />
-      <p className="text-[11px] text-text-muted animate-pulse">{loadingText}</p>
+      <p className="text-caption text-text-muted animate-pulse">{loadingText}</p>
     </div>
   );
 }
@@ -312,8 +312,8 @@ function buildListFilesSummary(args: any, result: any, status: 'loading' | 'succ
 
   const filesList: Array<{ name: string }> = result?.files || [];
   return (
-    <div className="py-1 space-y-1 font-mono text-xs">
-      <div className="text-text-muted font-medium text-[11px]">Files Found:</div>
+    <div className="py-1 space-y-1 font-mono text-caption">
+      <div className="text-text-muted font-medium text-caption">Files Found:</div>
       {filesList.length > 0 ? (
         <ul className="space-y-0.5 text-text-secondary pl-2">
           {filesList.map((f, i) => (
@@ -321,7 +321,7 @@ function buildListFilesSummary(args: any, result: any, status: 'loading' | 'succ
           ))}
         </ul>
       ) : (
-        <p className="text-text-muted italic text-[11px]">No files in workspace</p>
+        <p className="text-text-muted italic text-caption">No files in workspace</p>
       )}
     </div>
   );
@@ -343,8 +343,8 @@ function buildReadFileSummary(args: any, result: any, status: 'loading' | 'succe
   }
 
   return (
-    <div className="py-1 font-mono text-xs flex items-center gap-1.5">
-      <span className="text-text-muted text-[11px]">File Read:</span>
+    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
+      <span className="text-text-muted text-caption">File Read:</span>
       <span className="text-text-primary font-medium truncate">{fileName}</span>
     </div>
   );
@@ -367,8 +367,8 @@ function buildWriteFileSummary(args: any, result: any, status: 'loading' | 'succ
 
   const isCreated = result?.action === 'created';
   return (
-    <div className="py-1 font-mono text-xs flex items-center gap-1.5">
-      <span className="text-text-muted text-[11px]">{isCreated ? 'File Created:' : 'File Updated:'}</span>
+    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
+      <span className="text-text-muted text-caption">{isCreated ? 'File Created:' : 'File Updated:'}</span>
       <span className="text-primary font-medium truncate">{name}</span>
     </div>
   );
@@ -390,8 +390,8 @@ function buildEditFileSummary(args: any, result: any, status: 'loading' | 'succe
   }
 
   return (
-    <div className="py-1 font-mono text-xs flex items-center gap-1.5">
-      <span className="text-text-muted text-[11px]">File Edited:</span>
+    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
+      <span className="text-text-muted text-caption">File Edited:</span>
       <span className="text-warning font-medium truncate">{name}</span>
     </div>
   );
@@ -414,8 +414,8 @@ function buildRenameFileSummary(args: any, result: any, status: 'loading' | 'suc
   }
 
   return (
-    <div className="py-1 font-mono text-xs flex items-center gap-1.5">
-      <span className="text-text-muted text-[11px]">File Renamed:</span>
+    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
+      <span className="text-text-muted text-caption">File Renamed:</span>
       <span className="text-text-muted line-through truncate">{oldName}</span>
       <span className="text-text-secondary">→</span>
       <span className="text-text-primary font-medium truncate">{newName}</span>
@@ -439,8 +439,8 @@ function buildDeleteFileSummary(args: any, result: any, status: 'loading' | 'suc
   }
 
   return (
-    <div className="py-1 font-mono text-xs flex items-center gap-1.5">
-      <span className="text-text-muted text-[11px]">File Removed:</span>
+    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
+      <span className="text-text-muted text-caption">File Removed:</span>
       <span className="text-danger font-medium truncate">{name}</span>
     </div>
   );
@@ -464,15 +464,15 @@ function buildWebSearchSummary(args: any, result: any, status: 'loading' | 'succ
   const resultsList: Array<{ title?: string; url: string }> = result?.results || [];
 
   return (
-    <div className="py-1 space-y-1.5 font-mono text-xs">
+    <div className="py-1 space-y-1.5 font-mono text-caption">
       <div className="flex items-center gap-1.5">
-        <span className="text-text-muted text-[11px]">Query:</span>
+        <span className="text-text-muted text-caption">Query:</span>
         <span className="text-text-primary font-medium truncate">&quot;{query}&quot;</span>
       </div>
       {resultsList.length > 0 && (
         <div className="space-y-0.5">
-          <span className="text-text-muted text-[11px] block">URLs Found:</span>
-          <ul className="space-y-0.5 text-text-secondary text-[11px] pl-2">
+          <span className="text-text-muted text-caption block">URLs Found:</span>
+          <ul className="space-y-0.5 text-text-secondary text-caption pl-2">
             {resultsList.map((r, i) => (
               <li key={i} className="truncate">
                 <a
@@ -489,7 +489,7 @@ function buildWebSearchSummary(args: any, result: any, status: 'loading' | 'succ
         </div>
       )}
       {result?.error && (
-        <p className="text-[11px] text-danger truncate">Error: {result.error}</p>
+        <p className="text-caption text-danger truncate">Error: {result.error}</p>
       )}
     </div>
   );
@@ -514,10 +514,10 @@ function buildExtractUrlSummary(args: any, result: any, status: 'loading' | 'suc
   const displayUrls = extracted.length > 0 ? extracted.map((e) => e.url) : urls;
 
   return (
-    <div className="py-1 space-y-1 font-mono text-xs">
-      <span className="text-text-muted text-[11px] block">Extracted URLs:</span>
+    <div className="py-1 space-y-1 font-mono text-caption">
+      <span className="text-text-muted text-caption block">Extracted URLs:</span>
       {displayUrls.length > 0 ? (
-        <ul className="space-y-0.5 text-text-secondary text-[11px] pl-2">
+        <ul className="space-y-0.5 text-text-secondary text-caption pl-2">
           {displayUrls.map((url, i) => (
             <li key={i} className="truncate">
               <a
@@ -532,21 +532,21 @@ function buildExtractUrlSummary(args: any, result: any, status: 'loading' | 'suc
           ))}
         </ul>
       ) : (
-        <p className="text-text-muted italic text-[11px]">No URLs extracted</p>
+        <p className="text-text-muted italic text-caption">No URLs extracted</p>
       )}
-      {result?.error && (
-        <p className="text-[11px] text-danger truncate">Error: {result.error}</p>
+{result?.error && (
+        <p className="text-caption text-danger truncate">Error: {result.error}</p>
       )}
     </div>
   );
 }
 
 /**
- * Fallback summary for tools without a dedicated builder: just the raw tool name.
+ * Fallback summary for tools without a dedicated builder
  */
 function buildGenericSummary(args: any, rawName: string): ReactNode {
   return (
-    <div className="py-1 text-xs">
+    <div className="py-1 text-caption">
       <p className="font-medium text-text-primary truncate">{rawName || 'Tool Execution'}</p>
     </div>
   );

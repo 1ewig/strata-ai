@@ -64,27 +64,27 @@ export function QuotaErrorCard({ error, onDismiss }: QuotaErrorCardProps) {
 
           <div className="space-y-1.5 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="text-xs font-semibold text-danger uppercase tracking-wider font-display">
+              <h4 className="text-subheading font-semibold text-danger uppercase tracking-wider font-display">
                 Usage Quota Reached
               </h4>
               {/* Live reset countdown, or a static "exhausted" pill when no retry time is known */}
               {formattedTime ? (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-base border border-danger/30 text-[11px] font-medium text-danger">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-base border border-danger/30 text-caption font-medium text-danger">
                   <Clock className="w-3 h-3 animate-pulse" />
                   Resets in {formattedTime}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-base border border-edge-raised text-[11px] font-medium text-text-muted">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-surface-base border border-edge-raised text-caption font-medium text-text-muted">
                   Quota Exhausted
                 </span>
               )}
             </div>
 
-            <p className="text-xs text-text-primary leading-relaxed font-medium">
+            <p className="text-body text-text-primary leading-relaxed font-medium">
               {error.message || 'You have reached your allocated message limit.'}
             </p>
 
-            <div className="pt-1 text-[11px] text-text-muted flex items-center gap-3 flex-wrap">
+            <div className="pt-1 text-caption text-text-muted flex items-center gap-3 flex-wrap">
               <span>Standard limits: <strong className="text-text-secondary">10 msgs / 5h</strong> &amp; <strong className="text-text-secondary">50 msgs / week</strong></span>
             </div>
           </div>

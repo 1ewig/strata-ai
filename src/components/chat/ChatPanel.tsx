@@ -46,11 +46,11 @@ export default React.memo(function ChatPanel({
       {/* Empty-state hero welcoming the user to the workspace canvas. */}
       {messages.length === 0 && streamingContent === null && !isLoading && !quotaError && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary border border-secondary/50 flex items-center justify-center text-surface font-semibold text-lg shadow-glow-primary">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary border border-secondary/50 flex items-center justify-center text-surface font-semibold text-heading shadow-glow-primary">
             <StrataIcon className="w-6 h-6" />
           </div>
-          <h3 className="text-sm font-semibold text-text-primary font-display">Strata AI Workspace</h3>
-          <p className="text-xs text-text-muted max-w-sm leading-relaxed">
+          <h3 className="text-subheading font-semibold text-text-primary font-display">Strata AI Workspace</h3>
+          <p className="text-body text-text-muted max-w-sm leading-relaxed">
             Ask me to create, edit, analyze, or format documents, code snippets, and markdown notes in your interactive workspace canvas!
           </p>
         </div>

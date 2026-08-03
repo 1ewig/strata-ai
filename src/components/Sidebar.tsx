@@ -98,7 +98,7 @@ export default React.memo(function Sidebar({
           <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-glow-primary">
             <StrataIcon className="w-4 h-4 text-surface" />
           </div>
-          <h1 className="text-sm font-display font-bold tracking-tight text-text-bright">Strata AI</h1>
+          <h1 className="text-label font-display font-bold tracking-tight text-text-bright">Strata AI</h1>
           <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised text-text-muted">WORKSPACE</span>
         </Link>
         <button
@@ -115,7 +115,7 @@ export default React.memo(function Sidebar({
         <button
           onClick={handleNewChat}
           disabled={isMaxConversationsReached}
-          className={`w-full flex items-center justify-center gap-2 font-semibold px-3 py-2 rounded-xl text-xs transition-colors ${
+          className={`w-full flex items-center justify-center gap-2 font-semibold px-3 py-2 rounded-xl text-label transition-colors ${
             isMaxConversationsReached
               ? 'bg-surface-elevated text-text-muted opacity-50 cursor-not-allowed border border-edge-raised'
               : 'bg-primary hover:bg-primary-hover text-surface shadow-button cursor-pointer'
@@ -133,14 +133,14 @@ export default React.memo(function Sidebar({
 
       {/* Conversations List */}
       <div className="flex-1 overflow-y-auto p-2 space-y-1">
-        <div className="px-2 py-1 flex items-center justify-between text-[10px] font-semibold text-text-muted uppercase tracking-wider">
+        <div className="px-2 py-1 flex items-center justify-between text-micro font-semibold text-text-muted uppercase tracking-wider">
           <span>Conversations</span>
           <span className={isMaxConversationsReached ? 'text-warning font-bold' : ''}>
             {conversationCount} / {MAX_CONVERSATIONS_PER_USER}
           </span>
         </div>
         {(!conversations || conversations.length === 0) ? (
-          <div className="px-3 py-4 text-center text-xs text-text-faint">
+          <div className="px-3 py-4 text-center text-caption text-text-faint">
             No saved chats yet
           </div>
         ) : (
@@ -149,7 +149,7 @@ export default React.memo(function Sidebar({
             return (
               <div
                 key={conv.id}
-                className={`group relative flex items-center rounded-xl text-xs transition-colors ${
+                className={`group relative flex items-center rounded-xl text-label transition-colors ${
                   isActive
                     ? 'bg-primary-soft text-text-bright font-medium'
                     : 'text-text-muted hover:bg-surface-hover/50 hover:text-text-primary'

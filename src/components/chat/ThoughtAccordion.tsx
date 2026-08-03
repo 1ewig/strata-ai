@@ -27,10 +27,10 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
       p: ({ children }: any) => <p className="mb-2 leading-relaxed text-text-secondary">{children}</p>,
       ul: ({ children }: any) => <ul className="list-disc list-inside space-y-1 mb-2 text-text-muted">{children}</ul>,
       ol: ({ children }: any) => <ol className="list-decimal list-inside space-y-1 mb-2 text-text-muted">{children}</ol>,
-      li: ({ children }: any) => <li className="text-[11px] leading-relaxed">{children}</li>,
+      li: ({ children }: any) => <li className="text-caption leading-relaxed">{children}</li>,
       strong: ({ children }: any) => <strong className="font-semibold text-info">{children}</strong>,
       code: ({ children }: any) => (
-        <code className="bg-surface-raised text-info px-1 py-0.5 rounded text-[10px] font-mono border border-edge-raised">
+        <code className="bg-surface-raised text-info px-1 py-0.5 rounded text-micro font-mono border border-edge-raised">
           {children}
         </code>
       ),
@@ -42,10 +42,10 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
   if (!text || !text.trim()) return null;
 
   return (
-    <div className="my-1.5 rounded-2xl border border-edge-raised/40 bg-surface-overlay/30 overflow-hidden text-xs fade-in">
+    <div className="my-1.5 rounded-2xl border border-edge-raised/40 bg-surface-overlay/30 overflow-hidden text-caption fade-in">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-surface-raised/60 hover:bg-surface-raised transition-colors text-left font-mono text-[11px] text-info cursor-pointer"
+        className="w-full flex items-center justify-between px-3 py-2 bg-surface-raised/60 hover:bg-surface-raised transition-colors text-left font-mono text-label text-info cursor-pointer"
       >
         <div className="flex items-center gap-2">
           {isThinking ? (
@@ -54,7 +54,7 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
             <BrainCircuit className="w-3.5 h-3.5 text-info" />
           )}
           <span className="font-semibold">{isThinking ? 'Thinking...' : 'Thought Process'}</span>
-          <span className="text-[10px] text-text-muted font-normal">({text.length.toLocaleString()} chars)</span>
+          <span className="text-micro text-text-muted font-normal">({text.length.toLocaleString()} chars)</span>
         </div>
         <div className="flex items-center gap-1 text-text-muted">
           {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
@@ -62,7 +62,7 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
       </button>
 
       {isOpen && (
-        <div className="p-3 border-t border-edge-raised/60 text-[11px] text-text-secondary leading-relaxed max-h-56 overflow-y-auto bg-surface-base/90 font-mono">
+        <div className="p-3 border-t border-edge-raised/60 text-label text-text-secondary leading-relaxed max-h-56 overflow-y-auto bg-surface-base/90 font-mono">
           {/* While actively thinking, render plain pre-wrap whitespace to avoid per-token Markdown AST parsing freeze */}
           {isThinking ? (
             <p className="whitespace-pre-wrap font-mono leading-relaxed text-text-secondary">{text}</p>

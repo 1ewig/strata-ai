@@ -98,7 +98,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   if (isSessionPending || !session?.user) {
 
     return (
-      <main className="h-dvh bg-surface-base flex items-center justify-center text-text-muted text-sm">
+      <main className="h-dvh bg-surface-base flex items-center justify-center text-text-muted text-label">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           Verifying session...
@@ -154,7 +154,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
                 <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-40">
                   <button
                     onClick={() => context.scrollToBottom()}
-                    className="rounded-full border border-edge-raised bg-surface-overlay/90 px-3.5 py-1.5 text-xs font-medium text-text-muted hover:text-text-primary shadow-lg backdrop-blur-md transition-colors cursor-pointer"
+                    className="rounded-full border border-edge-raised bg-surface-overlay/90 px-3.5 py-1.5 text-caption font-medium text-text-muted hover:text-text-primary shadow-lg backdrop-blur-md transition-colors cursor-pointer"
                   >
                     ↓ Scroll to bottom
                   </button>
