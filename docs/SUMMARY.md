@@ -1,6 +1,8 @@
 # Strata AI - System Context & Architecture Guide
 
 > Primary context document for AI agents. Written from current source state — verify claims by re-reading the files it points to before editing.
+>
+> Pair with [`ai-sdk-nextjs-guide.md`](./ai-sdk-nextjs-guide.md) — the beginner-to-advanced tutorial on building chatbots and agentic apps with AI SDK 7 + Next.js 16, grounded in this codebase. This file is the *what/when/where*; the guide is the *how/why*.
 
 ## 1. Executive Summary & Domain Purpose
 

@@ -183,6 +183,7 @@ Open [http://localhost:3000](http://localhost:3000) in your browser. You'll be p
 
 For in-depth architectural breakdown, data flow details, and engineering design decisions:
 
+- [📘 Complete Chatbot & Agentic AI Guide (`docs/ai-sdk-nextjs-guide.md`)](docs/ai-sdk-nextjs-guide.md) — Beginner-to-advanced tutorial: build a chatbot, then a multi-tool agent with AI SDK 7 + Next.js 16, including streaming UX, provider abstraction, persistence, performance optimization, and best practices.
 - [📄 System Context & Architecture Guide (`docs/SUMMARY.md`)](docs/SUMMARY.md) — Canonical architecture guide: stack, data flow, domain models, routing, conventions, and extension recipes.
 
 ---
