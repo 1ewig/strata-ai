@@ -138,6 +138,101 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
     return result;
   }, [message, isUser]);
 
+  // Memoize custom markdown components so ReactMarkdown does not tear down DOM nodes on every token render.
+  const markdownComponents = React.useMemo(
+    () => ({
+      h1: ({ children }: any) => (
+        <h1 className="text-base sm:text-lg font-display font-bold text-text-bright mt-3 mb-2 border-b border-edge-raised/80 pb-1.5 flex items-center gap-2">
+          {children}
+        </h1>
+      ),
+      h2: ({ children }: any) => (
+        <h2 className="text-xs sm:text-sm font-bold text-primary/90 mt-3 mb-1.5 tracking-wide uppercase">
+          {children}
+        </h2>
+      ),
+      h3: ({ children }: any) => (
+        <h3 className="text-xs font-semibold text-text-primary mt-2 mb-1">
+          {children}
+        </h3>
+      ),
+      p: ({ children }: any) => <p className="mb-2.5 leading-relaxed last:mb-0">{children}</p>,
+      ul: ({ children }: any) => (
+        <ul className="list-disc list-inside space-y-1.5 mb-3 text-text-secondary">
+          {children}
+        </ul>
+      ),
+      ol: ({ children }: any) => (
+        <ol className="list-decimal list-inside space-y-1.5 mb-3 text-text-secondary">
+          {children}
+        </ol>
+      ),
+      li: ({ children }: any) => <li className="text-xs sm:text-sm leading-relaxed">{children}</li>,
+      strong: ({ children }: any) => (
+        <strong className="font-semibold text-text-bright">{children}</strong>
+      ),
+      code: ({ className, children, ...props }: any) => {
+        const isInline = !className;
+        const rawCode = String(children).replace(/\n$/, '');
+        const snippetId = `snippet-${rawCode.slice(0, 15)}`;
+
+        if (isInline) {
+          return (
+            <code className="bg-surface-elevated/90 text-primary font-mono px-1.5 py-0.5 rounded text-[11px] border border-edge-hover/60" {...props}>
+              {children}
+            </code>
+          );
+        }
+        return (
+          <div className="my-2.5 rounded-xl bg-surface-base border border-edge-raised/80 overflow-hidden font-mono text-[11px] shadow-sm">
+            <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-[10px] text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
+              <span className="text-text-muted">Code Snippet</span>
+              <button
+                onClick={() => handleCopyCodeSnippet(rawCode, snippetId)}
+                className="flex items-center gap-1 text-[10px] text-text-muted hover:text-primary transition-colors cursor-pointer"
+              >
+                {copiedCodeId === snippetId ? (
+                  <>
+                    <Check className="w-3 h-3 text-primary" />
+                    <span className="text-primary">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Code2 className="w-3 h-3" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            </div>
+            <pre className="p-3 overflow-x-auto text-text-secondary leading-relaxed">
+              <code>{children}</code>
+            </pre>
+          </div>
+        );
+      },
+      table: ({ children }: any) => (
+        <div className="overflow-x-auto my-3 rounded-xl border border-edge-raised/80 bg-surface-base/40">
+          <table className="min-w-full text-xs text-left text-text-secondary">{children}</table>
+        </div>
+      ),
+      th: ({ children }: any) => (
+        <th className="bg-surface-elevated/70 px-3 py-2 border-b border-edge-raised font-semibold text-text-primary">
+          {children}
+        </th>
+      ),
+      td: ({ children }: any) => (
+        <td className="px-3 py-2 border-b border-edge-raised/40 hover:bg-surface-hover/20">{children}</td>
+      ),
+      blockquote: ({ children }: any) => (
+        <blockquote className="border-l-2 border-primary/60 pl-3 my-2 text-text-muted italic text-xs">
+          {children}
+        </blockquote>
+      ),
+      hr: () => <hr className="my-3.5 border-edge-raised" />,
+    }),
+    [copiedCodeId],
+  );
+
   return (
     <div
       className={`group relative flex items-start gap-3.5 ${
@@ -204,6 +299,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           }
 
           if (seg.type === 'text' && seg.content) {
+            const isStreamingActiveSegment = isStreaming && isLastSegment;
             return (
               <div
                 key={seg.key}
@@ -212,114 +308,26 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   transition-all duration-300 fade-in
                   bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs
                   shadow-md backdrop-blur-sm
-                  ${isStreaming && isLastSegment ? 'shadow-glow-primary' : ''}
+                  ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''}
                 `}
               >
                 {/* Streaming glow: shimmer sweep across the newest text bubble */}
-                {isStreaming && isLastSegment && (
+                {isStreamingActiveSegment && (
                   <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
                     <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-primary/8 to-transparent" />
                   </div>
                 )}
 
                 <div className="prose max-w-none text-xs sm:text-sm text-text-primary leading-relaxed relative">
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      h1: ({ children }) => (
-                        <h1 className="text-base sm:text-lg font-display font-bold text-text-bright mt-3 mb-2 border-b border-edge-raised/80 pb-1.5 flex items-center gap-2">
-                          {children}
-                        </h1>
-                      ),
-                      h2: ({ children }) => (
-                        <h2 className="text-xs sm:text-sm font-bold text-primary/90 mt-3 mb-1.5 tracking-wide uppercase">
-                          {children}
-                        </h2>
-                      ),
-                      h3: ({ children }) => (
-                        <h3 className="text-xs font-semibold text-text-primary mt-2 mb-1">
-                          {children}
-                        </h3>
-                      ),
-                      p: ({ children }) => <p className="mb-2.5 leading-relaxed last:mb-0">{children}</p>,
-                      ul: ({ children }) => (
-                        <ul className="list-disc list-inside space-y-1.5 mb-3 text-text-secondary">
-                          {children}
-                        </ul>
-                      ),
-                      ol: ({ children }) => (
-                        <ol className="list-decimal list-inside space-y-1.5 mb-3 text-text-secondary">
-                          {children}
-                        </ol>
-                      ),
-                      li: ({ children }) => <li className="text-xs sm:text-sm leading-relaxed">{children}</li>,
-                      strong: ({ children }) => (
-                        <strong className="font-semibold text-text-bright">{children}</strong>
-                      ),
-                      code: ({ className, children, ...props }) => {
-                        const isInline = !className;
-                        const rawCode = String(children).replace(/\n$/, '');
-                        const snippetId = `snippet-${rawCode.slice(0, 15)}`;
-
-                        if (isInline) {
-                          return (
-                            <code className="bg-surface-elevated/90 text-primary font-mono px-1.5 py-0.5 rounded text-[11px] border border-edge-hover/60" {...props}>
-                              {children}
-                            </code>
-                          );
-                        }
-                        return (
-                          <div className="my-2.5 rounded-xl bg-surface-base border border-edge-raised/80 overflow-hidden font-mono text-[11px] shadow-sm">
-                            <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-[10px] text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
-                              <span className="text-text-muted">Code Snippet</span>
-                              <button
-                                onClick={() => handleCopyCodeSnippet(rawCode, snippetId)}
-                                className="flex items-center gap-1 text-[10px] text-text-muted hover:text-primary transition-colors cursor-pointer"
-                              >
-                                {copiedCodeId === snippetId ? (
-                                  <>
-                                    <Check className="w-3 h-3 text-primary" />
-                                    <span className="text-primary">Copied</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Code2 className="w-3 h-3" />
-                                    <span>Copy</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                            <pre className="p-3 overflow-x-auto text-text-secondary leading-relaxed">
-                              <code>{children}</code>
-                            </pre>
-                          </div>
-                        );
-                      },
-                      table: ({ children }) => (
-                        <div className="overflow-x-auto my-3 rounded-xl border border-edge-raised/80 bg-surface-base/40">
-                          <table className="min-w-full text-xs text-left text-text-secondary">{children}</table>
-                        </div>
-                      ),
-                      th: ({ children }) => (
-                        <th className="bg-surface-elevated/70 px-3 py-2 border-b border-edge-raised font-semibold text-text-primary">
-                          {children}
-                        </th>
-                      ),
-                      td: ({ children }) => (
-                        <td className="px-3 py-2 border-b border-edge-raised/40 hover:bg-surface-hover/20">{children}</td>
-                      ),
-                      blockquote: ({ children }) => (
-                        <blockquote className="border-l-2 border-primary/60 pl-3 my-2 text-text-muted italic text-xs">
-                          {children}
-                        </blockquote>
-                      ),
-                      hr: () => <hr className="my-3.5 border-edge-raised" />,
-                    }}
-                  >
-                    {seg.content}
-                  </ReactMarkdown>
-                  {isStreaming && isLastSegment && (
-                    <span className="inline-block w-[1.5px] h-[1.05em] ml-0.5 -mb-0.5 bg-primary/90 rounded-full animate-caret align-text-bottom" />
+                  {isStreamingActiveSegment ? (
+                    <p className="whitespace-pre-wrap leading-relaxed font-sans">
+                      {seg.content}
+                      <span className="inline-block w-[1.5px] h-[1.05em] ml-0.5 -mb-0.5 bg-primary/90 rounded-full animate-caret align-text-bottom" />
+                    </p>
+                  ) : (
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                      {seg.content}
+                    </ReactMarkdown>
                   )}
                 </div>
               </div>

@@ -18,7 +18,7 @@ import type { ToolCardProps } from './tools/resolver';
  * @param rawResult - Original tool result, pretty-printed in the details block.
  * @param onOpenDrawer - Optional callback that opens the full details drawer for successful calls.
  */
-export default function ToolCallCard({
+function ToolCallCard({
   label,
   badge,
   icon: Icon,
@@ -108,3 +108,5 @@ export default function ToolCallCard({
     </div>
   );
 }
+
+export default React.memo(ToolCallCard);

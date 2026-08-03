@@ -132,7 +132,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
           onOpenSidebar={handleOpenSidebar}
         />
 
-        <StickToBottom className="flex-1 min-h-0" resize="smooth" initial="instant">
+        <StickToBottom className="flex-1 min-h-0" resize="auto" initial="instant">
           {(context) => (
             <>
               <StickToBottom.Content className="max-w-2xl w-full mx-auto px-4 pb-48">

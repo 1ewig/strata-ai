@@ -43,55 +43,61 @@ export async function reconcileFinishedStep({
   continuationCountRef,
   sendMessageRef,
 }: ReconcileStepParams) {
-  // Persist all messages to Dexie
-  for (const msg of allMessages as any[]) {
-    await db.messages.put({
-      ...msg,
-      chatId,
-      ...(userId ? { userId } : {}),
-      timestamp: new Date().toISOString(),
-    });
-  }
-  await db.conversations.update(chatId, { updatedAt: new Date().toISOString() });
+  // Prepare batched messages payload
+  const timestamp = new Date().toISOString();
+  const dbMessages = (allMessages as any[]).map((msg) => ({
+    ...msg,
+    chatId,
+    ...(userId ? { userId } : {}),
+    timestamp,
+  }));
 
-  // Process workspace file updates/deletions ONLY from the current assistant message
-  const currentMsg = message as GenericUIMessage;
-  const deletions = extractDeletedFilesFromMessage(currentMsg);
-  const updatedFiles = extractFilesFromMessage(currentMsg);
-
-  if (deletions.length > 0 || (updatedFiles && updatedFiles.length > 0)) {
-    const conv = await db.conversations.get(chatId);
-    let currentFiles = getWorkspaceFiles(conv);
-
-    // Apply deletions
-    if (deletions.length > 0) {
-      currentFiles = currentFiles.filter((f) => {
-        for (const del of deletions) {
-          if (del.fileId && f.id === del.fileId) return false;
-          if (del.name && f.name.toLowerCase() === del.name.toLowerCase()) return false;
-        }
-        return true;
-      });
+  // Perform message batch writes and workspace file reconciliation atomically in a single transaction
+  await db.transaction('rw', [db.messages, db.conversations], async () => {
+    if (dbMessages.length > 0) {
+      await db.messages.bulkPut(dbMessages);
     }
+    await db.conversations.update(chatId, { updatedAt: timestamp });
 
-    // Apply creations or edits: replace by id/name, or append as a brand-new file.
-    if (updatedFiles && updatedFiles.length > 0) {
-      for (const newFile of updatedFiles) {
-        const idx = currentFiles.findIndex(
-          (f) => f.id === newFile.id || f.name.toLowerCase() === newFile.name.toLowerCase(),
-        );
-        if (idx >= 0) {
-          currentFiles[idx] = newFile;
-        } else {
-          currentFiles.push(newFile);
+    // Process workspace file updates/deletions ONLY from the current assistant message
+    const currentMsg = message as GenericUIMessage;
+    const deletions = extractDeletedFilesFromMessage(currentMsg);
+    const updatedFiles = extractFilesFromMessage(currentMsg);
+
+    if (deletions.length > 0 || (updatedFiles && updatedFiles.length > 0)) {
+      const conv = await db.conversations.get(chatId);
+      let currentFiles = getWorkspaceFiles(conv);
+
+      // Apply deletions
+      if (deletions.length > 0) {
+        currentFiles = currentFiles.filter((f) => {
+          for (const del of deletions) {
+            if (del.fileId && f.id === del.fileId) return false;
+            if (del.name && f.name.toLowerCase() === del.name.toLowerCase()) return false;
+          }
+          return true;
+        });
+      }
+
+      // Apply creations or edits: replace by id/name, or append as a brand-new file.
+      if (updatedFiles && updatedFiles.length > 0) {
+        for (const newFile of updatedFiles) {
+          const idx = currentFiles.findIndex(
+            (f) => f.id === newFile.id || f.name.toLowerCase() === newFile.name.toLowerCase(),
+          );
+          if (idx >= 0) {
+            currentFiles[idx] = newFile;
+          } else {
+            currentFiles.push(newFile);
+          }
         }
       }
-    }
 
-    // Keep the first file as the drawer's active selection, if any remain.
-    const activeId = currentFiles.length > 0 ? currentFiles[0].id : undefined;
-    await updateConversationFiles(chatId, currentFiles, activeId);
-  }
+      // Keep the first file as the drawer's active selection, if any remain.
+      const activeId = currentFiles.length > 0 ? currentFiles[0].id : undefined;
+      await updateConversationFiles(chatId, currentFiles, activeId);
+    }
+  });
 
   // Auto-continuation loop if step limit reached
   const currentCount = continuationCountRef.current ?? 0;

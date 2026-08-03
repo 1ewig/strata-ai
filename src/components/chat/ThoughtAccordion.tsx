@@ -19,7 +19,7 @@ interface ThoughtAccordionProps {
  * @param text - The reasoning content shown inside the expanded body.
  * @param isThinking - When true, renders a loading spinner and "Thinking..." label in the header.
  */
-export default function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
+function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   // Hide the whole accordion when there is no reasoning content to display.
@@ -70,3 +70,5 @@ export default function ThoughtAccordion({ text, isThinking }: ThoughtAccordionP
     </div>
   );
 }
+
+export default React.memo(ThoughtAccordion);
