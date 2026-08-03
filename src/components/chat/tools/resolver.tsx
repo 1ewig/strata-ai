@@ -207,17 +207,54 @@ function normalizeToolName(raw: string): { normalized: string; isCustom: boolean
 }
 
 /**
- * Extracts name, args, result, and state from a tool call, tolerating several message shapes
- * (toolInvocation, toolCall, toolResult, or the call itself) and JSON-encoded string payloads.
- * @param toolCall - The tool call object from the assistant message.
- * @returns Normalized tool info, ready for config lookup and summary building.
+ * Helper to determine if a tool result has meaningful output payload.
+ */
+function hasMeaningfulResult(result: any): boolean {
+  if (result === undefined || result === null) return false;
+  if (typeof result === 'string') return result.length > 0;
+  if (typeof result === 'boolean' || typeof result === 'number') return true;
+  if (typeof result === 'object') {
+    return Object.keys(result).length > 0;
+  }
+  return false;
+}
+
+/**
+ * Helper to detect if a tool call or result represents an error state.
+ */
+function hasErrorShape(result: any, state?: string): boolean {
+  if (state === 'output-error') return true;
+  if (result && typeof result === 'object') {
+    if (result.success === false || typeof result.error === 'string') return true;
+  }
+  return false;
+}
+
+/**
+ * Extracts normalized tool status matching AI SDK 7 modern and legacy lifecycle states.
+ */
+function extractToolStatus(inv: any, result: any, state: string): 'loading' | 'success' | 'error' {
+  if (hasErrorShape(result, state)) return 'error';
+
+  // Support both AI SDK 7 modern states (output-available, output-error) and legacy states (result)
+  const isTerminalState = state === 'output-available' || state === 'result';
+  if (isTerminalState && hasMeaningfulResult(result)) {
+    return 'success';
+  }
+
+  // input-streaming | input-available | call | partial-call | missing payload -> loading
+  return 'loading';
+}
+
+/**
+ * Extracts name, args, result, and status from a tool call object.
  */
 function extractToolInfo(toolCall: any) {
-  if (!toolCall) return { name: '', rawName: '', args: {}, result: {}, state: 'result' as const, isCustom: true };
+  if (!toolCall) return { name: '', rawName: '', args: {}, result: {}, state: 'input-available', status: 'error' as const, isCustom: true };
 
   const inv = toolCall.toolInvocation || toolCall.toolCall || toolCall.toolResult || toolCall;
 
-  // Prefer an explicit toolName/name field, falling back to a "tool-*" type prefix.
+  // Prefer explicit toolName/name field
   const rawName =
     inv?.toolName ||
     inv?.name ||
@@ -244,10 +281,8 @@ function extractToolInfo(toolCall: any) {
     inv?.output ||
     inv?.response ||
     toolCall?.result ||
-    toolCall?.output ||
-    {};
+    toolCall?.output;
 
-  // Args and results may arrive as strings; parse them so summaries can read object fields.
   if (typeof args === 'string') {
     try { args = JSON.parse(args); } catch {}
   }
@@ -255,19 +290,26 @@ function extractToolInfo(toolCall: any) {
     try { result = JSON.parse(result); } catch {}
   }
 
-  // Infer the lifecycle state: explicit state wins, otherwise a non-empty result means "done".
-  const state =
-    inv?.state ||
-    toolCall?.state ||
-    (result && (typeof result !== 'object' || Object.keys(result).length > 0) ? 'result' : 'call');
+  const rawState = inv?.state || toolCall?.state || (result && hasMeaningfulResult(result) ? 'output-available' : 'input-available');
+  const status = extractToolStatus(inv, result, rawState);
 
-  return { name, rawName, args, result, state: state as 'call' | 'partial-call' | 'result', isCustom };
+  return { name, rawName, args, result: result || {}, state: rawState, status, isCustom };
 }
 
 /**
  * Summary for listFiles: files found in workspace.
  */
-function buildListFilesSummary(args: any, result: any): ReactNode {
+function buildListFilesSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
+  if (status === 'loading') {
+    return (
+      <InFlightSummary
+        title="Workspace Files"
+        badgeText="loading..."
+        loadingText="Scanning workspace documents..."
+      />
+    );
+  }
+
   const filesList: Array<{ name: string }> = result?.files || [];
   return (
     <div className="py-1 space-y-1 font-mono text-xs">
@@ -288,8 +330,18 @@ function buildListFilesSummary(args: any, result: any): ReactNode {
 /**
  * Summary for readFile: the file read.
  */
-function buildReadFileSummary(args: any, result: any): ReactNode {
+function buildReadFileSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
   const fileName = args?.nameOrId || result?.name || 'File';
+  if (status === 'loading') {
+    return (
+      <InFlightSummary
+        title={fileName}
+        badgeText="loading..."
+        loadingText="Reading document content..."
+      />
+    );
+  }
+
   return (
     <div className="py-1 font-mono text-xs flex items-center gap-1.5">
       <span className="text-text-muted text-[11px]">File Read:</span>
@@ -301,8 +353,18 @@ function buildReadFileSummary(args: any, result: any): ReactNode {
 /**
  * Summary for writeFile: the file created or updated.
  */
-function buildWriteFileSummary(args: any, result: any): ReactNode {
+function buildWriteFileSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
   const name = args?.name || result?.file?.name || 'File';
+  if (status === 'loading') {
+    return (
+      <InFlightSummary
+        title={name}
+        badgeText="loading..."
+        loadingText="Writing file changes to workspace..."
+      />
+    );
+  }
+
   const isCreated = result?.action === 'created';
   return (
     <div className="py-1 font-mono text-xs flex items-center gap-1.5">
@@ -315,8 +377,18 @@ function buildWriteFileSummary(args: any, result: any): ReactNode {
 /**
  * Summary for editFile: the file edited.
  */
-function buildEditFileSummary(args: any, result: any): ReactNode {
+function buildEditFileSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
   const name = args?.nameOrId || result?.file?.name || 'File';
+  if (status === 'loading') {
+    return (
+      <InFlightSummary
+        title={name}
+        badgeText="loading..."
+        loadingText="Applying surgical edits to document..."
+      />
+    );
+  }
+
   return (
     <div className="py-1 font-mono text-xs flex items-center gap-1.5">
       <span className="text-text-muted text-[11px]">File Edited:</span>
@@ -328,9 +400,19 @@ function buildEditFileSummary(args: any, result: any): ReactNode {
 /**
  * Summary for renameFile: the old name and new name.
  */
-function buildRenameFileSummary(args: any, result: any): ReactNode {
+function buildRenameFileSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
   const oldName = args?.nameOrId || result?.oldName || 'File';
   const newName = result?.newName || args?.newName || '';
+  if (status === 'loading') {
+    return (
+      <InFlightSummary
+        title={oldName}
+        badgeText="loading..."
+        loadingText="Renaming file in workspace..."
+      />
+    );
+  }
+
   return (
     <div className="py-1 font-mono text-xs flex items-center gap-1.5">
       <span className="text-text-muted text-[11px]">File Renamed:</span>
@@ -344,8 +426,18 @@ function buildRenameFileSummary(args: any, result: any): ReactNode {
 /**
  * Summary for deleteFile: the file deleted.
  */
-function buildDeleteFileSummary(args: any, result: any): ReactNode {
+function buildDeleteFileSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
   const name = args?.nameOrId || result?.name || 'File';
+  if (status === 'loading') {
+    return (
+      <InFlightSummary
+        title={name}
+        badgeText="loading..."
+        loadingText="Deleting file from workspace..."
+      />
+    );
+  }
+
   return (
     <div className="py-1 font-mono text-xs flex items-center gap-1.5">
       <span className="text-text-muted text-[11px]">File Removed:</span>
@@ -357,8 +449,18 @@ function buildDeleteFileSummary(args: any, result: any): ReactNode {
 /**
  * Summary for webSearch: search query and URLs found.
  */
-function buildWebSearchSummary(args: any, result: any, status?: string): ReactNode {
+function buildWebSearchSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
   const query = args?.query || result?.query || '';
+  if (status === 'loading') {
+    return (
+      <InFlightSummary
+        title={query ? `"${query}"` : 'Web Search'}
+        badgeText="loading..."
+        loadingText="Querying Tavily search API and retrieving web sources..."
+      />
+    );
+  }
+
   const resultsList: Array<{ title?: string; url: string }> = result?.results || [];
 
   return (
@@ -396,8 +498,18 @@ function buildWebSearchSummary(args: any, result: any, status?: string): ReactNo
 /**
  * Summary for extractUrl: target URLs extracted.
  */
-function buildExtractUrlSummary(args: any, result: any, status?: string): ReactNode {
+function buildExtractUrlSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
   const urls: string[] = args?.urls || [];
+  if (status === 'loading') {
+    return (
+      <InFlightSummary
+        title={urls.length > 0 ? urls.join(', ') : 'URL Extraction'}
+        badgeText="loading..."
+        loadingText="Parsing clean Markdown content from web pages..."
+      />
+    );
+  }
+
   const extracted: Array<{ url: string; title?: string }> = result?.extracted || [];
   const displayUrls = extracted.length > 0 ? extracted.map((e) => e.url) : urls;
 
@@ -449,12 +561,11 @@ function buildGenericSummary(args: any, rawName: string): ReactNode {
  * @returns ToolCardProps describing how to render this invocation.
  */
 export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): ToolCardProps {
-  const { name, rawName, args, result, state, isCustom } = extractToolInfo(toolCall);
+  const { name, rawName, args, result, status, isCustom } = extractToolInfo(toolCall);
 
   let cfg = toolConfigs[name] || defaultConfig;
   // Custom tools have no config label, so surface their raw name instead.
   let label = !isCustom ? cfg.label : (rawName || cfg.label);
-  const status = state === 'call' || state === 'partial-call' ? 'loading' : result?.success === false ? 'error' : 'success';
 
   const action = (result as any)?.action;
   if ((name === 'writeFile' || name === 'writeResume') && (action === 'created' || action === 'replaced')) {
@@ -462,30 +573,30 @@ export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): To
     label = action === 'created' ? 'File Created' : 'File Replaced';
   }
 
-  // Route the tool to its dedicated summary builder; unknown tools fall back to the generic one.
+  // Route the tool to its dedicated summary builder, passing status
   let summary: ReactNode;
   switch (name) {
     case 'listFiles':
-      summary = buildListFilesSummary(args, result);
+      summary = buildListFilesSummary(args, result, status);
       break;
     case 'readFile':
     case 'readResume':
-      summary = buildReadFileSummary(args, result);
+      summary = buildReadFileSummary(args, result, status);
       break;
     case 'writeFile':
     case 'writeResume':
-      summary = buildWriteFileSummary(args, result);
+      summary = buildWriteFileSummary(args, result, status);
       break;
     case 'editFile':
     case 'editResume':
-      summary = buildEditFileSummary(args, result);
+      summary = buildEditFileSummary(args, result, status);
       break;
     case 'renameFile':
-      summary = buildRenameFileSummary(args, result);
+      summary = buildRenameFileSummary(args, result, status);
       break;
     case 'deleteFile':
     case 'deleteResume':
-      summary = buildDeleteFileSummary(args, result);
+      summary = buildDeleteFileSummary(args, result, status);
       break;
     case 'webSearch':
       summary = buildWebSearchSummary(args, result, status);
