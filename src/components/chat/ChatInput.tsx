@@ -36,7 +36,7 @@ interface ChatInputProps {
  * @param onThinkingLevelChange - Called when the user changes thinking effort.
  * @param rateLimitData - Remaining 5-hour/weekly message quota and optional retry window.
  */
-export default function ChatInput({
+export default React.memo(function ChatInput({
   onSendMessage,
   onStop,
   isLoading,
@@ -194,4 +194,4 @@ export default function ChatInput({
       </div>
     </form>
   );
-}
+});

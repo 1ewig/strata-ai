@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   getInitialModel,
   saveModelPreference,
@@ -44,7 +44,7 @@ export function useModelSettings(chatId: string, currentConv?: Conversation) {
    * Applies a model selection, clamping the thinking level to what that model supports.
    * @param id - The model identifier to select.
    */
-  const handleModelSelect = (id: string) => {
+  const handleModelSelect = useCallback((id: string) => {
     setModel(id);
     saveModelPreference(id);
     const currentLevel = getStoredThinkingLevel(id);
@@ -52,17 +52,17 @@ export function useModelSettings(chatId: string, currentConv?: Conversation) {
     setThinkingLevel(valid);
     saveThinkingLevel(valid);
     updateConversationModel(chatId, id, valid);
-  };
+  }, [chatId]);
 
   /**
    * Updates the thinking level for the current model.
    * @param level - The new thinking level to apply.
    */
-  const handleThinkingLevelChange = (level: string) => {
+  const handleThinkingLevelChange = useCallback((level: string) => {
     setThinkingLevel(level);
     saveThinkingLevel(level);
     updateConversationModel(chatId, model, level);
-  };
+  }, [chatId, model]);
 
   return {
     model,

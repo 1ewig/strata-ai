@@ -50,7 +50,7 @@ interface SidebarProps {
  *
  * @param props - Component props.
  */
-export default function Sidebar({
+export default React.memo(function Sidebar({
   conversations,
   conversationCount,
   isMaxConversationsReached,
@@ -184,4 +184,4 @@ export default function Sidebar({
       </aside>
     </>
   );
-}
+})

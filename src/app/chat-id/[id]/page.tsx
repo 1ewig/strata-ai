@@ -69,6 +69,8 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
   const handleOpenDrawer = React.useCallback(() => setIsWorkspaceDrawerOpen(true), [setIsWorkspaceDrawerOpen]);
 
+  const handleCloseDrawer = React.useCallback(() => setIsWorkspaceDrawerOpen(false), [setIsWorkspaceDrawerOpen]);
+
   const handleOpenSidebar = React.useCallback(() => setIsSidebarOpen(true), []);
 
   const handleCloseSidebar = React.useCallback(() => setIsSidebarOpen(false), []);
@@ -182,7 +184,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
       <WorkspaceDrawer
         isOpen={isWorkspaceDrawerOpen}
-        onClose={() => setIsWorkspaceDrawerOpen(false)}
+        onClose={handleCloseDrawer}
         files={files}
         activeFileId={activeFileId}
         onSelectFile={handleSelectFile}

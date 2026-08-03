@@ -36,7 +36,7 @@ interface WorkspaceDrawerProps {
  * @param onCreateFile - Callback creating a new file.
  * @param onDeleteFile - Callback deleting a file.
  */
-export default function WorkspaceDrawer({
+export default React.memo(function WorkspaceDrawer({
   isOpen,
   onClose,
   files,
@@ -405,4 +405,4 @@ export default function WorkspaceDrawer({
       </div>
     </AnimatePresence>
   );
-}
+});

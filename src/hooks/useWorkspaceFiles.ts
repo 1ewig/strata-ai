@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import {
   Conversation,
   getWorkspaceFiles,
@@ -38,17 +38,17 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
    * Marks a file as active and opens the drawer.
    * @param fileId - The id of the file to select.
    */
-  const handleSelectFile = (fileId: string) => {
+  const handleSelectFile = useCallback((fileId: string) => {
     setActiveFileId(fileId);
     setIsWorkspaceDrawerOpen(true);
-  };
+  }, []);
 
   /**
    * Creates a new workspace file with default markdown/text naming and persists it.
    * @param name - The file name; an extension is appended if missing.
    * @param content - Optional initial content.
    */
-  const handleCreateFile = async (name: string, content = '') => {
+  const handleCreateFile = useCallback(async (name: string, content = '') => {
     if (files.length >= MAX_FILES_PER_WORKSPACE) return;
     const safeContent = content.length > MAX_FILE_CHARS ? content.slice(0, MAX_FILE_CHARS) : content;
     const now = new Date().toISOString();
@@ -64,30 +64,30 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
     await saveWorkspaceFile(chatId, newFile);
     setActiveFileId(newFile.id);
     setIsWorkspaceDrawerOpen(true);
-  };
+  }, [chatId, files.length]);
 
   /**
    * Persists edits to an existing file, truncating content to the size limit.
    * @param updatedFile - The file with applied edits.
    */
-  const handleUpdateFile = async (updatedFile: WorkspaceFile) => {
+  const handleUpdateFile = useCallback(async (updatedFile: WorkspaceFile) => {
     const safeFile = updatedFile.content.length > MAX_FILE_CHARS
       ? { ...updatedFile, content: updatedFile.content.slice(0, MAX_FILE_CHARS) }
       : updatedFile;
     await saveWorkspaceFile(chatId, safeFile);
-  };
+  }, [chatId]);
 
   /**
    * Deletes a file and falls back to the next remaining file as active.
    * @param fileId - The id of the file to delete.
    */
-  const handleDeleteFile = async (fileId: string) => {
+  const handleDeleteFile = useCallback(async (fileId: string) => {
     await deleteWorkspaceFile(chatId, fileId);
     if (activeFileId === fileId) {
       const remaining = files.filter(f => f.id !== fileId);
       setActiveFileId(remaining.length > 0 ? remaining[0].id : null);
     }
-  };
+  }, [chatId, activeFileId, files]);
 
   return {
     files,
