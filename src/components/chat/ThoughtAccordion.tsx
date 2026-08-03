@@ -42,7 +42,7 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
   if (!text || !text.trim()) return null;
 
   return (
-    <div className="my-1.5 rounded-xl border border-edge-raised/40 bg-surface-overlay/30 overflow-hidden text-xs fade-in">
+    <div className="my-1.5 rounded-2xl border border-edge-raised/40 bg-surface-overlay/30 overflow-hidden text-xs fade-in">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between px-3 py-2 bg-surface-raised/60 hover:bg-surface-raised transition-colors text-left font-mono text-[11px] text-info cursor-pointer"

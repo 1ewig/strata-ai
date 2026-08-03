@@ -62,7 +62,7 @@ function ToolCallCard({
     : 'bg-primary-soft text-primary font-medium';
 
   return (
-    <div className="my-1.5 rounded-lg border border-edge-raised/40 bg-surface-raised/40 hover:border-edge-raised/70 transition-all text-xs overflow-hidden fade-in relative">
+    <div className="my-1.5 rounded-2xl border border-edge-raised/40 bg-surface-raised/40 hover:border-edge-raised/70 transition-all text-xs overflow-hidden fade-in relative">
       {isLoading && (
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-secondary to-primary animate-pulse" />
       )}
@@ -83,7 +83,7 @@ function ToolCallCard({
             <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
           ) : null}
           <span className="font-medium text-text-primary truncate">{label}</span>
-          <span className={`text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded capitalize ${statusBadgeStyle}`}>
+          <span className={`text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded-lg capitalize ${statusBadgeStyle}`}>
             {statusText}
           </span>
         </button>
@@ -109,4 +109,44 @@ function ToolCallCard({
   );
 }
 
-export default React.memo(ToolCallCard);
+/**
+ * Custom props comparator for React.memo(ToolCallCard) that prevents main-thread re-renders
+ * while multi-kilobyte file argument strings (e.g. writeFile / editFile content) stream in.
+ */
+function areToolCallCardPropsEqual(prevProps: ToolCallCardProps, nextProps: ToolCallCardProps): boolean {
+  if (prevProps.onOpenDrawer !== nextProps.onOpenDrawer) return false;
+  if (prevProps.label !== nextProps.label || prevProps.status !== nextProps.status) return false;
+
+  const prevPart = prevProps.part;
+  const nextPart = nextProps.part;
+
+  if (!prevPart && !nextPart) return true;
+  if (!prevPart || !nextPart) return false;
+
+  const prevInv = prevPart.toolInvocation || prevPart;
+  const nextInv = nextPart.toolInvocation || nextPart;
+
+  const prevId = prevInv.toolCallId || prevInv.id || prevPart.id;
+  const nextId = nextInv.toolCallId || nextInv.id || nextPart.id;
+  if (prevId !== nextId) return false;
+
+  const prevState = prevInv.state || prevPart.state;
+  const nextState = nextInv.state || nextPart.state;
+  if (prevState !== nextState) return false;
+
+  const prevName = prevInv.toolName || prevInv.name || prevPart.toolName;
+  const nextName = nextInv.toolName || nextInv.name || nextPart.toolName;
+  if (prevName !== nextName) return false;
+
+  // On terminal states (output-available or result), re-render if success or error output changes.
+  if (nextState === 'output-available' || nextState === 'result') {
+    const prevRes = prevInv.result || prevInv.output;
+    const nextRes = nextInv.result || nextInv.output;
+    if (prevRes?.success !== nextRes?.success || prevRes?.error !== nextRes?.error) return false;
+  }
+
+  // During active streaming/loading state, skip re-renders caused by growing args/input strings!
+  return true;
+}
+
+export default React.memo(ToolCallCard, areToolCallCardPropsEqual);
