@@ -238,10 +238,10 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
         isUser ? 'flex-row-reverse' : ''
       } ${!isUser ? 'fade-in' : ''}`}
     >
-      {/* Avatar Container */}
+      {/* Avatar Container: hidden on mobile (< sm) to give messages maximum width */}
       <div
         className={`
-          relative w-8 h-8 rounded-xl flex items-center justify-center text-sm font-semibold shrink-0 mt-0.5
+          hidden sm:flex relative w-8 h-8 rounded-xl items-center justify-center text-sm font-semibold shrink-0 mt-0.5
           transition-all duration-500
           ${
             isUser
@@ -262,7 +262,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
         )}
       </div>
 
-      <div className="flex flex-col max-w-[88%] min-w-0 gap-2">
+      <div className="flex flex-col w-full sm:w-auto max-w-full sm:max-w-[88%] min-w-0 gap-2">
         {/* Empty streaming state before first tokens */}
         {!isUser && isStreaming && segments.length === 0 && (
           <div className="rounded-2xl px-4.5 py-3.5 bg-surface-overlay/70 border border-edge-raised/60 backdrop-blur-sm fade-in">
