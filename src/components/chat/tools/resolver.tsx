@@ -39,7 +39,7 @@ type ToolConfig = {
  */
 const toolConfigs: Record<string, ToolConfig> = {
   listFiles: {
-    label: 'Workspace Files Listed',
+    label: 'List Files',
     badge: 'Listed',
     icon: Folder,
     accent: 'info',
@@ -48,7 +48,7 @@ const toolConfigs: Record<string, ToolConfig> = {
     accentText: 'text-info',
   },
   readFile: {
-    label: 'File Read',
+    label: 'Read File',
     badge: 'Read',
     icon: Search,
     accent: 'info',
@@ -57,8 +57,8 @@ const toolConfigs: Record<string, ToolConfig> = {
     accentText: 'text-info',
   },
   writeFile: {
-    label: 'File Written',
-    badge: 'Updated',
+    label: 'Write File',
+    badge: 'Written',
     icon: Sparkles,
     accent: 'primary',
     accentBg: 'bg-primary-soft',
@@ -66,8 +66,8 @@ const toolConfigs: Record<string, ToolConfig> = {
     accentText: 'text-primary',
   },
   editFile: {
-    label: 'File Edited',
-    badge: 'Applied',
+    label: 'Edit File',
+    badge: 'Edited',
     icon: PencilLine,
     accent: 'warning',
     accentBg: 'bg-warning-soft',
@@ -75,7 +75,7 @@ const toolConfigs: Record<string, ToolConfig> = {
     accentText: 'text-warning',
   },
   renameFile: {
-    label: 'File Renamed',
+    label: 'Rename File',
     badge: 'Renamed',
     icon: PenLine,
     accent: 'accent-pink-deep',
@@ -84,7 +84,7 @@ const toolConfigs: Record<string, ToolConfig> = {
     accentText: 'text-accent-pink-deep',
   },
   deleteFile: {
-    label: 'File Deleted',
+    label: 'Delete File',
     badge: 'Deleted',
     icon: Trash2,
     accent: 'danger',
@@ -93,7 +93,7 @@ const toolConfigs: Record<string, ToolConfig> = {
     accentText: 'text-danger',
   },
   webSearch: {
-    label: 'Web Search Executed',
+    label: 'Web Search',
     badge: 'Searched',
     icon: Globe,
     accent: 'info',
@@ -102,7 +102,7 @@ const toolConfigs: Record<string, ToolConfig> = {
     accentText: 'text-info',
   },
   extractUrl: {
-    label: 'Web Page Extracted',
+    label: 'Extract URL',
     badge: 'Extracted',
     icon: FileText,
     accent: 'info',
@@ -265,91 +265,126 @@ function extractToolInfo(toolCall: any) {
 }
 
 /**
- * Summary for listFiles: file count plus comma-separated names.
+ * Summary for listFiles: files found in workspace.
  */
 function buildListFilesSummary(args: any, result: any): ReactNode {
-  const count = result?.count ?? (result?.files?.length || 0);
-  const filesList = result?.files || [];
-
+  const filesList: Array<{ name: string }> = result?.files || [];
   return (
-    <div className="py-1 space-y-0.5">
-      <SummaryHeader
-        title="Workspace Files"
-        badge={`${count} file${count === 1 ? '' : 's'}`}
-        badgeColorClass="text-text-muted"
-      />
-      <p className="text-[11px] text-text-muted font-mono truncate">
-        {filesList.length > 0
-          ? filesList.map((f: any) => f.name).join(', ')
-          : 'No files in workspace'}
-      </p>
+    <div className="py-1 space-y-1 font-mono text-xs">
+      <div className="text-text-muted font-medium text-[11px]">Files Found:</div>
+      {filesList.length > 0 ? (
+        <ul className="space-y-0.5 text-text-secondary pl-2">
+          {filesList.map((f, i) => (
+            <li key={i} className="truncate">• {f.name}</li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-text-muted italic text-[11px]">No files in workspace</p>
+      )}
     </div>
   );
 }
 
 /**
- * Summary for readFile: the file name, optional section, and a preview of the content
- * (or a "not found" message when the file or section does not exist).
+ * Summary for readFile: the file read.
  */
 function buildReadFileSummary(args: any, result: any): ReactNode {
   const fileName = args?.nameOrId || result?.name || 'File';
-  const section = args?.section || result?.section;
-  const content = result?.content || (typeof result === 'string' ? result : '');
-
   return (
-    <div className="py-1 space-y-0.5">
-      <SummaryHeader
-        title={fileName}
-        badge={section ? `section: ${section}` : undefined}
-      />
-      <p className="text-[11px] text-text-muted truncate">
-        {result?.exists === false
-          ? result?.error || 'File or section not found'
-          : content
-          ? content.slice(0, 100).replace(/\s+/g, ' ')
-          : 'File content read'}
-      </p>
+    <div className="py-1 font-mono text-xs flex items-center gap-1.5">
+      <span className="text-text-muted text-[11px]">File Read:</span>
+      <span className="text-text-primary font-medium truncate">{fileName}</span>
     </div>
   );
 }
 
 /**
- * Summary for writeFile: the target file name and the character count of the written content.
+ * Summary for writeFile: the file created or updated.
  */
 function buildWriteFileSummary(args: any, result: any): ReactNode {
-  const file: WorkspaceFile | null = result?.file || null;
-  const name = args?.name || file?.name || 'document.md';
-  const content = args?.content || file?.content || '';
-  const charCount = content.length;
-
+  const name = args?.name || result?.file?.name || 'File';
+  const isCreated = result?.action === 'created';
   return (
-    <div className="py-1 space-y-0.5">
-      <SummaryHeader
-        title={name}
-        badge={charCount > 0 ? `${charCount.toLocaleString()} chars` : 'updated'}
-        badgeColorClass="text-primary/90"
-      />
+    <div className="py-1 font-mono text-xs flex items-center gap-1.5">
+      <span className="text-text-muted text-[11px]">{isCreated ? 'File Created:' : 'File Updated:'}</span>
+      <span className="text-primary font-medium truncate">{name}</span>
     </div>
   );
 }
 
 /**
- * Summary for editFile: the edited file name, the match strategy used, and any explanation or error.
+ * Summary for editFile: the file edited.
  */
 function buildEditFileSummary(args: any, result: any): ReactNode {
   const name = args?.nameOrId || result?.file?.name || 'File';
+  return (
+    <div className="py-1 font-mono text-xs flex items-center gap-1.5">
+      <span className="text-text-muted text-[11px]">File Edited:</span>
+      <span className="text-warning font-medium truncate">{name}</span>
+    </div>
+  );
+}
+
+/**
+ * Summary for renameFile: the old name and new name.
+ */
+function buildRenameFileSummary(args: any, result: any): ReactNode {
+  const oldName = args?.nameOrId || result?.oldName || 'File';
+  const newName = result?.newName || args?.newName || '';
+  return (
+    <div className="py-1 font-mono text-xs flex items-center gap-1.5">
+      <span className="text-text-muted text-[11px]">File Renamed:</span>
+      <span className="text-text-muted line-through truncate">{oldName}</span>
+      <span className="text-text-secondary">→</span>
+      <span className="text-text-primary font-medium truncate">{newName}</span>
+    </div>
+  );
+}
+
+/**
+ * Summary for deleteFile: the file deleted.
+ */
+function buildDeleteFileSummary(args: any, result: any): ReactNode {
+  const name = args?.nameOrId || result?.name || 'File';
+  return (
+    <div className="py-1 font-mono text-xs flex items-center gap-1.5">
+      <span className="text-text-muted text-[11px]">File Removed:</span>
+      <span className="text-danger font-medium truncate">{name}</span>
+    </div>
+  );
+}
+
+/**
+ * Summary for webSearch: search query and URLs found.
+ */
+function buildWebSearchSummary(args: any, result: any, status?: string): ReactNode {
+  const query = args?.query || result?.query || '';
+  const resultsList: Array<{ title?: string; url: string }> = result?.results || [];
 
   return (
-    <div className="py-1 space-y-0.5">
-      <SummaryHeader
-        title={name}
-        badge={result?.strategyUsed ? `${result.strategyUsed} match` : undefined}
-        badgeColorClass="text-warning/90"
-      />
-      {(args?.explanation || result?.explanation) && (
-        <p className="text-[11px] text-text-muted truncate">
-          {args?.explanation || result?.explanation}
-        </p>
+    <div className="py-1 space-y-1.5 font-mono text-xs">
+      <div className="flex items-center gap-1.5">
+        <span className="text-text-muted text-[11px]">Query:</span>
+        <span className="text-text-primary font-medium truncate">&quot;{query}&quot;</span>
+      </div>
+      {resultsList.length > 0 && (
+        <div className="space-y-0.5">
+          <span className="text-text-muted text-[11px] block">URLs Found:</span>
+          <ul className="space-y-0.5 text-text-secondary text-[11px] pl-2">
+            {resultsList.map((r, i) => (
+              <li key={i} className="truncate">
+                <a
+                  href={r.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline text-info truncate block"
+                >
+                  {r.url}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {result?.error && (
         <p className="text-[11px] text-danger truncate">Error: {result.error}</p>
@@ -359,121 +394,37 @@ function buildEditFileSummary(args: any, result: any): ReactNode {
 }
 
 /**
- * Summary for renameFile: the old name struck through, an arrow, and the new name.
- */
-function buildRenameFileSummary(args: any, result: any): ReactNode {
-  const oldName = args?.nameOrId || result?.oldName || 'File';
-  const newName = result?.newName || args?.newName || '';
-  return (
-    <div className="py-1 text-xs flex items-center gap-1.5 font-mono">
-      <span className="text-text-muted line-through truncate">{oldName}</span>
-      <span className="text-text-secondary">→</span>
-      <span className="text-text-primary font-medium truncate">{newName}</span>
-    </div>
-  );
-}
-
-/**
- * Summary for deleteFile: a short confirmation naming the removed file.
- */
-function buildDeleteFileSummary(args: any, result: any): ReactNode {
-  const name = args?.nameOrId || result?.name || 'File';
-  return (
-    <div className="py-1 text-xs font-mono text-text-muted">
-      File <span className="text-danger font-medium">{name}</span> removed from workspace.
-    </div>
-  );
-}
-
-/**
- * Summary for webSearch: the query, result count, an optional AI answer, and up to three
- * result sources shown as hostnames.
- */
-function buildWebSearchSummary(args: any, result: any, status?: string): ReactNode {
-  const query = args?.query || result?.query || 'Web Search';
-  const resultsList = result?.results || [];
-  const count = resultsList.length;
-  const answer = result?.answer;
-  const isLoading = status === 'loading' || (!result || Object.keys(result).length === 0);
-
-  if (isLoading && !result?.error) {
-    return (
-      <InFlightSummary
-        title={`"${query}"`}
-        badgeText="searching..."
-        loadingText="Querying Tavily search API and retrieving web sources..."
-      />
-    );
-  }
-
-  return (
-    <div className="py-1 space-y-0.5">
-      <SummaryHeader
-        title={`"${query}"`}
-        badge={`${count} result${count === 1 ? '' : 's'}`}
-      />
-      {answer && (
-        <p className="text-[11px] text-text-muted line-clamp-2">
-          {answer}
-        </p>
-      )}
-      {result?.error ? (
-        <p className="text-[11px] text-danger truncate">Error: {result.error}</p>
-      ) : resultsList.length > 0 ? (
-        <p className="text-[10px] font-mono text-text-muted/80 truncate">
-          Sources:{' '}
-          {resultsList
-            .map((r: any) => {
-              try {
-                return new URL(r.url).hostname.replace(/^www\./, '');
-              } catch {
-                return r.title || r.url;
-              }
-            })
-            .filter(Boolean)
-            .slice(0, 3)
-            .join(', ')}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * Summary for extractUrl: the requested URLs, the number of pages extracted, and a
- * content preview of the first extraction.
+ * Summary for extractUrl: target URLs extracted.
  */
 function buildExtractUrlSummary(args: any, result: any, status?: string): ReactNode {
   const urls: string[] = args?.urls || [];
-  const extracted = result?.extracted || [];
-  const count = extracted.length;
-  const firstTitle = extracted[0]?.title;
-  const displayTitle = firstTitle || (urls.length > 0 ? urls.join(', ') : 'URL Extraction');
-  const isLoading = status === 'loading' || (!result || Object.keys(result).length === 0);
-
-  if (isLoading && !result?.error) {
-    return (
-      <InFlightSummary
-        title={urls.length > 0 ? urls.join(', ') : 'URL Extraction'}
-        badgeText="extracting..."
-        loadingText={`Parsing clean Markdown content from ${urls.length || 1} web page${urls.length === 1 ? '' : 's'}...`}
-      />
-    );
-  }
+  const extracted: Array<{ url: string; title?: string }> = result?.extracted || [];
+  const displayUrls = extracted.length > 0 ? extracted.map((e) => e.url) : urls;
 
   return (
-    <div className="py-1 space-y-0.5">
-      <SummaryHeader
-        title={displayTitle}
-        badge={`${count} page${count === 1 ? '' : 's'} extracted`}
-      />
-      {result?.error ? (
+    <div className="py-1 space-y-1 font-mono text-xs">
+      <span className="text-text-muted text-[11px] block">Extracted URLs:</span>
+      {displayUrls.length > 0 ? (
+        <ul className="space-y-0.5 text-text-secondary text-[11px] pl-2">
+          {displayUrls.map((url, i) => (
+            <li key={i} className="truncate">
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline text-info truncate block"
+              >
+                {url}
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-text-muted italic text-[11px]">No URLs extracted</p>
+      )}
+      {result?.error && (
         <p className="text-[11px] text-danger truncate">Error: {result.error}</p>
-      ) : extracted.length > 0 ? (
-        <p className="text-[11px] text-text-muted line-clamp-2 font-mono">
-          {extracted[0]?.rawContent?.slice(0, 150).replace(/\s+/g, ' ')}...
-        </p>
-      ) : null}
+      )}
     </div>
   );
 }

@@ -20,20 +20,22 @@ import type { ToolCardProps } from './tools/resolver';
  */
 function ToolCallCard({
   label,
-  badge,
   icon: Icon,
   accentText,
   status,
   summary,
-  rawArgs,
-  rawResult,
   onOpenDrawer,
 }: ToolCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const isLoading = status === 'loading';
   const isError = status === 'error';
-  // An empty object counts as "no result" so the details block can hide the Result section.
-  const hasResult = rawResult != null && (typeof rawResult !== 'object' || Object.keys(rawResult as object).length > 0);
+
+  const statusText = isLoading ? 'loading' : isError ? 'fail' : 'success';
+  const statusBadgeStyle = isLoading
+    ? 'bg-surface-elevated text-text-muted'
+    : isError
+    ? 'bg-danger-soft text-danger font-medium'
+    : 'bg-primary-soft text-primary font-medium';
 
   return (
     <div className="my-1.5 rounded-lg border border-edge-raised/40 bg-surface-raised/40 hover:border-edge-raised/70 transition-all text-xs overflow-hidden fade-in relative">
@@ -46,7 +48,7 @@ function ToolCallCard({
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-2 text-left min-w-0 flex-1 cursor-pointer hover:opacity-90 transition-opacity"
         >
-          {/* Icon switches by status: spinner while loading, error icon on failure, tool icon otherwise */}
+          {/* Icon switches by status: spinner while loading, error icon on failure, unique tool icon otherwise */}
           {isLoading ? (
             <Loader2 className={`w-3.5 h-3.5 ${accentText} animate-spin shrink-0`} />
           ) : isError ? (
@@ -55,8 +57,8 @@ function ToolCallCard({
             <Icon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
           )}
           <span className="font-medium text-text-primary truncate">{label}</span>
-          <span className={`text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded ${isError ? 'bg-danger-soft text-danger' : 'bg-surface-elevated text-text-muted'}`}>
-            {isLoading ? 'running...' : isError ? 'failed' : badge.toLowerCase()}
+          <span className={`text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded capitalize ${statusBadgeStyle}`}>
+            {statusText}
           </span>
         </button>
 
@@ -81,28 +83,10 @@ function ToolCallCard({
         </div>
       </div>
 
-      {/* Expanded content */}
+      {/* Expanded content showing minimal summary */}
       {isOpen && (
-        <div className="px-3 pb-3 pt-1 border-t border-edge-raised/30 space-y-2 text-xs">
+        <div className="px-3 pb-2.5 pt-1 border-t border-edge-raised/30 text-xs">
           {summary}
-
-          {/* Raw parameters and result rendered as pretty-printed JSON */}
-          <div className="mt-2 bg-surface-base/80 p-2 rounded border border-edge-raised/50 font-mono text-[10px] text-text-muted max-h-40 overflow-y-auto space-y-1.5">
-            <div>
-              <span className="text-text-muted font-semibold block mb-0.5">Parameters:</span>
-              <pre className="text-text-secondary whitespace-pre-wrap break-all text-[10px]">
-                {JSON.stringify(rawArgs, null, 2)}
-              </pre>
-            </div>
-            {hasResult && (
-              <div className="border-t border-edge-raised/40 pt-1.5">
-                <span className={`${accentText} font-semibold block mb-0.5`}>Result:</span>
-                <pre className="text-text-secondary whitespace-pre-wrap break-all text-[10px]">
-                  {typeof rawResult === 'string' ? rawResult : JSON.stringify(rawResult, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
         </div>
       )}
     </div>
