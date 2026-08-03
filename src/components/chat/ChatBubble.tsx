@@ -262,10 +262,15 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
         )}
       </div>
 
-      <div className="flex flex-col w-full sm:w-auto max-w-full sm:max-w-[88%] min-w-0 gap-2">
+      <div
+        className={`
+          flex flex-col min-w-0 gap-2
+          ${isUser ? 'items-end w-fit max-w-[88%] sm:max-w-[78%] ms-auto' : 'items-start w-fit max-w-full sm:max-w-[88%]'}
+        `}
+      >
         {/* Empty streaming state before first tokens */}
         {!isUser && isStreaming && segments.length === 0 && (
-          <div className="rounded-2xl px-4.5 py-3.5 bg-surface-overlay/70 border border-edge-raised/60 backdrop-blur-sm fade-in">
+          <div className="rounded-2xl px-4.5 py-3.5 bg-surface-overlay/70 border border-edge-raised/60 backdrop-blur-sm fade-in w-fit">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
               <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
@@ -281,7 +286,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
             return (
               <div
                 key={seg.key}
-                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-primary text-surface border border-primary rounded-tr-xs shadow-card fade-in"
+                className="relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed transition-all bg-primary text-surface border border-primary rounded-tr-xs shadow-card fade-in w-fit max-w-full"
               >
                 <p className="whitespace-pre-wrap leading-relaxed">{seg.content}</p>
               </div>
@@ -305,7 +310,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   relative rounded-2xl px-4.5 py-3.5 text-sm leading-relaxed
                   transition-all duration-300 fade-in
                   bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs
-                  shadow-md backdrop-blur-sm
+                  shadow-md backdrop-blur-sm w-fit max-w-full
                   ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''}
                 `}
               >
