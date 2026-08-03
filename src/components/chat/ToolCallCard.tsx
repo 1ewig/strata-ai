@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Loader2, XCircle, ExternalLink } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, XCircle } from 'lucide-react';
 import type { ToolCardProps } from './tools/resolver';
 
 /**
@@ -24,7 +24,6 @@ function ToolCallCard({
   accentText,
   status,
   summary,
-  onOpenDrawer,
 }: ToolCardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const isLoading = status === 'loading';
@@ -63,16 +62,6 @@ function ToolCallCard({
         </button>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* "Open" action, only available for successful calls with a details drawer */}
-          {onOpenDrawer && status === 'success' && (
-            <button
-              onClick={onOpenDrawer}
-              className={`flex items-center gap-1 text-[11px] ${accentText} hover:underline cursor-pointer`}
-            >
-              <span>Open</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
-          )}
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="text-text-muted hover:text-text-primary p-0.5 transition-colors cursor-pointer"
