@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Loader2, XCircle, ExternalLink } from 'lucide-react';
-import type { ToolCardProps } from './tools/resolver';
+import React, { useState, type ReactNode } from 'react';
+import { ChevronDown, ChevronUp, Loader2, XCircle, type LucideIcon } from 'lucide-react';
+import { resolveToolDisplay, type ToolCardProps } from './tools/resolver';
 
 /**
  * Card rendering a single AI tool invocation: status icon and badge in the header, plus a
@@ -18,25 +18,51 @@ import type { ToolCardProps } from './tools/resolver';
  * @param rawResult - Original tool result, pretty-printed in the details block.
  * @param onOpenDrawer - Optional callback that opens the full details drawer for successful calls.
  */
-export default function ToolCallCard({
-  label,
-  badge,
-  icon: Icon,
-  accentText,
-  status,
-  summary,
-  rawArgs,
-  rawResult,
+interface ToolCallCardProps {
+  part?: any;
+  onOpenDrawer?: () => void;
+  label?: string;
+  icon?: LucideIcon;
+  accentText?: string;
+  status?: 'loading' | 'success' | 'error';
+  summary?: ReactNode;
+}
+
+function ToolCallCard({
+  part,
   onOpenDrawer,
-}: ToolCardProps) {
+  label: explicitLabel,
+  icon: ExplicitIcon,
+  accentText: explicitAccentText,
+  status: explicitStatus,
+  summary: explicitSummary,
+}: ToolCallCardProps) {
+  const resolved = React.useMemo(() => {
+    if (part) {
+      return resolveToolDisplay(part, onOpenDrawer);
+    }
+    return null;
+  }, [part, onOpenDrawer]);
+
+  const label = resolved?.label || explicitLabel || 'Tool Call';
+  const Icon = resolved?.icon;
+  const accentText = resolved?.accentText || explicitAccentText || 'text-info';
+  const status = resolved?.status || explicitStatus || 'success';
+  const summary = resolved?.summary || explicitSummary;
+
   const [isOpen, setIsOpen] = useState(false);
   const isLoading = status === 'loading';
   const isError = status === 'error';
-  // An empty object counts as "no result" so the details block can hide the Result section.
-  const hasResult = rawResult != null && (typeof rawResult !== 'object' || Object.keys(rawResult as object).length > 0);
+
+  const statusText = isLoading ? 'loading' : isError ? 'fail' : 'success';
+  const statusBadgeStyle = isLoading
+    ? 'bg-surface-elevated text-text-muted'
+    : isError
+    ? 'bg-danger-soft text-danger font-medium'
+    : 'bg-primary-soft text-primary font-medium';
 
   return (
-    <div className="my-1.5 rounded-lg border border-edge-raised/40 bg-surface-raised/40 hover:border-edge-raised/70 transition-all text-xs overflow-hidden fade-in relative">
+    <div className="my-1.5 rounded-2xl border border-edge-raised/40 bg-surface-raised/40 hover:border-edge-raised/70 transition-all text-xs overflow-hidden fade-in relative">
       {isLoading && (
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-secondary to-primary animate-pulse" />
       )}
@@ -46,31 +72,23 @@ export default function ToolCallCard({
           onClick={() => setIsOpen(!isOpen)}
           className="flex items-center gap-2 text-left min-w-0 flex-1 cursor-pointer hover:opacity-90 transition-opacity"
         >
-          {/* Icon switches by status: spinner while loading, error icon on failure, tool icon otherwise */}
+          {/* Icon switches by status: spinner while loading, error icon on failure, unique tool icon otherwise */}
           {isLoading ? (
             <Loader2 className={`w-3.5 h-3.5 ${accentText} animate-spin shrink-0`} />
           ) : isError ? (
             <XCircle className="w-3.5 h-3.5 text-danger shrink-0" />
-          ) : (
+          ) : Icon ? (
             <Icon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
-          )}
+          ) : ExplicitIcon ? (
+            <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
+          ) : null}
           <span className="font-medium text-text-primary truncate">{label}</span>
-          <span className={`text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded ${isError ? 'bg-danger-soft text-danger' : 'bg-surface-elevated text-text-muted'}`}>
-            {isLoading ? 'running...' : isError ? 'failed' : badge.toLowerCase()}
+          <span className={`text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded-lg capitalize ${statusBadgeStyle}`}>
+            {statusText}
           </span>
         </button>
 
         <div className="flex items-center gap-2 shrink-0">
-          {/* "Open" action, only available for successful calls with a details drawer */}
-          {onOpenDrawer && status === 'success' && (
-            <button
-              onClick={onOpenDrawer}
-              className={`flex items-center gap-1 text-[11px] ${accentText} hover:underline cursor-pointer`}
-            >
-              <span>Open</span>
-              <ExternalLink className="w-3 h-3" />
-            </button>
-          )}
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="text-text-muted hover:text-text-primary p-0.5 transition-colors cursor-pointer"
@@ -81,30 +99,54 @@ export default function ToolCallCard({
         </div>
       </div>
 
-      {/* Expanded content */}
+      {/* Expanded content showing minimal summary */}
       {isOpen && (
-        <div className="px-3 pb-3 pt-1 border-t border-edge-raised/30 space-y-2 text-xs">
+        <div className="px-3 pb-2.5 pt-1 border-t border-edge-raised/30 text-xs">
           {summary}
-
-          {/* Raw parameters and result rendered as pretty-printed JSON */}
-          <div className="mt-2 bg-surface-base/80 p-2 rounded border border-edge-raised/50 font-mono text-[10px] text-text-muted max-h-40 overflow-y-auto space-y-1.5">
-            <div>
-              <span className="text-text-muted font-semibold block mb-0.5">Parameters:</span>
-              <pre className="text-text-secondary whitespace-pre-wrap break-all text-[10px]">
-                {JSON.stringify(rawArgs, null, 2)}
-              </pre>
-            </div>
-            {hasResult && (
-              <div className="border-t border-edge-raised/40 pt-1.5">
-                <span className={`${accentText} font-semibold block mb-0.5`}>Result:</span>
-                <pre className="text-text-secondary whitespace-pre-wrap break-all text-[10px]">
-                  {typeof rawResult === 'string' ? rawResult : JSON.stringify(rawResult, null, 2)}
-                </pre>
-              </div>
-            )}
-          </div>
         </div>
       )}
     </div>
   );
 }
+
+/**
+ * Custom props comparator for React.memo(ToolCallCard) that prevents main-thread re-renders
+ * while multi-kilobyte file argument strings (e.g. writeFile / editFile content) stream in.
+ */
+function areToolCallCardPropsEqual(prevProps: ToolCallCardProps, nextProps: ToolCallCardProps): boolean {
+  if (prevProps.onOpenDrawer !== nextProps.onOpenDrawer) return false;
+  if (prevProps.label !== nextProps.label || prevProps.status !== nextProps.status) return false;
+
+  const prevPart = prevProps.part;
+  const nextPart = nextProps.part;
+
+  if (!prevPart && !nextPart) return true;
+  if (!prevPart || !nextPart) return false;
+
+  const prevInv = prevPart.toolInvocation || prevPart;
+  const nextInv = nextPart.toolInvocation || nextPart;
+
+  const prevId = prevInv.toolCallId || prevInv.id || prevPart.id;
+  const nextId = nextInv.toolCallId || nextInv.id || nextPart.id;
+  if (prevId !== nextId) return false;
+
+  const prevState = prevInv.state || prevPart.state;
+  const nextState = nextInv.state || nextPart.state;
+  if (prevState !== nextState) return false;
+
+  const prevName = prevInv.toolName || prevInv.name || prevPart.toolName;
+  const nextName = nextInv.toolName || nextInv.name || nextPart.toolName;
+  if (prevName !== nextName) return false;
+
+  // On terminal states (output-available or result), re-render if success or error output changes.
+  if (nextState === 'output-available' || nextState === 'result') {
+    const prevRes = prevInv.result || prevInv.output;
+    const nextRes = nextInv.result || nextInv.output;
+    if (prevRes?.success !== nextRes?.success || prevRes?.error !== nextRes?.error) return false;
+  }
+
+  // During active streaming/loading state, skip re-renders caused by growing args/input strings!
+  return true;
+}
+
+export default React.memo(ToolCallCard, areToolCallCardPropsEqual);

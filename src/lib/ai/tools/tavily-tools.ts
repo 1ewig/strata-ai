@@ -17,6 +17,7 @@ async function callTavilyApi<T = any>(
   endpoint: string,
   payload: Record<string, unknown>,
   timeoutMs = 30000,
+  signal?: AbortSignal,
 ): Promise<TavilyApiResponse<T>> {
   const apiKey = process.env.TAVILY_API_KEY;
   if (!apiKey) {
@@ -27,12 +28,15 @@ async function callTavilyApi<T = any>(
   }
 
   try {
+    const timeoutSignal = AbortSignal.timeout(timeoutMs);
+    const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal;
+
     const response = await fetch(`https://api.tavily.com/${endpoint}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      signal: AbortSignal.timeout(timeoutMs),
+      signal: combinedSignal,
       body: JSON.stringify({
         api_key: apiKey,
         ...payload,
