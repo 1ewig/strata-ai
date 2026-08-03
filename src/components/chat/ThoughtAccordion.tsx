@@ -22,6 +22,22 @@ interface ThoughtAccordionProps {
 function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
   const [isOpen, setIsOpen] = useState(false);
 
+  const markdownComponents = React.useMemo(
+    () => ({
+      p: ({ children }: any) => <p className="mb-2 leading-relaxed text-text-secondary">{children}</p>,
+      ul: ({ children }: any) => <ul className="list-disc list-inside space-y-1 mb-2 text-text-muted">{children}</ul>,
+      ol: ({ children }: any) => <ol className="list-decimal list-inside space-y-1 mb-2 text-text-muted">{children}</ol>,
+      li: ({ children }: any) => <li className="text-[11px] leading-relaxed">{children}</li>,
+      strong: ({ children }: any) => <strong className="font-semibold text-info">{children}</strong>,
+      code: ({ children }: any) => (
+        <code className="bg-surface-raised text-info px-1 py-0.5 rounded text-[10px] font-mono border border-edge-raised">
+          {children}
+        </code>
+      ),
+    }),
+    [],
+  );
+
   // Hide the whole accordion when there is no reasoning content to display.
   if (!text || !text.trim()) return null;
 
@@ -47,24 +63,14 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
 
       {isOpen && (
         <div className="p-3 border-t border-edge-raised/60 text-[11px] text-text-secondary leading-relaxed max-h-56 overflow-y-auto bg-surface-base/90 font-mono">
-          {/* Reasoning content rendered as Markdown with custom-styled inline elements */}
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              p: ({ children }) => <p className="mb-2 leading-relaxed text-text-secondary">{children}</p>,
-              ul: ({ children }) => <ul className="list-disc list-inside space-y-1 mb-2 text-text-muted">{children}</ul>,
-              ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 mb-2 text-text-muted">{children}</ol>,
-              li: ({ children }) => <li className="text-[11px] leading-relaxed">{children}</li>,
-              strong: ({ children }) => <strong className="font-semibold text-info">{children}</strong>,
-              code: ({ children }) => (
-                <code className="bg-surface-raised text-info px-1 py-0.5 rounded text-[10px] font-mono border border-edge-raised">
-                  {children}
-                </code>
-              ),
-            }}
-          >
-            {text}
-          </ReactMarkdown>
+          {/* While actively thinking, render plain pre-wrap whitespace to avoid per-token Markdown AST parsing freeze */}
+          {isThinking ? (
+            <p className="whitespace-pre-wrap font-mono leading-relaxed text-text-secondary">{text}</p>
+          ) : (
+            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+              {text}
+            </ReactMarkdown>
+          )}
         </div>
       )}
     </div>

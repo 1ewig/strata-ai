@@ -8,7 +8,6 @@ import { Check, Code2, User } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
-import { resolveToolDisplay } from './tools/resolver';
 
 /** Props for the ChatBubble message component. */
 interface ChatBubbleProps {
@@ -294,8 +293,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           }
 
           if (seg.type === 'tool') {
-            const cardProps = resolveToolDisplay(seg.part, onOpenDrawer);
-            return <ToolCallCard key={seg.key} {...cardProps} />;
+            return <ToolCallCard key={seg.key} part={seg.part} onOpenDrawer={onOpenDrawer} />;
           }
 
           if (seg.type === 'text' && seg.content) {

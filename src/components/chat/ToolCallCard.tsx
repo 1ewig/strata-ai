@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Loader2, XCircle } from 'lucide-react';
-import type { ToolCardProps } from './tools/resolver';
+import React, { useState, type ReactNode } from 'react';
+import { ChevronDown, ChevronUp, Loader2, XCircle, type LucideIcon } from 'lucide-react';
+import { resolveToolDisplay, type ToolCardProps } from './tools/resolver';
 
 /**
  * Card rendering a single AI tool invocation: status icon and badge in the header, plus a
@@ -18,13 +18,38 @@ import type { ToolCardProps } from './tools/resolver';
  * @param rawResult - Original tool result, pretty-printed in the details block.
  * @param onOpenDrawer - Optional callback that opens the full details drawer for successful calls.
  */
+interface ToolCallCardProps {
+  part?: any;
+  onOpenDrawer?: () => void;
+  label?: string;
+  icon?: LucideIcon;
+  accentText?: string;
+  status?: 'loading' | 'success' | 'error';
+  summary?: ReactNode;
+}
+
 function ToolCallCard({
-  label,
-  icon: Icon,
-  accentText,
-  status,
-  summary,
-}: ToolCardProps) {
+  part,
+  onOpenDrawer,
+  label: explicitLabel,
+  icon: ExplicitIcon,
+  accentText: explicitAccentText,
+  status: explicitStatus,
+  summary: explicitSummary,
+}: ToolCallCardProps) {
+  const resolved = React.useMemo(() => {
+    if (part) {
+      return resolveToolDisplay(part, onOpenDrawer);
+    }
+    return null;
+  }, [part, onOpenDrawer]);
+
+  const label = resolved?.label || explicitLabel || 'Tool Call';
+  const Icon = resolved?.icon;
+  const accentText = resolved?.accentText || explicitAccentText || 'text-info';
+  const status = resolved?.status || explicitStatus || 'success';
+  const summary = resolved?.summary || explicitSummary;
+
   const [isOpen, setIsOpen] = useState(false);
   const isLoading = status === 'loading';
   const isError = status === 'error';
@@ -52,9 +77,11 @@ function ToolCallCard({
             <Loader2 className={`w-3.5 h-3.5 ${accentText} animate-spin shrink-0`} />
           ) : isError ? (
             <XCircle className="w-3.5 h-3.5 text-danger shrink-0" />
-          ) : (
+          ) : Icon ? (
             <Icon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
-          )}
+          ) : ExplicitIcon ? (
+            <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
+          ) : null}
           <span className="font-medium text-text-primary truncate">{label}</span>
           <span className={`text-[10px] font-mono shrink-0 px-1.5 py-0.5 rounded capitalize ${statusBadgeStyle}`}>
             {statusText}
