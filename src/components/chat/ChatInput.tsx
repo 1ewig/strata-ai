@@ -103,13 +103,12 @@ export default React.memo(function ChatInput({
       }}
       className="relative z-10"
     >
-      <div className={`flex flex-col gap-2 bg-surface-raised border ${
-        isQuotaExhausted ? 'border-danger/40 bg-danger-soft/20' : 'border-edge-hover/60 focus-within:border-edge-hover'
-      } rounded-2xl p-3.5 transition-all shadow-lg`}>
+      <div className={`flex flex-col gap-2 bg-surface-raised border ${isQuotaExhausted ? 'border-danger/40 bg-danger-soft/20' : 'border-edge-hover/60 focus-within:border-edge-hover'
+        } rounded-2xl p-3.5 transition-all shadow-lg`}>
 
         {/* Row 1: Text Field Input or Quota Warning directly on the input field */}
         {isQuotaExhausted ? (
-          <div className="w-full min-h-[48px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in">
+          <div className="w-full min-h-[24px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
             <span>
               {rateLimitData?.remaining5h === 0
@@ -124,14 +123,14 @@ export default React.memo(function ChatInput({
           <textarea
             ref={textareaRef}
             id="chat-input-field"
-            rows={2}
+            rows={1}
             disabled={isLoading}
             maxLength={MAX_MESSAGE_CHARS}
             placeholder="Message Strata AI..."
             value={inputValue}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            className="w-full bg-transparent text-text-primary placeholder-text-muted border-none text-label focus:outline-none resize-none min-h-[48px] max-h-48 py-1 focus:ring-0 disabled:opacity-50"
+            className="w-full bg-transparent text-text-primary placeholder-text-muted border-none text-label focus:outline-none resize-none min-h-[24px] max-h-48 py-1 focus:ring-0 disabled:opacity-50"
           />
         )}
 
@@ -172,19 +171,18 @@ export default React.memo(function ChatInput({
                 id="chat-submit-btn"
                 type="submit"
                 disabled={!inputValue.trim() || isQuotaExhausted || isCharOverLimit}
-                className={`p-2 rounded-xl shrink-0 transition-all focus:outline-none ${
-                  !inputValue.trim() || isQuotaExhausted || isCharOverLimit
+                className={`p-2 rounded-xl shrink-0 transition-all focus:outline-none ${!inputValue.trim() || isQuotaExhausted || isCharOverLimit
                     ? 'bg-surface-elevated opacity-40 cursor-not-allowed'
                     : 'bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
-                }`}
+                  }`}
                 title={
                   isQuotaExhausted
                     ? 'Quota limit reached'
                     : isCharOverLimit
-                    ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
-                    : !inputValue.trim()
-                    ? 'Type a message to send'
-                    : 'Send message'
+                      ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
+                      : !inputValue.trim()
+                        ? 'Type a message to send'
+                        : 'Send message'
                 }
               >
                 <ArrowUp className="w-4 h-4 text-surface" />

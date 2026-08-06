@@ -101,23 +101,17 @@ export default function ModelSelectorMenu({
             setIsOpen(true);
           }
         }}
-        className={`flex items-center transition-all rounded-xl cursor-pointer shrink-0 border select-none ${
-          compact ? 'gap-1 px-2 py-0.5 h-6.5 text-caption' : 'gap-1.5 px-2 py-1 h-7 text-label font-medium'
-        } ${
+        className={`flex items-center gap-1 transition-all rounded-lg px-2 py-0.5 h-6.5 text-caption cursor-pointer shrink-0 border select-none ${
           isOpen
             ? 'bg-surface-hover text-text-primary border-edge-hover'
             : 'text-text-muted hover:text-text-primary bg-surface-base hover:bg-surface-hover/60 border-edge-raised'
         }`}
       >
-        <span className={`font-semibold text-text-primary truncate ${
-          compact ? 'max-w-[90px] xs:max-w-[125px]' : 'max-w-[110px] sm:max-w-[160px]'
-        }`}>
+        <span className="font-semibold text-text-primary truncate max-w-[95px] sm:max-w-[130px]">
           {currentModel?.label || 'Model'}
         </span>
         {effortLabel && (
-          <span className={`${
-            compact ? 'text-micro px-1 py-0' : 'text-micro px-1 py-0.5'
-          } rounded-md bg-surface-hover text-text-muted font-normal capitalize`}>
+          <span className="text-micro px-1 py-0 rounded-md bg-surface-hover text-text-muted font-normal capitalize">
             {effortLabel}
           </span>
         )}

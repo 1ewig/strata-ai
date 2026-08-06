@@ -47,7 +47,7 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
-        className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-surface-base border text-caption font-medium cursor-pointer transition-colors ${
+        className={`flex items-center gap-1.5 px-2 py-0.5 h-6.5 rounded-lg bg-surface-base border text-caption font-medium cursor-pointer transition-colors ${
           isQuotaExhausted ? 'border-danger/40 bg-danger-soft/40' : 'border-edge-raised'
         }`}
         aria-label="Toggle quota status popover"
