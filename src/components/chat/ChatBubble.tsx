@@ -289,7 +289,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       <div
         className={`
           flex flex-col min-w-0 gap-2
-          ${isUser ? 'items-end w-fit max-w-[90%] sm:max-w-[82%] ms-auto' : 'items-start w-full max-w-full'}
+          ${isUser ? 'items-end w-fit max-w-[90%] sm:max-w-[82%] ms-auto' : 'items-start w-fit max-w-full'}
         `}
       >
         {/* Empty streaming state before first tokens */}
@@ -345,7 +345,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed
                   transition-all duration-300 fade-in
                   bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs
-                  shadow-md backdrop-blur-sm w-full max-w-full
+                  shadow-md backdrop-blur-sm w-fit max-w-full
                   ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''}
                 `}
               >
