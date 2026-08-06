@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { BrainCircuit, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
@@ -21,6 +21,32 @@ interface ThoughtAccordionProps {
  */
 function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const startTimeRef = useRef<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(1);
+
+  // Compute estimated thought duration based on character count
+  const estimatedSeconds = React.useMemo(() => {
+    return Math.max(1, Math.round(text.length / 220));
+  }, [text.length]);
+
+  useEffect(() => {
+    if (!isThinking) return;
+
+    if (!startTimeRef.current) {
+      startTimeRef.current = Date.now();
+    }
+
+    const interval = setInterval(() => {
+      if (startTimeRef.current) {
+        const seconds = Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000));
+        setElapsedSeconds(seconds);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isThinking]);
+
+  const displaySeconds = isThinking ? elapsedSeconds : Math.max(elapsedSeconds, estimatedSeconds);
 
   const markdownComponents = React.useMemo(
     () => ({
@@ -52,8 +78,9 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
         ) : (
           <BrainCircuit className="w-3.5 h-3.5 text-text-muted group-hover:text-text-primary shrink-0" />
         )}
-        <span className="font-semibold">{isThinking ? 'Thinking...' : 'Thought Process'}</span>
-        <span className="text-micro text-text-muted font-normal">({text.length.toLocaleString()} chars)</span>
+        <span className="font-semibold">
+          {isThinking ? `Thinking (${displaySeconds}s)...` : `Thought for ${displaySeconds}s`}
+        </span>
         <div className="flex items-center gap-1 text-text-muted">
           {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </div>
