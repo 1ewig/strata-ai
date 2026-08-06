@@ -140,12 +140,14 @@ export default React.memo(function ChatInput({
 
           {/* Left Side Controls: Model Dropdown & Quota Ring */}
           <div className="flex items-center gap-2">
-            <ModelSelectorMenu
-              model={model}
-              thinkingLevel={thinkingLevel}
-              onModelSelect={onModelSelect}
-              onThinkingLevelChange={onThinkingLevelChange}
-            />
+            <div className="hidden md:block">
+              <ModelSelectorMenu
+                model={model}
+                thinkingLevel={thinkingLevel}
+                onModelSelect={onModelSelect}
+                onThinkingLevelChange={onThinkingLevelChange}
+              />
+            </div>
 
             <RateLimitRing
               rateLimitData={rateLimitData}

@@ -15,6 +15,8 @@ interface ModelSelectorMenuProps {
   thinkingLevel: string;
   onModelSelect: (modelId: string) => void;
   onThinkingLevelChange: (level: string) => void;
+  dropDirection?: 'up' | 'down';
+  compact?: boolean;
 }
 
 /**
@@ -26,12 +28,16 @@ interface ModelSelectorMenuProps {
  * @param thinkingLevel - Currently selected thinking effort level.
  * @param onModelSelect - Called with the chosen model id.
  * @param onThinkingLevelChange - Called with the chosen thinking effort level.
+ * @param dropDirection - Direction the popover opens ('up' for bottom toolbar, 'down' for header).
+ * @param compact - Whether to render a compact trigger button for tight header spaces.
  */
 export default function ModelSelectorMenu({
   model,
   thinkingLevel,
   onModelSelect,
   onThinkingLevelChange,
+  dropDirection = 'up',
+  compact = false,
 }: ModelSelectorMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'main' | 'effort' | 'more-models'>('main');
@@ -95,17 +101,23 @@ export default function ModelSelectorMenu({
             setIsOpen(true);
           }
         }}
-        className={`flex items-center gap-1.5 text-label font-medium transition-all rounded-xl px-2 py-1 h-7 cursor-pointer shrink-0 border select-none ${
+        className={`flex items-center transition-all rounded-xl cursor-pointer shrink-0 border select-none ${
+          compact ? 'gap-1 px-2 py-0.5 h-6.5 text-caption' : 'gap-1.5 px-2 py-1 h-7 text-label font-medium'
+        } ${
           isOpen
             ? 'bg-surface-hover text-text-primary border-edge-hover'
             : 'text-text-muted hover:text-text-primary bg-surface-base hover:bg-surface-hover/60 border-edge-raised'
         }`}
       >
-        <span className="font-semibold text-text-primary truncate max-w-[110px] sm:max-w-[160px]">
+        <span className={`font-semibold text-text-primary truncate ${
+          compact ? 'max-w-[90px] xs:max-w-[125px]' : 'max-w-[110px] sm:max-w-[160px]'
+        }`}>
           {currentModel?.label || 'Model'}
         </span>
         {effortLabel && (
-          <span className="text-micro px-1 py-0.5 rounded-md bg-surface-hover text-text-muted font-normal capitalize">
+          <span className={`${
+            compact ? 'text-micro px-1 py-0' : 'text-micro px-1 py-0.5'
+          } rounded-md bg-surface-hover text-text-muted font-normal capitalize`}>
             {effortLabel}
           </span>
         )}
@@ -118,7 +130,9 @@ export default function ModelSelectorMenu({
 
       {/* UNIFIED POPOVER MENU (For Mobile & Desktop) */}
       {isOpen && (
-        <div className="absolute bottom-full mb-2 left-0 w-72 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-2xl shadow-2xl p-1.5 text-label z-50 animate-in fade-in zoom-in-95 duration-100">
+        <div className={`absolute ${
+          dropDirection === 'down' ? 'top-full mt-2 left-0' : 'bottom-full mb-2 left-0'
+        } w-72 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-2xl shadow-2xl p-1.5 text-label z-50 animate-in fade-in zoom-in-95 duration-100`}>
 
           {/* SUBMENU HEADER (When drilled down into Effort or More Models) */}
           {view !== 'main' && (

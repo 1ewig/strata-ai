@@ -130,6 +130,10 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
           onOpenFile={handleOpenFile}
           onOpenDrawer={handleOpenDrawer}
           onOpenSidebar={handleOpenSidebar}
+          model={model}
+          thinkingLevel={thinkingLevel}
+          onModelSelect={handleModelSelect}
+          onThinkingLevelChange={handleThinkingLevelChange}
         />
 
         <StickToBottom className="flex-1 min-h-0" resize="auto" initial="instant">

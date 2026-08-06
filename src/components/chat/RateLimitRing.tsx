@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 
 /**
  * Props for the RateLimitRing component.
@@ -16,19 +16,42 @@ interface RateLimitRingProps {
 
 /**
  * Compact quota indicator showing how many messages remain in the current 5-hour window.
- * Renders a progress ring plus a hover popover with details for both quota windows.
+ * Renders a progress ring plus a hover/tap popover with details for both quota windows.
  * Renders nothing when rateLimitData is null.
  * @param rateLimitData - Remaining message counts for the 5-hour and 7-day windows, plus an optional reset delay; null hides the indicator.
  * @param isQuotaExhausted - When true, styles the badge and popover with danger colors and labels the quota as exhausted.
  */
 export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateLimitRingProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const ringRef = useRef<HTMLDivElement>(null);
+
+  // Close the popover when clicking or tapping outside on mobile/desktop
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (ringRef.current && !ringRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, []);
+
   if (!rateLimitData) return null;
 
   return (
-    <div className="relative group flex items-center">
-      <div className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-surface-base border text-caption font-medium cursor-help transition-colors ${
-        isQuotaExhausted ? 'border-danger/40 bg-danger-soft/40' : 'border-edge-raised'
-      }`}>
+    <div ref={ringRef} className="relative group flex items-center">
+      <button
+        type="button"
+        onClick={() => setIsOpen(prev => !prev)}
+        className={`flex items-center gap-1.5 px-2 py-1.5 rounded-lg bg-surface-base border text-caption font-medium cursor-pointer transition-colors ${
+          isQuotaExhausted ? 'border-danger/40 bg-danger-soft/40' : 'border-edge-raised'
+        }`}
+        aria-label="Toggle quota status popover"
+      >
         <svg className="w-3.5 h-3.5 -rotate-90" viewBox="0 0 20 20">
           <circle
             cx="10"
@@ -63,10 +86,14 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
         <span className={`text-caption font-medium ${isQuotaExhausted ? 'text-danger font-semibold' : 'text-text-muted'}`}>
           {rateLimitData.remaining5h} left
         </span>
-      </div>
+      </button>
 
-      {/* Popover Tooltip on Hover */}
-      <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block w-56 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-2.5 text-caption text-text-primary z-50 animate-in fade-in zoom-in-95 pointer-events-none">
+      {/* Popover Tooltip on Hover & Tap */}
+      <div
+        className={`absolute bottom-full left-0 mb-2 ${
+          isOpen ? 'block' : 'hidden group-hover:block'
+        } w-56 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-2.5 text-caption text-text-primary z-50 animate-in fade-in zoom-in-95`}
+      >
         <div className="font-semibold text-text-bright mb-1.5 flex items-center justify-between">
           <span>Remaining Messages</span>
           <span className={`text-micro font-semibold uppercase px-1.5 py-0.5 rounded ${
