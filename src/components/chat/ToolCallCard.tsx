@@ -62,15 +62,12 @@ function ToolCallCard({
     : 'bg-primary-soft text-primary font-medium';
 
   return (
-    <div className="my-1.5 rounded-2xl border border-edge-raised/40 bg-surface-raised/40 hover:border-edge-raised/70 transition-all text-caption overflow-hidden fade-in relative">
-      {isLoading && (
-        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary via-secondary to-primary animate-pulse" />
-      )}
+    <div className="my-1 w-full text-caption fade-in relative">
       {/* Header bar */}
-      <div className="flex items-center justify-between px-3 py-2 gap-2">
+      <div className="flex items-center justify-between py-1 gap-2">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 text-left min-w-0 flex-1 cursor-pointer hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 text-left min-w-0 flex-1 cursor-pointer group hover:opacity-90 transition-opacity"
         >
           {/* Icon switches by status: spinner while loading, error icon on failure, unique tool icon otherwise */}
           {isLoading ? (
@@ -82,26 +79,19 @@ function ToolCallCard({
           ) : ExplicitIcon ? (
             <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
           ) : null}
-          <span className="font-medium text-text-primary truncate">{label}</span>
+          <span className="font-medium text-text-secondary group-hover:text-text-primary truncate">{label}</span>
           <span className={`text-micro font-mono shrink-0 px-1.5 py-0.5 rounded-lg capitalize ${statusBadgeStyle}`}>
             {statusText}
           </span>
-        </button>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            className="text-text-muted hover:text-text-primary p-0.5 transition-colors cursor-pointer"
-            aria-label="Toggle details"
-          >
+          <div className="text-text-muted group-hover:text-text-primary transition-colors">
             {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-          </button>
-        </div>
+          </div>
+        </button>
       </div>
 
       {/* Expanded content showing minimal summary */}
       {isOpen && (
-        <div className="px-3 pb-2.5 pt-1 border-t border-edge-raised/30 text-caption">
+        <div className="pl-5 pt-0.5 pb-1 text-caption text-text-secondary">
           {summary}
         </div>
       )}

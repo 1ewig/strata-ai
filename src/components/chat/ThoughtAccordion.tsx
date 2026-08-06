@@ -42,27 +42,25 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
   if (!text || !text.trim()) return null;
 
   return (
-    <div className="my-1.5 rounded-2xl border border-edge-raised/40 bg-surface-overlay/30 overflow-hidden text-caption fade-in">
+    <div className="my-1.5 w-full text-caption fade-in">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3 py-2 bg-surface-raised/60 hover:bg-surface-raised transition-colors text-left font-mono text-label text-info cursor-pointer"
+        className="flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary transition-colors text-left font-mono text-caption cursor-pointer group"
       >
-        <div className="flex items-center gap-2">
-          {isThinking ? (
-            <Loader2 className="w-3.5 h-3.5 text-info animate-spin" />
-          ) : (
-            <BrainCircuit className="w-3.5 h-3.5 text-info" />
-          )}
-          <span className="font-semibold">{isThinking ? 'Thinking...' : 'Thought Process'}</span>
-          <span className="text-micro text-text-muted font-normal">({text.length.toLocaleString()} chars)</span>
-        </div>
+        {isThinking ? (
+          <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
+        ) : (
+          <BrainCircuit className="w-3.5 h-3.5 text-text-muted group-hover:text-text-primary shrink-0" />
+        )}
+        <span className="font-semibold">{isThinking ? 'Thinking...' : 'Thought Process'}</span>
+        <span className="text-micro text-text-muted font-normal">({text.length.toLocaleString()} chars)</span>
         <div className="flex items-center gap-1 text-text-muted">
           {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
         </div>
       </button>
 
       {isOpen && (
-        <div className="p-3 border-t border-edge-raised/60 text-label text-text-secondary leading-relaxed max-h-56 overflow-y-auto bg-surface-base/90 font-mono">
+        <div className="mt-1 pl-5 py-1.5 text-label text-text-secondary leading-relaxed max-h-60 overflow-y-auto font-mono">
           {/* While actively thinking, render plain pre-wrap whitespace to avoid per-token Markdown AST parsing freeze */}
           {isThinking ? (
             <p className="whitespace-pre-wrap font-mono leading-relaxed text-text-secondary">{text}</p>
