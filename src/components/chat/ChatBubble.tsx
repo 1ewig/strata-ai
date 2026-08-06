@@ -260,7 +260,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
   return (
     <div
       className={`group relative flex items-start gap-3.5 ${
-        isUser ? 'flex-row-reverse' : ''
+        isUser ? 'flex-row-reverse animate-slide-up' : ''
       } ${!isUser ? 'fade-in' : ''}`}
     >
       {/* Avatar Container: hidden on mobile (< sm) to give messages maximum width */}
@@ -311,7 +311,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
             return (
               <div
                 key={seg.key}
-                className="relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all bg-primary text-surface border border-primary rounded-tr-xs shadow-card fade-in w-fit max-w-full"
+                className="relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all bg-primary text-surface border border-primary rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full"
               >
                 <p className="whitespace-pre-wrap leading-relaxed">{seg.content}</p>
               </div>

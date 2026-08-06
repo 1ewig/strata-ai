@@ -5,6 +5,16 @@ import ChatBubble from '@/components/chat/ChatBubble';
 import { QuotaErrorCard } from '@/components/chat/QuotaErrorCard';
 import { StrataIcon } from '@/components/ui/strata-icon';
 
+/** Pool of short, engaging welcome greetings for new chats. */
+export const WELCOME_MESSAGES = [
+  "What would you like to build or edit today?",
+  "How can I help with your workspace today?",
+  "What are we working on today?",
+  "Ready to create, edit, or analyze your files.",
+  "What would you like to research or draft?",
+  "How can Strata AI assist your workspace today?",
+];
+
 /** Props for the ChatPanel message list orchestrator. */
 interface ChatPanelProps {
   messages: any[];
@@ -17,6 +27,9 @@ interface ChatPanelProps {
     retryAfter?: number;
   } | null;
   onDismissQuotaError?: () => void;
+  chatId?: string;
+  isNewChat?: boolean;
+  chatInputNode?: React.ReactNode;
 }
 
 /**
@@ -31,6 +44,9 @@ interface ChatPanelProps {
  * @param onOpenDrawer - Passed through to bubbles for tool card drawer actions.
  * @param quotaError - Quota exhaustion banner shown above the composer.
  * @param onDismissQuotaError - Dismisses the quota error card when called.
+ * @param chatId - Active conversation ID used to pick a stable welcome greeting.
+ * @param isNewChat - True when no messages exist, centering the composer in the hero.
+ * @param chatInputNode - The ChatInput node rendered in the centered hero.
  */
 export default React.memo(function ChatPanel({
   messages,
@@ -40,19 +56,45 @@ export default React.memo(function ChatPanel({
   onOpenDrawer,
   quotaError,
   onDismissQuotaError,
+  chatId,
+  isNewChat,
+  chatInputNode,
 }: ChatPanelProps) {
+  // Pick a stable welcome message from the pool based on the conversation ID
+  const welcomeMessage = React.useMemo(() => {
+    if (!chatId) return WELCOME_MESSAGES[0];
+    let hash = 0;
+    for (let i = 0; i < chatId.length; i++) {
+      hash = (hash << 5) - hash + chatId.charCodeAt(i);
+      hash |= 0;
+    }
+    const index = Math.abs(hash) % WELCOME_MESSAGES.length;
+    return WELCOME_MESSAGES[index];
+  }, [chatId]);
+
+  if (isNewChat) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-5 max-w-2xl mx-auto w-full px-2 pt-12 fade-in">
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary border border-secondary/50 flex items-center justify-center text-surface font-semibold text-heading shadow-glow-primary">
+          <StrataIcon className="w-6 h-6 text-surface" />
+        </div>
+        <h2 className="text-heading sm:text-title font-semibold text-text-primary font-display tracking-tight">
+          {welcomeMessage}
+        </h2>
+        {chatInputNode && <div className="w-full text-left pt-2">{chatInputNode}</div>}
+      </div>
+    );
+  }
+
   return (
     <div className="pt-4 space-y-4">
-      {/* Empty-state hero welcoming the user to the workspace canvas. */}
+      {/* Fallback empty state if isNewChat flag is not explicitly passed */}
       {messages.length === 0 && streamingContent === null && !isLoading && !quotaError && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary border border-secondary/50 flex items-center justify-center text-surface font-semibold text-heading shadow-glow-primary">
             <StrataIcon className="w-6 h-6" />
           </div>
-          <h3 className="text-subheading font-semibold text-text-primary font-display">Strata AI Workspace</h3>
-          <p className="text-body text-text-muted max-w-sm leading-relaxed">
-            Ask me to create, edit, analyze, or format documents, code snippets, and markdown notes in your interactive workspace canvas!
-          </p>
+          <h3 className="text-heading font-semibold text-text-primary font-display">{welcomeMessage}</h3>
         </div>
       )}
 

@@ -112,6 +112,21 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     );
   }
 
+  const chatInputNode = (
+    <ChatInput
+      onSendMessage={handleSendMessage}
+      onStop={handleStop}
+      isLoading={isLoading}
+      model={model}
+      thinkingLevel={thinkingLevel}
+      onModelSelect={handleModelSelect}
+      onThinkingLevelChange={handleThinkingLevelChange}
+      rateLimitData={rateLimitData}
+    />
+  );
+
+  const isNewChat = displayMessages.length === 0 && streamingContent === null && !isLoading && !quotaError;
+
   return (
     <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
       <Sidebar
@@ -165,11 +180,14 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
                   onOpenDrawer={handleOpenDrawer}
                   quotaError={quotaError}
                   onDismissQuotaError={clearQuotaError}
+                  chatId={chatId}
+                  isNewChat={isNewChat}
+                  chatInputNode={chatInputNode}
                 />
               </StickToBottom.Content>
 
               {/* Floating button appears when scrolled up - clicks snap back to the bottom */}
-              {!context.isAtBottom && (
+              {!context.isAtBottom && !isNewChat && (
                 <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-40">
                   <button
                     onClick={() => context.scrollToBottom()}
@@ -184,21 +202,13 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
           )}
         </StickToBottom>
 
-
-        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30">
-          <div className="max-w-4xl mx-auto pointer-events-auto">
-            <ChatInput
-              onSendMessage={handleSendMessage}
-              onStop={handleStop}
-              isLoading={isLoading}
-              model={model}
-              thinkingLevel={thinkingLevel}
-              onModelSelect={handleModelSelect}
-              onThinkingLevelChange={handleThinkingLevelChange}
-              rateLimitData={rateLimitData}
-            />
+        {!isNewChat && (
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30 animate-slide-up">
+            <div className="max-w-4xl mx-auto pointer-events-auto">
+              {chatInputNode}
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <WorkspaceDrawer

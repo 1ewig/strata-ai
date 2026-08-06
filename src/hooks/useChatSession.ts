@@ -185,7 +185,11 @@ export function useChatSession(chatId: string) {
     (text: string) => {
       continuationCountRef.current = 0;
       const trimmed = text.trim();
-      if (trimmed && chat.status === 'ready') {
+      const canSend = chat.status === 'ready' || chat.status === 'error' || chat.status !== 'streaming';
+      if (trimmed && canSend) {
+        if (chat.status !== 'ready' && chat.stop) {
+          chat.stop();
+        }
         if (rateLimitData && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0)) {
           setQuotaError({
             message: rateLimitData.remaining5h <= 0
@@ -212,7 +216,7 @@ export function useChatSession(chatId: string) {
     }
   }, [chat]);
 
-  const isLoading = chat.status !== 'ready' && !quotaError;
+  const isLoading = (chat.status === 'streaming' || chat.status === 'submitted') && !quotaError;
 
   return {
     model: modelSettings.model,
