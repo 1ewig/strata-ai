@@ -19,6 +19,7 @@ export interface Conversation {
   title: string;
   model: string;
   thinkingLevel?: string;
+  pinned?: boolean;
   files?: WorkspaceFile[];
   activeFileId?: string;
   createdAt: string;
@@ -137,6 +138,17 @@ export async function getConversation(id: string): Promise<Conversation | undefi
  */
 export async function updateConversationTitle(id: string, title: string): Promise<void> {
   await db.conversations.update(id, { title, updatedAt: new Date().toISOString() });
+}
+
+/**
+ * Toggles the pinned status of a conversation.
+ *
+ * @param id - The conversation id to update.
+ */
+export async function toggleConversationPin(id: string): Promise<void> {
+  const conv = await db.conversations.get(id);
+  if (!conv) return;
+  await db.conversations.update(id, { pinned: !conv.pinned });
 }
 
 /**

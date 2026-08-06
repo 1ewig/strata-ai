@@ -28,8 +28,15 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const { data: session, isPending: isSessionPending } = useSession();
   // Conversations for the signed-in user; guards are below so the sidebar
   // only renders after the session has resolved.
-  const { conversations, conversationCount, isMaxConversationsReached, handleNewChat, handleDeleteConversation } =
-    useConversations(session?.user?.id, chatId);
+  const {
+    conversations,
+    conversationCount,
+    isMaxConversationsReached,
+    handleNewChat,
+    handleDeleteConversation,
+    handleRenameConversation,
+    handleTogglePinConversation,
+  } = useConversations(session?.user?.id, chatId);
   const { isPending: isSigningOut, handleSignOut } = useSignOut();
   const { isDark, toggle: toggleTheme } = useTheme();
   // Anchor div passed to ChatPanel for the message list scroll position.
@@ -116,6 +123,8 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         activeConversationId={chatId}
         onNewChat={handleNewChat}
         onDelete={handleDeleteConversation}
+        onRename={handleRenameConversation}
+        onTogglePin={handleTogglePinConversation}
         session={session}
         isSigningOut={isSigningOut}
         onSignOut={handleSignOut}

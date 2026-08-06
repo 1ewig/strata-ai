@@ -1,8 +1,6 @@
-'use client';
-
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { MessageSquare, Plus, Trash2, X } from 'lucide-react';
+import { MessageSquare, Plus, Trash2, X, MoreVertical, Pin, PinOff, Edit3, Check } from 'lucide-react';
 import type { Conversation } from '@/lib/db/db';
 import type { authClient } from '@/lib/auth-client';
 import UserButton from '@/components/auth/user-button';
@@ -32,6 +30,10 @@ interface SidebarProps {
   onNewChat: () => void;
   /** Deletes a conversation, navigating away if it was the open one. */
   onDelete: (id: string) => Promise<void>;
+  /** Renames a conversation. */
+  onRename?: (id: string, newTitle: string) => Promise<void>;
+  /** Toggles the pinned state of a conversation. */
+  onTogglePin?: (id: string) => Promise<void>;
   /** The signed-in user's session, forwarded to the user button. */
   session: Session;
   /** Whether a sign-out request is in flight, forwarded to the user button. */
@@ -60,6 +62,8 @@ export default React.memo(function Sidebar({
   onClose,
   onNewChat,
   onDelete,
+  onRename,
+  onTogglePin,
   session,
   isSigningOut,
   onSignOut,
@@ -67,12 +71,41 @@ export default React.memo(function Sidebar({
   onToggleTheme,
 }: SidebarProps) {
   const [chatToDelete, setChatToDelete] = useState<Conversation | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
 
-  // Stop the event from bubbling (e.g. into a Link) before delegating.
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Close the 3-dots overflow popover when clicking anywhere outside it.
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setActiveMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const handleDelete = (e: React.MouseEvent, conv: Conversation) => {
     e.preventDefault();
     e.stopPropagation();
+    setActiveMenuId(null);
     setChatToDelete(conv);
+  };
+
+  const handleStartRename = (conv: Conversation) => {
+    setEditingChatId(conv.id);
+    setEditingTitle(conv.title || 'Untitled Chat');
+    setActiveMenuId(null);
+  };
+
+  const handleSaveRename = async (id: string) => {
+    if (editingTitle.trim()) {
+      await onRename?.(id, editingTitle.trim());
+    }
+    setEditingChatId(null);
   };
 
   const handleConfirmDelete = async () => {
@@ -155,6 +188,51 @@ export default React.memo(function Sidebar({
         ) : (
           conversations.map((conv) => {
             const isActive = activeConversationId === conv.id;
+            const isEditingThis = editingChatId === conv.id;
+
+            if (isEditingThis) {
+              return (
+                <div
+                  key={conv.id}
+                  className="flex items-center gap-1.5 px-2 py-1.5 rounded-xl bg-surface-elevated border border-edge-hover w-full my-0.5"
+                >
+                  <input
+                    type="text"
+                    value={editingTitle}
+                    onChange={(e) => setEditingTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSaveRename(conv.id);
+                      }
+                      if (e.key === 'Escape') {
+                        e.preventDefault();
+                        setEditingChatId(null);
+                      }
+                    }}
+                    className="flex-1 bg-surface-base border border-edge-raised rounded px-2 py-1 text-label text-text-bright focus:outline-none focus:border-primary min-w-0"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSaveRename(conv.id)}
+                    className="p-1 text-primary hover:bg-primary-soft rounded transition-colors cursor-pointer"
+                    title="Save title"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingChatId(null)}
+                    className="p-1 text-text-muted hover:text-text-primary rounded transition-colors cursor-pointer"
+                    title="Cancel"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            }
+
             return (
               <div
                 key={conv.id}
@@ -171,14 +249,87 @@ export default React.memo(function Sidebar({
                 >
                   <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-text-faint'}`} />
                   <span className="truncate flex-1">{conv.title || 'Untitled Chat'}</span>
+                  {conv.pinned && (
+                    <Pin className="w-3 h-3 text-primary shrink-0 opacity-80" />
+                  )}
                 </Link>
-                <button
-                  onClick={(e) => handleDelete(e, conv)}
-                  className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 mr-1 hover:text-danger text-text-muted rounded transition-opacity"
-                  title="Delete chat"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+
+                {/* 3-dots Menu Button */}
+                <div className="relative shrink-0 pr-1">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      setActiveMenuId(prev => prev === conv.id ? null : conv.id);
+                    }}
+                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                      activeMenuId === conv.id
+                        ? 'text-text-primary bg-surface-elevated'
+                        : 'opacity-100 md:opacity-0 md:group-hover:opacity-100 text-text-muted hover:text-text-primary hover:bg-surface-elevated'
+                    }`}
+                    title="Chat options"
+                  >
+                    <MoreVertical className="w-3.5 h-3.5" />
+                  </button>
+
+                  {/* Overflow Menu */}
+                  {activeMenuId === conv.id && (
+                    <div
+                      ref={menuRef}
+                      className="absolute right-0 mt-1 w-36 bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-1 text-caption z-50 animate-in fade-in zoom-in-95"
+                    >
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onTogglePin?.(conv.id);
+                          setActiveMenuId(null);
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-text-primary hover:bg-surface-hover rounded-lg transition-colors cursor-pointer"
+                      >
+                        {conv.pinned ? (
+                          <>
+                            <PinOff className="w-3.5 h-3.5 text-text-muted" />
+                            <span>Unpin</span>
+                          </>
+                        ) : (
+                          <>
+                            <Pin className="w-3.5 h-3.5 text-text-muted" />
+                            <span>Pin</span>
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleStartRename(conv);
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-text-primary hover:bg-surface-hover rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-text-muted" />
+                        <span>Rename</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleDelete(e, conv);
+                        }}
+                        className="w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-danger hover:bg-danger-soft/40 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-danger" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })

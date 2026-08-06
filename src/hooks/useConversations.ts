@@ -3,12 +3,12 @@
 import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, deleteConversation, type Conversation } from '@/lib/db/db';
+import { db, deleteConversation, updateConversationTitle, toggleConversationPin, type Conversation } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
 import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 
 /**
- * Returns the conversations belonging to a user, most recently updated first.
+ * Returns the conversations belonging to a user, pinned chats first, then most recently updated first.
  * Legacy chats that predate per-user scoping (no `userId`) are included so
  * existing data is never hidden.
  *
@@ -22,18 +22,22 @@ function getUserConversations(userId: string | undefined): Promise<Conversation[
     .then((list) =>
       list
         .filter((c) => !c.userId || c.userId === userId)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()),
+        .sort((a, b) => {
+          if (a.pinned && !b.pinned) return -1;
+          if (!a.pinned && b.pinned) return 1;
+          return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
+        }),
     );
 }
 
 /**
  * Manages the conversation list for the sidebar: live Dexie queries, the
- * per-user conversation cap, and create/delete actions with navigation.
+ * per-user conversation cap, pin/rename/delete actions with navigation.
  *
  * @param userId - The signed-in user's id (undefined while the session loads).
  * @param currentConversationId - The conversation currently open, used to
  *   decide where to navigate after a deletion.
- * @returns The conversation list, cap state, and create/delete handlers.
+ * @returns The conversation list, cap state, and create/delete/rename/pin handlers.
  */
 export function useConversations(
   userId: string | undefined,
@@ -78,11 +82,34 @@ export function useConversations(
     [currentConversationId, router, userId],
   );
 
+  /**
+   * Renames a conversation by id.
+   */
+  const handleRenameConversation = useCallback(
+    async (id: string, newTitle: string) => {
+      if (!newTitle.trim()) return;
+      await updateConversationTitle(id, newTitle.trim());
+    },
+    [],
+  );
+
+  /**
+   * Toggles the pinned status of a conversation.
+   */
+  const handleTogglePinConversation = useCallback(
+    async (id: string) => {
+      await toggleConversationPin(id);
+    },
+    [],
+  );
+
   return {
     conversations,
     conversationCount,
     isMaxConversationsReached,
     handleNewChat,
     handleDeleteConversation,
+    handleRenameConversation,
+    handleTogglePinConversation,
   };
 }
