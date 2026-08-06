@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useSyncExternalStore } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'motion/react';
 import { AlertTriangle, Loader2, X } from 'lucide-react';
+
+const emptySubscribe = () => () => {};
 
 export interface ConfirmDialogProps {
   /** Whether the dialog is visible. */
@@ -29,6 +32,8 @@ export interface ConfirmDialogProps {
  * Reusable modal dialog component for destructive and important confirmations
  * (e.g., signing out, deleting workspace files). Responsive layout optimized
  * for touch targets on mobile and keyboard navigation (Escape key) on desktop.
+ * Uses React Portals to render directly into document.body, escaping parent CSS
+ * transform containing blocks.
  */
 export default function ConfirmDialog({
   isOpen,
@@ -41,6 +46,11 @@ export default function ConfirmDialog({
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
+  const isMounted = useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
   const confirmButtonRef = useRef<HTMLButtonElement>(null);
 
   // Close modal when pressing the Escape key
@@ -65,11 +75,11 @@ export default function ConfirmDialog({
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !isMounted) return null;
 
   const isDanger = variant === 'danger';
 
-  return (
+  const dialogContent = (
     <AnimatePresence>
       <div
         className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto"
@@ -85,7 +95,7 @@ export default function ConfirmDialog({
           onClick={() => {
             if (!isLoading) onCancel();
           }}
-          className="fixed inset-0 bg-scrim backdrop-blur-xs"
+          className="fixed inset-0 bg-scrim backdrop-blur-xs z-[100]"
         />
 
         {/* Modal Card */}
@@ -94,7 +104,7 @@ export default function ConfirmDialog({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 8 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-md bg-surface-raised border border-edge-raised rounded-2xl shadow-card-lg p-5 sm:p-6 z-10 my-auto text-left"
+          className="relative w-full max-w-md bg-surface-raised border border-edge-raised rounded-2xl shadow-card-lg p-5 sm:p-6 z-[101] my-auto text-left"
         >
           {/* Header Row: Icon & Title */}
           <div className="flex items-start justify-between gap-3">
@@ -165,4 +175,6 @@ export default function ConfirmDialog({
       </div>
     </AnimatePresence>
   );
+
+  return createPortal(dialogContent, document.body);
 }
