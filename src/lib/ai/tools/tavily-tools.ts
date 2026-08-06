@@ -8,7 +8,40 @@ interface TavilyApiResponse<T> {
 }
 
 /**
+ * Reads a Tavily error payload and returns a readable message.
+ * Tavily returns errors under detail.error / error.message / message.
+ * @param status - HTTP status code of the failed response.
+ * @param bodyText - Raw response body text (already consumed).
+ * @returns A readable, status-aware error message.
+ */
+function extractTavilyErrorMessage(status: number, bodyText: string): string {
+  const friendly: Record<number, string> = {
+    401: "Tavily API key is invalid or missing.",
+    429: "Tavily rate limit exceeded; try again shortly.",
+    432: "Tavily plan usage limit reached; upgrade or adjust settings.",
+    433: "Tavily pay-as-you-go limit reached.",
+  };
+  const known = friendly[status];
+
+  let detail = "";
+  if (bodyText) {
+    try {
+      const json = JSON.parse(bodyText);
+      const err = json?.detail?.error || json?.error?.message || json?.error || json?.message;
+      if (typeof err === "string" && err) detail = err;
+    } catch {
+      detail = bodyText;
+    }
+  }
+
+  if (known && detail) return `${known} ${detail}`;
+  if (known) return known;
+  return `Tavily API error (${status})${detail ? `: ${detail}` : ""}`;
+}
+
+/**
  * Helper to perform authenticated calls to Tavily API endpoints.
+ * Authenticates via the Authorization Bearer header (the api_key body field is deprecated).
  * @param endpoint - Tavily API endpoint (e.g. 'search', 'extract').
  * @param payload - Request body sent alongside the API key.
  * @param timeoutMs - Abort the fetch after this many milliseconds.
@@ -35,19 +68,17 @@ async function callTavilyApi<T = any>(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
       },
       signal: combinedSignal,
-      body: JSON.stringify({
-        api_key: apiKey,
-        ...payload,
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const errText = await response.text().catch(() => response.statusText);
       return {
         success: false,
-        error: `Tavily API error (${response.status}): ${errText}`,
+        error: extractTavilyErrorMessage(response.status, errText),
       };
     }
 
@@ -79,10 +110,10 @@ export function createWebSearchTool() {
         .default("advanced")
         .describe("Search depth: 'basic' for quick results, 'advanced' for deeper analysis."),
       topic: z
-        .enum(["general", "news"])
+        .enum(["general", "news", "finance"])
         .optional()
         .default("general")
-        .describe("Topic focus: 'general' or 'news'."),
+        .describe("Topic focus: 'general', 'news', or 'finance'."),
       maxResults: z
         .number()
         .min(1)
@@ -116,7 +147,6 @@ export function createWebSearchTool() {
     outputSchema: z.object({
       success: z.boolean(),
       query: z.string(),
-      answer: z.string().optional(),
       results: z
         .array(
           z.object({
@@ -148,7 +178,6 @@ export function createWebSearchTool() {
         search_depth: searchDepth,
         topic,
         max_results: Math.min(Math.max(maxResults, 1), 10),
-        include_answer: true,
         include_raw_content: includeRawContent,
         include_images: includeImages,
       };
@@ -157,7 +186,7 @@ export function createWebSearchTool() {
       if (includeDomains?.length) payload.include_domains = includeDomains;
       if (excludeDomains?.length) payload.exclude_domains = excludeDomains;
 
-      const apiRes = await callTavilyApi<any>("search", payload, 15000);
+      const apiRes = await callTavilyApi<any>("search", payload, 30000);
 
       if (!apiRes.success || !apiRes.data) {
         return {
@@ -186,7 +215,6 @@ export function createWebSearchTool() {
       return {
         success: true,
         query,
-        answer: data.answer ? String(data.answer) : undefined,
         results,
         images: images && images.length > 0 ? images : undefined,
       };
@@ -240,7 +268,7 @@ export function createExtractUrlTool() {
           urls,
           extract_depth: extractDepth,
         },
-        30000,
+        45000,
       );
 
       if (!apiRes.success || !apiRes.data) {
