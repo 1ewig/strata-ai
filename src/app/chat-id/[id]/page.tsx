@@ -139,7 +139,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         <StickToBottom className="flex-1 min-h-0" resize="auto" initial="instant">
           {(context) => (
             <>
-              <StickToBottom.Content className="max-w-2xl w-full mx-auto px-4 pb-48">
+              <StickToBottom.Content className="max-w-4xl w-full mx-auto px-4 pb-36">
                 <ChatPanel
                   messages={displayMessages}
                   streamingContent={streamingContent}
@@ -153,7 +153,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
               {/* Floating button appears when scrolled up - clicks snap back to the bottom */}
               {!context.isAtBottom && (
-                <div className="absolute bottom-36 left-1/2 -translate-x-1/2 z-40">
+                <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-40">
                   <button
                     onClick={() => context.scrollToBottom()}
                     className="rounded-full border border-edge-raised bg-surface-overlay/90 px-3.5 py-1.5 text-caption font-medium text-text-muted hover:text-text-primary shadow-lg backdrop-blur-md transition-colors cursor-pointer"
@@ -169,7 +169,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
 
         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30">
-          <div className="max-w-2xl mx-auto pointer-events-auto">
+          <div className="max-w-4xl mx-auto pointer-events-auto">
             <ChatInput
               onSendMessage={handleSendMessage}
               onStop={handleStop}

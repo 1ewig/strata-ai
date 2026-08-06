@@ -289,7 +289,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       <div
         className={`
           flex flex-col min-w-0 gap-2
-          ${isUser ? 'items-end w-fit max-w-[88%] sm:max-w-[78%] ms-auto' : 'items-start w-full max-w-full sm:max-w-[88%]'}
+          ${isUser ? 'items-end w-fit max-w-[90%] sm:max-w-[82%] ms-auto' : 'items-start w-full max-w-full'}
         `}
       >
         {/* Empty streaming state before first tokens */}
