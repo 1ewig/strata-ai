@@ -31,7 +31,7 @@
 - **Local-First Client Persistence**: Complete conversation histories, dynamic file states, and user preferences persist client-side via **Dexie.js (IndexedDB v5)** with per-user session isolation—no server round-trips for workspace state.
 - **Enhanced Friendly Error Handling**: Technical API errors, session expirations, network drops, and character limits are captured and transformed into clean, polite assistant message bubbles that cleanly replace loading states.
 - **Auto-Continuation Execution Loop**: Automatically detects step-limit finish reasons (`finishReason === 'step-limit'`) and dispatches multi-pass continuation requests for complex agent tasks up to 75 steps.
-- **Word-Paced Smooth Streaming**: Powered by `smoothStream` (15ms pacing) to ensure continuous, natural token flow without jarring chunk bursts.
+- **Word-Paced Smooth Streaming & Token Fade**: Powered by `smoothStream` (25ms pacing) and `SmoothStreamText` with smooth CSS token opacity & blur fade transitions (`animate-token-fade`, 450ms) to ensure continuous, natural token flow without jarring chunk bursts.
 - **DOM-Observer Auto-Scroll**: Leverages `use-stick-to-bottom` (`ResizeObserver`/`MutationObserver`) for reliable, non-glitchy chat scrolling that respects manual user scroll interventions.
 - **Polymorphic Tool UI Resolver & Lag-Free Cards**: Isolates visual presentation logic in `src/components/chat/tools/resolver.tsx` with AI SDK 7 lifecycle state resolution, concise file/URL summaries, and a custom `areToolCallCardPropsEqual` comparator in `ToolCallCard.tsx` that skips 100% of intermediate re-renders while multi-KB file arguments stream in.
 - **Single Collapsed Work Card**: Reasoning, tool calls, and intermediate narration stream live and ungrouped while the agent works, then fold into one auto-collapsing "Worked for Xs" `WorkGroupCard` once inference ends — only the final answer remains as a message bubble.
@@ -74,7 +74,7 @@ chat.sendMessage({ text }) ──► DefaultChatTransport (POST /api/agent)
   │                        POST /api/agent
   │                              ├── Zod body validation
   │                              ├── Closure Context: WorkspaceToolsContext(mutableFiles)
-  │                              ├── streamText() + smoothStream(15ms)
+  │                              ├── streamText() + smoothStream(25ms)
   │                              └── prepareStep: re-injects metadata system prompt
   │                              ▼
   │                        SSE Response Stream (createUIMessageStreamResponse)
