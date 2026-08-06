@@ -81,8 +81,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       return text ? [{ type: 'text', content: text, key: 'text-0' }] : [];
     }
 
-    const workItems: Segment[] = [];
-    const textSegments: Segment[] = [];
+    const rawSegments: Segment[] = [];
     let currentText = '';
 
     // Detect tool invocations and reasoning/thought parts across both the
@@ -103,7 +102,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
 
       if (isReasoning) {
         if (currentText) {
-          textSegments.push({ type: 'text', content: currentText, key: `text-${idx}` });
+          rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}` });
           currentText = '';
         }
         const reasoningText =
@@ -113,45 +112,55 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           (p.type === 'reasoning' || p.type === 'thought' || p.type === 'thinking' ? p.text : '') ||
           '';
         if (reasoningText) {
-          workItems.push({ type: 'reasoning', content: reasoningText, key: `reasoning-${idx}` });
+          rawSegments.push({ type: 'reasoning', content: reasoningText, key: `reasoning-${idx}` });
         }
       } else if (isTool) {
         if (currentText) {
-          textSegments.push({ type: 'text', content: currentText, key: `text-${idx}` });
+          rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}` });
           currentText = '';
         }
         const inv = (p as any).toolInvocation || p;
         const key = inv.toolCallId || p.toolCallId || `tool-${idx}`;
-        workItems.push({ type: 'tool', part: p, key });
+        rawSegments.push({ type: 'tool', part: p, key });
       } else if (p.type === 'text' && typeof p.text === 'string') {
         currentText += p.text;
       }
     });
 
     if (currentText) {
-      textSegments.push({ type: 'text', content: currentText, key: `text-final` });
+      rawSegments.push({ type: 'text', content: currentText, key: `text-final` });
     }
 
+    // Last resort: render raw content string if segmentation produced nothing.
+    if (rawSegments.length === 0 && typeof (message as any).content === 'string' && (message as any).content) {
+      rawSegments.push({ type: 'text', content: (message as any).content, key: 'text-fallback' });
+    }
+
+    // Group consecutive non-text segments (reasoning + tools) into work-group items
+    // while preserving chronological order with intermediate text responses.
     const result: Segment[] = [];
+    let pendingGroup: Segment[] = [];
 
-    // All pre-response work items (thoughts + tool calls) go into a single WorkGroupCard
-    if (workItems.length > 0) {
-      result.push({
-        type: 'work-group',
-        items: workItems,
-        key: `work-group-single`,
-      });
-    }
+    const flushGroup = (groupIndex: number) => {
+      if (pendingGroup.length > 0) {
+        result.push({
+          type: 'work-group',
+          items: [...pendingGroup],
+          key: `work-group-${groupIndex}-${pendingGroup[0].key}`,
+        });
+        pendingGroup = [];
+      }
+    };
 
-    // Followed by the final response text segments
-    textSegments.forEach((textSeg) => {
-      result.push(textSeg);
+    rawSegments.forEach((seg, idx) => {
+      if (seg.type === 'reasoning' || seg.type === 'tool') {
+        pendingGroup.push(seg);
+      } else {
+        flushGroup(idx);
+        result.push(seg);
+      }
     });
-
-    // Last resort: render the raw content string if segmentation produced nothing.
-    if (result.length === 0 && typeof (message as any).content === 'string' && (message as any).content) {
-      result.push({ type: 'text', content: (message as any).content, key: 'text-fallback' });
-    }
+    flushGroup(rawSegments.length);
 
     return result;
   }, [message, isUser]);
