@@ -114,8 +114,8 @@ The API route is intentionally **stateless**: it reconstructs workspace state fr
 
 1. `streamText` output is wrapped as `toUIMessageStream` → `createUIMessageStreamResponse` → an SSE stream of UI message deltas consumed by `useChat`.
 2. `smoothStream({ delayInMs: 15, chunking: "word" })` paces token delivery so the UI reads as continuous prose, not bursty chunks. The `prepareStep` hook re-injects `buildSystemInstruction(mutableFiles)` before each agent step so the model's file-state view is always current.
-3. Reasoning/thinking text (enabled via `thinkingConfig.includeThoughts`) arrives as reasoning parts; `ChatBubble` renders them inside a collapsible `ThoughtAccordion` ("Thought Process", spinner while in progress). While actively thinking (`isThinking === true`), expanded thinking text renders as plain pre-wrap font-mono to eliminate 60 Hz Markdown AST re-parsing, upgrading to formatted `ReactMarkdown` once thinking completes.
-4. Tool invocations arrive as tool parts; `resolveToolDisplay` normalizes each into `ToolCardProps` and `ToolCallCard` renders a minimal, lightweight UI (unique Lucide icon, tool name, `loading` / `success` / `fail` status badge, and a concise file or search URL summary in the dropdown). `ToolCallCard` uses a custom `areToolCallCardPropsEqual` comparator in `React.memo` that skips intermediate re-renders while multi-KB argument strings (e.g. `writeFile`/`editFile` content) stream in. The other hot streaming components (`ChatBubble`, `WorkspaceDrawer`, `ChatInput`, `Sidebar`) are `React.memo`'d, and the workspace/drawer handlers (`handleSelectFile`/`handleCreateFile`/`handleUpdateFile`/`handleDeleteFile`) plus model handlers are stable `useCallback`s — the unmemoized `WorkspaceDrawer` re-running `ReactMarkdown` on every 15 ms delta was the primary length-scaled freeze hotspot. The AI SDK `useChat` reducer `structuredClone`'s only the in-flight message, so completed bubbles keep reference identity and memoization skips them during streaming.
+3. Reasoning/thinking text (enabled via `thinkingConfig.includeThoughts`) arrives as reasoning parts; `ChatBubble` renders them inside a collapsible `ThoughtAccordion` (`Thinking (Xs)…` live timer / `Thought for Xs`, spinner while in progress). While actively thinking (`isThinking === true`), expanded thinking text renders as plain pre-wrap font-mono to eliminate 60 Hz Markdown AST re-parsing, upgrading to formatted `ReactMarkdown` once thinking completes.
+4. Tool invocations arrive as tool parts; `resolveToolDisplay` normalizes each into `ToolCardProps` and `ToolCallCard` renders a minimal, lightweight UI (unique Lucide icon, tool name, `loading` / `success` / `fail` status badge, and a concise file or search URL summary in the dropdown). **Streaming vs Finished grouping:** While the agent is working (`isStreaming === true`), ChatBubble renders all work items (reasoning accordions, intermediate text narration, and tool call cards) **ungrouped and live in stream order**. Once inference finishes (`isStreaming` flips to false), the memo recomputes and folds all pre-answer output into a **single collapsible `WorkGroupCard`** ("Working (Xs)..." live → "Worked for Xs") that auto-collapses, leaving only the final assistant answer bubble. Intermediate text narration lives inside the expanded group card. `ToolCallCard` uses a custom `areToolCallCardPropsEqual` comparator in `React.memo` that skips intermediate re-renders while multi-KB argument strings (e.g. `writeFile`/`editFile` content) stream in. The other hot streaming components (`ChatBubble`, `WorkspaceDrawer`, `ChatInput`, `Sidebar`) are `React.memo`'d, and the workspace/drawer handlers (`handleSelectFile`/`handleCreateFile`/`handleUpdateFile`/`handleDeleteFile`) plus model handlers are stable `useCallback`s — the unmemoized `WorkspaceDrawer` re-running `ReactMarkdown` on every 15 ms delta was the primary length-scaled freeze hotspot. The AI SDK `useChat` reducer `structuredClone`'s only the in-flight message, so completed bubbles keep reference identity and memoization skips them during streaming.
 5. `useChat` `status` (streaming / submitted / ready) drives `isLoading`, the typing-dots loader, the streaming caret + shimmer overlay, and `<StickToBottom resize="auto">`-based auto-scroll.
 6. `stopWhen: isStepCount(maxSteps)` caps agentic tool loops; on `step-limit` finish the client auto-continues (see §7.4).
 
@@ -141,12 +141,13 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │       ├── auth/[...all]/route.ts  # Better Auth Next.js catch-all (GET/POST from toNextJsHandler)
     │   │       └── user/rate-limit/route.ts # GET quota status (auth-verified)
     │   ├── components/
-    │   │   ├── Sidebar.tsx           # Pure presentational sidebar component (receives conversations, active ID, new/delete/signOut handlers)
+    │   │   ├── Sidebar.tsx           # Pure presentational sidebar component (receives conversations, active ID, new/delete/signOut handlers; confirm-to-delete chat dialog)
     │   │   ├── theme-toggle.tsx      # Pure presentational dark-mode toggle (isDark/onToggle props; logic in useTheme hook)
     │   │   ├── auth/                 # auth-shell (card layout), loading-screen, sign-in-form, sign-up-form, user-button (profile + sign-out)
     │   │   ├── chat/
     │   │   │   ├── ChatPanel.tsx     # Message list, empty state, typing dots, QuotaErrorCard slot
-    │   │   │   ├── ChatBubble.tsx    # Per-message renderer: user bubble / markdown + ThoughtAccordion + ToolCallCard segments
+    │   │   │   ├── ChatBubble.tsx    # Per-message renderer: user bubble / markdown + ThoughtAccordion + ToolCallCard segments, grouped via WorkGroupCard
+    │   │   │   ├── WorkGroupCard.tsx # Single auto-collapsing group of all pre-answer output (intermediate text + reasoning + tool calls)
     │   │   │   ├── ChatInput.tsx     # Shell for textarea input, auto-resizing, submit handling & composition
     │   │   │   ├── ModelSelectorMenu.tsx # Model dropdown trigger, featured models, effort flyout & overflow submenus
     │   │   │   ├── RateLimitRing.tsx # Quota progress SVG ring & hover popover tooltip
@@ -156,7 +157,9 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   │   ├── ToolCallCard.tsx  # Generic accordion tool-card chrome — NEVER needs edits when tools change
     │   │   │   └── tools/resolver.tsx    # extractToolInfo + resolveToolDisplay → ToolCardProps (per-tool UI config + summaries)
     │   │   ├── workspace/WorkspaceDrawer.tsx # Slide-over: file switcher, create/edit/delete, markdown preview vs raw editor, footer actions
-    │   │   └── ui/strata-icon.tsx    # Brand SVG logo (currentColor or gradient)
+    │   │   └── ui/
+    │   │       ├── strata-icon.tsx   # Brand SVG logo (currentColor or gradient)
+    │   │       └── ConfirmDialog.tsx # Portaled modal for destructive confirmations (sign-out, delete file, delete chat)
     │   ├── contexts/RateLimitContext.tsx # Global quota provider: SSR hydration, render-phase rehydration, fetch fallback, setQuotaError
     │   ├── hooks/
     │   │   ├── useChatSession.ts     # Orchestration core: delegates to transport, error handler, reconciler, and sub-hooks

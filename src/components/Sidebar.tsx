@@ -1,12 +1,13 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { MessageSquare, Plus, Trash2, X } from 'lucide-react';
 import type { Conversation } from '@/lib/db/db';
 import type { authClient } from '@/lib/auth-client';
 import UserButton from '@/components/auth/user-button';
 import ThemeToggle from '@/components/theme-toggle';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 
@@ -65,11 +66,19 @@ export default React.memo(function Sidebar({
   isDark,
   onToggleTheme,
 }: SidebarProps) {
+  const [chatToDelete, setChatToDelete] = useState<Conversation | null>(null);
+
   // Stop the event from bubbling (e.g. into a Link) before delegating.
-  const handleDelete = async (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, conv: Conversation) => {
     e.preventDefault();
     e.stopPropagation();
-    await onDelete(id);
+    setChatToDelete(conv);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!chatToDelete) return;
+    await onDelete(chatToDelete.id);
+    setChatToDelete(null);
     onClose?.();
   };
 
@@ -164,7 +173,7 @@ export default React.memo(function Sidebar({
                   <span className="truncate flex-1">{conv.title || 'Untitled Chat'}</span>
                 </Link>
                 <button
-                  onClick={(e) => handleDelete(e, conv.id)}
+                  onClick={(e) => handleDelete(e, conv)}
                   className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-1.5 mr-1 hover:text-danger text-text-muted rounded transition-opacity"
                   title="Delete chat"
                 >
@@ -182,6 +191,23 @@ export default React.memo(function Sidebar({
         <UserButton session={session} isSigningOut={isSigningOut} onSignOut={onSignOut} />
       </div>
       </aside>
+
+      <ConfirmDialog
+        isOpen={Boolean(chatToDelete)}
+        title="Delete Chat"
+        description={
+          <>
+            Are you sure you want to delete{' '}
+            <strong className="text-text-bright font-semibold">{chatToDelete?.title || 'Untitled Chat'}</strong>?
+            This will permanently remove the conversation and its messages.
+          </>
+        }
+        confirmLabel="Delete Chat"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setChatToDelete(null)}
+      />
     </>
   );
 })
