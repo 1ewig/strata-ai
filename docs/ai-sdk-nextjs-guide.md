@@ -349,15 +349,15 @@ import { streamText, smoothStream } from 'ai';
 const result = streamText({
   model,
   messages,
-  // production values in Strata AI (src/app/api/agent/route.ts):
+  // production values in Strata AI (src/lib/ai/agent-runner.ts):
   experimental_transform: smoothStream({
-    delayInMs: 15,     // ms between chunk emissions
+    delayInMs: 25,     // ms between chunk emissions
     chunking: 'word',  // 'word' | 'character' | 'line' | 'token'
   }),
 });
 ```
 
-`chunking: 'word'` makes the caret type at a natural reading pace; `'character'` feels more incremental but costs more re-renders (see Part 5). The delay is a floor, not a guarantee — larger model chunks still flush as-is if they exceed the window.
+`chunking: 'word'` makes the caret type at a natural reading pace; `'character'` feels more incremental but costs more re-renders (see Part 5). In Strata AI, server-side `smoothStream` (25ms delay) is paired on the client with `SmoothStreamText` (`src/components/chat/SmoothStreamText.tsx`) — a component that diffs incoming stream updates and animates newly appended token deltas with a smooth CSS opacity & blur fade-in (`animate-token-fade`, 450ms).
 
 ### 2.2 Status-driven chrome
 
@@ -885,7 +885,7 @@ The counter-pattern that shipped first (and was removed): resolving tool display
 
 The single biggest per-frame win: **do not re-parse Markdown during streaming** (§2.4–2.5).
 
-- Active text part → `<pre className="whitespace-pre-wrap">` (a string render, O(1)).
+- Active text part → `<SmoothStreamText text={seg.content} isStreaming={true} />` (diffs stream updates and animates newly appended token deltas via 450ms `.animate-token-fade` CSS opacity & blur transition).
 - Completed parts → `ReactMarkdown` with a **memoized components map**:
 
 ```tsx
@@ -985,7 +985,7 @@ Every item below shipped to production and was later fixed. Learn from the recei
 | Dexie schema + CRUD | `src/lib/db/db.ts` |
 | onFinish reconciliation | `src/lib/ai/chat-reconciler.ts` |
 | Tool-result file extraction | `src/lib/ai/message-extractor.ts` |
-| Memoized chat surfaces | `src/components/chat/*` (ChatBubble, ChatInput, ToolCallCard, resolver) |
+| Memoized chat surfaces | `src/components/chat/*` (ChatBubble, SmoothStreamText, ChatInput, ToolCallCard, resolver) |
 | Design tokens (type scale, colors, shadows) | `src/app/globals.css` |
 | Thin shell page + auto-scroll | `src/app/chat-id/[id]/page.tsx` |
 | Architecture reference | `docs/SUMMARY.md` |
