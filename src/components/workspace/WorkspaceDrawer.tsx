@@ -7,6 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MAX_FILE_CHARS, MAX_FILES_PER_WORKSPACE, formatCharCount } from '@/lib/limits';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 /** Props for the WorkspaceDrawer component. */
 interface WorkspaceDrawerProps {
@@ -57,6 +58,7 @@ export default React.memo(function WorkspaceDrawer({
   const [copied, setCopied] = useState(false);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newFileName, setNewFileName] = useState('');
+  const [fileToDelete, setFileToDelete] = useState<WorkspaceFile | null>(null);
 
   const handleStartEditing = () => {
     setFileName(activeFile?.name || '');
@@ -171,7 +173,7 @@ export default React.memo(function WorkspaceDrawer({
             <div className="flex items-center gap-1.5 shrink-0">
               {activeFile && (
                 <button
-                  onClick={() => onDeleteFile(activeFile.id)}
+                  onClick={() => setFileToDelete(activeFile)}
                   className="p-1.5 text-text-muted hover:text-danger hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
                   title="Delete file"
                 >
@@ -403,6 +405,28 @@ export default React.memo(function WorkspaceDrawer({
           )}
         </motion.div>
       </div>
+
+      <ConfirmDialog
+        isOpen={Boolean(fileToDelete)}
+        title="Delete File"
+        description={
+          <>
+            Are you sure you want to delete{' '}
+            <strong className="text-text-bright font-semibold">{fileToDelete?.name}</strong>?
+            This will permanently remove the file from your workspace.
+          </>
+        }
+        confirmLabel="Delete File"
+        cancelLabel="Cancel"
+        variant="danger"
+        onConfirm={() => {
+          if (fileToDelete) {
+            onDeleteFile(fileToDelete.id);
+            setFileToDelete(null);
+          }
+        }}
+        onCancel={() => setFileToDelete(null)}
+      />
     </AnimatePresence>
   );
 });
