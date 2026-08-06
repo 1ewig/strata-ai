@@ -69,7 +69,7 @@ export async function runAgentResponse({
     tools: createWorkspaceTools(workspace),
     abortSignal: signal,
     experimental_transform: smoothStream({
-      delayInMs: 15,
+      delayInMs: 25,
       chunking: "word",
     }),
     prepareStep: async ({ stepNumber }) => {

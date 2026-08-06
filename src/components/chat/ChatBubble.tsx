@@ -9,6 +9,7 @@ import { StrataIcon } from '@/components/ui/strata-icon';
 import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
 import WorkGroupCard from './WorkGroupCard';
+import SmoothStreamText from './SmoothStreamText';
 
 /** Props for the ChatBubble message component. */
 interface ChatBubbleProps {
@@ -358,10 +359,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
 
                 <div className="text-body text-text-primary leading-relaxed relative">
                   {isStreamingActiveSegment ? (
-                    <p className="whitespace-pre-wrap leading-relaxed font-sans">
-                      {seg.content}
-                      <span className="inline-block w-[1.5px] h-[1.05em] ml-0.5 -mb-0.5 bg-primary/90 rounded-full animate-caret align-text-bottom" />
-                    </p>
+                    <SmoothStreamText text={seg.content} isStreaming={true} />
                   ) : (
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                       {seg.content}
