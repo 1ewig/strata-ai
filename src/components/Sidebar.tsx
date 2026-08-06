@@ -5,6 +5,7 @@ import type { Conversation } from '@/lib/db/db';
 import type { authClient } from '@/lib/auth-client';
 import UserButton from '@/components/auth/user-button';
 import ThemeToggle from '@/components/theme-toggle';
+import RateLimitRing from '@/components/chat/RateLimitRing';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
@@ -44,6 +45,12 @@ interface SidebarProps {
   isDark: boolean;
   /** Toggles the theme, forwarded to the theme toggle. */
   onToggleTheme: () => void;
+  /** Remaining 5-hour/weekly message quota, forwarded to the quota ring. */
+  rateLimitData?: {
+    remaining5h: number;
+    remainingWeek: number;
+    retryAfter?: number;
+  } | null;
 }
 
 /**
@@ -69,6 +76,7 @@ export default React.memo(function Sidebar({
   onSignOut,
   isDark,
   onToggleTheme,
+  rateLimitData: rateLimitDataProp,
 }: SidebarProps) {
   const [chatToDelete, setChatToDelete] = useState<Conversation | null>(null);
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -76,6 +84,9 @@ export default React.memo(function Sidebar({
   const [editingTitle, setEditingTitle] = useState('');
 
   const menuRef = useRef<HTMLDivElement>(null);
+
+  const rateLimitData = rateLimitDataProp ?? null;
+  const isQuotaExhausted = rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
 
   // Close the 3-dots overflow popover when clicking anywhere outside it.
   useEffect(() => {
@@ -338,7 +349,14 @@ export default React.memo(function Sidebar({
 
       {/* User Auth Footer */}
       <div className="p-3 border-t border-edge-hover/50 space-y-2">
-        <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <RateLimitRing rateLimitData={rateLimitData} isQuotaExhausted={isQuotaExhausted} />
+          </div>
+        </div>
         <UserButton session={session} isSigningOut={isSigningOut} onSignOut={onSignOut} />
       </div>
       </aside>

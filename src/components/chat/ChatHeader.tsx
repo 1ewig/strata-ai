@@ -3,7 +3,6 @@
 import React from 'react';
 import { Folder, Menu } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
-import ModelSelectorMenu from './ModelSelectorMenu';
 
 /** Props for the ChatHeader component. */
 interface ChatHeaderProps {
@@ -13,36 +12,24 @@ interface ChatHeaderProps {
   onOpenFile?: (fileId: string) => void;
   onOpenDrawer: () => void;
   onOpenSidebar?: () => void;
-  model?: string;
-  thinkingLevel?: string;
-  onModelSelect?: (modelId: string) => void;
-  onThinkingLevelChange?: (level: string) => void;
 }
 
 /**
- * Sticky chat header with desktop workspace title, mobile sidebar toggle and compact
- * model selector menu, plus a workspace files action button that opens the Workspace Drawer.
+ * Sticky chat header with the conversation title, mobile sidebar toggle and
+ * a workspace files action button that opens the Workspace Drawer.
  *
- * @param title - Optional chat/workspace title; falls back to "Chat Workspace" on desktop.
+ * @param title - Optional chat/workspace title; falls back to "Chat Workspace".
  * @param files - Workspace files listed in the workspace.
  * @param activeFileId - Id of the currently open file.
  * @param onOpenFile - Optional callback when selecting a file.
  * @param onOpenDrawer - Opens the workspace files drawer.
  * @param onOpenSidebar - Opens the mobile sidebar; hides the toggle when omitted.
- * @param model - Currently selected model id.
- * @param thinkingLevel - Currently selected thinking effort level.
- * @param onModelSelect - Called when the user picks a model.
- * @param onThinkingLevelChange - Called when the user changes thinking effort.
  */
 export default React.memo(function ChatHeader({
   title,
   files,
   onOpenDrawer,
   onOpenSidebar,
-  model,
-  thinkingLevel,
-  onModelSelect,
-  onThinkingLevelChange,
 }: ChatHeaderProps) {
   return (
     <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40">
@@ -57,24 +44,10 @@ export default React.memo(function ChatHeader({
           </button>
         )}
 
-        {/* Title visible on desktop view */}
-        <span className="hidden md:inline text-label font-semibold text-text-secondary truncate max-w-xs sm:max-w-md">
+        {/* Conversation title */}
+        <span className="text-label font-semibold text-text-secondary truncate max-w-[160px] sm:max-w-md">
           {title || 'Chat Workspace'}
         </span>
-
-        {/* Compact ModelSelectorMenu visible on mobile view */}
-        {model && onModelSelect && onThinkingLevelChange && (
-          <div className="md:hidden flex items-center shrink-0">
-            <ModelSelectorMenu
-              model={model}
-              thinkingLevel={thinkingLevel || ''}
-              onModelSelect={onModelSelect}
-              onThinkingLevelChange={onThinkingLevelChange}
-              dropDirection="down"
-              compact
-            />
-          </div>
-        )}
       </div>
 
       <div className="flex items-center gap-3">

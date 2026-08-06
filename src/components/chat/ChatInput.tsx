@@ -4,7 +4,6 @@ import React, { useRef, useEffect, useState } from 'react';
 import { ArrowUp, AlertCircle, Square } from 'lucide-react';
 import { MAX_MESSAGE_CHARS } from '@/lib/limits';
 import ModelSelectorMenu from './ModelSelectorMenu';
-import RateLimitRing from './RateLimitRing';
 
 /** Props for the ChatInput composer. */
 interface ChatInputProps {
@@ -24,7 +23,7 @@ interface ChatInputProps {
 
 /**
  * Renders the message composer: auto-growing textarea, model/thinking-level
- * selector, quota ring, and send button. When streaming is active, the send
+ * selector, and send button. When streaming is active, the send
  * button is swapped for an interactive Stop button to cancel inference.
  *
  * @param onSendMessage - Fires with the trimmed text when the user submits.
@@ -140,20 +139,13 @@ export default React.memo(function ChatInput({
           {/* Left Side Controls */}
           <div className="flex items-center gap-2" />
 
-          {/* Right Side Controls: Model Dropdown (Desktop), Quota Ring & Send / Stop Button */}
+          {/* Right Side Controls: Model Dropdown, Send / Stop Button */}
           <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden md:block">
-              <ModelSelectorMenu
-                model={model}
-                thinkingLevel={thinkingLevel}
-                onModelSelect={onModelSelect}
-                onThinkingLevelChange={onThinkingLevelChange}
-              />
-            </div>
-
-            <RateLimitRing
-              rateLimitData={rateLimitData}
-              isQuotaExhausted={isQuotaExhausted}
+            <ModelSelectorMenu
+              model={model}
+              thinkingLevel={thinkingLevel}
+              onModelSelect={onModelSelect}
+              onThinkingLevelChange={onThinkingLevelChange}
             />
 
             {isLoading ? (

@@ -130,6 +130,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         onSignOut={handleSignOut}
         isDark={isDark}
         onToggleTheme={toggleTheme}
+        rateLimitData={rateLimitData}
       />
 
       <div className="flex-1 flex flex-col h-dvh overflow-hidden min-w-0 relative">
@@ -147,10 +148,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               onOpenFile={handleOpenFile}
               onOpenDrawer={handleOpenDrawer}
               onOpenSidebar={handleOpenSidebar}
-              model={model}
-              thinkingLevel={thinkingLevel}
-              onModelSelect={handleModelSelect}
-              onThinkingLevelChange={handleThinkingLevelChange}
             />
           );
         })()}

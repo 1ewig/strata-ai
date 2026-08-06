@@ -43,16 +43,18 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
   if (!rateLimitData) return null;
 
   return (
-    <div ref={ringRef} className="relative group flex items-center">
+    <div ref={ringRef} className="relative group flex w-full items-center">
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
-        className={`flex items-center gap-1.5 px-2 py-0.5 h-6.5 rounded-lg bg-surface-base border text-caption font-medium cursor-pointer transition-colors ${
-          isQuotaExhausted ? 'border-danger/40 bg-danger-soft/40' : 'border-edge-raised'
+        className={`w-full flex items-center justify-center gap-2 px-3 py-2 border rounded-lg text-label font-semibold transition-colors cursor-pointer ${
+          isQuotaExhausted
+            ? 'border-danger/40 bg-danger-soft/40 text-danger'
+            : 'border-edge-raised bg-surface-overlay hover:bg-surface-elevated text-text-secondary hover:text-text-primary'
         }`}
         aria-label="Toggle quota status popover"
       >
-        <svg className="w-3.5 h-3.5 -rotate-90" viewBox="0 0 20 20">
+        <svg className="w-3.5 h-3.5 -rotate-90 shrink-0" viewBox="0 0 20 20">
           <circle
             cx="10"
             cy="10"
@@ -83,7 +85,7 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
             }`}
           />
         </svg>
-        <span className={`text-caption font-medium ${isQuotaExhausted ? 'text-danger font-semibold' : 'text-text-muted'}`}>
+        <span className={isQuotaExhausted ? 'text-danger font-semibold' : 'text-text-secondary'}>
           {rateLimitData.remaining5h} left
         </span>
       </button>

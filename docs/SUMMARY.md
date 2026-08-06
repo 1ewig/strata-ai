@@ -150,7 +150,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   │   ├── WorkGroupCard.tsx # Single auto-collapsing group of all pre-answer output (intermediate text + reasoning + tool calls)
     │   │   │   ├── ChatInput.tsx     # Shell for textarea input, auto-resizing, submit handling & composition
     │   │   │   ├── ModelSelectorMenu.tsx # Model dropdown trigger, featured models, effort flyout & overflow submenus
-    │   │   │   ├── RateLimitRing.tsx # Quota progress SVG ring & hover popover tooltip
+    │   │   │   ├── RateLimitRing.tsx # Quota progress SVG ring & hover popover tooltip (rendered in sidebar footer)
     │   │   │   ├── ChatHeader.tsx    # Mobile hamburger, title, workspace Files dropdown
     │   │   │   ├── QuotaErrorCard.tsx# Alert with live countdown when quota exhausted
     │   │   │   ├── ThoughtAccordion.tsx  # Collapsible reasoning/thought display
