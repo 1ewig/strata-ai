@@ -136,6 +136,13 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       rawSegments.push({ type: 'text', content: (message as any).content, key: 'text-fallback' });
     }
 
+    // While streaming, render each part live and ungrouped so thoughts, tool
+    // calls, and intermediate text stream in place. Grouping happens only once
+    // the inference finishes (isStreaming flips false and the memo recomputes).
+    if (isStreaming) {
+      return rawSegments;
+    }
+
     // Group ALL pre-answer output (intermediate text + reasoning + tool calls) into
     // a single work group so a multi-response inference reads as one compact block.
     // Only the final text segment renders as the assistant message bubble.
@@ -152,7 +159,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
     }
 
     return result;
-  }, [message, isUser]);
+  }, [message, isUser, isStreaming]);
 
   // Memoize custom markdown components so ReactMarkdown does not tear down DOM nodes on every token render.
   const markdownComponents = React.useMemo(
