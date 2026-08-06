@@ -131,36 +131,25 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       rawSegments.push({ type: 'text', content: currentText, key: `text-final` });
     }
 
-    // Last resort: render raw content string if segmentation produced nothing.
+    // Last resort: render the raw content string if segmentation produced nothing.
     if (rawSegments.length === 0 && typeof (message as any).content === 'string' && (message as any).content) {
       rawSegments.push({ type: 'text', content: (message as any).content, key: 'text-fallback' });
     }
 
-    // Group consecutive non-text segments (reasoning + tools) into work-group items
-    // while preserving chronological order with intermediate text responses.
+    // Group ALL pre-answer output (intermediate text + reasoning + tool calls) into
+    // a single work group so a multi-response inference reads as one compact block.
+    // Only the final text segment renders as the assistant message bubble.
     const result: Segment[] = [];
-    let pendingGroup: Segment[] = [];
+    const lastSegment = rawSegments[rawSegments.length - 1];
+    const hasFinalText = lastSegment?.type === 'text';
+    const workItems = hasFinalText ? rawSegments.slice(0, -1) : rawSegments;
 
-    const flushGroup = (groupIndex: number) => {
-      if (pendingGroup.length > 0) {
-        result.push({
-          type: 'work-group',
-          items: [...pendingGroup],
-          key: `work-group-${groupIndex}-${pendingGroup[0].key}`,
-        });
-        pendingGroup = [];
-      }
-    };
-
-    rawSegments.forEach((seg, idx) => {
-      if (seg.type === 'reasoning' || seg.type === 'tool') {
-        pendingGroup.push(seg);
-      } else {
-        flushGroup(idx);
-        result.push(seg);
-      }
-    });
-    flushGroup(rawSegments.length);
+    if (workItems.length > 0) {
+      result.push({ type: 'work-group', items: workItems, key: 'work-group-single' });
+    }
+    if (hasFinalText) {
+      result.push(lastSegment);
+    }
 
     return result;
   }, [message, isUser]);
@@ -326,7 +315,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
               <WorkGroupCard
                 key={seg.key}
                 items={seg.items}
-                isStreaming={isStreaming && isLastSegment}
+                isStreaming={isStreaming}
                 onOpenDrawer={onOpenDrawer}
               />
             );
