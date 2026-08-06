@@ -8,6 +8,10 @@ import {
   extractDeletedFilesFromMessage,
   extractFilesFromMessage,
 } from '@/lib/ai/message-extractor';
+import {
+  removeFileFromWorkspace,
+  upsertFileIntoWorkspace,
+} from '@/lib/ai/workspace';
 
 /**
  * Parameters needed to reconcile one finished agent step into Dexie.
@@ -70,26 +74,18 @@ export async function reconcileFinishedStep({
 
       // Apply deletions
       if (deletions.length > 0) {
-        currentFiles = currentFiles.filter((f) => {
-          for (const del of deletions) {
-            if (del.fileId && f.id === del.fileId) return false;
-            if (del.name && f.name.toLowerCase() === del.name.toLowerCase()) return false;
+        for (const del of deletions) {
+          const identifier = del.fileId || del.name;
+          if (identifier) {
+            currentFiles = removeFileFromWorkspace(currentFiles, identifier);
           }
-          return true;
-        });
+        }
       }
 
       // Apply creations or edits: replace by id/name, or append as a brand-new file.
       if (updatedFiles && updatedFiles.length > 0) {
         for (const newFile of updatedFiles) {
-          const idx = currentFiles.findIndex(
-            (f) => f.id === newFile.id || f.name.toLowerCase() === newFile.name.toLowerCase(),
-          );
-          if (idx >= 0) {
-            currentFiles[idx] = newFile;
-          } else {
-            currentFiles.push(newFile);
-          }
+          currentFiles = upsertFileIntoWorkspace(currentFiles, newFile);
         }
       }
 

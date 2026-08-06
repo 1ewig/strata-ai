@@ -10,14 +10,14 @@ export interface EditResult {
 }
 
 /**
- * Applies string-based edits to resume content using progressive matching
- * strategies (exact, whitespace-normalized, then anchor-matched).
+ * Applies string-based edits to workspace file content using progressive
+ * matching strategies (exact, whitespace-normalized, then anchor-matched).
  */
-export class ResumeEditEngine {
+export class StringEditEngine {
   /**
    * Attempts to replace `searchString` in `source`, trying each matching
    * strategy in order until one succeeds.
-   * @param source - The current resume content.
+   * @param source - The current file content.
    * @param searchString - The text to find (verbatim lines preferred).
    * @param replaceString - The text to substitute in its place.
    * @returns An `EditResult` with the new content on success, or an error
@@ -40,7 +40,7 @@ export class ResumeEditEngine {
     return {
       success: false,
       error:
-        "The `searchString` could not be matched anywhere in the current resume. Make sure you copy lines verbatim from `<workspace_resume>`. Include 1-2 lines of surrounding context as anchors.",
+        "The `searchString` could not be matched anywhere in the current file. Make sure you copy lines verbatim from the `readFile` output. Include 1-2 lines of surrounding context as anchors.",
     };
   }
 

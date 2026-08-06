@@ -112,12 +112,6 @@ const toolConfigs: Record<string, ToolConfig> = {
   },
 };
 
-// Map legacy resume aliases directly to canonical tool configs
-toolConfigs.writeResume = { ...toolConfigs.writeFile, label: 'Resume Updated' };
-toolConfigs.readResume = { ...toolConfigs.readFile, label: 'Resume Read' };
-toolConfigs.deleteResume = { ...toolConfigs.deleteFile, label: 'Resume Deleted', badge: 'Cleared' };
-toolConfigs.editResume = { ...toolConfigs.editFile, label: 'Resume Edited' };
-
 /**
  * Fallback config used when no entry in toolConfigs matches the invoked tool.
  */
@@ -197,11 +191,6 @@ function normalizeToolName(raw: string): { normalized: string; isCustom: boolean
   if (clean === 'renamefile' || clean === 'renamef') return { normalized: 'renameFile', isCustom: false };
   if (clean === 'websearch' || clean === 'tavilysearch' || clean === 'tavily' || clean === 'search') return { normalized: 'webSearch', isCustom: false };
   if (clean === 'extracturl' || clean === 'extractpage' || clean === 'extract' || clean === 'tavilyextract') return { normalized: 'extractUrl', isCustom: false };
-
-  if (clean === 'writeresume') return { normalized: 'writeResume', isCustom: false };
-  if (clean === 'readresume') return { normalized: 'readResume', isCustom: false };
-  if (clean === 'deleteresume') return { normalized: 'deleteResume', isCustom: false };
-  if (clean === 'editresume') return { normalized: 'editResume', isCustom: false };
 
   return { normalized: raw, isCustom: true };
 }
@@ -568,7 +557,7 @@ export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): To
   let label = !isCustom ? cfg.label : (rawName || cfg.label);
 
   const action = (result as any)?.action;
-  if ((name === 'writeFile' || name === 'writeResume') && (action === 'created' || action === 'replaced')) {
+  if (name === 'writeFile' && (action === 'created' || action === 'replaced')) {
     cfg = { ...cfg, badge: action === 'created' ? 'Created' : 'Replaced' };
     label = action === 'created' ? 'File Created' : 'File Replaced';
   }
@@ -580,22 +569,18 @@ export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): To
       summary = buildListFilesSummary(args, result, status);
       break;
     case 'readFile':
-    case 'readResume':
       summary = buildReadFileSummary(args, result, status);
       break;
     case 'writeFile':
-    case 'writeResume':
       summary = buildWriteFileSummary(args, result, status);
       break;
     case 'editFile':
-    case 'editResume':
       summary = buildEditFileSummary(args, result, status);
       break;
     case 'renameFile':
       summary = buildRenameFileSummary(args, result, status);
       break;
     case 'deleteFile':
-    case 'deleteResume':
       summary = buildDeleteFileSummary(args, result, status);
       break;
     case 'webSearch':

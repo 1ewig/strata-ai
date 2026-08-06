@@ -1,14 +1,17 @@
 import Dexie, { Table } from 'dexie';
 import { UIMessage } from 'ai';
-import { Resume, WorkspaceFile } from '@/lib/schemas';
+import { WorkspaceFile } from '@/lib/schemas';
+import {
+  removeFileFromWorkspace,
+  upsertFileIntoWorkspace,
+} from '@/lib/ai/workspace';
 
 /**
  * A persisted chat session row stored in the `conversations` table.
  *
  * Holds the chat metadata (title, model, thinking level) plus the current
- * workspace snapshot: the files the agent can operate on, which file is
- * active, and the legacy `resume` payload carried over from before the
- * workspace-file model existed.
+ * workspace snapshot: the files the agent can operate on and which file is
+ * active.
  */
 export interface Conversation {
   id: string;
@@ -16,7 +19,6 @@ export interface Conversation {
   title: string;
   model: string;
   thinkingLevel?: string;
-  resume?: Resume;
   files?: WorkspaceFile[];
   activeFileId?: string;
   createdAt: string;
@@ -76,32 +78,12 @@ export const db = new ChatDatabase();
 /**
  * Resolves the workspace files for a conversation.
  *
- * Returns the conversation's stored files, or falls back to building a
- * single markdown file from the legacy `resume` payload when the workspace
- * has not been migrated yet.
- *
  * @param conv - The conversation to read files from, if any.
- * @returns The workspace file list; empty when there is nothing stored.
+ * @returns The workspace file list; empty when nothing is stored.
  */
 export function getWorkspaceFiles(conv?: Conversation): WorkspaceFile[] {
   if (!conv) return [];
-  if (conv.files && conv.files.length > 0) {
-    return conv.files;
-  }
-  // Migration fallback from legacy resume
-  if (conv.resume?.markdownContent) {
-    return [
-      {
-        id: conv.resume.id || `file-${conv.id}`,
-        name: `${conv.resume.title || 'resume'}.md`,
-        content: conv.resume.markdownContent,
-        language: 'markdown',
-        createdAt: conv.resume.createdAt || conv.createdAt,
-        updatedAt: conv.resume.updatedAt || conv.updatedAt,
-      },
-    ];
-  }
-  return [];
+  return conv.files ?? [];
 }
 
 /**
@@ -188,31 +170,8 @@ export async function updateConversationFiles(
 }
 
 /**
- * Persists a legacy resume and mirrors it as the conversation's single
- * workspace file.
- *
- * @param id - The conversation id to update.
- * @param resume - The resume payload to store.
- */
-export async function updateConversationResume(id: string, resume: Resume): Promise<void> {
-  // Convert the resume into a markdown workspace file so downstream code
-  // only ever deals with the workspace-file model.
-  const files: WorkspaceFile[] = [
-    {
-      id: resume.id,
-      name: `${resume.title || 'resume'}.md`,
-      content: resume.markdownContent,
-      language: 'markdown',
-      createdAt: resume.createdAt,
-      updatedAt: resume.updatedAt,
-    },
-  ];
-  await db.conversations.update(id, { resume, files, activeFileId: resume.id, updatedAt: new Date().toISOString() });
-}
-
-/**
- * Upserts a workspace file: replaces it when an id already exists in the
- * conversation, otherwise appends it.
+ * Upserts a workspace file into the conversation: replaces it in place when
+ * an entry matches by id or case-insensitive name, otherwise appends it.
  *
  * @param chatId - The conversation owning the file.
  * @param file - The file to save.
@@ -220,15 +179,7 @@ export async function updateConversationResume(id: string, resume: Resume): Prom
 export async function saveWorkspaceFile(chatId: string, file: WorkspaceFile): Promise<void> {
   const conv = await db.conversations.get(chatId);
   const currentFiles = getWorkspaceFiles(conv);
-  const idx = currentFiles.findIndex(f => f.id === file.id);
-  let nextFiles: WorkspaceFile[];
-  if (idx >= 0) {
-    // Replace the existing file in place to preserve ordering.
-    nextFiles = [...currentFiles];
-    nextFiles[idx] = file;
-  } else {
-    nextFiles = [...currentFiles, file];
-  }
+  const nextFiles = upsertFileIntoWorkspace(currentFiles, file);
   await updateConversationFiles(chatId, nextFiles, file.id);
 }
 
@@ -237,12 +188,12 @@ export async function saveWorkspaceFile(chatId: string, file: WorkspaceFile): Pr
  * remaining file, if any.
  *
  * @param chatId - The conversation owning the file.
- * @param fileId - The id of the file to delete.
+ * @param fileId - The id or case-insensitive name of the file to delete.
  */
 export async function deleteWorkspaceFile(chatId: string, fileId: string): Promise<void> {
   const conv = await db.conversations.get(chatId);
   const currentFiles = getWorkspaceFiles(conv);
-  const nextFiles = currentFiles.filter(f => f.id !== fileId);
+  const nextFiles = removeFileFromWorkspace(currentFiles, fileId);
   const nextActiveId = nextFiles.length > 0 ? nextFiles[0].id : undefined;
   await updateConversationFiles(chatId, nextFiles, nextActiveId);
 }

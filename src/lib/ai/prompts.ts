@@ -1,4 +1,4 @@
-import { Resume, WorkspaceFile } from "@/lib/schemas";
+import { WorkspaceFile } from "@/lib/schemas";
 import {
   MAX_FILE_CHARS,
   MAX_FILES_PER_WORKSPACE,
@@ -8,30 +8,12 @@ import {
 
 /**
  * Builds the agent's system instruction, embedding workspace file metadata and constraints.
- * @param filesInput - Workspace files to reference, or a legacy Resume to convert into a single file.
+ * @param filesInput - Workspace files to reference (metadata only).
  * @returns The complete system instruction string for the model.
  */
-export function buildSystemInstruction(filesInput?: WorkspaceFile[] | Resume): string {
-  let workspaceFiles: WorkspaceFile[] = [];
-
-  // Normalize a legacy Resume object into a single markdown workspace file.
-  if (Array.isArray(filesInput)) {
-    workspaceFiles = filesInput;
-  } else if (filesInput && filesInput.markdownContent) {
-    workspaceFiles = [
-      {
-        id: filesInput.id || "chat-file",
-        name: `${filesInput.title || "resume"}.md`,
-        content: filesInput.markdownContent,
-        language: "markdown",
-        createdAt: filesInput.createdAt || new Date().toISOString(),
-        updatedAt: filesInput.updatedAt || new Date().toISOString(),
-      },
-    ];
-  }
-
+export function buildSystemInstruction(filesInput?: WorkspaceFile[]): string {
   // Only files with actual content are worth surfacing to the model.
-  const activeFiles = workspaceFiles.filter((f) => f.content?.trim());
+  const activeFiles = (filesInput ?? []).filter((f) => f.content?.trim());
   const hasFiles = activeFiles.length > 0;
 
   const formattedFilesList = activeFiles
@@ -49,7 +31,7 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[] | Resume): s
     day: "numeric",
   });
 
-  return `You are Strata AI — an elite autonomous AI workspace studio architect and technical document engineer. Your domain is creating, analyzing, editing, organizing, and maintaining dynamic multi-file workspaces (code, notes, resumes, specifications, and documentation) with surgical precision.
+  return `You are Strata AI — an elite autonomous AI workspace studio architect and technical document engineer. Your domain is creating, analyzing, editing, organizing, and maintaining dynamic multi-file workspaces (code, notes, specifications, and documentation) with surgical precision.
 
 ## 1. Active Workspace State & Context
 Current Date: ${currentDate}

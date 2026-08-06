@@ -1,28 +1,19 @@
-import {
-  streamText,
-  isStepCount,
-  convertToModelMessages,
-  createUIMessageStreamResponse,
-  toUIMessageStream,
-  smoothStream,
-} from "ai";
 import { z } from "zod";
-import { Resume, WorkspaceFile } from "@/lib/schemas";
+import { WorkspaceFile } from "@/lib/schemas";
 import { MAX_MESSAGE_CHARS } from "@/lib/limits";
-import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
-import { resolveAgentModel } from "@/lib/ai/providers";
+import { createMutableWorkspace } from "@/lib/ai/workspace";
+import { runAgentResponse } from "@/lib/ai/agent-runner";
 
 import { auth } from "@/lib/auth";
 import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
 
 /**
  * Schema for the agent request body: conversation messages plus optional
- * workspace files, legacy resumes, and model/step configuration.
+ * workspace files and model/step configuration.
  */
 const bodySchema = z.object({
   messages: z.array(z.any()),
   files: z.array(z.any()).optional(),
-  resumes: z.array(z.any()).optional(),
   model: z.string().optional(),
   thinkingLevel: z.string().optional(),
   maxSteps: z.number().optional(),
@@ -33,6 +24,10 @@ const bodySchema = z.object({
  * protocol. Requires an authenticated session and consumes the user's
  * rate-limit quota. Responds with JSON errors (401/400/429) or a UI message
  * stream carrying X-RateLimit-* headers.
+ *
+ * This route is a thin HTTP/security/validation shell: authentication,
+ * quota enforcement, body validation, and step clamping live here, while the
+ * model/stream/tool configuration lives in `runAgentResponse`.
  *
  * @param req - The incoming request with the chat session headers and body
  * @returns A streaming text/plain response or a JSON error response
@@ -82,8 +77,10 @@ export async function POST(req: Request) {
 
   const { messages, model, thinkingLevel, maxSteps } = parsed.data;
 
-  // Validate latest user message character length
-  const lastUserMsg = Array.isArray(messages) ? [...messages].reverse().find((m: { role?: string; content?: unknown }) => m?.role === "user") : null;
+  // Validate latest user message character length.
+  const lastUserMsg = Array.isArray(messages)
+    ? [...messages].reverse().find((m: { role?: string; content?: unknown }) => m?.role === "user")
+    : null;
   if (lastUserMsg && typeof lastUserMsg.content === "string" && lastUserMsg.content.length > MAX_MESSAGE_CHARS) {
     return new Response(
       JSON.stringify({
@@ -95,101 +92,16 @@ export async function POST(req: Request) {
 
   // Clamp the requested step limit to the 1-30 range, defaulting to 25.
   const maxStepsLimit = Math.min(Math.max(maxSteps || 25, 1), 30);
-  const mutableFiles: WorkspaceFile[] = parsed.data.files || [];
 
-  // Migration / fallback from legacy resumes
-  if (mutableFiles.length === 0 && parsed.data.resumes && parsed.data.resumes.length > 0) {
-    const legacy: Resume = parsed.data.resumes[0];
-    if (legacy.markdownContent) {
-      mutableFiles.push({
-        id: legacy.id || "chat-file",
-        name: `${legacy.title || "resume"}.md`,
-        content: legacy.markdownContent,
-        language: "markdown",
-        createdAt: legacy.createdAt || new Date().toISOString(),
-        updatedAt: legacy.updatedAt || new Date().toISOString(),
-      });
-    }
-  }
-
-  const removeFileFromMutable = (fileIdOrName: string) => {
-    const target = fileIdOrName.toLowerCase();
-    for (let i = mutableFiles.length - 1; i >= 0; i--) {
-      if (mutableFiles[i].id === fileIdOrName || mutableFiles[i].name.toLowerCase() === target) {
-        mutableFiles.splice(i, 1);
-      }
-    }
-  };
-
-  // Resolve the requested model to its provider-specific config (Google or Fireworks).
-  const resolvedModel = resolveAgentModel(model || "gemini-3.5-flash-lite", thinkingLevel);
-
-  // Stream the agent run, wiring the workspace tools to the mutable file list.
-  const result = streamText({
-    model: resolvedModel.model,
-    // Spread conditionally so provider branches can omit unsupported options.
-    ...(resolvedModel.reasoning !== undefined
-      ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
-      : {}),
-    ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
-    system: buildSystemInstruction(mutableFiles),
-    messages: await convertToModelMessages(messages),
-    tools: createWorkspaceTools({
-      getCurrentFiles: () => mutableFiles,
-      onUpdateFile: (file: WorkspaceFile) => {
-        const idx = mutableFiles.findIndex(
-          (f) => f.id === file.id || f.name.toLowerCase() === file.name.toLowerCase(),
-        );
-        if (idx >= 0) {
-          mutableFiles[idx] = file;
-        } else {
-          mutableFiles.push(file);
-        }
-      },
-      onDeleteFile: (fileIdOrName: string) => {
-        removeFileFromMutable(fileIdOrName);
-      },
-    }),
-    abortSignal: req.signal,
-    experimental_transform: smoothStream({
-      delayInMs: 15,
-      chunking: "word",
-    }),
-    prepareStep: async ({ stepNumber }) => {
-      console.log(`[agent] Preparing step ${stepNumber}. Active workspace files: ${mutableFiles.length}`);
-      // Rebuild the system prompt per step so the model sees live file state.
-      return {
-        system: buildSystemInstruction(mutableFiles),
-      };
-    },
-    onStart() {
-      console.log("[agent] Generation stream started.");
-    },
-    onStepEnd({ stepNumber, toolCalls }) {
-      console.log(
-        `[agent] Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`,
-      );
-    },
-    onEnd({ finishReason, usage }) {
-      console.log(
-        `[agent] Stream finished (${finishReason}). Total token usage:`,
-        usage,
-      );
-    },
-    onError({ error }) {
-      console.error("[agent] Stream error:", error);
-    },
-    // Bound the run to the step limit so tool loops cannot run forever.
-    stopWhen: isStepCount(maxStepsLimit),
-  });
-
-  // Wrap the AI SDK stream in the UI message protocol and attach quota headers.
-  return createUIMessageStreamResponse({
-    stream: toUIMessageStream({ stream: result.stream }),
-    headers: {
-      "X-RateLimit-Remaining-5h": String(rateLimit.remaining5h),
-      "X-RateLimit-Remaining-Week": String(rateLimit.remainingWeek),
-    },
+  // Delegate model streaming, tool wiring, and SSE wrapping to the agent runner.
+  return runAgentResponse({
+    workspace: createMutableWorkspace((parsed.data.files as WorkspaceFile[]) || []),
+    messages,
+    modelId: model,
+    thinkingLevel,
+    maxSteps: maxStepsLimit,
+    signal: req.signal,
+    remaining5h: rateLimit.remaining5h,
+    remainingWeek: rateLimit.remainingWeek,
   });
 }
-

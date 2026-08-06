@@ -83,13 +83,11 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     [handleSelectFile, setIsWorkspaceDrawerOpen],
   );
 
-  // Open the workspace drawer when other components dispatch these custom events.
+  // Open the workspace drawer when other components dispatch this custom event.
   React.useEffect(() => {
     const handleCustomOpen = () => setIsWorkspaceDrawerOpen(true);
-    window.addEventListener('open-resume-drawer', handleCustomOpen);
     window.addEventListener('open-workspace-drawer', handleCustomOpen);
     return () => {
-      window.removeEventListener('open-resume-drawer', handleCustomOpen);
       window.removeEventListener('open-workspace-drawer', handleCustomOpen);
     };
   }, [setIsWorkspaceDrawerOpen]);

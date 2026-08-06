@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { WorkspaceFile } from "@/lib/schemas";
-import { ResumeEditEngine } from "@/lib/edit-engine";
+import { StringEditEngine } from "@/lib/edit-engine";
 import {
   MAX_FILE_CHARS,
   MAX_FILES_PER_WORKSPACE,
@@ -56,7 +56,7 @@ export function createReadFileTool({ getCurrentFiles }: WorkspaceToolsContext) {
     inputSchema: z.object({
       nameOrId: z
         .string()
-        .describe("Filename (e.g. 'notes.md', 'resume.md') or file ID to read."),
+        .describe("Filename (e.g. 'notes.md', 'todo.md') or file ID to read."),
       section: z
         .string()
         .optional()
@@ -205,7 +205,7 @@ export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceT
         };
       }
 
-      const result = ResumeEditEngine.applyEdit(targetFile.content, searchString, replaceString);
+      const result = StringEditEngine.applyEdit(targetFile.content, searchString, replaceString);
 
       if (!result.success || !result.newContent) {
         return { success: false, error: result.error };
@@ -261,7 +261,7 @@ export function createRenameFileTool({ getCurrentFiles, onUpdateFile }: Workspac
         .describe("Current filename or file ID of the file to rename."),
       newName: z
         .string()
-        .describe("New filename (e.g. 'notes.md', 'resume.md'). Must not already exist in workspace."),
+        .describe("New filename (e.g. 'notes.md', 'todo.md'). Must not already exist in workspace."),
     }),
     outputSchema: z.object({
       success: z.boolean(),

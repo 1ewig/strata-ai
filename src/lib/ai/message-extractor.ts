@@ -22,13 +22,6 @@ type FileResult = {
   deleted?: boolean;
   fileId?: string;
   name?: string;
-  resume?: {
-    id?: string;
-    title?: string;
-    markdownContent: string;
-    createdAt?: string;
-    updatedAt?: string;
-  };
 };
 
 // Extracts the FileResult from a tool part, handling both the modern typed shape and legacy invocation shape.
@@ -48,18 +41,6 @@ function getToolOutput(part: unknown): FileResult | undefined {
   const inv = (part as any).toolInvocation ?? part;
   const res = inv.result ?? inv.output;
   return res as FileResult | undefined;
-}
-
-// Converts a legacy resume tool result into a workspace file for downstream merging.
-function resumeToFile(resume: NonNullable<FileResult["resume"]>): WorkspaceFile {
-  return {
-    id: resume.id || "resume-file",
-    name: `${resume.title || "resume"}.md`,
-    content: resume.markdownContent,
-    language: "markdown",
-    createdAt: resume.createdAt || new Date().toISOString(),
-    updatedAt: resume.updatedAt || new Date().toISOString(),
-  };
 }
 
 /**
@@ -89,12 +70,6 @@ export function extractFilesFromMessage(msg: UIMessage | GenericUIMessage): Work
       if (res.file.id && !seen.has(res.file.id)) {
         seen.add(res.file.id);
         files.push(res.file);
-      }
-    } else if (res.resume?.markdownContent) {
-      const f = resumeToFile(res.resume);
-      if (!seen.has(f.id)) {
-        seen.add(f.id);
-        files.push(f);
       }
     }
   }
