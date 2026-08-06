@@ -134,11 +134,14 @@ export default React.memo(function ChatInput({
           />
         )}
 
-        {/* Row 2: Bottom Toolbar (Model Dropdown & Quota Ring on Left, Send/Stop Button on Right) */}
+        {/* Row 2: Bottom Toolbar */}
         <div className="flex items-center justify-between pt-1">
 
-          {/* Left Side Controls: Model Dropdown & Quota Ring */}
-          <div className="flex items-center gap-2">
+          {/* Left Side Controls */}
+          <div className="flex items-center gap-2" />
+
+          {/* Right Side Controls: Model Dropdown (Desktop), Quota Ring & Send / Stop Button */}
+          <div className="flex items-center gap-2 shrink-0">
             <div className="hidden md:block">
               <ModelSelectorMenu
                 model={model}
@@ -152,10 +155,7 @@ export default React.memo(function ChatInput({
               rateLimitData={rateLimitData}
               isQuotaExhausted={isQuotaExhausted}
             />
-          </div>
 
-          {/* Right Side Controls: Send / Stop Button */}
-          <div className="flex items-center gap-2 shrink-0">
             {isLoading ? (
               <button
                 id="chat-stop-btn"

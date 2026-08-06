@@ -101,10 +101,14 @@ export default function ModelSelectorMenu({
             setIsOpen(true);
           }
         }}
-        className={`flex items-center gap-1 transition-all rounded-lg px-2 py-0.5 h-6.5 text-caption cursor-pointer shrink-0 border select-none ${
+        className={`flex items-center gap-1 transition-all cursor-pointer shrink-0 select-none ${
+          compact
+            ? 'border-0 bg-transparent px-0.5 py-0.5 h-6.5 text-caption hover:opacity-80'
+            : 'rounded-lg px-2 py-0.5 h-6.5 text-caption border bg-surface-base hover:bg-surface-hover/60 border-edge-raised'
+        } ${
           isOpen
-            ? 'bg-surface-hover text-text-primary border-edge-hover'
-            : 'text-text-muted hover:text-text-primary bg-surface-base hover:bg-surface-hover/60 border-edge-raised'
+            ? 'text-text-primary'
+            : 'text-text-muted hover:text-text-primary'
         }`}
       >
         <span className="font-semibold text-text-primary truncate max-w-[95px] sm:max-w-[130px]">
@@ -125,7 +129,7 @@ export default function ModelSelectorMenu({
       {/* UNIFIED POPOVER MENU (For Mobile & Desktop) */}
       {isOpen && (
         <div className={`absolute ${
-          dropDirection === 'down' ? 'top-full mt-2 left-0' : 'bottom-full mb-2 left-0'
+          dropDirection === 'down' ? 'top-full mt-2 left-0' : 'bottom-full mb-2 right-0'
         } w-72 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-2xl shadow-2xl p-1.5 text-label z-50 animate-in fade-in zoom-in-95 duration-100`}>
 
           {/* SUBMENU HEADER (When drilled down into Effort or More Models) */}
