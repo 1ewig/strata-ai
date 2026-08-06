@@ -147,7 +147,7 @@ export default React.memo(function WorkspaceDrawer({
                       <button
                         type="button"
                         onClick={() => setIsDropdownOpen(prev => !prev)}
-                        className="flex items-center gap-2 bg-surface-elevated text-label font-semibold text-text-bright border border-edge-raised hover:border-edge-hover rounded-xl px-3 py-1.5 transition-colors cursor-pointer max-w-[200px] sm:max-w-[260px]"
+                        className="flex items-center gap-1.5 bg-transparent border-0 px-0.5 py-1 text-label font-semibold text-text-bright hover:opacity-80 transition-opacity cursor-pointer max-w-[200px] sm:max-w-[280px]"
                       >
                         <FileText className="w-4 h-4 text-primary shrink-0" />
                         <span className="truncate flex-1 text-left">{activeFile?.name || 'Select File'}</span>
@@ -168,7 +168,8 @@ export default React.memo(function WorkspaceDrawer({
                             {files.length}/{MAX_FILES_PER_WORKSPACE} files
                           </span>
                         </div>
-                        <div className="py-1 max-h-60 overflow-y-auto">
+
+                        <div className="py-1 max-h-56 overflow-y-auto">
                           {files.map((f) => {
                             const isActive = f.id === activeFile?.id;
                             return (
@@ -194,29 +195,35 @@ export default React.memo(function WorkspaceDrawer({
                             );
                           })}
                         </div>
+
+                        {/* Footer Plus Button */}
+                        <div className="p-1 border-t border-edge-raised">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (files.length >= MAX_FILES_PER_WORKSPACE) return;
+                              setIsDropdownOpen(false);
+                              setIsCreatingNew(true);
+                            }}
+                            disabled={files.length >= MAX_FILES_PER_WORKSPACE}
+                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-caption font-semibold transition-colors cursor-pointer ${
+                              files.length >= MAX_FILES_PER_WORKSPACE
+                                ? 'opacity-40 cursor-not-allowed text-text-muted'
+                                : 'text-primary hover:bg-primary-soft/60'
+                            }`}
+                            title={
+                              files.length >= MAX_FILES_PER_WORKSPACE
+                                ? `Maximum ${MAX_FILES_PER_WORKSPACE} files per workspace reached.`
+                                : 'Create new file'
+                            }
+                          >
+                            <Plus className="w-3.5 h-3.5 text-primary" />
+                            <span>Create New File</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
-
-                  <button
-                    onClick={() => {
-                      if (files.length >= MAX_FILES_PER_WORKSPACE) return;
-                      setIsCreatingNew(prev => !prev);
-                    }}
-                    disabled={files.length >= MAX_FILES_PER_WORKSPACE}
-                    className={`p-1.5 rounded-lg transition-colors ${
-                      files.length >= MAX_FILES_PER_WORKSPACE
-                        ? 'text-text-muted opacity-40 cursor-not-allowed'
-                        : 'text-text-muted hover:text-primary hover:bg-surface-elevated cursor-pointer'
-                    }`}
-                    title={
-                      files.length >= MAX_FILES_PER_WORKSPACE
-                        ? `Maximum ${MAX_FILES_PER_WORKSPACE} files per workspace reached.`
-                        : 'Create new file'
-                    }
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
                 </div>
 
                 {/* Top Right: Delete Icon & Close Button */}
