@@ -62,7 +62,7 @@ function ToolCallCard({
     : 'bg-primary-soft text-primary font-medium';
 
   return (
-    <div className="my-1 w-full text-caption fade-in relative">
+    <div className="my-1 w-full text-caption relative">
       {/* Header bar */}
       <div className="flex items-center justify-between py-1 gap-2">
         <button

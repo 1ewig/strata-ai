@@ -164,7 +164,7 @@ export default React.memo(function ChatInput({
                 type="submit"
                 disabled={!inputValue.trim() || isQuotaExhausted || isCharOverLimit}
                 className={`p-2 rounded-xl shrink-0 transition-all focus:outline-none ${!inputValue.trim() || isQuotaExhausted || isCharOverLimit
-                    ? 'bg-surface-elevated opacity-40 cursor-not-allowed'
+                    ? 'bg-surface-elevated cursor-not-allowed'
                     : 'bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
                   }`}
                 title={
@@ -177,7 +177,7 @@ export default React.memo(function ChatInput({
                         : 'Send message'
                 }
               >
-                <ArrowUp className="w-4 h-4 text-surface" />
+                <ArrowUp className={`w-4 h-4 ${!inputValue.trim() || isQuotaExhausted || isCharOverLimit ? 'text-text-muted' : 'text-surface'}`} />
               </button>
             )}
           </div>

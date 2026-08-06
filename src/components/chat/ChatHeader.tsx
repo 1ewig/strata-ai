@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Folder, Menu } from 'lucide-react';
+import { Folder, Menu, Plus } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
 
 /** Props for the ChatHeader component. */
@@ -12,6 +12,7 @@ interface ChatHeaderProps {
   onOpenFile?: (fileId: string) => void;
   onOpenDrawer: () => void;
   onOpenSidebar?: () => void;
+  onNewChat: () => void;
 }
 
 /**
@@ -24,12 +25,14 @@ interface ChatHeaderProps {
  * @param onOpenFile - Optional callback when selecting a file.
  * @param onOpenDrawer - Opens the workspace files drawer.
  * @param onOpenSidebar - Opens the mobile sidebar; hides the toggle when omitted.
+ * @param onNewChat - Creates and navigates to a fresh conversation (mobile only).
  */
 export default React.memo(function ChatHeader({
   title,
   files,
   onOpenDrawer,
   onOpenSidebar,
+  onNewChat,
 }: ChatHeaderProps) {
   return (
     <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40">
@@ -51,6 +54,16 @@ export default React.memo(function ChatHeader({
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Mobile New Chat Button (Creates a fresh conversation) */}
+        <button
+          onClick={onNewChat}
+          className="md:hidden flex items-center justify-center p-2 text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 rounded-lg hover:bg-primary-soft-strong transition-all cursor-pointer"
+          title="New chat"
+          aria-label="New chat"
+        >
+          <Plus className="w-4 h-4" />
+        </button>
+
         {/* Desktop Files Button (Opens Workspace Drawer) */}
         <button
           onClick={onOpenDrawer}

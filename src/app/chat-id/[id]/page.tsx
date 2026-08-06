@@ -148,6 +148,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               onOpenFile={handleOpenFile}
               onOpenDrawer={handleOpenDrawer}
               onOpenSidebar={handleOpenSidebar}
+              onNewChat={handleNewChat}
             />
           );
         })()}

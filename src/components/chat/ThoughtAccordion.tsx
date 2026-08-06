@@ -68,7 +68,7 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
   if (!text || !text.trim()) return null;
 
   return (
-    <div className="my-1.5 w-full text-caption fade-in">
+    <div className="my-1.5 w-full text-caption">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary transition-colors text-left font-mono text-caption cursor-pointer group"
