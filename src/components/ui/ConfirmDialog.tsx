@@ -75,104 +75,109 @@ export default function ConfirmDialog({
     }
   }, [isOpen]);
 
-  if (!isOpen || !isMounted) return null;
+  if (!isMounted) return null;
 
   const isDanger = variant === 'danger';
 
   const dialogContent = (
     <AnimatePresence>
-      <div
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
-      >
-        {/* Backdrop overlay */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={() => {
-            if (!isLoading) onCancel();
-          }}
-          className="fixed inset-0 bg-scrim backdrop-blur-xs z-[100]"
-        />
-
-        {/* Modal Card */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 8 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 8 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="relative w-full max-w-md bg-surface-raised border border-edge-raised rounded-2xl shadow-card-lg p-5 sm:p-6 z-[101] my-auto text-left"
+      {isOpen && (
+        <div
+          key="confirm-dialog-container"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 overflow-y-auto"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
         >
-          {/* Header Row: Icon & Title */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div
-                className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+          {/* Backdrop overlay */}
+          <motion.div
+            key="confirm-dialog-backdrop"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              if (!isLoading) onCancel();
+            }}
+            className="fixed inset-0 bg-scrim backdrop-blur-xs z-[100]"
+          />
+
+          {/* Modal Card */}
+          <motion.div
+            key="confirm-dialog-card"
+            initial={{ opacity: 0, scale: 0.95, y: 8 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 8 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="relative w-full max-w-md bg-surface-raised border border-edge-raised rounded-2xl shadow-card-lg p-5 sm:p-6 z-[101] my-auto text-left"
+          >
+            {/* Header Row: Icon & Title */}
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                    isDanger
+                      ? 'bg-danger-soft text-danger border border-danger/30'
+                      : 'bg-primary-soft text-primary border border-primary/30'
+                  }`}
+                >
+                  <AlertTriangle className="w-5 h-5" />
+                </div>
+                <h3
+                  id="confirm-dialog-title"
+                  className="text-subheading font-display font-bold text-text-bright"
+                >
+                  {title}
+                </h3>
+              </div>
+              <button
+                onClick={onCancel}
+                disabled={isLoading}
+                className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                aria-label="Close dialog"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Body Description */}
+            <div className="mt-3 text-body text-text-secondary leading-relaxed">
+              {description}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="mt-6 flex items-center justify-end gap-2.5 flex-col-reverse sm:flex-row">
+              <button
+                type="button"
+                onClick={onCancel}
+                disabled={isLoading}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-label font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover/60 border border-edge-raised transition-colors cursor-pointer disabled:opacity-50"
+              >
+                {cancelLabel}
+              </button>
+              <button
+                type="button"
+                ref={confirmButtonRef}
+                onClick={onConfirm}
+                disabled={isLoading}
+                className={`w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-label font-semibold transition-all cursor-pointer shadow-button disabled:opacity-50 disabled:cursor-not-allowed ${
                   isDanger
-                    ? 'bg-danger-soft text-danger border border-danger/30'
-                    : 'bg-primary-soft text-primary border border-primary/30'
+                    ? 'bg-danger hover:bg-danger/90 text-surface'
+                    : 'bg-primary hover:bg-primary-hover text-surface'
                 }`}
               >
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <h3
-                id="confirm-dialog-title"
-                className="text-subheading font-display font-bold text-text-bright"
-              >
-                {title}
-              </h3>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  <span>{confirmLabel}</span>
+                )}
+              </button>
             </div>
-            <button
-              onClick={onCancel}
-              disabled={isLoading}
-              className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer disabled:opacity-50"
-              aria-label="Close dialog"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          {/* Body Description */}
-          <div className="mt-3 text-body text-text-secondary leading-relaxed">
-            {description}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="mt-6 flex items-center justify-end gap-2.5 flex-col-reverse sm:flex-row">
-            <button
-              type="button"
-              onClick={onCancel}
-              disabled={isLoading}
-              className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-label font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover/60 border border-edge-raised transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {cancelLabel}
-            </button>
-            <button
-              type="button"
-              ref={confirmButtonRef}
-              onClick={onConfirm}
-              disabled={isLoading}
-              className={`w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-label font-semibold transition-all cursor-pointer shadow-button disabled:opacity-50 disabled:cursor-not-allowed ${
-                isDanger
-                  ? 'bg-danger hover:bg-danger/90 text-surface'
-                  : 'bg-primary hover:bg-primary-hover text-surface'
-              }`}
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <span>{confirmLabel}</span>
-              )}
-            </button>
-          </div>
-        </motion.div>
-      </div>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   );
 
