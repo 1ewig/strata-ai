@@ -124,17 +124,27 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
       />
 
       <div className="flex-1 flex flex-col h-dvh overflow-hidden min-w-0 relative">
-        <ChatHeader
-          files={files}
-          activeFileId={activeFileId}
-          onOpenFile={handleOpenFile}
-          onOpenDrawer={handleOpenDrawer}
-          onOpenSidebar={handleOpenSidebar}
-          model={model}
-          thinkingLevel={thinkingLevel}
-          onModelSelect={handleModelSelect}
-          onThinkingLevelChange={handleThinkingLevelChange}
-        />
+        {(() => {
+          const activeConversation = conversations?.find(c => c.id === chatId);
+          const headerTitle = displayMessages.length > 0
+            ? activeConversation?.title || 'Chat Workspace'
+            : 'Chat Workspace';
+
+          return (
+            <ChatHeader
+              title={headerTitle}
+              files={files}
+              activeFileId={activeFileId}
+              onOpenFile={handleOpenFile}
+              onOpenDrawer={handleOpenDrawer}
+              onOpenSidebar={handleOpenSidebar}
+              model={model}
+              thinkingLevel={thinkingLevel}
+              onModelSelect={handleModelSelect}
+              onThinkingLevelChange={handleThinkingLevelChange}
+            />
+          );
+        })()}
 
         <StickToBottom className="flex-1 min-h-0" resize="auto" initial="instant">
           {(context) => (
