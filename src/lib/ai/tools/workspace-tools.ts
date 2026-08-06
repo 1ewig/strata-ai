@@ -105,7 +105,7 @@ export function createReadFileTool({ getCurrentFiles }: WorkspaceToolsContext) {
  * @param context - Workspace context providing current-file access and update callbacks.
  * @returns An AI SDK tool for writing workspace files.
  */
-export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceToolsContext) {
+export function createWriteFileTool({ getCurrentFiles, onUpdateFile, writer }: WorkspaceToolsContext) {
   return tool({
     description:
       "Create a new file or completely replace an existing file in the workspace canvas. Prefer editFile for targeted, surgical changes.",
@@ -152,6 +152,10 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: Workspace
       };
 
       onUpdateFile(updatedFile);
+      writer?.write({
+        type: "data-workspace",
+        data: { event: "file-updated", file: updatedFile },
+      });
 
       return {
         action: existing ? "replaced" : "created",
@@ -166,7 +170,7 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile }: Workspace
  * @param context - Workspace context providing current-file access and update callbacks.
  * @returns An AI SDK tool for editing workspace files.
  */
-export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceToolsContext) {
+export function createEditFileTool({ getCurrentFiles, onUpdateFile, writer }: WorkspaceToolsContext) {
   return tool({
     description:
       "Surgically edit a specific block of a workspace file. Call readFile first to get the exact text, then use searchString to specify the verbatim block to replace.",
@@ -234,6 +238,10 @@ export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceT
       };
 
       onUpdateFile(updatedFile);
+      writer?.write({
+        type: "data-workspace",
+        data: { event: "file-updated", file: updatedFile },
+      });
 
       return {
         success: true,
@@ -251,7 +259,7 @@ export function createEditFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceT
  * @param context - Workspace context providing current-file access and update callbacks.
  * @returns An AI SDK tool for renaming workspace files.
  */
-export function createRenameFileTool({ getCurrentFiles, onUpdateFile }: WorkspaceToolsContext) {
+export function createRenameFileTool({ getCurrentFiles, onUpdateFile, writer }: WorkspaceToolsContext) {
   return tool({
     description:
       "Rename a workspace file. Updates the filename while preserving its content.",
@@ -293,6 +301,10 @@ export function createRenameFileTool({ getCurrentFiles, onUpdateFile }: Workspac
       };
 
       onUpdateFile(renamed);
+      writer?.write({
+        type: "data-workspace",
+        data: { event: "file-updated", file: renamed },
+      });
 
       return {
         success: true,
@@ -309,7 +321,7 @@ export function createRenameFileTool({ getCurrentFiles, onUpdateFile }: Workspac
  * @param context - Workspace context providing current-file access and delete callbacks.
  * @returns An AI SDK tool for deleting workspace files.
  */
-export function createDeleteFileTool({ getCurrentFiles, onDeleteFile }: WorkspaceToolsContext) {
+export function createDeleteFileTool({ getCurrentFiles, onDeleteFile, writer }: WorkspaceToolsContext) {
   return tool({
     description: "Delete a file from the workspace canvas.",
     inputSchema: z.object({
@@ -330,6 +342,10 @@ export function createDeleteFileTool({ getCurrentFiles, onDeleteFile }: Workspac
       }
 
       onDeleteFile(targetFile.id);
+      writer?.write({
+        type: "data-workspace",
+        data: { event: "file-deleted", fileId: targetFile.id, name: targetFile.name },
+      });
 
       return {
         deleted: true,

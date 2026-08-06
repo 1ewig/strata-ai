@@ -5,6 +5,7 @@ import {
   createUIMessageStreamResponse,
   toUIMessageStream,
   smoothStream,
+  createUIMessageStream,
 } from "ai";
 import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
 import { resolveAgentModel } from "@/lib/ai/providers";
@@ -56,53 +57,63 @@ export async function runAgentResponse({
   // Resolve the requested model to its provider-specific config (Google or Fireworks).
   const resolvedModel = resolveAgentModel(modelId || "gemini-3.5-flash-lite", thinkingLevel);
 
-  // Stream the agent run, wiring the workspace tools to the mutable file list.
-  const result = streamText({
-    model: resolvedModel.model,
-    // Spread conditionally so provider branches can omit unsupported options.
-    ...(resolvedModel.reasoning !== undefined
-      ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
-      : {}),
-    ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
-    system: buildSystemInstruction(workspace.getCurrentFiles()),
-    messages: await convertToModelMessages(messages),
-    tools: createWorkspaceTools(workspace),
-    abortSignal: signal,
-    experimental_transform: smoothStream({
-      delayInMs: 25,
-      chunking: "word",
-    }),
-    prepareStep: async ({ stepNumber }) => {
-      console.log(`[agent] Preparing step ${stepNumber}. Active workspace files: ${workspace.getCurrentFiles().length}`);
-      // Rebuild the system prompt per step so the model sees live file state.
-      return {
-        system: buildSystemInstruction(workspace.getCurrentFiles()),
+  // Wrap streamText with createUIMessageStream so tools can emit live data-workspace events.
+  const stream = createUIMessageStream({
+    execute: async ({ writer }) => {
+      const workspaceWithWriter: WorkspaceToolsContext = {
+        ...workspace,
+        writer,
       };
+
+      const result = streamText({
+        model: resolvedModel.model,
+        ...(resolvedModel.reasoning !== undefined
+          ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
+          : {}),
+        ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
+        system: buildSystemInstruction(workspaceWithWriter.getCurrentFiles()),
+        messages: await convertToModelMessages(messages),
+        tools: createWorkspaceTools(workspaceWithWriter),
+        abortSignal: signal,
+        experimental_transform: smoothStream({
+          delayInMs: 25,
+          chunking: "word",
+        }),
+        prepareStep: async ({ stepNumber }) => {
+          console.log(
+            `[agent] Preparing step ${stepNumber}. Active workspace files: ${workspaceWithWriter.getCurrentFiles().length}`
+          );
+          return {
+            system: buildSystemInstruction(workspaceWithWriter.getCurrentFiles()),
+          };
+        },
+        onStart() {
+          console.log("[agent] Generation stream started.");
+        },
+        onStepEnd({ stepNumber, toolCalls }) {
+          console.log(
+            `[agent] Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`
+          );
+        },
+        onEnd({ finishReason, usage }) {
+          console.log(
+            `[agent] Stream finished (${finishReason}). Total token usage:`,
+            usage
+          );
+        },
+        onError({ error }) {
+          console.error("[agent] Stream error:", error);
+        },
+        stopWhen: isStepCount(maxSteps),
+      });
+
+      writer.merge(toUIMessageStream({ stream: result.stream }));
     },
-    onStart() {
-      console.log("[agent] Generation stream started.");
-    },
-    onStepEnd({ stepNumber, toolCalls }) {
-      console.log(
-        `[agent] Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`,
-      );
-    },
-    onEnd({ finishReason, usage }) {
-      console.log(
-        `[agent] Stream finished (${finishReason}). Total token usage:`,
-        usage,
-      );
-    },
-    onError({ error }) {
-      console.error("[agent] Stream error:", error);
-    },
-    // Bound the run to the step limit so tool loops cannot run forever.
-    stopWhen: isStepCount(maxSteps),
   });
 
-  // Wrap the AI SDK stream in the UI message protocol and attach quota headers.
+  // Wrap the UI message stream and attach quota headers.
   return createUIMessageStreamResponse({
-    stream: toUIMessageStream({ stream: result.stream }),
+    stream,
     headers: {
       "X-RateLimit-Remaining-5h": String(remaining5h),
       "X-RateLimit-Remaining-Week": String(remainingWeek),

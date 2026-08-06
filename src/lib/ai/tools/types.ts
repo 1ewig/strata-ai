@@ -11,6 +11,9 @@ export interface WorkspaceToolsContext {
   getCurrentFiles: () => WorkspaceFile[];
   onUpdateFile: (file: WorkspaceFile) => void;
   onDeleteFile: (fileIdOrName: string) => void;
+  writer?: {
+    write: (part: { type: `data-${string}`; id?: string; data: any; transient?: boolean }) => void;
+  };
 }
 
 // Metadata-only shape for file listings (deliberately excludes content).

@@ -98,22 +98,22 @@ export default function ModelSelectorMenu({
             setIsOpen(true);
           }
         }}
-        className={`flex items-center gap-1 text-caption transition-all cursor-pointer shrink-0 select-none ${
+        className={`flex items-center gap-1.5 text-label transition-all cursor-pointer shrink-0 select-none ${
           isOpen
             ? 'text-text-primary'
             : 'text-text-muted hover:text-text-primary'
         }`}
       >
-        <span className="font-semibold text-text-primary truncate max-w-[95px] sm:max-w-[130px]">
+        <span className="font-semibold text-text-primary truncate max-w-[130px] sm:max-w-[220px] md:max-w-[320px]">
           {currentModel?.label || 'Model'}
         </span>
         {effortLabel && (
-          <span className="text-micro px-1 py-0 rounded-md bg-surface-hover text-text-muted font-normal capitalize">
+          <span className="text-micro px-1.5 py-0.5 rounded-md bg-surface-hover text-text-muted font-medium capitalize shrink-0">
             {effortLabel}
           </span>
         )}
         <ChevronDown
-          className={`w-3.5 h-3.5 text-text-muted shrink-0 transition-transform duration-200 ${
+          className={`w-4 h-4 text-text-muted shrink-0 transition-transform duration-200 ${
             isOpen ? 'rotate-180 text-text-primary' : ''
           }`}
         />

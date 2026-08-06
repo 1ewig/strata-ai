@@ -95,6 +95,19 @@ export function useChatSession(chatId: string) {
   const chat = useChat({
     id: chatId,
     transport: transport as any,
+    onData: useCallback(
+      (dataPart: any) => {
+        if (dataPart?.type === 'data-workspace' && dataPart.data) {
+          const { event, file, fileId } = dataPart.data;
+          if (event === 'file-updated' && file) {
+            workspace.handleUpdateFile(file);
+          } else if (event === 'file-deleted' && fileId) {
+            workspace.handleDeleteFile(fileId);
+          }
+        }
+      },
+      [workspace],
+    ),
     onError: useCallback(
       (err: Error) => {
         handleChatError({
