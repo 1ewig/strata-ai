@@ -27,6 +27,17 @@ function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps)
   const [isOpen, setIsOpen] = useState(() => Boolean(isStreaming));
   const startTimeRef = useRef<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(1);
+  const prevStreamingRef = useRef(isStreaming);
+
+  // While working/streaming, keep open so thoughts & tools display live; collapse when work finishes.
+  useEffect(() => {
+    if (prevStreamingRef.current && !isStreaming) {
+      setIsOpen(false);
+    } else if (!prevStreamingRef.current && isStreaming) {
+      setIsOpen(true);
+    }
+    prevStreamingRef.current = isStreaming;
+  }, [isStreaming]);
 
   // Compute estimated duration for historical or non-streaming messages
   const estimatedSeconds = React.useMemo(() => {
