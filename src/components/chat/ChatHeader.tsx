@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Folder, FileText, Menu, Plus } from 'lucide-react';
+import { ChevronDown, Folder, FileText, Menu } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
 import ModelSelectorMenu from './ModelSelectorMenu';
 
@@ -96,14 +96,25 @@ export default React.memo(function ChatHeader({
       <div className="flex items-center gap-3">
         {/* Files Overflow Dropdown */}
         <div className="relative" ref={fileMenuRef}>
+          {/* Desktop Files Button (Full label & badge) */}
           <button
             onClick={() => setFileMenuOpen(prev => !prev)}
-            className="flex items-center gap-1.5 text-label text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary-soft-strong transition-all font-medium cursor-pointer"
+            className="hidden md:flex items-center gap-1.5 text-label text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary-soft-strong transition-all font-medium cursor-pointer"
             title="Workspace Files"
           >
             <Folder className="w-3.5 h-3.5" />
             Files ({files.length})
             <ChevronDown className="w-3 h-3 ml-0.5 opacity-80" />
+          </button>
+
+          {/* Mobile Files Icon Button (Simple folder icon) */}
+          <button
+            onClick={() => setFileMenuOpen(prev => !prev)}
+            className="md:hidden flex items-center justify-center p-2 text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 rounded-lg hover:bg-primary-soft-strong transition-all cursor-pointer"
+            title={`Workspace Files (${files.length})`}
+            aria-label="Workspace Files"
+          >
+            <Folder className="w-4 h-4" />
           </button>
 
           {fileMenuOpen && (
@@ -142,19 +153,6 @@ export default React.memo(function ChatHeader({
                     );
                   })
                 )}
-              </div>
-
-              <div className="p-1.5 border-t border-edge-raised bg-surface-base/30">
-                <button
-                  onClick={() => {
-                    setFileMenuOpen(false);
-                    onOpenDrawer();
-                  }}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-primary hover:bg-primary-soft font-medium transition-colors cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  Manage Workspace Files
-                </button>
               </div>
             </div>
           )}
