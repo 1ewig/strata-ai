@@ -8,7 +8,7 @@
 
 - **What it is:** Strata AI is an AI-powered "agentic workspace studio" — a chat-first app where users create, edit, analyze, rename, and organize multi-file workspaces (documents, markdown notes, code snippets) through a conversational interface backed by Google Gemini models.
 - **Core mechanic:** The assistant executes 8 schema-validated tools (6 workspace tools + `webSearch` & `extractUrl`) in multi-step agentic loops, mutating files live. Content lives in files on a "canvas" (Workspace Drawer); chat is the control surface.
-- **Target audience:** Individual power users (job-seeker resume workflows were the original focus; the "resume" naming survives in legacy code) who want a local-first AI document studio without cloud sync complexity.
+- **Target audience:** Individual power users (job-seeker document workflows were the original focus) who want a local-first AI document studio without cloud sync complexity.
 - **Business problem solved:** (a) Putting durable, structured content into files instead of disposable chat messages; (b) precise, non-destructive AI edits via a surgical string-edit engine; (c) no-database-setup local persistence via IndexedDB.
 - **Core feature surface:**
   - Multi-step agentic file operations & web research — the model chains `readFile` → `editFile`/`writeFile` or `webSearch` → `extractUrl` across up to 75 tool steps.
@@ -73,8 +73,8 @@
 2. `chat.sendMessage({ text })` on a `useChat` instance whose `transport` is built via `useChatTransport`; the transport's body closure snapshots current model, thinking level, and workspace files via refs.
 3. Request passes through `src/proxy.ts` (Next.js 16 proxy, the middleware replacement): session-cookie check + security headers.
 4. `app/api/agent/route.ts` (Route Handler) verifies the session server-side with `auth.api.getSession`, then calls `checkAndIncrementRateLimit(userId)`.
-5. Body is parsed with Zod (`messages`, `files`, `resumes` legacy, `model`, `thinkingLevel`, `maxSteps`).
-6. `streamText()` is invoked with the provider-resolved model (Google or Fireworks, via `lib/ai/providers.ts`), a 6-section `buildSystemInstruction(files)` prompt, `convertToModelMessages(messages)`, and `createWorkspaceTools(...)` whose closures mutate a per-request `mutableFiles` array.
+5. Body is parsed with Zod (`messages`, `files`, `model`, `thinkingLevel`, `maxSteps`).
+6. Stream assembly is delegated to `runAgentResponse` (`lib/ai/agent-runner.ts`): it resolves the provider model (Google or Fireworks via `lib/ai/providers.ts`), builds a 6-section `buildSystemInstruction(files)` prompt, `convertToModelMessages(messages)`, and `createWorkspaceTools(...)` bound to a per-request `createMutableWorkspace` (`lib/ai/workspace.ts`) whose closures mutate an in-memory `files` array.
 7. The response is returned as an SSE UI-message stream (`createUIMessageStreamResponse` + `toUIMessageStream`), carrying `X-RateLimit-Remaining-5h` / `X-RateLimit-Remaining-Week` headers.
 8. `useChat` updates `chat.messages` + `chat.status` reactively; the UI renders streaming text, reasoning accordion, and tool cards.
 9. `onFinish` (handled by `chat-reconciler.ts`) persists every message as a native AI SDK `UIMessage` into Dexie, extracts file create/edit/delete results from tool parts, merges them into the conversation's `files` array, and persists. Auto-continuation fires if `finishReason === 'step-limit'` (up to 2 more passes).
@@ -175,14 +175,16 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── auth-client.ts        # Better Auth React client (signIn/signUp/signOut/useSession)
     │   │   ├── rate-limit.ts         # DB sliding-window limiter (message_log): checkAndIncrement + getRateLimitStatus
     │   │   ├── models.ts             # Model registry, descriptions, thinking-level config, localStorage helpers
-    │   │   ├── schemas.ts            # Zod: WorkspaceFile, Resume, ToolCall, ChatMessage (legacy)
+    │   │   ├── schemas.ts            # Zod: WorkspaceFile
     │   │   ├── id.ts                 # crypto.randomUUID with fallback
-    │   │   ├── edit-engine.ts        # ResumeEditEngine: 3-tier surgical string matching
+    │   │   ├── edit-engine.ts        # StringEditEngine: 3-tier surgical string matching
     │   │   ├── db/db.ts              # Dexie ChatDatabase (v5), Conversation/DBMessage types, CRUD helpers
     │   │   └── ai/
     │   │       ├── index.ts          # Re-exports prompts + tools
     │   │       ├── prompts.ts        # buildSystemInstruction(files) — 6-section advanced system prompt
     │   │       ├── providers.ts      # SERVER-ONLY model→provider resolver (google/fireworks streamText config)
+    │   │       ├── agent-runner.ts   # SERVER-ONLY runAgentResponse: streamText assembly, transforms, lifecycle, SSE + quota headers
+    │   │       ├── workspace.ts      # Shared upsertFileIntoWorkspace/removeFileFromWorkspace + createMutableWorkspace
     │   │       ├── tools.ts          # Barrel: re-exports tool factories + createWorkspaceTools (8 tools)
     │   │       ├── tools/            # Tool factory submodules (split by domain)
     │   │       │   ├── types.ts          # WorkspaceToolsContext, Zod file schemas, findWorkspaceFile/isSameFilename
@@ -206,9 +208,9 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 ### 5.1 Client-side (Dexie IndexedDB — the product database)
 
 - **`conversations`** table (keyPath `id`; indexes `id, userId, updatedAt, createdAt`):
-  - `id` (UUID, matches the `/chat-id/:id` URL), `userId?` (Better Auth user ID), `title` (auto-title from first message or "New Chat"), `model` (Gemini model id), `thinkingLevel?` ("minimal"|"low"|"medium"|"high"), `files?` (embedded array of WorkspaceFile — the active workspace snapshot), `activeFileId?`, `resume?` (legacy single-resume object, migration fallback), `createdAt`/`updatedAt` (ISO strings).
+  - `id` (UUID, matches the `/chat-id/:id` URL), `userId?` (Better Auth user ID), `title` (auto-title from first message or "New Chat"), `model` (Gemini model id), `thinkingLevel?` ("minimal"|"low"|"medium"|"high"), `files?` (embedded array of WorkspaceFile — the active workspace snapshot), `activeFileId?`, `createdAt`/`updatedAt` (ISO strings).
 - **`messages`** table (keyPath `id`; indexes `id, chatId, userId, timestamp`):
-  - `DBMessage` extends AI SDK `UIMessage` (native parts array) with `chatId` (indexed FK to conversations), `userId?` (Better Auth user ID) + `timestamp`. Stored as native UI messages — no shape conversion.
+  - `DBMessage` extends AI SDK `UIMessage` (native parts array) with `chatId` (indexed FK to conversations), `userId?` (Better Auth user ID) + `timestamp`. Stored as native UI messages — no shape conversion. **`timestamp` is a position-derived ordering key**: `chat-reconciler.ts` stamps each message with a strictly increasing value derived from its index in `allMessages`, so `sortBy('timestamp')` deterministically reproduces conversation order (a single shared timestamp would tie and fall back to random UUID ordering).
 - **`WorkspaceFile`** entity (embedded in conversations.files): `id`, `name`, `content`, `language` (default "markdown"), `createdAt`, `updatedAt`. Note: no per-file indexes; the whole array is read/written as one column.
 - **Schema version history:** v1 (custom ChatMessage) → v2 (+thinkingLevel) → v3 (type updates) → v4 (native UIMessage; +files/activeFileId on conversations) → v5 (+userId indexing on conversations and messages for per-user session isolation). To bump: increment version in `db.ts` constructor and add a `stores()` definition.
 
@@ -223,7 +225,6 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 ### 5.3 Relationships & state transitions
 
 - **1:N** `user` → `session` (cascade delete); `user` → `message_log` (cascade delete). Auth identity and workspace data are **not** linked server-side — workspaces are per-browser, not per-user.
-- **Legacy → current migration:** a conversation with `resume` and no `files` is lazily converted by `getWorkspaceFiles()` into a single `WorkspaceFile` named `<title>.md`; the API route performs the same fallback when `files` is empty but `resumes` is present.
 - **Rate-limit window state:** quota is a pure function of `COUNT(*)` over `message_log` in sliding 5-hour and 7-day windows; exhaustion disables sending until the oldest row ages out (`retryAfter` seconds). No persistent state machine — the log table IS the state.
 
 ### 5.4 Model registry (`lib/models.ts`)
@@ -282,7 +283,7 @@ All tools are `ai.tool()` definitions registered by `createWorkspaceTools(contex
 | `listFiles` | `{}` | `{ count, files: [{id,name,language,charCount}] }` | Metadata only — never full content |
 | `readFile` | `nameOrId`, `section?` | `{ exists, name?, section?, content?, error? }` | Full content or heading-section regex extract (H1–H6, case-insensitive) |
 | `writeFile` | `name`, `content`, `language?` | `{ action: "created"\|"replaced", file }` | Full create/replace; auto language (`.txt` → text, else markdown); reuses existing id on replace |
-| `editFile` | `nameOrId`, `explanation`, `searchString`, `replaceString` | `{ success, explanation?, strategyUsed?, message?, error?, file? }` | Routes through `ResumeEditEngine`; readFile-first discipline |
+| `editFile` | `nameOrId`, `explanation`, `searchString`, `replaceString` | `{ success, explanation?, strategyUsed?, message?, error?, file? }` | Routes through `StringEditEngine`; readFile-first discipline |
 | `renameFile` | `nameOrId`, `newName` | `{ success, oldName?, newName?, file?, error? }` | Rejects case-insensitive name collisions |
 | `deleteFile` | `nameOrId` | `{ deleted, fileId?, name?, error? }` | Matches by id or case-insensitive name |
 
@@ -297,9 +298,9 @@ The two web tools (`lib/ai/tools/tavily-tools.ts`, shared `callTavilyApi` helper
 
 ### 7.2 Agent endpoint configuration (`/api/agent`)
 
-- **Validation:** `bodySchema` (Zod): `messages` (any[]), `files?`, `resumes?` (legacy), `model?`, `thinkingLevel?`, `maxSteps?`; `maxSteps` clamped to 1–30.
+- **Validation:** `bodySchema` (Zod): `messages` (any[]), `files?`, `model?`, `thinkingLevel?`, `maxSteps?`; `maxSteps` clamped to 1–30.
 - **Error handling:** 401 (no session), 429 (quota — with `Retry-After` + `X-RateLimit-*` headers and a human message), 400 (Zod failure, flattened details). Stream errors only `console.error` (no rethrow).
-- **`streamText` config:** model + reasoning + `providerOptions` are resolved per-provider by `lib/ai/providers.ts` (`resolveAgentModel`); system prompt rebuilt on every `prepareStep` (so the model always sees current file state); `smoothStream({ delayInMs: 15, chunking: "word" })`; `stopWhen: isStepCount(maxSteps)`; Google models pass `reasoning` mapped from thinkingLevel (Gemma models pass provider-default) + `providerOptions.google.thinkingConfig.includeThoughts: true` (feeds ThoughtAccordion); Fireworks models pass `reasoning` mapped to `reasoning_effort` (low/high) + `providerOptions.fireworks` `thinking: { type: "enabled" }` and `reasoningHistory: "interleaved"` (keeps reasoning across tool calls); lifecycle `onStart`/`onStepEnd`/`onEnd`/`onError` logging.
+- **`streamText` config** (all owned by `runAgentResponse` in `lib/ai/agent-runner.ts`; the route only delegates): model + reasoning + `providerOptions` are resolved per-provider by `lib/ai/providers.ts` (`resolveAgentModel`); system prompt rebuilt on every `prepareStep` (so the model always sees current file state); `smoothStream({ delayInMs: 15, chunking: "word" })`; `stopWhen: isStepCount(maxSteps)`; Google models pass `reasoning` mapped from thinkingLevel (Gemma models pass provider-default) + `providerOptions.google.thinkingConfig.includeThoughts: true` (feeds ThoughtAccordion); Fireworks models pass `reasoning` mapped to `reasoning_effort` (low/high) + `providerOptions.fireworks` `thinking: { type: "enabled" }` and `reasoningHistory: "interleaved"` (keeps reasoning across tool calls); lifecycle `onStart`/`onStepEnd`/`onEnd`/`onError` logging.
 - **Auto-continuation:** client-side, in `useChatSession` — `finishReason === 'step-limit'` triggers up to 2 follow-up "please continue" sends (max ~75 effective steps), reset on manual send.
 - **Rate limiting:** `checkAndIncrementRateLimit(userId)` runs before streaming; success response headers carry remaining quota; 429 branch zeroes the 5h header.
 
@@ -319,10 +320,10 @@ The two web tools (`lib/ai/tools/tavily-tools.ts`, shared `callTavilyApi` helper
 
 This is the single reconciliation point that turns a streamed assistant message into durable state:
 
-1. Persist **every** message in the conversation (not just the last) via batched `db.messages.bulkPut` inside a single atomic Dexie transaction (`db.transaction('rw', [db.messages, db.conversations], ...)`), touching the conversation's `updatedAt`.
+1. Persist **every** message in the conversation (not just the last) via batched `db.messages.bulkPut` inside a single atomic Dexie transaction (`db.transaction('rw', [db.messages, db.conversations], ...)`), touching the conversation's `updatedAt`. Each message is stamped with a **unique position-derived `timestamp`** (base + its index in `allMessages`) so deduplicated reloads keep true conversation order — never a single shared value.
 2. Extract deletions (`extractDeletedFilesFromMessage`) and file updates (`extractFilesFromMessage`) from the **current** assistant message's tool-result parts only.
-3. If any deletions exist, filter them out of the conversation's current `files` (match by `fileId` or case-insensitive name).
-4. Merge extracted file objects into `files` — replace by `id` or case-insensitive name, else append; dedupe by id.
+3. If any deletions exist, filter them out of the conversation's current `files` via the shared `removeFileFromWorkspace` helper (`lib/ai/workspace.ts`), matching by `fileId` or case-insensitive name.
+4. Merge extracted file objects into `files` via the shared `upsertFileIntoWorkspace` helper — replace by `id` or case-insensitive name, else append; dedupe by id.
 5. Persist the merged array via `updateConversationFiles` and reset the active file to the first remaining file.
 6. Auto-continuation: if `finishReason === 'step-limit'` and fewer than 2 passes have run, schedule a follow-up "Please continue completing the task where you left off." send (300ms delay) and re-enter the loop; otherwise reset the continuation counter. This effectively allows up to 3 chained `isStepCount` executions (~75 steps) for complex tasks.
 
@@ -387,7 +388,7 @@ This is the single reconciliation point that turns a streamed assistant message 
 12. **Dexie schema upgrades:** bump the version in `lib/db/db.ts` constructor and add a `stores()` definition; keep messages as native `UIMessage` shape (`DBMessage`).
 13. **System prompt discipline:** inject metadata-only file listings into the prompt (name/language/charCount/id); never dump full file content — the model must call `readFile`.
 14. **No emojis in code/files.** (README/docs may differ; code must not.)
-15. **Never reintroduce removed/migrated patterns** (e.g., the `already-authenticated` component or custom `ChatMessage` shapes). The message model is native AI SDK `UIMessage`; the file model is the workspace `files` array.
+15. **Never reintroduce removed/migrated patterns** (e.g., the `already-authenticated` component, custom `ChatMessage`/`Resume` shapes, or the legacy `resumes` request field). The message model is native AI SDK `UIMessage`; the file model is the workspace `files` array.
 16. **Keep `/api/agent` stateless.** Do not persist workspace state server-side; workspace lives in the request body + Dexie. A future server-side persistence migration would change this rule by design — until then it holds.
 17. **Respect the proxy matcher.** Adding a protected page means adding it to `config.matcher` in `src/proxy.ts`; do not widen bypass lists (`/auth`, `/api/auth`) without explicit approval.
 18. **SSR hydration is the norm for signed-in data.** Follow the `RootLayout` → provider `initialData` pattern for any new per-user server state instead of client-only fetches.

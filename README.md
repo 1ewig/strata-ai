@@ -27,7 +27,7 @@
 
 - **Autonomous Agentic Workspace Tools**: 8 schema-validated tools enabling the AI to inspect, read, create, surgically edit, rename, and delete workspace documents, plus perform real-time Tavily web searches (`webSearch`, advanced depth, domain/time filters, raw-content mode) and deep Markdown page extraction (`extractUrl`).
 - **Significantly Reduced Context Footprint**: System prompts inject lightweight file metadata (`name`, `language`, `charCount`, `id`) rather than raw content. The agent calls `readFile` only when precise code context is required.
-- **3-Tier Surgical Edit Engine (`ResumeEditEngine`)**: Performs precise string manipulation through exact matching, whitespace normalization, and 2-point anchor bounded matching without breaking document structure.
+- **3-Tier Surgical Edit Engine (`StringEditEngine`)**: Performs precise string manipulation through exact matching, whitespace normalization, and 2-point anchor bounded matching without breaking document structure.
 - **Local-First Client Persistence**: Complete conversation histories, dynamic file states, and user preferences persist client-side via **Dexie.js (IndexedDB v5)** with per-user session isolation—no server round-trips for workspace state.
 - **Enhanced Friendly Error Handling**: Technical API errors, session expirations, network drops, and character limits are captured and transformed into clean, polite assistant message bubbles that cleanly replace loading states.
 - **Auto-Continuation Execution Loop**: Automatically detects step-limit finish reasons (`finishReason === 'step-limit'`) and dispatches multi-pass continuation requests for complex agent tasks up to 75 steps.
@@ -49,7 +49,7 @@ The agent interacts with user workspaces and the web via 8 core tools — factor
 | `listFiles` | *(none)* | Returns count & metadata list (`id`, `name`, `language`, `charCount`) for all workspace files. |
 | `readFile` | `nameOrId`, `section?` | Reads full file or extracts a target heading section via regex. |
 | `writeFile` | `name`, `content`, `language?` | Creates a new file or completely replaces existing file contents. |
-| `editFile` | `nameOrId`, `searchString`, `replaceString`, `explanation` | Surgically edits code blocks using the 3-tier `ResumeEditEngine`. |
+| `editFile` | `nameOrId`, `searchString`, `replaceString`, `explanation` | Surgically edits code blocks using the 3-tier `StringEditEngine`. |
 | `renameFile` | `nameOrId`, `newName` | Renames an existing file with collision checking. |
 | `deleteFile` | `nameOrId` | Removes a target file from the current workspace collection. |
 | `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?`, `includeRawContent?`, `includeImages?`, `timeRange?`, `includeDomains?`, `excludeDomains?` | Real-time web search via Tavily (`searchDepth: "advanced"` default) — AI answer summary + ranked results with content snippets, optional raw page content, images, and publish dates. |

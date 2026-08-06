@@ -47,13 +47,16 @@ export async function reconcileFinishedStep({
   continuationCountRef,
   sendMessageRef,
 }: ReconcileStepParams) {
-  // Prepare batched messages payload
-  const timestamp = new Date().toISOString();
-  const dbMessages = (allMessages as any[]).map((msg) => ({
+  // Prepare batched messages payload. Each message gets a strictly increasing
+  // timestamp derived from its position in `allMessages`, so `sortBy('timestamp')`
+  // always reproduces the true conversation order (shared timestamps would tie
+  // and fall back to random UUID ordering).
+  const base = Date.now();
+  const dbMessages = (allMessages as any[]).map((msg, idx) => ({
     ...msg,
     chatId,
     ...(userId ? { userId } : {}),
-    timestamp,
+    timestamp: new Date(base + idx).toISOString(),
   }));
 
   // Perform message batch writes and workspace file reconciliation atomically in a single transaction
@@ -61,7 +64,7 @@ export async function reconcileFinishedStep({
     if (dbMessages.length > 0) {
       await db.messages.bulkPut(dbMessages);
     }
-    await db.conversations.update(chatId, { updatedAt: timestamp });
+    await db.conversations.update(chatId, { updatedAt: new Date().toISOString() });
 
     // Process workspace file updates/deletions ONLY from the current assistant message
     const currentMsg = message as GenericUIMessage;

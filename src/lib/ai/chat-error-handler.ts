@@ -91,12 +91,15 @@ export async function handleChatError({
     }
 
     // Persist the corrected message list so the error copy survives a reload.
-    for (const msg of updatedMessages) {
+    // Timestamps are derived from position so ordering stays deterministic.
+    const base = Date.now();
+    for (let i = 0; i < updatedMessages.length; i++) {
+      const msg = updatedMessages[i];
       await db.messages.put({
         ...msg,
         chatId,
         ...(userId ? { userId } : {}),
-        timestamp: new Date().toISOString(),
+        timestamp: new Date(base + i).toISOString(),
       });
     }
   }
