@@ -273,7 +273,7 @@ export default React.memo(function WorkspaceDrawer({
               {/* Drawer Body */}
               <div className="flex-1 overflow-y-auto p-6">
                 {!activeFile ? (
-                  <div className="h-full flex flex-col items-center justify-center border border-dashed border-edge-raised/80 rounded-2xl p-8 text-center bg-surface-base/20">
+                  <div className="h-full flex flex-col items-center justify-center text-center">
                     <FileText className="w-10 h-10 text-text-faint mb-3" />
                     <h4 className="text-text-secondary font-semibold text-subheading">Workspace Drawer Empty</h4>
                     <p className="text-body text-text-muted max-w-sm mt-1 mb-4">
@@ -305,7 +305,7 @@ export default React.memo(function WorkspaceDrawer({
                     />
                   </div>
                 ) : !activeFile.content ? (
-                  <div className="h-full flex flex-col items-center justify-center border border-dashed border-edge-raised/80 rounded-2xl p-8 text-center bg-surface-base/20">
+                  <div className="h-full flex flex-col items-center justify-center text-center">
                     <Code className="w-10 h-10 text-text-faint mb-3" />
                     <h4 className="text-text-secondary font-semibold text-subheading">{activeFile.name} is Empty</h4>
                     <p className="text-body text-text-muted max-w-sm mt-1 mb-4">
