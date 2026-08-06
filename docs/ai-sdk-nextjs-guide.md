@@ -277,6 +277,7 @@ Three non-obvious pieces you *must* keep:
 1. **`convertToModelMessages`** — the wire shape the provider understands is not the `parts` shape. Convert both ways across the boundary.
 2. **`toUIMessageStream(result.stream)`** — this re-emits the model stream as UI-message deltas (the same format `useChat` consumes).
 3. **`createUIMessageStreamResponse`** — wraps that stream in the SSE `Content-Type: text/plain` response, with (optionally) extra headers (Strata AI attaches `X-RateLimit-*` quota headers here).
+4. **`createUIMessageStream(({ writer }) => { ... })`** — wraps `streamText` to allow tools to emit live custom stream events (`writer.write({ type: "data-workspace", data: ... })`), which the client handles in real time via `useChat`'s `onData` callback.
 
 `abortSignal: req.signal` is the server half of `chat.stop()`. Skip it and stop becomes a no-op that burns tokens.
 

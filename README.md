@@ -26,6 +26,7 @@
 ## 🌟 Key Features & Capabilities
 
 - **Autonomous Agentic Workspace Tools**: 8 schema-validated tools enabling the AI to inspect, read, create, surgically edit, rename, and delete workspace documents, plus perform real-time Tavily web searches (`webSearch`, advanced depth, domain/time filters, raw-content mode) and deep Markdown page extraction (`extractUrl`).
+- **Real-Time Live Workspace Updates**: Tools emit custom `data-workspace` SSE stream events via AI SDK 7's `createUIMessageStream` (`writer.write`). Client `onData` handler updates the Workspace Drawer and IndexedDB in real-time the instant a tool finishes executing, without waiting for the inference run to complete.
 - **Significantly Reduced Context Footprint**: System prompts inject lightweight file metadata (`name`, `language`, `charCount`, `id`) rather than raw content. The agent calls `readFile` only when precise code context is required.
 - **3-Tier Surgical Edit Engine (`StringEditEngine`)**: Performs precise string manipulation through exact matching, whitespace normalization, and 2-point anchor bounded matching without breaking document structure.
 - **Local-First Client Persistence**: Complete conversation histories, dynamic file states, and user preferences persist client-side via **Dexie.js (IndexedDB v5)** with per-user session isolation—no server round-trips for workspace state.
@@ -54,8 +55,8 @@ The agent interacts with user workspaces and the web via 8 core tools — factor
 | `editFile` | `nameOrId`, `searchString`, `replaceString`, `explanation` | Surgically edits code blocks using the 3-tier `StringEditEngine`. |
 | `renameFile` | `nameOrId`, `newName` | Renames an existing file with collision checking. |
 | `deleteFile` | `nameOrId` | Removes a target file from the current workspace collection. |
-| `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?`, `includeRawContent?`, `includeImages?`, `timeRange?`, `includeDomains?`, `excludeDomains?` | Real-time web search via Tavily (`searchDepth: "advanced"` default) — AI answer summary + ranked results with content snippets, optional raw page content, images, and publish dates. |
-| `extractUrl` | `urls` (1–3), `extractDepth?` | Extracts clean Markdown content from target web pages via Tavily Extract (up to 3 URLs per call, 30s timeout). |
+| `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?`, `includeRawContent?`, `includeImages?`, `timeRange?`, `includeDomains?`, `excludeDomains?` | Real-time web search via Tavily (`searchDepth: "advanced"` default) — ranked results with content snippets, optional raw page content, images, and publish dates (the app's own model synthesizes the answer). |
+| `extractUrl` | `urls` (1–3), `extractDepth?` | Extracts clean Markdown content from target web pages via Tavily Extract (up to 3 URLs per call, 45s timeout). |
 
 ---
 
@@ -73,13 +74,14 @@ chat.sendMessage({ text }) ──► DefaultChatTransport (POST /api/agent)
   │                              ▼
   │                        POST /api/agent
   │                              ├── Zod body validation
-  │                              ├── Closure Context: WorkspaceToolsContext(mutableFiles)
+  │                              ├── Closure Context: WorkspaceToolsContext(mutableFiles, writer)
+  │                              ├── createUIMessageStream + writer.write({ type: "data-workspace" })
   │                              ├── streamText() + smoothStream(25ms)
   │                              └── prepareStep: re-injects metadata system prompt
   │                              ▼
   │                        SSE Response Stream (createUIMessageStreamResponse)
   ▼
-useChat UI Stream Update ◄──────┘
+useChat UI Stream Update + onData ◄───┘
   │
   ▼
 onFinish(message, allMessages)
