@@ -8,6 +8,7 @@ import { Check, Code2, User } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
+import WorkGroupCard from './WorkGroupCard';
 
 /** Props for the ChatBubble message component. */
 interface ChatBubbleProps {
@@ -18,12 +19,13 @@ interface ChatBubbleProps {
 
 /**
  * A flattened, render-ready slice of a message: user text, markdown text,
- * reasoning/thought content, or a tool invocation part.
+ * reasoning/thought content, a tool invocation part, or a work group of reasoning + tools.
  */
 interface Segment {
   type: string;
   content?: string;
   part?: any;
+  items?: Segment[];
   key: string;
 }
 
@@ -55,8 +57,8 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
   };
 
   // Flatten the raw message into render-ready segments (user text, markdown
-  // text, reasoning, tool invocations) so each part can be rendered by its
-  // own sub-component below.
+  // text, reasoning, tool invocations, grouped work items) so each part can be
+  // rendered by its own sub-component below.
   const segments: Segment[] = React.useMemo(() => {
     if (isUser) {
       // User bubbles show a single combined bubble: join every text part.
@@ -79,7 +81,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       return text ? [{ type: 'text', content: text, key: 'text-0' }] : [];
     }
 
-    const result: Segment[] = [];
+    const rawSegments: Segment[] = [];
     let currentText = '';
 
     // Detect tool invocations and reasoning/thought parts across both the
@@ -100,7 +102,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
 
       if (isReasoning) {
         if (currentText) {
-          result.push({ type: 'text', content: currentText, key: `text-${idx}` });
+          rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}` });
           currentText = '';
         }
         const reasoningText =
@@ -110,29 +112,54 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           (p.type === 'reasoning' || p.type === 'thought' || p.type === 'thinking' ? p.text : '') ||
           '';
         if (reasoningText) {
-          result.push({ type: 'reasoning', content: reasoningText, key: `reasoning-${idx}` });
+          rawSegments.push({ type: 'reasoning', content: reasoningText, key: `reasoning-${idx}` });
         }
       } else if (isTool) {
         if (currentText) {
-          result.push({ type: 'text', content: currentText, key: `text-${idx}` });
+          rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}` });
           currentText = '';
         }
         const inv = (p as any).toolInvocation || p;
         const key = inv.toolCallId || p.toolCallId || `tool-${idx}`;
-        result.push({ type: 'tool', part: p, key });
+        rawSegments.push({ type: 'tool', part: p, key });
       } else if (p.type === 'text' && typeof p.text === 'string') {
         currentText += p.text;
       }
     });
 
     if (currentText) {
-      result.push({ type: 'text', content: currentText, key: `text-final` });
+      rawSegments.push({ type: 'text', content: currentText, key: `text-final` });
     }
 
     // Last resort: render the raw content string if segmentation produced nothing.
-    if (result.length === 0 && typeof (message as any).content === 'string' && (message as any).content) {
-      result.push({ type: 'text', content: (message as any).content, key: 'text-fallback' });
+    if (rawSegments.length === 0 && typeof (message as any).content === 'string' && (message as any).content) {
+      rawSegments.push({ type: 'text', content: (message as any).content, key: 'text-fallback' });
     }
+
+    // Group consecutive non-text segments (reasoning + tools) into work-group items
+    const result: Segment[] = [];
+    let pendingGroup: Segment[] = [];
+
+    const flushGroup = (groupIndex: number) => {
+      if (pendingGroup.length > 0) {
+        result.push({
+          type: 'work-group',
+          items: [...pendingGroup],
+          key: `work-group-${groupIndex}-${pendingGroup[0].key}`,
+        });
+        pendingGroup = [];
+      }
+    };
+
+    rawSegments.forEach((seg, idx) => {
+      if (seg.type === 'reasoning' || seg.type === 'tool') {
+        pendingGroup.push(seg);
+      } else {
+        flushGroup(idx);
+        result.push(seg);
+      }
+    });
+    flushGroup(rawSegments.length);
 
     return result;
   }, [message, isUser]);
@@ -290,6 +317,17 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
               >
                 <p className="whitespace-pre-wrap leading-relaxed">{seg.content}</p>
               </div>
+            );
+          }
+
+          if (seg.type === 'work-group' && seg.items && seg.items.length > 0) {
+            return (
+              <WorkGroupCard
+                key={seg.key}
+                items={seg.items}
+                isStreaming={isStreaming && isLastSegment}
+                onOpenDrawer={onOpenDrawer}
+              />
             );
           }
 
