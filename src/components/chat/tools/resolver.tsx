@@ -1,5 +1,21 @@
 import React, { type ReactNode } from 'react';
-import { type LucideIcon, Sparkles, Search, Trash2, PencilLine, PenLine, Wrench, FileText, Folder, Globe } from 'lucide-react';
+import {
+  type LucideIcon,
+  Sparkles,
+  Search,
+  Trash2,
+  PencilLine,
+  PenTool,
+  Wrench,
+  FileText,
+  Files,
+  FileSearch,
+  FilePlus2,
+  FileEdit,
+  FileX,
+  Globe,
+  Link2,
+} from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
 
 /**
@@ -41,7 +57,7 @@ const toolConfigs: Record<string, ToolConfig> = {
   listFiles: {
     label: 'List Files',
     badge: 'Listed',
-    icon: Folder,
+    icon: Files,
     accent: 'info',
     accentBg: 'bg-accent-blue-soft',
     accentBorder: 'border-accent-blue/60',
@@ -50,7 +66,7 @@ const toolConfigs: Record<string, ToolConfig> = {
   readFile: {
     label: 'Read File',
     badge: 'Read',
-    icon: Search,
+    icon: FileSearch,
     accent: 'info',
     accentBg: 'bg-accent-blue-soft',
     accentBorder: 'border-accent-blue/60',
@@ -59,7 +75,7 @@ const toolConfigs: Record<string, ToolConfig> = {
   writeFile: {
     label: 'Write File',
     badge: 'Written',
-    icon: Sparkles,
+    icon: FilePlus2,
     accent: 'primary',
     accentBg: 'bg-primary-soft',
     accentBorder: 'border-primary/40',
@@ -68,7 +84,7 @@ const toolConfigs: Record<string, ToolConfig> = {
   editFile: {
     label: 'Edit File',
     badge: 'Edited',
-    icon: PencilLine,
+    icon: FileEdit,
     accent: 'warning',
     accentBg: 'bg-warning-soft',
     accentBorder: 'border-secondary/70',
@@ -77,7 +93,7 @@ const toolConfigs: Record<string, ToolConfig> = {
   renameFile: {
     label: 'Rename File',
     badge: 'Renamed',
-    icon: PenLine,
+    icon: PenTool,
     accent: 'accent-pink-deep',
     accentBg: 'bg-accent-pink-soft',
     accentBorder: 'border-accent-pink/70',
@@ -86,7 +102,7 @@ const toolConfigs: Record<string, ToolConfig> = {
   deleteFile: {
     label: 'Delete File',
     badge: 'Deleted',
-    icon: Trash2,
+    icon: FileX,
     accent: 'danger',
     accentBg: 'bg-danger-soft',
     accentBorder: 'border-danger/40',
@@ -104,7 +120,7 @@ const toolConfigs: Record<string, ToolConfig> = {
   extractUrl: {
     label: 'Extract URL',
     badge: 'Extracted',
-    icon: FileText,
+    icon: Link2,
     accent: 'info',
     accentBg: 'bg-accent-blue-soft',
     accentBorder: 'border-accent-blue/60',

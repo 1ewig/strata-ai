@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ChevronDown, ChevronUp, Loader2, Sparkles } from 'lucide-react';
+import { ChevronDown, ChevronUp, Loader2, Workflow } from 'lucide-react';
 import ThoughtAccordion from './ThoughtAccordion';
 import ToolCallCard from './ToolCallCard';
 
@@ -97,7 +97,7 @@ function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps)
         {isStreaming ? (
           <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
         ) : (
-          <Sparkles className="w-3.5 h-3.5 text-text-muted group-hover:text-text-primary shrink-0" />
+          <Workflow className="w-3.5 h-3.5 text-text-muted group-hover:text-text-primary shrink-0" />
         )}
         <span className="font-semibold">
           {isStreaming ? `Working (${displaySeconds}s)...` : `Worked for ${displaySeconds}s`}
