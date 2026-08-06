@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, FileText, Copy, Edit3, Check, Plus, Trash2, Code } from 'lucide-react';
+import { X, FileText, Copy, Edit3, Check, Plus, Trash2, Code, ChevronDown } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { WorkspaceFile } from '@/lib/schemas';
@@ -59,6 +59,19 @@ export default React.memo(function WorkspaceDrawer({
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [fileToDelete, setFileToDelete] = useState<WorkspaceFile | null>(null);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleStartEditing = () => {
     setFileName(activeFile?.name || '');
@@ -129,22 +142,61 @@ export default React.memo(function WorkspaceDrawer({
               <div className="h-14 px-3 sm:px-6 border-b border-edge-raised flex items-center justify-between bg-surface-base/40 shrink-0 gap-4">
                 {/* File Switcher Dropdown & Add Button */}
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <FileText className="w-4 h-4 text-primary shrink-0" />
-                  {files.length > 0 ? (
-                    <select
-                      value={activeFile?.id || ''}
-                      onChange={(e) => onSelectFile(e.target.value)}
-                      className="bg-surface-elevated text-label font-semibold text-text-bright border border-edge-raised rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-edge-hover max-w-[220px] truncate cursor-pointer"
-                    >
-                      {files.map(f => (
-                        <option key={f.id} value={f.id}>
-                          {f.name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <span className="text-label font-semibold text-text-muted">No Files</span>
-                  )}
+                  <div className="relative" ref={dropdownRef}>
+                    {files.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => setIsDropdownOpen(prev => !prev)}
+                        className="flex items-center gap-2 bg-surface-elevated text-label font-semibold text-text-bright border border-edge-raised hover:border-edge-hover rounded-xl px-3 py-1.5 transition-colors cursor-pointer max-w-[200px] sm:max-w-[260px]"
+                      >
+                        <FileText className="w-4 h-4 text-primary shrink-0" />
+                        <span className="truncate flex-1 text-left">{activeFile?.name || 'Select File'}</span>
+                        <ChevronDown className={`w-3.5 h-3.5 text-text-muted shrink-0 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-text-primary' : ''}`} />
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-1.5 text-label font-semibold text-text-muted px-2 py-1">
+                        <FileText className="w-4 h-4 text-text-faint" />
+                        <span>No Files</span>
+                      </div>
+                    )}
+
+                    {isDropdownOpen && files.length > 0 && (
+                      <div className="absolute mt-1.5 left-0 w-64 max-w-[calc(100vw-3rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl overflow-hidden text-caption z-50 animate-in fade-in zoom-in-95 duration-100">
+                        <div className="px-3 py-2 border-b border-edge-raised font-semibold text-text-muted text-micro uppercase tracking-wider flex items-center justify-between">
+                          <span>Workspace Files</span>
+                          <span className="px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised font-mono text-[10px] text-text-secondary font-semibold">
+                            {files.length}/{MAX_FILES_PER_WORKSPACE} files
+                          </span>
+                        </div>
+                        <div className="py-1 max-h-60 overflow-y-auto">
+                          {files.map((f) => {
+                            const isActive = f.id === activeFile?.id;
+                            return (
+                              <button
+                                key={f.id}
+                                type="button"
+                                onClick={() => {
+                                  onSelectFile(f.id);
+                                  setIsDropdownOpen(false);
+                                }}
+                                className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-surface-hover transition-colors cursor-pointer ${
+                                  isActive ? 'bg-primary-soft text-primary font-semibold' : 'text-text-primary'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 truncate">
+                                  <FileText className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-text-muted'}`} />
+                                  <span className="truncate">{f.name}</span>
+                                </div>
+                                {isActive && (
+                                  <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
 
                   <button
                     onClick={() => {
@@ -165,10 +217,6 @@ export default React.memo(function WorkspaceDrawer({
                   >
                     <Plus className="w-4 h-4" />
                   </button>
-
-                  <span className="text-micro font-semibold text-text-muted px-1.5 py-0.5 rounded bg-surface-elevated border border-edge-raised">
-                    {files.length}/{MAX_FILES_PER_WORKSPACE} files
-                  </span>
                 </div>
 
                 {/* Top Right: Delete Icon & Close Button */}
