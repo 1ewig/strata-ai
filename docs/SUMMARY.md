@@ -141,7 +141,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │       ├── auth/[...all]/route.ts  # Better Auth Next.js catch-all (GET/POST from toNextJsHandler)
     │   │       └── user/rate-limit/route.ts # GET quota status (auth-verified)
     │   ├── components/
-    │   │   ├── Sidebar.tsx           # Pure presentational sidebar component (receives conversations, active ID, new/delete/signOut handlers; confirm-to-delete chat dialog)
+    │   │   ├── Sidebar.tsx           # Pure presentational sidebar component (receives conversations, active ID, new/delete/rename/pin handlers; 3-dots overflow menu & inline title editing; confirm-to-delete chat dialog)
     │   │   ├── theme-toggle.tsx      # Pure presentational dark-mode toggle (isDark/onToggle props; logic in useTheme hook)
     │   │   ├── auth/                 # auth-shell (card layout), loading-screen, sign-in-form, sign-up-form, user-button (profile + sign-out)
     │   │   ├── chat/
@@ -164,7 +164,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   ├── hooks/
     │   │   ├── useChatSession.ts     # Orchestration core: delegates to transport, error handler, reconciler, and sub-hooks
     │   │   ├── useChatTransport.ts   # Custom DefaultChatTransport creation, rate-limit header parsing & error throwing
-    │   │   ├── useConversations.ts   # Conversation list + create/delete with navigation (Dexie v5 live query, cap enforcement)
+    │   │   ├── useConversations.ts   # Conversation list + create/delete/rename/pin with navigation (Dexie v5 live query, pinned-first sorting, cap enforcement)
     │   │   ├── useLatestConversationRedirect.ts # Landing-page redirect to latest user conversation or a fresh chat
     │   │   ├── useSignIn.ts          # Sign-in form state: validation, auth call, error/success feedback, redirect
     │   │   ├── useSignUp.ts          # Sign-up form state: validation, auth call, error/success feedback, redirect
