@@ -47,7 +47,7 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
-        className={`w-full flex items-center justify-center gap-2 px-3 py-2 border rounded-lg text-label font-semibold transition-colors cursor-pointer ${
+        className={`w-full flex items-center justify-center gap-2 px-3 h-9 border rounded-lg text-label font-semibold transition-colors cursor-pointer ${
           isQuotaExhausted
             ? 'border-danger/40 bg-danger-soft/40 text-danger'
             : 'border-edge-raised bg-surface-overlay hover:bg-surface-elevated text-text-secondary hover:text-text-primary'

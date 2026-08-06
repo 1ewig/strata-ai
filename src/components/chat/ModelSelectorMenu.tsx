@@ -16,7 +16,6 @@ interface ModelSelectorMenuProps {
   onModelSelect: (modelId: string) => void;
   onThinkingLevelChange: (level: string) => void;
   dropDirection?: 'up' | 'down';
-  compact?: boolean;
 }
 
 /**
@@ -29,7 +28,6 @@ interface ModelSelectorMenuProps {
  * @param onModelSelect - Called with the chosen model id.
  * @param onThinkingLevelChange - Called with the chosen thinking effort level.
  * @param dropDirection - Direction the popover opens ('up' for bottom toolbar, 'down' for header).
- * @param compact - Whether to render a compact trigger button for tight header spaces.
  */
 export default function ModelSelectorMenu({
   model,
@@ -37,7 +35,6 @@ export default function ModelSelectorMenu({
   onModelSelect,
   onThinkingLevelChange,
   dropDirection = 'up',
-  compact = false,
 }: ModelSelectorMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'main' | 'effort' | 'more-models'>('main');
@@ -101,11 +98,7 @@ export default function ModelSelectorMenu({
             setIsOpen(true);
           }
         }}
-        className={`flex items-center gap-1 transition-all cursor-pointer shrink-0 select-none ${
-          compact
-            ? 'border-0 bg-transparent px-0.5 py-0.5 h-6.5 text-caption hover:opacity-80'
-            : 'rounded-lg px-2 py-0.5 h-6.5 text-caption border bg-surface-base hover:bg-surface-hover/60 border-edge-raised'
-        } ${
+        className={`flex items-center gap-1 text-caption transition-all cursor-pointer shrink-0 select-none ${
           isOpen
             ? 'text-text-primary'
             : 'text-text-muted hover:text-text-primary'
