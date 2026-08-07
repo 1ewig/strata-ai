@@ -51,8 +51,6 @@ export default React.memo(function ChatHeader({
   const { contextWindow } = modelOption;
   const totalTokens = tokenUsage?.totalTokens ?? 0;
   const pct = contextWindow > 0 ? Math.min(100, Math.round((totalTokens / contextWindow) * 100)) : 0;
-  const barTone =
-    pct >= 85 ? 'bg-danger' : pct >= 65 ? 'bg-warning' : totalTokens > 0 ? 'bg-primary' : 'bg-primary/30';
 
   return (
     <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40">
@@ -80,15 +78,6 @@ export default React.memo(function ChatHeader({
           >
             {formatTokens(totalTokens)} / {formatContextWindow(contextWindow)} tokens ({pct}%)
           </span>
-          <div
-            className="mt-1 h-1 w-full max-w-[120px] rounded-full bg-surface-hover/60 overflow-hidden"
-            aria-hidden="true"
-          >
-            <div
-              className={`h-full rounded-full transition-all duration-500 ${barTone}`}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
         </div>
       </div>
 
