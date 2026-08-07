@@ -175,7 +175,22 @@ export async function runAgentResponse({
         stopWhen: isStepCount(maxSteps),
       });
 
-      writer.merge(toUIMessageStream({ stream: result.stream }));
+      writer.merge(
+        toUIMessageStream({
+          stream: result.stream,
+          messageMetadata: ({ part }) => {
+            // Attach the provider-reported usage to the finished assistant message so the
+            // client can sum real token usage without a character-based estimator.
+            if (part.type === 'finish') {
+              return {
+                usage: part.totalUsage,
+                modelId: modelId || "gemini-3.5-flash-lite",
+              };
+            }
+            return undefined;
+          },
+        })
+      );
     },
   });
 

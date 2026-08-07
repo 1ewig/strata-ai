@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -13,8 +13,19 @@ import { useWorkspaceFiles } from './useWorkspaceFiles';
 import { useChatTransport } from './useChatTransport';
 import { handleChatError } from '@/lib/ai/chat-error-handler';
 import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
+import { computeCumulativeUsage, ChatMetadata } from '@/lib/token-usage';
 import { useRateLimit } from '@/contexts/RateLimitContext';
 import { useSession } from '@/lib/auth-client';
+
+/**
+ * Structural message type carrying provider-reported usage metadata. Kept loose
+ * (role + metadata only) so it stays compatible with the SDK version nested
+ * under @ai-sdk/react without coupling to a specific `UIMessage` generic.
+ */
+export interface UsageMessage {
+  role?: string;
+  metadata?: ChatMetadata;
+}
 
 /**
  * Orchestrator hook for a single chat session.
@@ -218,6 +229,9 @@ export function useChatSession(chatId: string) {
 
   const isLoading = (chat.status === 'streaming' || chat.status === 'submitted') && !quotaError;
 
+  // Real provider-reported token usage summed across every assistant message.
+  const tokenUsage = useMemo(() => computeCumulativeUsage(chat.messages as UsageMessage[]), [chat.messages]);
+
   return {
     model: modelSettings.model,
     thinkingLevel: modelSettings.thinkingLevel,
@@ -226,6 +240,7 @@ export function useChatSession(chatId: string) {
     files: workspace.files,
     activeFileId: workspace.activeFileId,
     displayMessages: chat.messages,
+    tokenUsage,
     streamingContent: null,
     status: chat.status,
     isLoading,

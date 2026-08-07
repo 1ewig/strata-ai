@@ -6,7 +6,7 @@ import { WorkspaceFile } from '@/lib/schemas';
 
 /** Props for the ChatHeader component. */
 import { MODELS } from '@/lib/models';
-import { computeTokenUsage, TokenUsageMessage } from '@/lib/token-usage';
+import { formatContextWindow, formatTokens, CumulativeUsage } from '@/lib/token-usage';
 
 /** Props for the ChatHeader component. */
 interface ChatHeaderProps {
@@ -14,7 +14,7 @@ interface ChatHeaderProps {
   files: WorkspaceFile[];
   activeFileId: string | null;
   model?: string;
-  messages?: TokenUsageMessage[];
+  tokenUsage?: CumulativeUsage | null;
   onOpenFile?: (fileId: string) => void;
   onOpenDrawer: () => void;
   onOpenSidebar?: () => void;
@@ -29,7 +29,7 @@ interface ChatHeaderProps {
  * @param files - Workspace files listed in the workspace.
  * @param activeFileId - Id of the currently open file.
  * @param model - Active catalog model id.
- * @param messages - Active chat session messages for estimating context window usage.
+ * @param tokenUsage - Cumulative provider-reported token usage across the conversation.
  * @param onOpenFile - Optional callback when selecting a file.
  * @param onOpenDrawer - Opens the workspace files drawer.
  * @param onOpenSidebar - Opens the mobile sidebar; hides the toggle when omitted.
@@ -39,7 +39,7 @@ export default React.memo(function ChatHeader({
   title,
   files,
   model,
-  messages,
+  tokenUsage,
   onOpenDrawer,
   onOpenSidebar,
   onNewChat,
@@ -48,11 +48,11 @@ export default React.memo(function ChatHeader({
     return MODELS.find((m) => m.id === model) || MODELS[0];
   }, [model]);
 
-  const tokenUsage = React.useMemo(
-    () => computeTokenUsage(files, messages, modelOption.contextWindow),
-    [files, messages, modelOption],
-  );
-  const { estimatedTokens, contextWindow, percentage, formattedTokens, formattedContextWindow } = tokenUsage;
+  const { contextWindow } = modelOption;
+  const totalTokens = tokenUsage?.totalTokens ?? 0;
+  const pct = contextWindow > 0 ? Math.min(100, Math.round((totalTokens / contextWindow) * 100)) : 0;
+  const barTone =
+    pct >= 85 ? 'bg-danger' : pct >= 65 ? 'bg-warning' : totalTokens > 0 ? 'bg-primary' : 'bg-primary/30';
 
   return (
     <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40">
@@ -73,11 +73,22 @@ export default React.memo(function ChatHeader({
             {title || 'Chat Workspace'}
           </span>
           <span
-            className="text-micro font-mono text-text-muted truncate max-w-[180px] sm:max-w-xs leading-none"
-            title={`Estimated ${estimatedTokens.toLocaleString()} tokens used out of ${contextWindow.toLocaleString()} context limit`}
+            className="text-micro font-mono text-text-muted truncate max-w-[220px] sm:max-w-xs leading-none"
+            title={tokenUsage
+              ? `Cumulative ${tokenUsage.totalTokens.toLocaleString()} tokens used (${tokenUsage.inputTokens.toLocaleString()} in / ${tokenUsage.outputTokens.toLocaleString()} out) of ${contextWindow.toLocaleString()} context limit`
+              : `No token usage recorded yet of ${contextWindow.toLocaleString()} context limit`}
           >
-            {formattedTokens} / {formattedContextWindow} tokens ({percentage}%)
+            {formatTokens(totalTokens)} / {formatContextWindow(contextWindow)} tokens ({pct}%)
           </span>
+          <div
+            className="mt-1 h-1 w-full max-w-[120px] rounded-full bg-surface-hover/60 overflow-hidden"
+            aria-hidden="true"
+          >
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${barTone}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
         </div>
       </div>
 

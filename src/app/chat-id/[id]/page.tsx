@@ -58,6 +58,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     files,
     activeFileId,
     displayMessages,
+    tokenUsage,
     streamingContent,
     isLoading,
     rateLimitData,
@@ -161,7 +162,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               files={files}
               activeFileId={activeFileId}
               model={model}
-              messages={displayMessages}
+              tokenUsage={tokenUsage}
               onOpenFile={handleOpenFile}
               onOpenDrawer={handleOpenDrawer}
               onOpenSidebar={handleOpenSidebar}
