@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
@@ -13,8 +13,20 @@ import { useWorkspaceFiles } from './useWorkspaceFiles';
 import { useChatTransport } from './useChatTransport';
 import { handleChatError } from '@/lib/ai/chat-error-handler';
 import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
+import { computeCumulativeUsage, ChatMetadata } from '@/lib/token-usage';
+import { getModelContextWindow } from '@/lib/models';
 import { useRateLimit } from '@/contexts/RateLimitContext';
 import { useSession } from '@/lib/auth-client';
+
+/**
+ * Structural message type carrying provider-reported usage metadata. Kept loose
+ * (role + metadata only) so it stays compatible with the SDK version nested
+ * under @ai-sdk/react without coupling to a specific `UIMessage` generic.
+ */
+export interface UsageMessage {
+  role?: string;
+  metadata?: ChatMetadata;
+}
 
 /**
  * Orchestrator hook for a single chat session.
@@ -177,6 +189,14 @@ export function useChatSession(chatId: string) {
 
   const currentConvTitle = currentConv?.title;
 
+  // Real provider-reported token usage summed across every assistant message.
+  const tokenUsage = useMemo(() => computeCumulativeUsage(chat.messages as UsageMessage[]), [chat.messages]);
+
+  // The active model's context window in tokens.
+  const contextWindow = getModelContextWindow(modelSettings.model);
+  // Refuse further sends in this conversation once usage has crossed the window.
+  const isContextWindowExhausted = tokenUsage != null && tokenUsage.totalTokens >= contextWindow;
+
   /**
    * Sends a user message after validating quota, auto-titling the conversation on its first message.
    * @param text - The raw message text to send.
@@ -199,6 +219,15 @@ export function useChatSession(chatId: string) {
           });
           return;
         }
+        if (isContextWindowExhausted) {
+          setQuotaError({
+            message:
+              contextWindow > 0
+                ? `Context window reached (${contextWindow.toLocaleString()} tokens). Start a new chat to continue.`
+                : 'Context window reached. Start a new chat to continue.',
+          });
+          return;
+        }
         setQuotaError(null);
         if (!currentConvTitle || currentConvTitle === 'New Chat') {
           const autoTitle = trimmed.length > 40 ? `${trimmed.slice(0, 40)}...` : trimmed;
@@ -207,7 +236,7 @@ export function useChatSession(chatId: string) {
         chat.sendMessage({ text: trimmed });
       }
     },
-    [chat, chatId, currentConvTitle, rateLimitData, setQuotaError],
+    [chat, chatId, currentConvTitle, rateLimitData, setQuotaError, isContextWindowExhausted, contextWindow],
   );
 
   const handleStop = useCallback(() => {
@@ -226,6 +255,9 @@ export function useChatSession(chatId: string) {
     files: workspace.files,
     activeFileId: workspace.activeFileId,
     displayMessages: chat.messages,
+    tokenUsage,
+    isContextWindowExhausted,
+    contextWindow,
     streamingContent: null,
     status: chat.status,
     isLoading,

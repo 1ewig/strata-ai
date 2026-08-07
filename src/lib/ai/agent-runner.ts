@@ -10,6 +10,8 @@ import {
 import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
 import { resolveAgentModel } from "@/lib/ai/providers";
 import { WorkspaceToolsContext } from "@/lib/ai/tools/types";
+import { getModelContextWindow } from "@/lib/models";
+import { computeCumulativeUsage, ChatMetadata } from "@/lib/token-usage";
 
 /**
  * Server-side agent run configuration.
@@ -31,6 +33,71 @@ export interface RunAgentResponseParams {
   signal?: AbortSignal;
   remaining5h: number;
   remainingWeek: number;
+}
+
+/**
+ * Server-side stream transform that buffers and coalesces `tool-input-delta` chunks
+ * per tool call before emitting them to the client.
+ *
+ * Prevents client-side UI freezes caused by AI SDK 7's message reducer running O(N * length)
+ * `parsePartialJson` + `fixJson()` operations on every token chunk of large tool arguments.
+ */
+function coalesceToolInputDeltas() {
+  return () => {
+    const buffers = new Map<
+      string,
+      { delta: string; chunkCount: number; providerMetadata?: unknown }
+    >();
+
+    function flush(id: string, controller: TransformStreamDefaultController) {
+      const entry = buffers.get(id);
+      if (entry && entry.delta.length > 0) {
+        console.log(
+          `[agent] Coalesced tool-input-delta for tool call "${id}": ${entry.delta.length} chars across ${entry.chunkCount} chunks.`
+        );
+        controller.enqueue({
+          type: "tool-input-delta",
+          id,
+          delta: entry.delta,
+          ...(entry.providerMetadata ? { providerMetadata: entry.providerMetadata } : {}),
+        });
+        buffers.delete(id);
+      }
+    }
+
+    return new TransformStream({
+      async transform(chunk: any, controller) {
+        if (chunk.type === "tool-input-delta") {
+          const existing = buffers.get(chunk.id);
+          if (existing) {
+            existing.delta += chunk.delta;
+            existing.chunkCount += 1;
+            if (chunk.providerMetadata) {
+              existing.providerMetadata = chunk.providerMetadata;
+            }
+          } else {
+            buffers.set(chunk.id, {
+              delta: chunk.delta,
+              chunkCount: 1,
+              providerMetadata: chunk.providerMetadata,
+            });
+          }
+          return;
+        }
+
+        if ((chunk.type === "tool-input-end" || chunk.type === "tool-call") && chunk.id) {
+          flush(chunk.id, controller);
+        }
+
+        controller.enqueue(chunk);
+      },
+      async flush(controller) {
+        for (const id of Array.from(buffers.keys())) {
+          flush(id, controller);
+        }
+      },
+    });
+  };
 }
 
 /**
@@ -57,6 +124,15 @@ export async function runAgentResponse({
   // Resolve the requested model to its provider-specific config (Google or Fireworks).
   const resolvedModel = resolveAgentModel(modelId || "gemini-3.5-flash-lite", thinkingLevel);
 
+  // Token budget: active model's context window + cumulative provider-reported usage from
+  // prior assistant messages (metadata.usage round-trips through the request body).
+  const contextWindow = getModelContextWindow(modelId || "gemini-3.5-flash-lite");
+  const cumulativeUsage = computeCumulativeUsage(messages as Array<{ role?: string; metadata?: ChatMetadata }>);
+  const tokenBudget = {
+    contextWindow,
+    totalTokens: cumulativeUsage?.totalTokens,
+  };
+
   // Wrap streamText with createUIMessageStream so tools can emit live data-workspace events.
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
@@ -75,16 +151,19 @@ export async function runAgentResponse({
         messages: await convertToModelMessages(messages),
         tools: createWorkspaceTools(workspaceWithWriter),
         abortSignal: signal,
-        experimental_transform: smoothStream({
-          delayInMs: 25,
-          chunking: "word",
-        }),
+        experimental_transform: [
+          smoothStream({
+            delayInMs: 25,
+            chunking: "word",
+          }),
+          coalesceToolInputDeltas() as any,
+        ],
         prepareStep: async ({ stepNumber }) => {
           console.log(
             `[agent] Preparing step ${stepNumber}. Active workspace files: ${workspaceWithWriter.getCurrentFiles().length}`
           );
           return {
-            system: buildSystemInstruction(workspaceWithWriter.getCurrentFiles()),
+            system: buildSystemInstruction(workspaceWithWriter.getCurrentFiles(), tokenBudget),
           };
         },
         onStart() {
@@ -107,7 +186,22 @@ export async function runAgentResponse({
         stopWhen: isStepCount(maxSteps),
       });
 
-      writer.merge(toUIMessageStream({ stream: result.stream }));
+      writer.merge(
+        toUIMessageStream({
+          stream: result.stream,
+          messageMetadata: ({ part }) => {
+            // Attach the provider-reported usage to the finished assistant message so the
+            // client can sum real token usage without a character-based estimator.
+            if (part.type === 'finish') {
+              return {
+                usage: part.totalUsage,
+                modelId: modelId || "gemini-3.5-flash-lite",
+              };
+            }
+            return undefined;
+          },
+        })
+      );
     },
   });
 

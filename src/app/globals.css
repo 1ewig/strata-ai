@@ -158,15 +158,15 @@ body::before {
 
 .animate-token-fade {
   display: inline;
-  animation: tokenFadeIn 450ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: tokenFadeIn 750ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
   will-change: opacity, filter, transform;
 }
 
 @keyframes tokenFadeIn {
   from {
-    opacity: 0.05;
-    filter: blur(2px);
-    transform: translateY(1px);
+    opacity: 0;
+    filter: blur(3px);
+    transform: translateY(1.5px);
   }
   to {
     opacity: 1;

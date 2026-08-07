@@ -17,32 +17,32 @@ export const MODELS: ModelOption[] = [
     id: 'gemini-3.5-flash-lite',
     label: 'Gemini 3.5 Flash Lite',
     family: 'Gemini 3.5',
-    contextWindow: 1048576,
+    contextWindow: 131072,
     maxOutput: 65536,
   },
   {
     id: 'gemini-3.1-flash-lite',
     label: 'Gemini 3.1 Flash Lite',
     family: 'Gemini 3.1',
-    contextWindow: 1048576,
+    contextWindow: 131072,
     maxOutput: 65536,
   },
   {
     id: 'gemini-3-flash-preview',
     label: 'Gemini 3 Flash Preview',
     family: 'Gemini 3',
-    contextWindow: 1048576,
+    contextWindow: 131072,
     maxOutput: 65536,
   },
-  { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', family: 'Gemma 4', contextWindow: 262144 },
-  { id: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B IT', family: 'Gemma 4', contextWindow: 131072 },
+  { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536 },
+  { id: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536 },
   {
     id: 'accounts/fireworks/models/deepseek-v4-flash-0731',
     label: 'DeepSeek V4 Flash 0731',
     family: 'DeepSeek',
     provider: 'fireworks',
-    contextWindow: 1048576,
-    maxOutput: 1048576,
+    contextWindow: 131072,
+    maxOutput: 65536,
   },
 ];
 
@@ -58,6 +58,15 @@ export const MODEL_DESCRIPTIONS: Record<string, string> = {
 
 /** Unique family names derived from MODELS, preserving insertion order. */
 export const MODEL_FAMILIES = [...new Set(MODELS.map(m => m.family))];
+
+/**
+ * Resolves the context window (in tokens) for a model id.
+ * @param modelId - The model id to look up.
+ * @returns The model's context window, falling back to the first catalog entry.
+ */
+export function getModelContextWindow(modelId: string): number {
+  return MODELS.find((m) => m.id === modelId)?.contextWindow ?? MODELS[0].contextWindow;
+}
 
 /** Supported thinking-effort levels for models that expose the setting. */
 export type ThinkingLevelId = 'minimal' | 'low' | 'medium' | 'high';

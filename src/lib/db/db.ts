@@ -2,6 +2,7 @@ import Dexie, { Table } from 'dexie';
 import { UIMessage } from 'ai';
 import { WorkspaceFile } from '@/lib/schemas';
 import {
+  isSameFilename,
   removeFileFromWorkspace,
   upsertFileIntoWorkspace,
 } from '@/lib/ai/workspace';
@@ -191,6 +192,18 @@ export async function updateConversationFiles(
 export async function saveWorkspaceFile(chatId: string, file: WorkspaceFile): Promise<void> {
   const conv = await db.conversations.get(chatId);
   const currentFiles = getWorkspaceFiles(conv);
+  const existing = currentFiles.find(
+    (f) => f.id === file.id || isSameFilename(f.name, file.name),
+  );
+  if (
+    existing &&
+    existing.content === file.content &&
+    existing.name === file.name &&
+    existing.language === file.language &&
+    conv?.activeFileId === file.id
+  ) {
+    return;
+  }
   const nextFiles = upsertFileIntoWorkspace(currentFiles, file);
   await updateConversationFiles(chatId, nextFiles, file.id);
 }

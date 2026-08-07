@@ -19,6 +19,7 @@ interface ChatInputProps {
     remainingWeek: number;
     retryAfter?: number;
   } | null;
+  isContextWindowExhausted?: boolean;
 }
 
 /**
@@ -33,7 +34,9 @@ interface ChatInputProps {
  * @param thinkingLevel - Currently selected thinking effort level.
  * @param onModelSelect - Called when the user picks a model.
  * @param onThinkingLevelChange - Called when the user changes thinking effort.
+ * @param onThinkingLevelChange - Called when the user changes thinking effort.
  * @param rateLimitData - Remaining 5-hour/weekly message quota and optional retry window.
+ * @param isContextWindowExhausted - True once cumulative token usage crosses the active model's context window.
  */
 export default React.memo(function ChatInput({
   onSendMessage,
@@ -44,6 +47,7 @@ export default React.memo(function ChatInput({
   onModelSelect,
   onThinkingLevelChange,
   rateLimitData: rateLimitDataProp,
+  isContextWindowExhausted = false,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState('');
@@ -52,6 +56,8 @@ export default React.memo(function ChatInput({
   const rateLimitData = rateLimitDataProp ?? null;
   // Sending is blocked once either the 5-hour or weekly quota is exhausted.
   const isQuotaExhausted = rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
+  // Sending is also blocked once cumulative usage crosses the model's context window.
+  const isBlocked = isQuotaExhausted || isContextWindowExhausted;
 
   /** Keeps the input state in sync with the textarea value. */
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -76,7 +82,7 @@ export default React.memo(function ChatInput({
    */
   const handleSend = () => {
     const text = inputValue.trim();
-    if (text && !isLoading && !isQuotaExhausted && !isCharOverLimit) {
+    if (text && !isLoading && !isBlocked && !isCharOverLimit) {
       onSendMessage(text);
       setInputValue('');
     }
@@ -102,20 +108,24 @@ export default React.memo(function ChatInput({
       }}
       className="relative z-10"
     >
-      <div className={`flex flex-col gap-2 bg-surface-raised border ${isQuotaExhausted ? 'border-danger/40 bg-danger-soft/20' : 'border-edge-hover/60 focus-within:border-edge-hover'
+      <div className={`flex flex-col gap-2 bg-surface-raised border ${isBlocked ? 'border-danger/40 bg-danger-soft/20' : 'border-edge-hover/60 focus-within:border-edge-hover'
         } rounded-2xl p-3.5 transition-all shadow-lg`}>
 
-        {/* Row 1: Text Field Input or Quota Warning directly on the input field */}
-        {isQuotaExhausted ? (
+        {/* Row 1: Text Field Input or Blocking Warning directly on the input field */}
+        {isBlocked ? (
           <div className="w-full min-h-[24px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
             <span>
-              {rateLimitData?.remaining5h === 0
-                ? '5-hour limit reached (10/10 msgs used).'
-                : 'Weekly limit reached (50/50 msgs used).'}
-              {rateLimitData?.retryAfter
+              {isContextWindowExhausted
+                ? 'Context window reached. Start a new chat to continue.'
+                : rateLimitData?.remaining5h === 0
+                  ? '5-hour limit reached (10/10 msgs used).'
+                  : 'Weekly limit reached (50/50 msgs used).'}
+              {!isContextWindowExhausted && rateLimitData?.retryAfter
                 ? ` Resets in ~${Math.ceil(rateLimitData.retryAfter / 60)} min.`
-                : ' Please wait before sending.'}
+                : !isContextWindowExhausted
+                  ? ' Please wait before sending.'
+                  : ''}
             </span>
           </div>
         ) : (
@@ -162,22 +172,24 @@ export default React.memo(function ChatInput({
               <button
                 id="chat-submit-btn"
                 type="submit"
-                disabled={!inputValue.trim() || isQuotaExhausted || isCharOverLimit}
-                className={`p-2 rounded-xl shrink-0 transition-all focus:outline-none ${!inputValue.trim() || isQuotaExhausted || isCharOverLimit
+                disabled={!inputValue.trim() || isBlocked || isCharOverLimit}
+                className={`p-2 rounded-xl shrink-0 transition-all focus:outline-none ${!inputValue.trim() || isBlocked || isCharOverLimit
                     ? 'bg-surface-elevated cursor-not-allowed'
                     : 'bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
                   }`}
                 title={
-                  isQuotaExhausted
-                    ? 'Quota limit reached'
-                    : isCharOverLimit
-                      ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
-                      : !inputValue.trim()
-                        ? 'Type a message to send'
-                        : 'Send message'
+                  isContextWindowExhausted
+                    ? 'Context window reached'
+                    : isQuotaExhausted
+                      ? 'Quota limit reached'
+                      : isCharOverLimit
+                        ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
+                        : !inputValue.trim()
+                          ? 'Type a message to send'
+                          : 'Send message'
                 }
               >
-                <ArrowUp className={`w-4 h-4 ${!inputValue.trim() || isQuotaExhausted || isCharOverLimit ? 'text-text-muted' : 'text-surface'}`} />
+                <ArrowUp className={`w-4 h-4 ${!inputValue.trim() || isBlocked || isCharOverLimit ? 'text-text-muted' : 'text-surface'}`} />
               </button>
             )}
           </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import {
   Conversation,
   getWorkspaceFiles,
@@ -66,15 +66,32 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
     setIsWorkspaceDrawerOpen(true);
   }, [chatId, files.length]);
 
+  const pendingUpdatesRef = useRef<Map<string, WorkspaceFile>>(new Map());
+  const updateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   /**
    * Persists edits to an existing file, truncating content to the size limit.
+   * Coalesces rapid sequential updates within a 150ms window to reduce DB rewrites.
    * @param updatedFile - The file with applied edits.
    */
-  const handleUpdateFile = useCallback(async (updatedFile: WorkspaceFile) => {
+  const handleUpdateFile = useCallback((updatedFile: WorkspaceFile) => {
     const safeFile = updatedFile.content.length > MAX_FILE_CHARS
       ? { ...updatedFile, content: updatedFile.content.slice(0, MAX_FILE_CHARS) }
       : updatedFile;
-    await saveWorkspaceFile(chatId, safeFile);
+
+    pendingUpdatesRef.current.set(safeFile.id, safeFile);
+
+    if (updateTimerRef.current) {
+      clearTimeout(updateTimerRef.current);
+    }
+
+    updateTimerRef.current = setTimeout(async () => {
+      const updates = Array.from(pendingUpdatesRef.current.values());
+      pendingUpdatesRef.current.clear();
+      for (const file of updates) {
+        await saveWorkspaceFile(chatId, file);
+      }
+    }, 150);
   }, [chatId]);
 
   /**
