@@ -7,11 +7,23 @@ import {
 } from "@/lib/limits";
 
 /**
+ * Token-budget context shared with the model so it can size replies and flag
+ * when a conversation is nearing its context-window ceiling.
+ */
+export interface TokenBudgetContext {
+  /** The active model's context window in tokens. */
+  contextWindow?: number;
+  /** Cumulative provider-reported token usage across the conversation. */
+  totalTokens?: number;
+}
+
+/**
  * Builds the agent's system instruction, embedding workspace file metadata and constraints.
  * @param filesInput - Workspace files to reference (metadata only).
+ * @param tokenBudget - Optional cumulative token usage / context window for budget awareness.
  * @returns The complete system instruction string for the model.
  */
-export function buildSystemInstruction(filesInput?: WorkspaceFile[]): string {
+export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget?: TokenBudgetContext): string {
   // Only files with actual content are worth surfacing to the model.
   const activeFiles = (filesInput ?? []).filter((f) => f.content?.trim());
   const hasFiles = activeFiles.length > 0;
@@ -22,6 +34,22 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[]): string {
         `- ${f.name} (${f.language || "markdown"}, ${f.content.length.toLocaleString()}/${MAX_FILE_CHARS.toLocaleString()} chars, id: ${f.id})`,
     )
     .join("\n");
+
+  // Token budget awareness: cumulative use vs context window, with a sizing hint near the ceiling.
+  const { contextWindow, totalTokens } = tokenBudget ?? {};
+  const windowText = contextWindow ? contextWindow.toLocaleString() : "unknown";
+  const usageText = totalTokens != null ? totalTokens.toLocaleString() : "0";
+  const nearLimit =
+    contextWindow && totalTokens != null && totalTokens > 0 && totalTokens / contextWindow >= 0.8;
+  const tokenBudgetSection = [
+    "",
+    "## Context & Token Budget",
+    `- Cumulative conversation token usage: ${usageText} tokens (provider-reported).`,
+    `- Active model context window: ${windowText} tokens.`,
+    nearLimit
+      ? "- You are near or above 80% of the context window: be concise, avoid repeating content already in files, and if the user needs far more room, proactively suggest starting a new chat to continue."
+      : "- Keep replies reasonably sized to stay well within the context window.",
+  ].join("\n");
 
   // Format current date, day of week, and year for real-time temporal awareness.
   const currentDate = new Date().toLocaleDateString("en-US", {
@@ -46,7 +74,7 @@ ${
 - Maximum files per workspace: ${MAX_FILES_PER_WORKSPACE}
 - Maximum per-file size: ${MAX_FILE_CHARS.toLocaleString()} characters
 - Maximum user prompt size: ${MAX_MESSAGE_CHARS.toLocaleString()} characters
-- Maximum total workspace size: ${MAX_WORKSPACE_TOTAL_CHARS.toLocaleString()} characters
+- Maximum total workspace size: ${MAX_WORKSPACE_TOTAL_CHARS.toLocaleString()} characters${tokenBudgetSection}
 
 ## 3. Autonomous Tool Execution Directives
 
