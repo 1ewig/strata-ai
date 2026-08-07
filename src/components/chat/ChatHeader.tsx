@@ -6,7 +6,7 @@ import { WorkspaceFile } from '@/lib/schemas';
 
 /** Props for the ChatHeader component. */
 import { MODELS } from '@/lib/models';
-import { UIMessage } from 'ai';
+import { computeTokenUsage, TokenUsageMessage } from '@/lib/token-usage';
 
 /** Props for the ChatHeader component. */
 interface ChatHeaderProps {
@@ -14,7 +14,7 @@ interface ChatHeaderProps {
   files: WorkspaceFile[];
   activeFileId: string | null;
   model?: string;
-  messages?: UIMessage[] | unknown[];
+  messages?: TokenUsageMessage[];
   onOpenFile?: (fileId: string) => void;
   onOpenDrawer: () => void;
   onOpenSidebar?: () => void;
@@ -48,61 +48,11 @@ export default React.memo(function ChatHeader({
     return MODELS.find((m) => m.id === model) || MODELS[0];
   }, [model]);
 
-  const { estimatedTokens, contextWindow, percentage, formattedTokens, formattedContextWindow } = React.useMemo(() => {
-    let charCount = 0;
-
-    // Sum active workspace file content lengths
-    if (files && files.length > 0) {
-      for (const f of files) {
-        if (f.content) charCount += f.content.length;
-      }
-    }
-
-    // Sum message content, reasoning, and tool execution payload sizes
-    if (messages && messages.length > 0) {
-      for (const m of messages as any[]) {
-        if (typeof m.content === 'string') {
-          charCount += m.content.length;
-        }
-        if (Array.isArray(m.parts)) {
-          for (const p of m.parts) {
-            if (p.type === 'text' && typeof p.text === 'string') {
-              charCount += p.text.length;
-            } else if (p.type === 'reasoning' && typeof p.reasoning === 'string') {
-              charCount += p.reasoning.length;
-            } else if (p.type === 'tool-invocation' || p.type === 'tool-call') {
-              charCount += JSON.stringify(p.toolInvocation || p.toolCall || p).length;
-            }
-          }
-        }
-      }
-    }
-
-    // Standard LLM token heuristic (~4 chars per token)
-    const estTokens = Math.ceil(charCount / 4);
-    const maxContext = modelOption.contextWindow;
-    const pct = Math.min(100, (estTokens / maxContext) * 100);
-
-    const fmtTokens =
-      estTokens < 1000
-        ? String(estTokens)
-        : estTokens < 1000000
-        ? `${(estTokens / 1000).toFixed(1)}k`
-        : `${(estTokens / 1000000).toFixed(2)}M`;
-
-    const fmtContext =
-      maxContext >= 1000000
-        ? `${(maxContext / 1000000).toFixed(1)}M`
-        : `${Math.round(maxContext / 1000)}k`;
-
-    return {
-      estimatedTokens: estTokens,
-      contextWindow: maxContext,
-      percentage: pct < 0.1 && estTokens > 0 ? '<0.1' : pct.toFixed(1),
-      formattedTokens: fmtTokens,
-      formattedContextWindow: fmtContext,
-    };
-  }, [files, messages, modelOption]);
+  const tokenUsage = React.useMemo(
+    () => computeTokenUsage(files, messages, modelOption.contextWindow),
+    [files, messages, modelOption],
+  );
+  const { estimatedTokens, contextWindow, percentage, formattedTokens, formattedContextWindow } = tokenUsage;
 
   return (
     <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40">
