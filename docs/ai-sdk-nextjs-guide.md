@@ -354,14 +354,17 @@ const result = streamText({
   model,
   messages,
   // production values in Strata AI (src/lib/ai/agent-runner.ts):
-  experimental_transform: smoothStream({
-    delayInMs: 25,     // ms between chunk emissions
-    chunking: 'word',  // 'word' | 'character' | 'line' | 'token'
-  }),
+  experimental_transform: [
+    smoothStream({
+      delayInMs: 25,     // ms between chunk emissions
+      chunking: 'word',  // 'word' | 'character' | 'line' | 'token'
+    }),
+    coalesceToolInputDeltas(), // buffers tool-input-delta chunks to prevent AI SDK reducer partial-JSON re-parse freezes
+  ],
 });
 ```
 
-`chunking: 'word'` makes the caret type at a natural reading pace; `'character'` feels more incremental but costs more re-renders (see Part 5). In Strata AI, server-side `smoothStream` (25ms delay) is paired on the client with `SmoothStreamText` (`src/components/chat/SmoothStreamText.tsx`) — a component that diffs incoming stream updates and animates newly appended token deltas with a smooth CSS opacity & blur fade-in (`animate-token-fade`, 450ms).
+`chunking: 'word'` makes the caret type at a natural reading pace; `'character'` feels more incremental but costs more re-renders (see Part 5). In Strata AI, server-side `smoothStream` (25ms delay) is paired on the client with `SmoothStreamText` (`src/components/chat/SmoothStreamText.tsx`) — a component that diffs incoming stream updates and animates newly appended token deltas with a smooth CSS opacity & blur fade-in (`animate-token-fade`, 750ms). `coalesceToolInputDeltas()` buffers `tool-input-delta` chunks server-side so the client AI SDK message reducer parses JSON once per tool call instead of $O(N \times \text{length})$ times on every token chunk.
 
 ### 2.2 Status-driven chrome
 

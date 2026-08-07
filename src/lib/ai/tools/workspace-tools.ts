@@ -10,6 +10,7 @@ import {
 import {
   WorkspaceToolsContext,
   fileMetadataSchema,
+  fileSummarySchema,
   workspaceFileSchema,
   findWorkspaceFile,
   isSameFilename,
@@ -124,7 +125,7 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile, writer }: W
     }),
     outputSchema: z.object({
       action: z.enum(["created", "replaced"]),
-      file: workspaceFileSchema,
+      file: fileSummarySchema,
     }),
     execute: async ({ name, content, language }) => {
       const existingFiles = getCurrentFiles();
@@ -159,7 +160,14 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile, writer }: W
 
       return {
         action: existing ? "replaced" : "created",
-        file: updatedFile,
+        file: {
+          id: updatedFile.id,
+          name: updatedFile.name,
+          language: updatedFile.language,
+          charCount: updatedFile.content.length,
+          createdAt: updatedFile.createdAt,
+          updatedAt: updatedFile.updatedAt,
+        },
       };
     },
   });
@@ -196,7 +204,7 @@ export function createEditFileTool({ getCurrentFiles, onUpdateFile, writer }: Wo
       strategyUsed: z.string().optional(),
       message: z.string().optional(),
       error: z.string().optional(),
-      file: workspaceFileSchema.optional(),
+      file: fileSummarySchema.optional(),
     }),
     execute: async ({ nameOrId, searchString, replaceString, explanation }) => {
       const files = getCurrentFiles();
@@ -248,7 +256,14 @@ export function createEditFileTool({ getCurrentFiles, onUpdateFile, writer }: Wo
         explanation,
         strategyUsed: result.strategyUsed,
         message: `File ${targetFile.name} updated successfully.`,
-        file: updatedFile,
+        file: {
+          id: updatedFile.id,
+          name: updatedFile.name,
+          language: updatedFile.language,
+          charCount: updatedFile.content.length,
+          createdAt: updatedFile.createdAt,
+          updatedAt: updatedFile.updatedAt,
+        },
       };
     },
   });
@@ -275,7 +290,7 @@ export function createRenameFileTool({ getCurrentFiles, onUpdateFile, writer }: 
       success: z.boolean(),
       oldName: z.string().optional(),
       newName: z.string().optional(),
-      file: workspaceFileSchema.optional(),
+      file: fileSummarySchema.optional(),
       error: z.string().optional(),
     }),
     execute: async ({ nameOrId, newName }) => {
@@ -310,7 +325,14 @@ export function createRenameFileTool({ getCurrentFiles, onUpdateFile, writer }: 
         success: true,
         oldName: target.name,
         newName,
-        file: renamed,
+        file: {
+          id: renamed.id,
+          name: renamed.name,
+          language: renamed.language,
+          charCount: renamed.content.length,
+          createdAt: renamed.createdAt,
+          updatedAt: renamed.updatedAt,
+        },
       };
     },
   });

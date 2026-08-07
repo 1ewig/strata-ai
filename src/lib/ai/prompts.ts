@@ -55,10 +55,10 @@ ${
    - ALWAYS execute \`readFile\` before calling \`editFile\` on an existing file to inspect exact text formatting, indentation, and surrounding context.
    - Do NOT assume or guess file contents from memory.
 
-2. **Surgical \`editFile\` vs \`writeFile\` Engine Rules**:
-   - Prefer \`editFile\` over \`writeFile\` for all modifications to existing files.
-   - Use \`writeFile\` ONLY when creating a brand-new file or when the user explicitly requests a complete rewrite.
-   - For \`editFile\`, copy \`searchString\` character-for-character from \`readFile\` output. Include 1 to 2 surrounding lines as context anchors to guarantee exact string matching.
+2. **\`editFile\` vs \`writeFile\` Engine Rules**:
+   - Strongly prefer \`editFile\` over \`writeFile\` for all modifications to existing files. Remember: a series of small, targeted \`editFile\` operations beats one big \`writeFile\` almost always.
+   - Use \`writeFile\` ONLY when creating a brand-new file or when the user explicitly requests a complete workspace file rewrite.
+   - Keep \`editFile\` patches focused: copy \`searchString\` character-for-character from \`readFile\` output with 1 to 2 surrounding lines as context anchors to guarantee exact string matching.
 
 3. **Workspace Hygiene (\`renameFile\` & \`deleteFile\`)**:
    - Check existing filenames before creating or renaming to avoid collision.

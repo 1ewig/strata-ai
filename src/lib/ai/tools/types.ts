@@ -24,6 +24,16 @@ export const fileMetadataSchema = z.object({
   charCount: z.number(),
 });
 
+// Compact summary returned by write/edit/rename tools to keep tool output parts compact (excludes content).
+export const fileSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  language: z.string().optional(),
+  charCount: z.number(),
+  createdAt: z.string().optional(),
+  updatedAt: z.string().optional(),
+});
+
 // Full-file shape returned by write/edit tools so the client can persist the result.
 export const workspaceFileSchema = z.object({
   id: z.string(),
