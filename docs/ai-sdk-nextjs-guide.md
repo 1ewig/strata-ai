@@ -1,6 +1,8 @@
 # Building Chatbots & Agentic AI with AI SDK 7 + Next.js 16
 
-> The complete, beginner-to-advanced guide to building production-grade AI chat applications with the **Vercel AI SDK 7**, **Next.js 16**, and **bun**. Every technique in this guide is demonstrably shipped in **Strata AI**, the reference workspace-studio app that lives in this repository (`docs/SUMMARY.md` is the companion architecture guide). Where a concept comes from real Strata AI code, the source file is cited so you can read the production implementation.
+> The complete, beginner-to-advanced guide to building production-grade AI chat applications with the **Vercel AI SDK 7**, **Next.js 16**, and **bun**. Every technique in this guide is demonstrably shipped in **Strata AI**, the reference workspace-studio app in this repository. This guide is written against the *current* source state — the snippets are extracted verbatim from the files they cite, so they double as a grounded reference. `docs/SUMMARY.md` is the companion system-context & architecture guide; this file is the *how/why*, that one is the *what/when/where*.
+>
+> **Read order:** each Part is a strict superset of the last — stream a reply (Part 1), make it feel premium (Part 2), give it tools & loops (Part 3), architecture & persistence (Part 4), performance (Part 5), then keep discipline (Part 6).
 
 ## Table of Contents
 
@@ -37,11 +39,13 @@
   - [4.2 The provider resolver: one seam, many providers](#42-the-provider-resolver-one-seam-many-providers)
   - [4.3 Reasoning mapped per provider](#43-reasoning-mapped-per-provider)
   - [4.4 Persisting native UI messages (Dexie)](#44-persisting-native-ui-messages-dexie)
-  - [4.5 The single onFinish reconciliation point](#45-the-single-onfinish-reconciliation-point)
-  - [4.6 Tool-result file extraction](#46-tool-result-file-extraction)
+  - [4.5 The single onFinish reconciliation point](#45-the-single-on-finish-reconciliation-point)
+  - [4.6 Tool-result extraction & live `data-workspace` events](#46-tool-result-extraction--live-data-workspace-events)
   - [4.7 The refs-as-transport-bridge](#47-the-refs-as-transport-bridge)
   - [4.8 Quota via response headers](#48-quota-via-response-headers)
-  - [4.9 Provider-accurate token accounting via `messageMetadata`](#49-provider-accurate-token-accounting-via-messagemetadata)
+  - [4.9 Provider-accurate token accounting & the context-window guard](#49-provider-accurate-token-accounting--the-context-window-guard)
+  - [4.10 SSR rate-limit hydration](#410-ssr-rate-limit-hydration)
+  - [4.11 The three persistence touchpoints](#411-the-three-persistence-touchpoints)
 - [Part 5 — Performance Optimization Techniques](#part-5-performance-optimization-techniques)
   - [5.1 The streaming re-render audit](#51-the-streaming-re-render-audit)
   - [5.2 The key insight: only the in-flight message is re-created](#52-the-key-insight-only-the-in-flight-message-is-re-created)
@@ -64,7 +68,7 @@
 
 ### 0.1 What this guide is
 
-This is a complete, opinionated walkthrough of how to build a modern AI application: a plain text chatbot first, then a full multi-tool *agent*. It is intentionally built as a ladder — each part is a strict superset of the previous one:
+This is a complete, opinionated walkthrough of how to build a modern AI application: a plain-text chatbot first, then a full multi-tool *agent*, then a *production* agent with a real persistence layer. It is intentionally built as a ladder — each part is a strict superset of the previous one:
 
 1. **Part 1** streams a chat reply (chatbot).
 2. **Part 2** makes it feel fast and smooth (streaming UX).
@@ -73,67 +77,89 @@ This is a complete, opinionated walkthrough of how to build a modern AI applicat
 5. **Part 5** shows the performance techniques that keep a long agentic session fluid (optimization).
 6. **Part 6** is the running checklist of best practices and anti-patterns.
 
-Everything maps to the real Strata AI codebase in this repository. Those file citations are the "answer key" — when an example here is abstracted, `src/...` shows the production version.
+Everything maps to the real Strata AI codebase in this repository. Those file citations are the "answer key" — when an example here is abstracted, `src/...` shows the production version. If a snippet and the source ever disagree, **the source wins** — this is a guide over a living codebase.
 
 ### 0.2 The stack, in one picture
 
 ```
 ┌────────────────────────── Client (Next.js 16 App Router, 'use client') ──────────────────────────┐
 │                                                                                                   │
-│  useChat({ id, transport, onError, onFinish })      <── @ai-sdk/react                               │
+│  useChat({ id, transport, onData, onError, onFinish })      <── @ai-sdk/react                       │
 │      │                                                                                             │
 │      │ DefaultChatTransport({ api: '/api/agent', body, fetch })                                     │
 │      │   POST /api/agent  (SSE, UI message stream)                                                 │
 └──────┼─────────────────────────────────────────────────────────────────────────────────────────────┘
        ▼
+┌────────────────────────── Edge / proxy (Next.js 16 proxy.ts) ─────────────────────────────────────┐
+│  config.matcher = ['/', '/chat-id/:path*', '/api/agent']                                           │
+│  session-cookie presence check + security headers                                                  │
+└──────┼─────────────────────────────────────────────────────────────────────────────────────────────┘
+       ▼
 ┌────────────────────────── Server (Route Handler) ─────────────────────────────────────────────────┐
-│  auth → rate limit → zod body validation                                                          │
-│  streamText({ model, system, messages, tools, stopWhen, experimental_transform })                 │
+│  auth.api.getSession → checkAndIncrementRateLimit → zod body validation → clamp maxSteps           │
+│  runAgentResponse():  resolveAgentModel → buildSystemInstruction(files)                           │
+│     streamText({ model, system, messages, tools, stopWhen, experimental_transform, prepareStep })  │
 │      │                                                                                             │
-│      └─ toUIMessageStream() ── createUIMessageStreamResponse({ stream, headers })                 │
+│      └─ createUIMessageStream({ writer }) ── toUIMessageStream() ── createUIMessageStreamResponse()  │
+│             writer.write({ type: "data-workspace", ... })  → live file events                      │
 └────────────────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
 Two facts make AI SDK 7 + Next.js 16 a great pair:
 
 - **AI SDK 7 owns the "wire format".** Both sides speak a single protocol — a *stream of UI message deltas* (SSE). The client (`useChat`) and server (`streamText` + `toUIMessageStream`) are pieces of the same contract, so you never hand-write SSE parsing or message diffing.
-- **Next.js 16 gives you one-button streaming endpoints.** Route Handlers can return a `ReadableStream` trivially, `abortSignal` propagates to the HTTP request, and App Router conventions (`use(params)`, `proxy.ts`) handle the shell around it.
+- **Next.js 16 gives you one-button streaming endpoints.** Route Handlers return a `ReadableStream` trivially, `abortSignal` propagates to the HTTP request, the `proxy` export supplies middleware-style guards, and dynamic `params` are first-class promises.
 
 ### 0.3 Project setup
 
 Initialize and install:
 
-```bash
+```
 bun init -y
 bun add next@16 react@19 react-dom@19
 bun add ai @ai-sdk/react @ai-sdk/google
 bun add zod
 bun add -d @types/react @types/react-dom typescript tailwindcss @tailwindcss/postcss
+bun add dexie dexie-react-hooks react-markdown remark-gfm lucide-react motion use-stick-to-bottom @supabase/supabase-js better-auth pg @ai-sdk/fireworks
 ```
 
-Create `.env.local` (never commit keys):
+Create `.env.local` (never commit keys; `.env.example` is the authoritative reference):
 
 ```env
 # Provider keys
 GOOGLE_GENERATIVE_AI_API_KEY="..."
-# Optional: a second provider (this guide uses Fireworks in Part 4)
-FIREWORKS_API_KEY="..."
+FIREWORKS_API_KEY="..."            # required for Fireworks-hosted models (DeepSeek V4 Flash)
+TAVILY_API_KEY="..."               # optional — enables the webSearch / extractUrl agent tools
+
+# Supabase Postgres (auth + rate limiting)
+DATABASE_URL="postgresql://postgres.ref:password@aws-0-region.pooler.supabase.com:6543/postgres"
+NEXT_PUBLIC_SUPABASE_URL="..."
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="..."
+
+# Better Auth
+BETTER_AUTH_SECRET="..."           # min 32 chars
+BETTER_AUTH_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+
+# Optional default model override
+NEXT_PUBLIC_GEMINI_MODEL="gemini-3.5-flash-lite"
 ```
 
-`package.json` scripts — this repo's exact commands:
+This repo's exact `package.json` scripts (bun only — never `npm`/`yarn`/`npx`):
 
 ```json
 {
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "start": "node .next/standalone/server.js",
     "lint": "eslint .",
-    "start": "next start"
+    "clean": "next clean",
+    "db:migrate": "bun run scripts/migrate-better-auth-schema.ts",
+    "db:test": "bun run scripts/test-db.ts"
   }
 }
 ```
-
-> Note the bun-only rule: never `npm install`/`yarn add` in this repo.
 
 ### 0.4 Core dependencies
 
@@ -141,34 +167,44 @@ From Strata AI's `package.json` — the exact versions this guide documents:
 
 | Package | Version | Role |
 |---------|---------|------|
-| `next` | 16.2.10 | App Router, streaming route handlers, `proxy.ts` |
-| `ai` | ^7.0.0 | `streamText`, `tool`, `smoothStream`, `isStepCount`, UI-message helpers |
-| `@ai-sdk/react` | ^2.0.0 | `useChat`, transports |
-| `@ai-sdk/google` | ^4.0.0 | Gemini provider |
-| `@ai-sdk/fireworks` | ^3.0.0 | Fireworks-hosted open-weight models |
-| `zod` | ^4.4.3 | Schema validation for API bodies and every tool |
+| `next` | 16.2.10 | App Router, streaming route handlers, `proxy.ts`, standalone build |
+| `ai` | ^7.0.0 | `streamText`, `tool`, `smoothStream`, `isStepCount`, `convertToModelMessages`, UI-message helpers (`createUIMessageStream`, `toUIMessageStream`, `createUIMessageStreamResponse`) |
+| `@ai-sdk/react` | ^2.0.0 | `useChat`, `DefaultChatTransport` |
+| `@ai-sdk/google` | ^4.0.0 | Gemini + Gemma provider |
+| `@ai-sdk/fireworks` | ^3.0.0 | Fireworks-hosted open-weight models (DeepSeek V4 Flash) |
+| `zod` | ^4.4.3 | Schema validation for API bodies and every tool input/output |
 | `dexie` / `dexie-react-hooks` | ^4 | IndexedDB for local-first persistence |
+| `better-auth` | ^1.6 | Email/password sessions |
+| `react-markdown` + `remark-gfm` | ^10 / ^4 | Markdown rendering in bubbles & drawer |
 
 ### 0.5 The server/client boundary in Next.js 16
 
 The App Router `src/` layout makes the boundary physical:
 
-- **Server code:** `app/layout.tsx` (SSR), `app/api/**/route.ts` (Route Handlers), `proxy.ts` (middleware replacement), any file/server module imported only from server files.
-- **Client code:** every interactive page is marked `'use client'`. The chat page (`app/chat-id/[id]/page.tsx`) is a deliberately *thin shell* — it unwraps async params, calls feature hooks, and threads everything to presentational components as props.
+- **Server code:** `app/layout.tsx` (SSR), `app/api/**/route.ts` (Route Handlers), `proxy.ts` (the Next 16 middleware replacement), and any module imported only from server files.
+- **Client code:** every interactive page is marked `'use client'`. The chat page (`app/chat-id/[id]/page.tsx`) is a deliberately *thin shell* — it unwraps async params with `use(params)`, calls feature hooks, and threads everything to presentational components as props.
 
-Two hard rules you'll see repeated:
+Two hard architectural rules (see §9 of `docs/SUMMARY.md`):
 
-1. **Server code never imports client DB clients** (Dexie); **client code never imports the server `pg` pool** or provider SDKs (`@ai-sdk/google`/`@ai-sdk/fireworks`). The shared seam is Zod schemas (`lib/schemas.ts`).
-2. **Dynamic params are promises in Next 16** — client pages unwrap with `use(params)`:
+1. **Never import a client DB client (Dexie) into server code, and never import the server `pg` pool or the LLM provider SDKs (`@ai-sdk/google`/`@ai-sdk/fireworks`) into client code.** The shared seam is Zod schemas (`src/lib/schemas.ts` + the tool `types.ts`).
+2. **Dynamic params are promises in Next 16.** A client page unwraps them with the `use()` React hook:
 
 ```tsx
-export default function ChatPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
+// src/app/chat-id/[id]/page.tsx (client)
+export default function ChatIdPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id: chatId } = use(params);
   // ...
 }
 ```
 
-Read it in `src/app/chat-id/[id]/page.tsx`.
+Note the proxy specifically: Next 16 has replaced `middleware.ts` with **`proxy.ts`** exporting a `proxy` function plus a `config.matcher` array. Strata AI's matcher targets only the app shell and the agent API, and the proxy does a **fast cookie-presence check** (via `better-auth/cookies`' `getSessionCookie`), never a full server-side session verification (that happens, authoritatively, inside the Route Handlers):
+
+```ts
+// src/proxy.ts
+export const config = {
+  matcher: ["/", "/chat-id/:path*", "/api/agent"],
+};
+```
 
 ---
 
@@ -178,296 +214,294 @@ Read it in `src/app/chat-id/[id]/page.tsx`.
 
 AI SDK 7's chat model is a **user-interface message**: a container with `id`, `role`, `text content`, and — the important part — a **`parts` array**. Every piece of a message is a part:
 
-- `{ type: 'text', text: '...' }`
-- `{ type: 'reasoning', reasoning: '...' }` (thinking output)
-- `{ type: 'tool-invocation', toolInvocation: { ... } }` (tool calls/results)
+- `{ type: 'text', text: '...' }` — displayed text.
+- `{ type: 'reasoning', reasoning: '...' }` — thinking output (§2.4).
+- `{ type: 'tool-invocation', toolInvocation: { ... } }` — a tool call and/or its result (§3, §4.6).
 
-The server and the client both work on this shape. The server *produces* a stream of these; the client *consumes* it. No custom DTO, no manual parsing.
+The server and the client both work on this shape. The server *produces* a stream of these; the client *consumes* it. No custom DTO, no manual parsing, and — critically for persistence — this exact shape is stored **verbatim** in the offline database (§4.4).
 
 ### 1.2 The client: `useChat` + a transport
 
-In AI SDK 7 the way chat connects to a backend moved from a plain `fetch` option to dedicated **transports**. The default transport already wraps `fetch` for `/api/chat`; you subclass or wrap it when you need custom request bodies or response handling.
+In AI SDK 7 the way chat connects to a backend moved from a plain `fetch` option to dedicated **transports**. `DefaultChatTransport` already wraps `fetch`; you subclass or wrap it when you need custom request bodies or response handling. The production pattern in Strata AI (`src/hooks/useChatTransport.ts`) builds a `DefaultChatTransport` that:
 
-The exact production pattern in Strata AI (`src/hooks/useChatTransport.ts`):
+- posts to `/api/agent`;
+- computes a **fresh `body` per request** — reading live values through refs so it never re-creates the transport (the §4.7 bridge);
+- overrides `fetch` to parse the `X-RateLimit-*` response headers and report quota state (§4.8).
 
 ```ts
+// src/hooks/useChatTransport.ts (abridged)
 import { useMemo } from 'react';
 import { DefaultChatTransport } from 'ai';
 
-export function useChatTransport() {
+export function useChatTransport({ filesRef, modelRef, thinkingLevelRef, chatRef, updateRateLimitData, setQuotaError }) {
   return useMemo(
     () =>
       new DefaultChatTransport({
         api: '/api/agent',
-        // body() is evaluated per request, so it can read live refs — see Part 4.7.
+        // body() runs per request so it can read live refs without re-creating the transport.
         body: () => ({
-          model: 'gemini-3.5-flash-lite',
-          thinkingLevel: 'medium',
-          files: currentFilesRef.current,
+          model: modelRef.current,
+          thinkingLevel: thinkingLevelRef.current,
+          files: filesRef.current,
         }),
         fetch: async (url, options) => {
           const res = await fetch(url, options);
-          // Rate-limit headers come back on every response — Part 4.8.
+          const rem5h = res.headers.get('X-RateLimit-Remaining-5h');
+          const remWeek = res.headers.get('X-RateLimit-Remaining-Week');
+          const retryHeader = res.headers.get('X-RateLimit-Retry-After') || res.headers.get('Retry-After');
+          const retryAfterSec = retryHeader ? parseInt(retryHeader, 10) : undefined;
+          if (rem5h !== null && remWeek !== null) {
+            updateRateLimitData({ remaining5h: parseInt(rem5h, 10), remainingWeek: parseInt(remWeek, 10), retryAfter: retryAfterSec });
+          }
+          if (res.status === 429) {
+            const data = await res.clone().json().catch(() => null);
+            setQuotaError({ message: data?.message || 'Usage quota reached...', retryAfter: retryAfterSec || data?.retryAfter });
+            setTimeout(() => { if (chatRef.current?.stop) chatRef.current.stop(); }, 0);
+          } else if (!res.ok) {
+            const data = await res.clone().json().catch(() => null);
+            throw new Error(`[API Error ${res.status}] ${data?.error || data?.message || `HTTP ${res.status}`}`);
+          }
           return res;
         },
       }),
-    [],
+    [updateRateLimitData, setQuotaError, chatRef, filesRef, modelRef, thinkingLevelRef],
   );
 }
 ```
 
-Then the session hook (abridged from `src/hooks/useChatSession.ts`):
+Then the orchestration hook consumes `useChat` (`src/hooks/useChatSession.ts`). Keep it modular: this one hook wires the transport, the model + workspace sub-hooks, Dexie persistence, and quota gating, and returns everything a chat page needs:
 
 ```ts
+// src/hooks/useChatSession.ts (abridged)
 'use client';
 import { useChat } from '@ai-sdk/react';
 
-export function useChatSession() {
+export function useChatSession(chatId: string) {
+  const transport = useChatTransport({ /* refs + quota setters */ });
+
   const chat = useChat({
-    id: 'my-conversation-id',          // stable id => persisted continuation key
+    id: chatId,                          // stable id = persisted continuation key
     transport: transport as any,
-    onError: (err) => handle(error),
-    onFinish: async ({ message, messages, finishReason }) => { /* Part 4.5 */ },
+    onData: handleLiveWorkspaceEvents,   // §4.6: apply data-workspace file events immediately
+    onError: handleChatError,            // §7.5/4.8: friendly error handler
+    onFinish: reconcileFinishedStep,     // §4.5: single durable reconciliation point
   });
 
-  return {
-    messages: chat.messages,
-    status: chat.status,
-    send: chat.sendMessage,
-    stop: chat.stop,
-  };
+  // ... hydration effect: chat.setMessages(dexieMessages) once per chat switch
+  // ... send/stop/setup handlers, quota + context-window gating
 }
 ```
 
-Notes on `useChat` state captures:
+Notes on `useChat` state:
 
 - `chat.messages` — the live, streaming message list (re-renders each delta).
 - `chat.status` — `'ready' | 'submitted' | 'streaming'` (drives every visual state; never invent your own boolean).
-- `chat.sendMessage({ text })` — the v7 replace for `append`. It returns a promise but you normally do not await it.
+- `chat.sendMessage({ text })` — the v7 replacement for `append`; returns a promise, but you normally do not await it.
 - `chat.stop()` — aborts the in-flight request server-side via `abortSignal`.
+- `chat.setMessages([...])` — used to hydrate from Dexie and to prune the empty trailing bubble on a quota error.
+- `chat.reStart`/`chat.stop()` — the send/stop morph §2.2.
 
 ### 1.3 The server: `streamText` to the UI stream response
 
-The other half of the contract. In Strata AI this lives in `src/lib/ai/agent-runner.ts` (`runAgentResponse`), and `src/app/api/agent/route.ts` stays a thin auth/quota/validation shell that only delegates to it (Part 3.2 shows the split). The core shape (abridged):
+The other half of the contract. In Strata AI this lives in `src/lib/ai/agent-runner.ts` (`runAgentResponse`); `src/app/api/agent/route.ts` stays a thin auth/quota/validation shell that only delegates to it. The core shape:
 
 ```ts
 import {
   streamText,
-  convertToModelMessages,
+  createUIMessageStream,
   toUIMessageStream,
   createUIMessageStreamResponse,
+  isStepCount,
+  convertToModelMessages,
 } from 'ai';
-import { google } from '@ai-sdk/google';
 
-export async function POST(req: Request) {
-  const body = await req.json();
-  const { messages } = body;
+// inside createUIMessageStream's execute()
+const result = streamText({
+  model: resolvedModel.model,
+  system: buildSystemInstruction(workspace.getCurrentFiles()),
+  messages: await convertToModelMessages(messages),   // UI messages -> model messages
+  tools, createWorkspaceTools(workspaceWithWriter),
+  abortSignal: signal,
+  experimental_transform: [smoothStream({ delayInMs: 25, chunking: 'word' }), coalesceToolInputDeltas()],
+  stopWhen: isStepCount(maxSteps),
+  prepareStep: async ({ stepNumber }) => ({ system: buildSystemInstruction(workspace.getCurrentFiles(), tokenBudget) }),
+});
 
-  const result = streamText({
-    model: google('gemini-3.5-flash-lite'),
-    messages: await convertToModelMessages(messages), // UI messages -> model messages
-    abortSignal: req.signal,
-  });
-
-  return createUIMessageStreamResponse({
-    stream: toUIMessageStream({ stream: result.stream }),
-  });
-}
+writer.merge(toUIMessageStream({ stream: result.stream, messageMetadata }));
+return createUIMessageStreamResponse({ stream, headers: { 'X-RateLimit-Remaining-5h': ..., 'X-RateLimit-Remaining-Week': ... } });
 ```
 
-Three non-obvious pieces you *must* keep:
+Five non-obvious pieces you *must* keep:
 
 1. **`convertToModelMessages`** — the wire shape the provider understands is not the `parts` shape. Convert both ways across the boundary.
-2. **`toUIMessageStream(result.stream)`** — this re-emits the model stream as UI-message deltas (the same format `useChat` consumes).
-3. **`createUIMessageStreamResponse`** — wraps that stream in the SSE `Content-Type: text/plain` response, with (optionally) extra headers (Strata AI attaches `X-RateLimit-*` quota headers here).
-4. **`createUIMessageStream(({ writer }) => { ... })`** — wraps `streamText` to allow tools to emit live custom stream events (`writer.write({ type: "data-workspace", data: ... })`), which the client handles in real time via `useChat`'s `onData` callback. This is how workspace files appear/disappear live mid-stream, before the run finishes (Part 4.6).
+2. **`toUIMessageStream(result.stream)`** — re-emits the model stream as UI-message deltas, the same format `useChat` consumes.
+3. **`createUIMessageStreamResponse`** — wraps the stream in the SSE `Content-Type: text/plain` response, with optional extra headers (Strata AI attaches the rate-limit quota headers here).
+4. **`createUIMessageStream({ execute: async ({ writer }) => { ... } })`** — wraps `streamText` so tools can emit **live custom stream events** via `writer.write(...)`, which the client handles via `useChat`'s `onData`. This is how workspace files appear/disappear live mid-stream (§4.6).
+5. **`abortSignal: req.signal`** — the server half of `chat.stop()`. Skip it and stop becomes a no-op that burns tokens.
 
-`abortSignal: req.signal` is the server half of `chat.stop()`. Skip it and stop becomes a no-op that burns tokens.
+`prepareStep` re-injects a fresh system prompt before **every agent step** so the model always sees the current file state; the `messageMetadata` option attaches provider-reported usage to the finished assistant message (§4.9).
+
+> **Thin-route rule.** The route composes `runAgentResponse` but owns none of the `streamText` configuration. Auth → rate limit → zod → clamp → delegate. Every streaming detail lives in the runner so the route stays trivially verifiable.
 
 ### 1.4 The components
 
-Keep the components **dumb**. A page shell calls the hook and passes props down:
+Keep the components **dumb**. The page shell (`src/app/chat-id/[id]/page.tsx`) calls the hooks and passes props down; components never query Dexie, never call `getSession`, never navigate by themselves:
 
 ```tsx
-// app/chat/[id]/page.tsx (client)
-const { messages, status, sendMessage, stop } = useChatSession();
+const {
+  displayMessages, status, isLoading, handleSendMessage, handleStop,
+  files, activeFileId, handleSelectFile, ...  // from useChatSession
+} = useChatSession(chatId);
 
 return (
-  <div className="flex flex-col h-dvh">
-    <ChatPanel messages={messages} status={status} />
-    <ChatInput status={status} onSend={sendMessage} onStop={stop} />
-  </div>
+  <StickToBottom resize="auto" className="flex-1 min-h-0">
+    {(context) => (
+      <StickToBottom.Content>
+        <ChatPanel messages={displayMessages} ... />
+        {!context.isAtBottom && <Button onClick={() => context.scrollToBottom()}>↓</Button>}
+      </StickToBottom.Content>
+    )}
+  </StickToBottom>
 );
 ```
 
-`ChatPanel` just renders the list:
+`ChatPanel` renders the message list and the empty/typing states; each message becomes a `ChatBubble` (§2.5/2.6). `ChatBubble` maps each part with a **memoized components object** so `ReactMarkdown` never re-creates the tree per render (§5.7).
 
-```tsx
-export function ChatPanel({ messages, status }) {
-  return (
-    <div className="flex-1 overflow-y-auto">
-      {messages.map((m) => (
-        <MessageBubble key={m.id} message={m} />
-      ))}
-      {status === 'streaming' && <TypingDots />}
-    </div>
-  );
-}
-```
-
-`MessageBubble` maps each part (see `src/components/chat/ChatBubble.tsx` for the full map):
-
-```tsx
-const byType = {
-  text: (p) => <p className="text-body">{p.text}</p>,
-  reasoning: (p) => <ThoughtAccordion text={p.reasoning} />,
-  'tool-invocation': (p) => <ToolCallCard />,
-};
-```
-
-`ChatInput` mirrors the send/stop morph (see Part 2.2).
-
-**Overlays need a portal.** A modal confirmed inside a chat surface can be trapped by an ancestor with a CSS `transform` (e.g. the chat page's layout blocks), shrinking it or clipping it mid-viewport. Strata AI's `ConfirmDialog` (`src/components/ui/ConfirmDialog.tsx`) renders through `createPortal(dialog, document.body)` and drives open/close with `AnimatePresence`, so the dialog always spans the real viewport regardless of where it was mounted. Use the same escape hatch for any fixed-position overlay rendered from inside transformed/animated parents.
+**Overlays need a portal.** A modal confirmed inside a chat surface can be trapped by an ancestor with a CSS `transform` (e.g. the chat page's layout blocks), shrinking or clipping it. Strata AI's `ConfirmDialog` (`src/components/ui/ConfirmDialog.tsx`) renders through `createPortal(dialog, document.body)` and drives open/close with `AnimatePresence`, so the dialog always spans the real viewport. Use the same escape hatch for any fixed overlay rendered from inside transformed/animated parents.
 
 ### 1.5 Sending, status, and stopping
 
-A finished `ChatInput` flow:
+A finished send flow (see `handleSendMessage` in `useChatSession.ts`):
 
-- on submit: `chat.sendMessage({ text })`; `status` flips `ready → submitted → streaming`.
-- While `streaming`: render the caret, disable send, show the stop control.
-- `chat.stop()` → server aborts via `abortSignal`, `status → ready`.
+- Trim the text; only send when the status allows (`chat.status` is not actively streaming), calling `chat.stop()` first if a previous run is in-flight.
+- **Quota pre-check:** if `rateLimitData.remaining5h <= 0 || remainingWeek <= 0`, set a `quotaError` instead of sending (§4.8).
+- **Context-window pre-check:** if cumulative token usage has crossed the active model's window, refuse with a friendly message and disable the composer (§4.9).
+- On a user's first message, **auto-title** the conversation: `trimmed.slice(0, 40) + '...'` when longer than 40 chars.
+- Send: `chat.sendMessage({ text: trimmed })`; `status` flips `ready → submitted → streaming`.
 
-Add a character cap (`MAX_MESSAGE_CHARS = 2000`) mirrored on the server with a Zod/HTTP 400 — do not trust the client-side `maxLength` alone.
+Add a **character cap** (`MAX_MESSAGE_CHARS = 2000` from `src/lib/limits.ts`) mirrored on the server with a Zod/HTTP 400 — never trust the client-side `maxLength` alone. `src/lib/limits.ts` centralizes every free-tier limit (message length 2,000; per-file 10,000; workspace 50,000; conversations 5; files-per-workspace 3) and shared validation helpers (`isMessageOverLimit`, `isFileOverLimit`, `isWorkspaceTotalOverLimit`).
 
 ---
 
 ## Part 2 — Streaming UX (the "non-glitchy" layer)
 
-A working chatbot is not a *good* chatbot. The gap between "works" and "feels premium" is the streaming experience. This part is the checklist.
+A working chatbot is not a *good* chatbot. The gap between "works" and "feels premium" is the experience. This part is the checklist.
 
 ### 2.1 Word-pace the stream with `smoothStream`
 
-Providers emit tokens in bursts. Without pacing, the text jumps in chunks and the UI reads as a glitchy typewriter. AI SDK 7 ships `smoothStream` as an **`experimental_transform`** that re-chunks the output for controlled delivery:
+Providers emit tokens in bursts; unordered delivery makes the UI read as a glitchy typewriter. AI SDK 7 ships `smoothStream` as an `experimental_transform` that re-chunks output for controlled delivery. Strata AI's exact config (`src/lib/ai/agent-runner.ts`):
 
 ```ts
-import { streamText, smoothStream } from 'ai';
-
-const result = streamText({
-  model,
-  messages,
-  // production values in Strata AI (src/lib/ai/agent-runner.ts):
-  experimental_transform: [
-    smoothStream({
-      delayInMs: 25,     // ms between chunk emissions
-      chunking: 'word',  // 'word' | 'character' | 'line' | 'token'
-    }),
-    coalesceToolInputDeltas(), // buffers tool-input-delta chunks to prevent AI SDK reducer partial-JSON re-parse freezes
-  ],
-});
+experimental_transform: [
+  smoothStream({
+    delayInMs: 25,    // ms between chunk emissions
+    chunking: 'word', // 'word' | 'character' | 'line' | 'token'
+  }),
+  coalesceToolInputDeltas(),
+],
 ```
 
-`chunking: 'word'` makes the caret type at a natural reading pace; `'character'` feels more incremental but costs more re-renders (see Part 5). In Strata AI, server-side `smoothStream` (25ms delay) is paired on the client with `SmoothStreamText` (`src/components/chat/SmoothStreamText.tsx`) — a component that diffs incoming stream updates and animates newly appended token deltas with a smooth CSS opacity & blur fade-in (`animate-token-fade`, 750ms). `coalesceToolInputDeltas()` buffers `tool-input-delta` chunks server-side so the client AI SDK message reducer parses JSON once per tool call instead of $O(N \times \text{length})$ times on every token chunk.
+Weight-conscious notes:
+
+- `chunking: 'word'` reads as natural prose; `'character'` feels more incremental but costs more re-renders (§5).
+- Strata AI pairs server-side `smoothStream` with client-side `SmoothStreamText` (`src/components/chat/SmoothStreamText.tsx`), which diffs incoming stream updates and animates **newly appended** token deltas with a smooth 750 ms opacity & blur fade (`animate-token-fade` — from `src/app/globals.css`, `--animate-token-fade` / keyframe `tokenFadeIn`):
+
+```
+.animate-token-fade { animation: tokenFadeIn 750ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+```
+
+`SmoothStreamText` splits the live text into a static `prefix` and an animated `delta` chunk, keyed by a monotonic `chunkCount` ref so each new delta mounts with a fresh fade — and stops animating as soon as `isStreaming` flips false (rendering plain text). Its running caret (`animate-caret`, 1.1 s blink) shows exactly where the stream is writing.
 
 ### 2.2 Status-driven chrome
 
-Drive the UI strictly off `chat.status` — there must be no hand-rolled "is thinking" flag. One boolean source of truth, derived:
+Drive the UI strictly off `chat.status` — there must be no hand-rolled "is thinking" flag:
 
 ```ts
-export function ChatInput({ status, onSend, onStop }) {
-  const isStreaming = status === 'streaming';
-  return (
-    <div className="relative">
-      <textarea
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' && !e.shiftKey && !isStreaming) {
-            e.preventDefault();
-            onSend(text);
-          }
-        }}
-      />
-      {/* Send button morphs into a stop button while streaming */}
-      <button onClick={isStreaming ? onStop : () => onSend(text)}>
-        {isStreaming ? <StopIcon /> : <SendIcon />}
-      </button>
-    </div>
-  );
-}
+const isStreaming = status === 'streaming';
+const isSubmitted = status === 'submitted';
+const isLoading = (status === 'streaming' || status === 'submitted') && !quotaError;
+// Send button morphs into a stop button while streaming
+<button onClick={isStreaming ? onStop : () => onSendMessage(text)}>
+  {isStreaming ? <StopIcon /> : <SendIcon />}
+</button>
 ```
 
-Add a **streaming caret + shimmer** to the in-flight text so users see where the stream is writing (Strata AI defines `caret`/`shimmer` keyframes in `globals.css`).
+Strata AI ships a **streaming shimmer** (`animate-shimmer`) sweeping across the newest bubble and a caret (`animate-caret`) in the in-flight text. The typing loader and the shimmer **must** be derived from `status`, not a separate boolean — one source of truth.
 
 ### 2.3 Auto-scroll without a single `scrollIntoView`
 
-The reliable "stick to bottom with manual scroll override" behavior is hard to get right by hand. Use `use-stick-to-bottom` — a `ResizeObserver`/`MutationObserver` component that respects manual user scroll:
+Use `use-stick-to-bottom` — a `ResizeObserver`/`MutationObserver` component that respects manual user scroll. The page wraps the panel:
 
 ```tsx
-import { StickToBottom } from 'use-stick-to-bottom';
-
 <StickToBottom className="flex-1 min-h-0" resize="auto" initial="instant">
   {(context) => (
     <>
-      <StickToBottom.Content>
-        {/* message list */}
+      <StickToBottom.Content className="max-w-4xl w-full mx-auto px-4 pb-36">
+        <ChatPanel ... />
       </StickToBottom.Content>
       {!context.isAtBottom && (
-        <button onClick={() => context.scrollToBottom()}>Scroll to bottom</button>
+        <button onClick={() => context.scrollToBottom()}>↓ Scroll to bottom</button>
       )}
     </>
   )}
 </StickToBottom>
 ```
 
-Two rules Strata AI's architecture doc enforces:
+Two rules enforced by AGENTS.md:
 
-- `resize="auto"` — stay pinned only when the user is already at the bottom.
+- `resize="auto"` — only stay pinned when the user is already at the bottom.
 - **Never** write a manual `useEffect` + `scrollIntoView` loop. It fights user scroll and double-fires during streaming. `StickToBottom` owns the DOM.
 
 ### 2.4 Reasoning / thinking streams
 
 Open reasoning models emit their *thoughts* as a separate part type. The Strata AI UX rule:
 
-1. **While reasoning is in progress**, show it inside a collapsible "Thought Process" accordion as **plain pre-wrapped text** (`font-mono whitespace-pre-wrap`) with a spinner.
+1. **While reasoning is in progress**, render the thought text inside a collapsible "Thought Process" accordion as **plain pre-wrap text** (`font-mono whitespace-pre-wrap`) with a spinner, and a live clock ("Thinking...") or a fixed "Thought for X s".
 2. **Only once thinking completes**, upgrade that block to styled `ReactMarkdown`.
 
-Why two phases? Because a Markdown AST re-parse on every 15 ms delta is the #1 cause of stream jank — quantified in Part 5.7.
+Why two phases? Because re-parsing a Markdown AST on every 15 ms delta is a top cause of stream jank — quantified in §5.7. `ThoughtAccordion` (`src/components/chat/ThoughtAccordion.tsx`) is fed `isStreaming={isStreaming && isLastSegment}` so the in-flight thought stays cheap.
 
 ### 2.5 Stream plain text, markdown late
 
-The active (in-flight) text part renders as cheap plain text; only *completed* parts go through `ReactMarkdown` with a memoized component map:
+The active (in-flight) text part renders as cheap plain text via `SmoothStreamText`; completed parts go through `ReactMarkdown` with a memoized component map. From `src/components/chat/ChatBubble.tsx`:
 
 ```tsx
-{isActiveStreamingText
-  ? <pre className="whitespace-pre-wrap font-sans">{text}</pre>
-  : <ReactMarkdown components={mdComponents}>{text}</ReactMarkdown>}
+{isActiveStreamingText ? (
+  <SmoothStreamText text={seg.content} isStreaming={true} />
+) : (
+  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+    {seg.content}
+  </ReactMarkdown>
+)}
 ```
 
-When the whole bubble is finished, `React.memo` keeps it from ever re-rendering on later deltas (Part 5).
+When the whole bubble is finished, `React.memo(ChatBubble)` (§5.2–5.3) keeps it from re-rendering on later deltas. The `markdownComponents` object must be referentially stable (`useMemo` keyed on the copy-state only) or every render re-creates the whole tree (§5.7).
 
 ### 2.6 Group intermediate work, but only after it finishes
 
-A multi-step agent produces a *scaffold* before the final answer: reasoning spans, tool-call cards, intermediate prose. Render it live, then collapse it the moment inference completes. Strata AI's `WorkGroupCard` (`src/components/chat/WorkGroupCard.tsx`) does exactly this:
+A multi-step agent produces a *scaffold* before the final answer: reasoning spans, tool-call cards, intermediate prose. Render it live, then collapse it the instant inference completes. `WorkGroupCard` (`src/components/chat/WorkGroupCard.tsx`) does exactly this:
 
-1. **While streaming**, every part renders ungrouped and in place (`ChatBubble.tsx` returns the raw segment list) so thoughts, tool calls, and intermediate text stream chronologically with the spinner.
-2. **On finish**, the bubble rebuilds its segment list and folds *all* pre-answer output — intermediate text + reasoning + tool calls — into a single collapsible "Worked for Xs" group card. Only the final text segment renders as the answer bubble.
-3. The group header shows a **live elapsed timer** while working, then freezes at the larger of the measured or estimated duration (`toolCount * 1.5 + reasoningChars / 250`) for historical messages, and **auto-collapses** when the stream ends.
+1. **While streaming**, `ChatBubble` returns every segment **ungrouped and in place**, so thoughts, tool-calls, and intermediate text stream chronologically with the spinner.
+2. **On finish**, the memo recomputes and folds *all* pre-answer output into a **single collapsible "Worked for Xs" card**. Only the final text segment renders as the answer bubble.
+3. The group header shows a **live elapsed timer** while working (`setInterval` per second), then freezes at the larger of measured vs. estimated duration (`toolCount * 1.5 + reasoningChars / 250`), and **auto-collapses** when the stream ends.
 
-The two-phase memo (`isStreaming` flips the grouping decision) is the load-bearing idea: grouping is a *final render* transform, never a mid-stream one — re-flattening mid-stream would reorder parts and fight the stream.
+The two-phase decision — grouping is a **final render transform**, never a mid-stream one — is the load-bearing idea. Re-flattening mid-stream would reorder parts and fight the stream:
 
 ```tsx
-// ChatBubble.tsx — segment assembly
-if (isStreaming) return rawSegments;                       // live, ungrouped
+// ChatBubble.tsx — segment assembly (trimmed)
+if (isStreaming) return rawSegments;                                  // live, ungrouped
 const workItems = hasFinalText ? rawSegments.slice(0, -1) : rawSegments;
 if (workItems.length > 0) result.push({ type: 'work-group', items: workItems, key: 'work-group' });
 if (hasFinalText) result.push(lastSegment);
 ```
 
-> Note: this grouping only changes *layout*; the underlying message parts are untouched, so persistence (§4.4) and extraction (§4.6) stay oblivious.
+This grouping only changes *layout*; the underlying message parts are untouched, so persistence (§4.4) and extraction (§4.6) stay oblivious.
 
 ---
 
 ## Part 3 — Agentic AI: Tools & Loops
 
-The upgrade from "chatbot" to "agent": the model can **call tools**, inspect the **results**, and **loop**. Strata AI runs up to ~75 tool steps per user turn across an 8-tool workspace suite. This part builds that loop from the ground up.
+The upgrade from "chatbot" to "agent": the model **calls tools**, **reads results**, and **loops**. Strata AI runs up to ~75 tool steps per user turn across an 8-tool workspace suite. This part builds that loop from the ground up.
 
 ### 3.1 The atomic unit: `tool()` with schemas
 
@@ -477,36 +511,29 @@ Every tool is `tool()` with an explicit Zod `inputSchema` and (recommended) `out
 import { tool } from 'ai';
 import { z } from 'zod';
 
-export function createReadFileTool({ getCurrentFiles }) {
-  return tool({
-    description:
-      'Read full content or a specific section of a workspace file by name or ID. Always call this before making targeted edits.',
-    inputSchema: z.object({
-      nameOrId: z.string().describe("Filename (e.g. 'notes.md') or file ID to read."),
-      section: z
-        .string()
-        .optional()
-        .describe("Optional section heading to extract (e.g. 'Summary'). Omit to read full file."),
-    }),
-    outputSchema: z.object({
-      exists: z.boolean(),
-      name: z.string().optional(),
-      content: z.string().optional(),
-      error: z.string().optional(),
-    }),
-    execute: async ({ nameOrId, section }) => {
-      const files = getCurrentFiles();
-      // ... look up the file, extract section via regex, return { exists, name, content }
-    },
-  });
-}
+// createReadFileTool({ getCurrentFiles })
+return tool({
+  description: 'Read full content or a specific section of a workspace file by name or ID. Always call this before making targeted edits.',
+  inputSchema: z.object({
+    nameOrId: z.string().describe("Filename (e.g. 'notes.md', 'todo.md') or file ID to read."),
+    section: z.string().optional().describe("Optional section heading to extract (e.g. 'Professional Summary'). Omit to read full file."),
+  }),
+  outputSchema: z.object({
+    exists: z.boolean(),
+    name: z.string().optional(),
+    section: z.string().optional(),
+    content: z.string().optional(),
+    error: z.string().optional(),
+  }),
+  execute: async ({ nameOrId, section }) => { /* ... */ },
+});
 ```
 
 Schema discipline is what makes agents trustworthy:
 
-- **Descriptions are instructions.** The model reads `description` and each `z.string().describe(...)` to decide how to call the tool. Write them like requirements docs.
-- **`outputSchema` shapes what the model sees next.** Trimming outputs (metadata instead of full content, §3.7) shrinks the context window and steers behavior.
-- **Errors go into the result, not thrown.** Return `{ exists: false, error: '...' }`; the model reads the error and retries. Throwing terminates the run.
+- **Descriptions are instructions.** The model reads `description` and each `z.string().describe(...)` to decide how to call the tool. Write them like a requirements doc.
+- **`outputSchema` shapes what the model sees next.** Trim outputs to metadata where possible (§3.7).
+- **Errors go into the result, not thrown.** Return `{ exists: false, error: '...' }`; the model reads the error and retries. *Throwing* terminates the run — Strata AI reserves `throw` for hard, unrecoverable rules (e.g. writing past the per-workspace file count cap).
 
 ### 3.2 The closure-context pattern (stateless routes)
 
@@ -514,8 +541,8 @@ The critical design question for multi-tool agents: *where does state live?* Str
 
 - The client snapshots the workspace into the request body.
 - The server clones it into a per-request mutable array via `createMutableWorkspace`.
-- Tools receive **closures** over that array — never the array itself, never a database.
-- The `writer` field (when present) lets file tools push live `data-workspace` events to the client.
+- Tools receive **closures** over that array via a `WorkspaceToolsContext` — never the array itself, never a database.
+- An optional `writer` lets file tools push live `data-workspace` events to the client (§4.6).
 
 ```ts
 // src/lib/ai/tools/types.ts
@@ -529,35 +556,45 @@ export interface WorkspaceToolsContext {
 }
 ```
 
-The workspace factory lives in `src/lib/ai/workspace.ts` — it returns the `WorkspaceToolsContext` backed by one mutated array, and reuses `upsertFileIntoWorkspace` / `removeFileFromWorkspace` (also used by session-side persistence).
-
-Wiring in the route (`src/app/api/agent/route.ts`):
+The factory & merge helpers live in `src/lib/ai/workspace.ts` — `createMutableWorkspace(initialFiles)` returns a `WorkspaceToolsContext` backed by one mutated array, reusing `upsertFileIntoWorkspace` / `removeFileFromWorkspace` (also used by session-side persistence in §4.5/§4.6):
 
 ```ts
-// thin shell: auth -> quota -> zod -> clamp -> delegate
+// src/lib/ai/workspace.ts (abridged)
+export function createMutableWorkspace(initialFiles: WorkspaceFile[] = []): WorkspaceToolsContext {
+  const files: WorkspaceFile[] = initialFiles;
+  return {
+    getCurrentFiles: () => files,
+    onUpdateFile: (file) => { /* findIndex by id or case-insensitive name, else push */ },
+    onDeleteFile: (fileIdOrName) => { /* splice matching entries */ },
+  };
+}
+```
+
+The route wires it (thin shell: auth → quota → validate → clamp → delegate):
+
+```ts
+// src/app/api/agent/route.ts
 return runAgentResponse({
-  workspace: createMutableWorkspace(parsed.data.files || []),
+  workspace: createMutableWorkspace((parsed.data.files as WorkspaceFile[]) || []),
   messages: parsed.data.messages,
   modelId: parsed.data.model,
   thinkingLevel: parsed.data.thinkingLevel,
-  maxSteps: clamp(parsed.data.maxSteps, 1, 30),
+  maxSteps: Math.min(Math.max(maxSteps || 25, 1), 30),   // clamp 1-30
   signal: req.signal,
   remaining5h: rateLimit.remaining5h,
   remainingWeek: rateLimit.remainingWeek,
 });
 ```
 
-`runAgentResponse` (`src/lib/ai/agent-runner.ts`) owns every `streamText` config value — model resolution, `system` prompt, `messages`, `tools`, `abortSignal`, `smoothStream` transform, `prepareStep`, and `stopWhen` — then wraps the stream in `createUIMessageStream` (so tools can write `data-workspace` events via `writer`) and returns `createUIMessageStreamResponse` with the quota headers. It takes the `WorkspaceToolsContext` as the `workspace` param and layers a `writer` onto it.
+Why this beats the alternatives:
 
-Why this beats alternatives:
-
-- **No `contextSchema`.** State flows through closures, so there is no cross-request persistence to reason about.
-- **Scale = array ops.** Read, write, rename, delete, and cross-file invariants are all expressed as `findIndex`/`splice` over one array.
-- **The request boundary is the durability boundary.** Whatever tools mutate during the stream ships back in the tool-result parts; the client reconciles (Part 4.5). Live `data-workspace` events also stream out in real time via `writer` (Part 4.6).
+- **No cross-request state to reason about.** State IS the request body (plus the per-request closure).
+- **Scale = array ops.** Read/write/rename/delete and invariants express as `find`/`splice` over one array.
+- **The request boundary is the durability boundary.** Whatever tools mutate during the stream ships back as tool-result parts; the client reconciles (§4.5). Live `data-workspace` events also stream out in real time via `writer` (§4.6).
 
 ### 3.3 Registering the tool suite
 
-One factory function returns the full record (barrel `src/lib/ai/tools.ts`):
+One factory returns the full record (barrel `src/lib/ai/tools.ts`):
 
 ```ts
 export function createWorkspaceTools(context: WorkspaceToolsContext) {
@@ -574,29 +611,25 @@ export function createWorkspaceTools(context: WorkspaceToolsContext) {
 }
 ```
 
-Web tools (Tavily search/extract) take no context — stateless by nature. Keep tool factories split by domain: `workspace-tools.ts` vs `tavily-tools.ts`. Both share a `callTavilyApi` helper in `tavily-tools.ts` that hits the Tavily REST API directly (no SDK) with `Authorization: Bearer` header auth, per-endpoint fetch timeouts (30s search, 45s extract), and maps 401/429/432/433 responses to readable tool errors.
+The six workspace tools take the context; the two web tools (`webSearch`, `extractUrl`) are stateless by nature. They live split by domain — `workspace-tools.ts` vs `tavily-tools.ts` — sharing a `callTavilyApi` REST helper (no SDK) with `Authorization: Bearer` header auth, per-endpoint fetch timeouts (30 s search, 45 s extract), and mapping of 401/429/432/433 responses into readable tool errors.
 
 ### 3.4 Step limits keep loops finite
 
-A tool loop with no bound burns tokens forever. AI SDK 7's `isStepCount` stops the agent at N model-steps, and the finish reason tells the client why:
+A tool loop with no bound burns tokens forever. AI SDK 7's `isStepCount` stops the agent at N model steps, and the finish reason tells the client why (triggering the auto-continuation chain of up to 3 capped runs, §3.5):
 
 ```ts
 import { streamText, isStepCount } from 'ai';
-
 const maxSteps = Math.min(Math.max(requestedMaxSteps || 25, 1), 30); // clamp 1-30
-
-const result = streamText({
-  model,
-  tools,
-  stopWhen: isStepCount(maxSteps),
-});
+const result = streamText({ model, tools, stopWhen: isStepCount(maxSteps), /* ... */ });
 ```
 
-When the limit fires, the stream ends with `finishReason === 'step-limit'` — the client sees the signal and decides what to do next (§3.5). (The old `maxSteps` option on `streamText` is gone; `stopWhen` is the v7 primitive.)
+When the limit fires, the stream ends with `finishReason === 'step-limit'`. (The legacy integer `maxSteps` option on `streamText` is gone; `stopWhen` is the v7 primitive.)
+
+The route clamps to `1..30`; the route's default is 25 and the auto-continuation can chain up to 2 more passes for ~75 steps total.
 
 ### 3.5 The auto-continuation loop
 
-For genuinely long agent tasks, one capped run isn't enough. Strata AI chains up to **3 runs** (~75 steps) by auto-resuming: when `onFinish` reports `step-limit`, the client re-sends a continuation prompt. From `src/lib/ai/chat-reconciler.ts`:
+For long agent tasks one capped run isn't enough. Strata AI chains up to **3 runs** (~75 steps) by auto-resuming: when `onFinish` reports `step-limit`, the client re-sends a continuation prompt. From `src/lib/ai/chat-reconciler.ts`:
 
 ```ts
 const currentCount = continuationCountRef.current ?? 0;
@@ -612,30 +645,28 @@ if (finishReason === 'step-limit' && currentCount < 2) {
 }
 ```
 
-Implementation notes:
-
-- `sendMessageRef` is a ref to `chat.sendMessage` (stable, transport-safe — Part 4.7).
+- `sendMessageRef` is a ref to `chat.sendMessage` (stable, §5.5).
 - The counter resets on every *user* send (`handleSendMessage` sets it to 0), so auto-continuation can never loop forever.
-- The continuation text matters: "…where you left off" asks the agent to resume state from its own prior messages (the tools' closures were per-request, but the *conversation* — including the tool results — is in the message history).
+- The continuation text matters: "…where you left off" asks the agent to resume from its own prior messages (the tool closures were per-request, but the *conversation* — including the tool results — is in the message history it already has).
 
 ### 3.6 Re-injecting the system prompt per step
 
-Tools mutate the workspace *during* a run, but the system prompt was built *before* it. If the model's file-state view goes stale, it edits wrong files. `prepareStep` runs before every agent step and lets you rebuild the system prompt with live state (`src/lib/ai/agent-runner.ts`):
+Tools mutate the workspace *during* a run, but the system prompt was built *before* it. If the model's file-state view goes stale, it edits wrong files. `prepareStep` runs before every step and rebuilds the system prompt with live state — and now also with the token budget (§4.9):
 
 ```ts
+// src/lib/ai/agent-runner.ts
 prepareStep: async ({ stepNumber }) => {
-  console.log(`[agent] Preparing step ${stepNumber}. Active files: ${workspace.getCurrentFiles().length}`);
   return {
-    system: buildSystemInstruction(workspace.getCurrentFiles()), // fresh metadata per step
+    system: buildSystemInstruction(workspace.getCurrentFiles(), tokenBudget),
   };
 },
 ```
 
-This single hook is the difference between an agent that "kind of works" and one that reliably chains `readFile → editFile → verify` across many steps.
+This is the difference between an agent that "kind of works" and one that reliably chains `readFile → editFile → verify` across many steps.
 
 ### 3.7 System-prompt discipline: metadata, not content
 
-Never dump file contents into the system prompt. Strata AI injects a metadata-only listing and forces the model to call `readFile` for content (`src/lib/ai/prompts.ts`):
+Never dump file contents into the system prompt. `src/lib/ai/prompts.ts` injects a metadata-only listing and forces the model to call `readFile` for content:
 
 ```
 Workspace Files Listing (Metadata Only):
@@ -644,36 +675,32 @@ Workspace Files Listing (Metadata Only):
 *Note: System prompts contain metadata only. Call `readFile` to inspect actual file contents before making edits.*
 ```
 
-Costs and benefits:
-
-- **Tokens:** a 10k-char file costs ~3k tokens if injected; its metadata costs ~20.
-- **Correctness:** the model can't "hallucinate file contents from memory" if contents were never in context — it *must* read.
+- **Tokens:** a 10k-char file costs ~3k tokens injected; its metadata costs ~20.
+- **Correctness:** the model cannot "recall file contents from memory" it never saw — it *must* read.
 - **Prompt locality:** instruction weight stays high; the prompt doesn't drown in data.
 
-The system prompt is also where **hard constraints** belong (max files, max sizes) and where the agent's **workflow protocol** is encoded (inspect → mutate → verify, as numbered directives). Give the model a numbered rule list, not prose.
+The prompt also carries **hard constraints** (max files, max sizes — from `src/lib/limits.ts`) and a **numbered workflow protocol** (inspect → mutate → verify), a strict **GFM output-rule section** (since replies render through `react-markdown` + `remark-gfm`, the model must emit valid GFM: tables, task lists, fenced code with language tags), and an explicit **tone & persona section**. Two sections worth calling out:
 
-Two more prompt sections Strata AI ships because the output is rendered client-side:
-
-- **Strict GFM output rules.** Since chat replies render through `react-markdown` + `remark-gfm`, the prompt mandates valid GitHub-Flavored Markdown only — no HTML or pseudo-markdown, correct table alignment, fenced code blocks with language tags, proper task lists/strikethrough. Informing the model of the exact renderer keeps tables and lists structurally valid (§2.5's "markdown late" only works if the model emits real GFM).
-- **Tone & communication section.** An explicit "be a genuinely helpful assistant" directive (`prompts.ts` §7) — name the persona, forbid vague hedging, and require honest admission of limits. Tone lives in the prompt, not in post-processing.
-
-Both live in `src/lib/ai/prompts.ts` and are rebuilt per `prepareStep` along with the file metadata (§3.6).
+- **Context & Token Budget** (new): `buildSystemInstruction(files, tokenBudget)` appends the cumulative provider-reported usage and the active model's context window, so the model sizes replies accordingly. When usage is past 80% of the window, it adds a directive to "be concise" and proactively suggest a new chat. The budget is recomputed each `prepareStep` (so it stays current) and initially injected into the first `system` call too.
+- **Streamed live workspace hint:** the same `writer` used by tools is passed to the tools list so edits stream out live.
 
 ### 3.8 Bonus technique: a surgical edit engine
 
-Once agents *write*, the second-order problem appears: they clobber files. Strata AI's `ResumeEditEngine` (`src/lib/edit-engine.ts`) makes edits surgical with three escalating match strategies:
+Once agents *write*, the second-order problem appears: they clobber files. Strata AI's `StringEditEngine` (`src/lib/edit-engine.ts`) makes edits surgical with three escalating match strategies:
 
-1. **Exact match** — `source.replace(searchString, replaceString)`; rejected as *ambiguous* if the search string appears more than once.
+1. **Exact match** — `source.replace(searchString, replaceString)`; rejected as *ambiguous* if the string occurs more than once, forcing a richer `searchString`.
 2. **Whitespace-normalized match** — line-by-line matching that ignores indentation/blank lines, tolerating drift.
-3. **Anchor-matched** — matches only the first/last lines of the search within a bounded window (±5 lines), replacing the span between.
+3. **Anchor-matched** — matches only the first/last search lines within a bounded window (up to 5 extra lines between anchors), replacing the span.
 
-The `editFile` tool wraps the engine and reports `strategyUsed`, so the model learns *why* an edit failed and can adjust its `searchString` (the prompt mandates copying search strings verbatim from `readFile` output with 1-2 anchor lines). A surgical edit engine is the single highest-leverage quality investment for any document/code agent.
+Each strategy that does *not* give a unique match returns a descriptive error the model can act on. `applyEdit` reports `strategyUsed` (`'exact' | 'whitespace-normalized' | 'anchor-matched'`), and the `createEditFileTool` wraps it — echoing the strategy in its result so the model learns *why* an edit succeeded. The prompt mandates copying search strings verbatim from `readFile` output with 1–2 anchor lines.
+
+The `createEditFileTool` also applies hard limits *after* producing new content: reject if the resulting single file exceeds `MAX_FILE_CHARS` or the whole workspace would exceed `MAX_WORKSPACE_TOTAL_CHARS`. A surgical edit engine is the single highest-leverage quality investment for a document/code agent.
 
 ---
 
 ## Part 4 — Architecture, Providers, & Persistence
 
-Production agents fail on three axes if you don't architect them: provider coupling, persistence shape, and request-scoped state. This part is the Strata AI answer to each.
+Production agents fail on three axes if you don't architect them: provider coupling, persistence shape, and request-scoped state. This is the Strata AI answer to each.
 
 ### 4.1 The model registry
 
@@ -685,44 +712,56 @@ export interface ModelOption {
   label: string;
   family: string;
   provider?: 'google' | 'fireworks'; // defaults to 'google'
-  contextWindow: number;   // approximate context window in tokens (display metadata)
-  maxOutput?: number;      // maximum output tokens when the provider publishes one
+  contextWindow: number;   // approximate context window in tokens
+  maxOutput?: number;      // max output tokens when the provider publishes one
 }
 
 export const MODELS: ModelOption[] = [
   { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite', family: 'Gemini 3.5', contextWindow: 131072, maxOutput: 65536 },
+  { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', family: 'Gemini 3.1', contextWindow: 131072, maxOutput: 65536 },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview', family: 'Gemini 3', contextWindow: 131072, maxOutput: 65536 },
   { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536 },
-  {
-    id: 'accounts/fireworks/models/deepseek-v4-flash-0731',
-    label: 'DeepSeek V4 Flash 0731',
-    family: 'DeepSeek',
-    provider: 'fireworks',
-    contextWindow: 131072,
-    maxOutput: 65536,
-  },
+  { id: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536 },
+  { id: 'accounts/fireworks/models/deepseek-v4-flash-0731', label: 'DeepSeek V4 Flash 0731', family: 'DeepSeek', provider: 'fireworks', contextWindow: 131072, maxOutput: 65536 },
 ];
 ```
 
-Plus a per-model thinking-level config (`MODEL_THINKING_LEVELS`) and localStorage preference helpers. The catalog is the single source of truth that drives: the model picker UI, validation of stored preferences (`getInitialModel` only trusts ids still in the catalog), and — via the provider field — server routing.
+Plus, per `src/lib/models.ts`:
+
+- `MODEL_DESCRIPTIONS` — one-line user-facing descriptions for the picker.
+- `MODEL_THINKING_LEVELS` — `{ levels, defaultLevel }` per model:
+  - Gemini 3.5 Flash Lite: minimal / low / medium / high (default **low**).
+  - Gemini 3.1 Flash Lite: minimal / high (default **minimal**).
+  - Gemini 3 Flash Preview: minimal / low / medium / high (default **high**).
+  - DeepSeek V4 Flash: **low / high** (default **high**) — `max` effort is unrepresentable via the SDK, so levels collapse onto low/high.
+  - **Gemma 4**: *none* — the resolver must omit the reasoning field entirely (see §4.3).
+- `getInitialModel()` / `saveModelPreference()` / `getStoredThinkingLevel()` — localStorage helpers. `getInitialModel` only trusts a stored id still in the catalog, falling back to `NEXT_PUBLIC_GEMINI_MODEL` then `gemini-3.5-flash-lite`.
+- `getValidThinkingLevelForModel(modelId, level)` — clamps a chosen level to a model's allowed set, else returns the default.
+
+The catalog is the single source of truth that drives the model picker UI (`ModelSelectorMenu`), validation of stored preferences, and — via the `provider` field — server routing (`resolveAgentModel`, §4.2). The default model falls back to `NEXT_PUBLIC_GEMINI_MODEL`, then `gemini-3.5-flash-lite`. Conversation-level state (`conversations.model` / `thinkingLevel`) wins over stored preferences on load (`useModelSettings`).
 
 ### 4.2 The provider resolver: one seam, many providers
 
-Rule (from AGENTS.md): **provider wiring lives ONLY in `lib/ai/providers.ts`**, imported solely by `/api/agent`. No `@ai-sdk/google`/`@ai-sdk/fireworks` import may ever reach client code.
+**Rule:** provider wiring lives ONLY in `src/lib/ai/providers.ts`, imported solely by the agent path. No `@ai-sdk/google` / `@ai-sdk/fireworks` import may ever reach client code (`resolveAgentModel`, `getModelProvider` are the entire provider surface):
 
 ```ts
 // src/lib/ai/providers.ts
 export function resolveAgentModel(modelId: string, thinkingLevel?: string): ResolvedAgentModel {
   if (getModelProvider(modelId) === 'fireworks') {
+    const effort = DEEPSEEK_EFFORT[thinkingLevel || ''];   // minimal/low -> low; medium/high -> high
     return {
-      model: fireworks(DEEPSEEK_V4_FLASH_MODEL),
-      ...(effort ? { reasoning: effort } : {}),          // spread conditionally
+      model: fireworks(DEEPSEEK_V4_FLASH_MODEL),                              // DeepSeek V4 Flash 0731
+      ...(effort ? { reasoning: effort } : {}),
       providerOptions: {
-        fireworks: { thinking: { type: 'enabled' }, reasoningHistory: 'interleaved' },
+        fireworks: {
+          thinking: { type: 'enabled' },
+          reasoningHistory: 'interleaved',   // keep reasoning across tool calls in agent loops
+        },
       },
     };
   }
   return {
-    model: google(modelId || DEFAULT_AGENT_MODEL),
+    model: google(modelId || DEFAULT_AGENT_MODEL),   // DEFAULT_AGENT_MODEL = gemini-3.5-flash-lite
     reasoning: thinkingLevel || 'provider-default',
     providerOptions: {
       google: { thinkingConfig: { includeThoughts: true } },
@@ -731,81 +770,87 @@ export function resolveAgentModel(modelId: string, thinkingLevel?: string): Reso
 }
 ```
 
-The agent runner consumes it generically (`src/lib/ai/agent-runner.ts`), inside the `createUIMessageStream` callback:
+The runner consumes it generically inside the `createUIMessageStream` callback:
 
 ```ts
-const resolved = resolveAgentModel(modelId, thinkingLevel);
+const resolvedModel = resolveAgentModel(modelId, thinkingLevel);
 const result = streamText({
-  model: resolved.model,
-  ...(resolved.reasoning !== undefined ? { reasoning: resolved.reasoning } : {}),
-  ...(resolved.providerOptions ? { providerOptions: resolved.providerOptions } : {}),
+  model: resolvedModel.model,
+  ...(resolvedModel.reasoning !== undefined ? { reasoning: resolvedModel.reasoning } : {}),
+  ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
   // ...
 });
 ```
 
-Why spread conditionally: providers reject unknown options (`Gemma models have no thinking levels — omitting the field is a hard requirement`). The resolver is the one place that knows; the route stays provider-agnostic.
+Why spread conditionally? Because **providers reject unknown options** aggressively (Gemma accepts no thinking config). The resolver is the one place that knows per-provider; the route and the UI stay provider-agnostic.
 
 ### 4.3 Reasoning mapped per provider
 
 The same app concept ("thinking level") maps differently per provider:
 
-- **Google Gemini:** `reasoning: thinkingLevel` (values like `'minimal' | 'low' | 'medium' | 'high'`), plus `providerOptions.google.thinkingConfig.includeThoughts: true` to stream thoughts into reasoning parts.
-- **Fireworks DeepSeek:** top-level `reasoning` maps to `reasoning_effort` (`low`/`high` — the model's `max` isn't expressible, so levels collapse), plus `thinking: { type: 'enabled' }` and `reasoningHistory: 'interleaved'` — the latter keeps reasoning across tool calls in agent loops.
+- **Google Gemini:** `reasoning: thinkingLevel` (e.g. `minimal|low|medium|high`), with `providerOptions.google.thinkingConfig.includeThoughts: true` to stream thoughts into reasoning parts.
+- **Fireworks DeepSeek:** top-level `reasoning` maps to the provider `reasoning_effort` (`low`/`high`, via the `DEEPSEEK_EFFORT` map — `max` is not expressible), plus `providerOptions.fireworks.thinking { type: 'enabled' }` and `reasoningHistory: 'interleaved'` (keeps reasoning between tool calls in agent loops).
 
-All of this is invisible to the client, which just sends `{ model, thinkingLevel }`.
+The provider's reasoning tokens arrive as native `reasoning` parts and feed the same `ThoughtAccordion` as Google's thoughts (§2.4). The client sends only `{ model, thinkingLevel }`; the mapping is entirely server-side.
 
 ### 4.4 Persisting native UI messages (Dexie)
 
-Persistence strategy: **store the wire format, verbatim.** Strata AI's `DBMessage` extends the SDK's `UIMessage` with only storage keys:
+Persistence strategy: **store the wire format, verbatim**. `DBMessage` extends the SDK's `UIMessage` with only storage keys (`src/lib/db/db.ts`):
 
 ```ts
-// src/lib/db/db.ts
 export interface DBMessage extends UIMessage {
   chatId: string;
-  userId?: string;   // per-user session isolation (indexed)
-  timestamp: string; // ordering
+  userId?: string;    // per-user session isolation (indexed)
+  timestamp: string;  // ordering
 }
 
 export class ChatDatabase extends Dexie {
   constructor() {
     super('StrataAIChatDB');
-    this.version(5).stores({
-      conversations: 'id, userId, updatedAt, createdAt',
-      messages: 'id, chatId, userId, timestamp',
-    });
+    // v4 base; v5 adds the userId index for per-user isolation.
+    this.version(4).stores({ conversations: 'id, updatedAt, createdAt', messages: 'id, chatId, timestamp' });
+    this.version(5).stores({ conversations: 'id, userId, updatedAt, createdAt', messages: 'id, chatId, userId, timestamp' });
   }
 }
 ```
 
-No shape conversion, no DTOs — `messages` holds the same `parts` arrays the UI renders, so re-hydration is a one-liner: `chat.setMessages(dexieMessages)`.
+No shape conversion, no DTOs — `messages` holds the same `parts` arrays the UI renders, so re-hydration is a one-liner: `chat.setMessages(dexieMessages)` in `useChatSession`.
 
-Schema versioning notes:
+Schema-versioning notes:
 
-- Every schema change is a **new `version(n)`** with a `stores()` string — IndexedDB migrates in place.
+- Every change is a new `version(n)` with a `stores()` string; IndexedDB migrates in place.
 - Index only what you query (`chatId`, `userId`, `timestamp`); the workspace `files` array is embedded on the conversation row and rewritten wholesale (no per-file indexes).
-- **Timestamps must be unique and ordered.** Messages persisted in a batch share an ISO-ms timestamp, so `sortBy('timestamp')` ties and falls back to random UUID order. Strata AI stamps each row with `new Date(base + idx).toISOString()` where `idx` is the message's position in the batch (`chat-reconciler.ts`), guaranteeing `sortBy('timestamp')` always reproduces true conversation order.
+- **Timestamps must be unique and ordered.** Messages persisted in a batch share an ISO-ms wall-clock timestamp, so `sortBy('timestamp')` could tie and fall back to random UUID order. The reconciler stamps each row with `base + idx`, guaranteeing stable order (`§4.5`):
+
+```ts
+const base = Date.now();
+const dbMessages = allMessages.map((msg, idx) => ({
+  ...msg, chatId, ...(userId ? { userId } : {}),
+  timestamp: new Date(base + idx).toISOString(),
+}));
+```
 
 ### 4.5 The single onFinish reconciliation point
 
 All durable writes happen in **one place**, on `onFinish` — never during streaming. `src/lib/ai/chat-reconciler.ts`:
 
-1. Map all messages to `DBMessage` rows (`chatId`, `userId`, `timestamp`).
-2. Run a single atomic Dexie transaction:
-   - `db.messages.bulkPut(allDbMessages)` — persist **every** message, not just the last;
+1. Map all messages to `DBMessage` rows (`chatId`, `userId`, position-derived `timestamp`).
+2. Run a **single atomic Dexie transaction** (`db.transaction('rw', [db.messages, db.conversations], ...)`:
+   - `db.messages.bulkPut(dbMessages)` — persist **every** message, not just the last;
    - bump `conversations.updatedAt`;
-   - extract file deletions/updates from the **current** assistant message's tool parts (§4.6);
-   - apply deletions, merge updates (replace by id or case-insensitive name, else append), write the merged array via `updateConversationFiles`.
-3. Outside the transaction: the auto-continuation decision (§3.5).
+   - extract file deletions + updates from the **current** assistant message's tool parts (§4.6);
+   - apply deletions (`removeFileFromWorkspace`), merge updates (`upsertFileIntoWorkspace` — replace by id or case-insensitive name, else append), write the merged array via `updateConversationFiles`, and reset the active file.
+3. Outside the transaction, resolve the auto-continuation decision (§3.5).
 
 Why single-point:
 
 - **Atomicity.** If any write fails, nothing is half-persisted.
-- **Determinism.** One function owns the entire filesystem-of-record merge; there's exactly one place bugs can live.
-- **Separation.** Streaming UI stays ephemeral; persistence is a discrete event, not scattered effects.
+- **Determinism.** One function owns the entire file-state merge; there is exactly one place bugs can live.
+- **Separation.** Streaming UI stays ephemeral; persistence is a discrete event.
 
-### 4.6 Tool-result file extraction
+### 4.6 Tool-result file extraction & live `data-workspace` events
 
-The client can't trust the model's prose ("I created notes.md") — it trusts **tool results**. `src/lib/ai/message-extractor.ts` scans the tool parts of the finished message:
+The client cannot trust the model's prose ("I created notes.md") — it trusts **tool results**. `src/lib/ai/message-extractor.ts` scans the tool parts of the finished message and pulls out any result carrying `{ file }`, `{ files: [...] }`, or `{ deleted: true, fileId/name }`:
 
 ```ts
 if (isToolUIPart(part) && part.state === 'output-available' && part.output) {
@@ -813,9 +858,9 @@ if (isToolUIPart(part) && part.state === 'output-available' && part.output) {
 }
 ```
 
-Convention: any tool returning `{ file }`, `{ files: [...] }`, or `{ deleted: true, fileId/name }` is auto-discovered. Adding a new file-mutating tool requires **zero changes** to extraction or reconciliation. This is the persistence contract — document it in your AGENTS.md.
+Convention: **any** tool returning those keys is auto-discovered — adding a new file-mutating tool requires zero changes to extraction or reconciliation. The client then merges them into `conversation.files` (§4.5).
 
-**Live updates (separate from the replay contract):** the same tools also stream changes to the client *while* the run is still streaming. Server-side, the `writer` injected into `WorkspaceToolsContext` emits events — `writer.write({ type: "data-workspace", data: { event: "file-updated", file } })` / `{ event: "file-deleted", fileId }`. The client picks these up in `useChat`'s `onData` callback and applies them to the live workspace immediately (`src/hooks/useChatSession.ts`):
+**Live updates (separate channel):** the same tools also stream changes to the client *while the run is still streaming*. Server-side, the `writer` injected into the `WorkspaceToolsContext` emits events — for example the write/edit/rename tools call `writer.write({ type: "data-workspace", data: { event: "file-updated", file } })` and the delete tool `writer.write({ type: "data-workspace", data: { event: "file-deleted", fileId, name } })`. The client, in `useChat`, subscribe via `onData`:
 
 ```ts
 onData: (dataPart) => {
@@ -827,251 +872,265 @@ onData: (dataPart) => {
 },
 ```
 
-So the drawer reflects a file as *soon as* a tool writes it, rather than only after the whole inference finishes and `onFinish` reconciles. Durable persistence still happens once at `onFinish` (§4.5); the `data-workspace` events are a faster, ephemeral preview of that same state.
+So the drawer reflects a file *as soon as* a tool writes it, rather than waiting for the whole inference run to finish and `onFinish` to reconcile. Durable persistence still happens once at `onFinish`; the `data-workspace` events are a faster, ephemeral preview of that same state.
 
 ### 4.7 The refs-as-transport-bridge
 
-The transport is memoized once (`useMemo` with an empty dependency list) because recreating it restarts the chat state machine. But its `body()` must read *current* model/thinking/files. The bridge: keep the live values in refs, updated by effects (`src/hooks/useChatSession.ts`):
+The transport is memoized once (`useMemo`) because re-creating it restarts the chat state machine. But its `body()` must read *current* model/think/file values. The bridge: keep live values in refs, updated by effects, and read them lazily in `body()` (`src/hooks/useChatSession.ts` + `useChatTransport`):
 
 ```ts
-const filesRef = useRef(workspace.files);
 const modelRef = useRef(modelSettings.model);
+const thinkingLevelRef = useRef(modelSettings.thinkingLevel);
+const filesRef = useRef(workspace.files);
 
 useEffect(() => { filesRef.current = workspace.files; }, [workspace.files]);
 useEffect(() => { modelRef.current = modelSettings.model; }, [modelSettings.model]);
+useEffect(() => { thinkingLevelRef.current = modelSettings.thinkingLevel; }, [modelSettings.thinkingLevel]);
 
-const transport = useChatTransport({ filesRef, modelRef, /* ... */ });
-// transport body(): ({ model: modelRef.current, files: filesRef.current, ... })
+const transport = useChatTransport({ filesRef, modelRef, thinkingLevelRef, /* ... */ });
+// transport body(): ({ model: modelRef.current, thinkingLevel: thinkingLevelRef.current, files: filesRef.current })
 ```
 
-This is the canonical pattern for feeding live state into an AI SDK transport. Any new request-scoped value (a user id, a feature flag) joins the same bridge.
+This is the canonical pattern for feeding live state into an AI SDK transport. Any new request-scoped value (a user id, a flag) would join the same bridge.
 
 ### 4.8 Quota via response headers
 
-Server-enforced quotas belong on **every response**, not just failures. Strata AI returns `X-RateLimit-Remaining-5h` / `X-RateLimit-Remaining-Week` on success, and `Retry-After` + 429 on exhaustion. The transport's custom `fetch` reads them and pushes into a global quota context (`src/hooks/useChatTransport.ts`) — so the UI stays truthful in real time without polling. Patterns:
+Server-enforced quotas belong on **every response**, not just failures. Strata AI returns `X-RateLimit-Remaining-5h` / `X-RateLimit-Remaining-Week` on success, and `Retry-After` + 429 on exhaustion. The transport's `fetch` reads them and pushes into a global quote context (`useChatTransport` → `RateLimitContext`), so the UI stays truthful in real time without polling. Key patterns:
 
-- Pre-check client-side (block send when remaining <= 0), then let the server be authoritative.
-- On 429, stop the in-flight stream (`chatRef.current?.stop()`) and prune the empty trailing assistant bubble.
-- The error path surfaces as a friendly assistant-style bubble, never a raw stack (Strata AI: `chat-error-handler.ts`).
+- **Pre-check client-side** (block send when `remaining <= 0`), then let the server be authoritative (a DB-backed sliding-window limiter in `src/lib/rate-limit.ts`, writing to a `better_auth.message_log` table).
+- On **429**, stop the in-flight stream (`chatRef.current?.stop()`) and prune the empty trailing assistant bubble via an effect in `useChatSession`.
+- **Friendly error surface:** `src/lib/ai/chat-error-handler.ts` maps `Failed to fetch`/network/401/400/429 patterns to clean assistant-style copy and replaces the pending bubble — no raw stack, and it persists the corrected message list to Dexie with position-derived timestamps.
 
-### 4.9 Provider-accurate token accounting via `messageMetadata`
+### 4.9 Provider-accurate token accounting & the context-window guard
 
-Rather than relying on character-based estimation heuristics, Strata AI captures real provider-reported usage attached to assistant messages via AI SDK 7's `messageMetadata` stream option (`src/lib/token-usage.ts`).
+Rather than estimate tokens by characters, Strata AI captures **real provider-reported usage** and attaches it to the finished assistant message via AI SDK 7's `messageMetadata`. From `src/lib/ai/agent-runner.ts`:
 
 ```ts
-// src/lib/token-usage.ts
-export interface ChatMetadata {
-  usage?: LanguageModelUsage;
-  modelId?: string;
-}
+writer.merge(
+  toUIMessageStream({
+    stream: result.stream,
+    messageMetadata: ({ part }) => {
+      if (part.type === 'finish') {
+        return { usage: part.totalUsage, modelId: modelId || 'gemini-3.5-flash-lite' };
+      }
+      return undefined;
+    },
+  })
+);
+```
 
-export function computeCumulativeUsage(
-  messages: Array<{ role?: string; metadata?: ChatMetadata }> | undefined
-): CumulativeUsage | null {
+`src/lib/token-usage.ts` folds that into a per-conversation total:
+
+```ts
+export interface ChatMetadata { usage?: LanguageModelUsage; modelId?: string; }
+export interface CumulativeUsage { inputTokens: number; outputTokens: number; totalTokens: number; }
+
+export function computeCumulativeUsage(messages): CumulativeUsage | null {
   if (!messages || messages.length === 0) return null;
-  let inputTokens = 0, outputTokens = 0, totalTokens = 0;
-
+  let in = 0, out = 0, total = 0;
   for (const m of messages) {
     if (m.role !== 'assistant') continue;
     const usage = m.metadata?.usage;
     if (!usage) continue;
-    inputTokens += usage.inputTokens ?? 0;
-    outputTokens += usage.outputTokens ?? 0;
-    totalTokens += usage.totalTokens ?? (usage.inputTokens + usage.outputTokens);
+    in += usage.inputTokens ?? 0;
+    out += usage.outputTokens ?? 0;
+    total += usage.totalTokens ?? (usage.inputTokens + usage.outputTokens);
   }
-
-  return totalTokens > 0 ? { inputTokens, outputTokens, totalTokens } : null;
+  return total > 0 ? { inputTokens: in, outputTokens: out, totalTokens: total } : null;
 }
 ```
 
-The computed total is displayed in `ChatHeader.tsx` alongside the active model's context window limit (`formatTokens(totalTokens) / formatContextWindow(contextWindow) tokens (pct%)`).
+The header (`src/components/chat/ChatHeader.tsx`) shows a live, cumulative meter: `formatTokens(total) / formatContextWindow(contextWindow) tokens (pct%)`. When `totalTokens >= contextWindow` (`isContextWindowExhausted` in `useChatSession`), `handleSendMessage` refuses further sends with "Context window reached. Start a new chat to continue." — a **context-window guard** that keeps every run within budget by refusing sends, not by silently truncating.
+
+### 4.10 SSR rate-limit hydration
+
+Initial quota is resolved **on the server** so the client never waits on a fetch waterfall. The async root layout (`src/app/layout.tsx`) reads the session and quota before render:
+
+```tsx
+// src/app/layout.tsx (async server component)
+const reqHeaders = await headers();
+const session = await auth.api.getSession({ headers: reqHeaders });
+if (session?.user) initialRateLimit = await getRateLimitStatus(session.user.id);
+// <RateLimitProvider initialData={initialRateLimit}>{children}</RateLimitProvider>
+```
+
+`RateLimitProvider` (`src/contexts/RateLimitContext.tsx`) then:
+
+- seeds `rateLimitData` / `quotaError` from that `initialData`;
+- runs a **render-phase rehydration** (an `if (prevUser !== user || prevKey !== initialKey)` block, *not* an effect) so the quota UI is correct on the very first paint and on-sign-out it clears;
+- falls back to a `useEffect` fetch of `GET /api/user/rate-limit` (`src/app/api/user/rate-limit/route.ts`) only when SSR data is unavailable (e.g., signed-in during a client-only navigation) — guarded by an `active` flag to avoid setting state after unmount;
+- reacts to the transport's header updates via `updateRateLimitData`.
+
+The `GET /api/user/rate-limit` route re-verifies the session with `auth.api.getSession` and returns `getRateLimitStatus(userId)` as JSON (401 on no session, 500 on DB failure).
+
+### 4.11 The three persistence touchpoints
+
+| Layer | What holds state | Purpose | Writes happen |
+|-------|------------------|---------|---------------|
+| **Dexie (IndexedDB)** | `conversations` + `messages` tables | Durable client-side state across reloads and chat switches | `onFinish` reconciliation (§4.5), file CRUD, title/model updates |
+| **Request-body snapshot** | `files` array serialized into the transport `body` | Gives the stateless API route the current workspace so tools can operate | Each `sendMessage` via `filesRef` (§4.7) |
+| **API-route `mutableFiles[]`** | In-memory array mutated by tool closures during one request | Single source of truth for tool reads/writes within a stream; synced back via tool-result parts | Tool `execute()` callbacks (`onUpdateFile` / `onDeleteFile`) |
+
+The API route is intentionally **stateless**: it reconstructs workspace state from each request body and never persists anything itself. Whatever tool results mutate during the stream are reflected in the SSE tool parts and the live `data-workspace` events; the client's `onFinish` is the one reconciliation point that merges them into Dexie.
 
 ---
 
 ## Part 5 — Performance Optimization Techniques
 
-This is the payoff section: everything Strata AI learned the hard way about keeping a streaming agent session at 60 fps, even after thousands of words and dozens of tool calls.
+This is the payoff: everything Strata AI learned the hard way about keeping a streaming agent session at 60 fps, even after thousands of words and dozens of tool calls.
 
 ### 5.1 The streaming re-render audit
 
 Start with the question: **what re-renders on every stream delta, and does its cost scale with message length?**
 
-On each 15 ms chunk, `useChat` updates `chat.messages`. Every component in the render tree that receives `messages` (or anything derived from it) re-renders. The audit checklist:
+On each chunk, `useChat` updates `chat.messages`. Every consumer gets re-rendered. The audit checklist:
 
 1. **Find every consumer of the messages array** (panel, bubbles, drawer, sidebar badges).
-2. **Classify cost per consumer**: text render (cheap) vs `ReactMarkdown` AST parse (expensive) vs re-resolved tool UI (medium) vs Dexie `useLiveQuery` writes (only on finish — fine).
-3. **Kill the quadratic term**: a length-N conversation must not do N expensive re-parses per delta.
+2. **Classify cost per consumer**: text render (cheap) vs `ReactMarkdown` AST parse (expensive) vs re-resolved tool UI (medium) vs Dexie toWrite (only on finish — fine).
+3. **Kill the quadratic term** — a length-N conversation must not do N expensive re-parses per delta.
 
 ### 5.2 The key insight: only the in-flight message is re-created
 
-Why `React.memo` on message bubbles works at all: the AI SDK's `useChat` reducer `structuredClone`'s **only the message being updated** on each delta. Completed messages keep **reference identity** across updates.
+Why `React.memo` on message bubbles works at all: the AI SDK's `useChat` reducer `structuredClone`'s **only the message currently streaming**. Completed messages keep **reference identity** across updates.
 
 Consequences:
 
-- A `React.memo`'d bubble for a *finished* message sees identical `message` reference → skips entirely (O(1) cost per delta, not O(N)).
-- Only the active bubble — the one actually streaming — pays per-delta render cost. That's the whole ballgame.
+- A `React.memo`'d bubble for a *finished* message sees an identical `message` reference → skips entirely (O(1) per delta, not O(N)).
+- Only the active bubble — the one streaming — pays per-delta render cost. That's the whole ballgame.
 
-Verify this assumption after every SDK upgrade (the implementation detail lives in `node_modules/@ai-sdk/react/dist/index.js` — the `replaceMessage`/reducer logic). If the SDK ever clones all messages, the memo strategy breaks and you'll need selector-level memoization instead.
+Re-verify this assumption after every SDK version bump (the implementation lives in the `@ai-sdk/react` source). If it ever clones all messages, the memo strategy breaks and you'll need selector-level memoization instead.
 
 ### 5.3 `React.memo` boundaries on hot surfaces
 
-Wrap every hot chat surface in `React.memo`:
+Wrap every hot chat surface:
 
 ```tsx
-export const WorkspaceDrawer = memo(function WorkspaceDrawer({ isOpen, files, ... }) { ... });
-export const ChatInput = memo(function ChatInput({ onSendMessage, ... }) { ... });
-export const ChatBubble = memo(function ChatBubble({ message, ... }) { ... });
-export const Sidebar = memo(function Sidebar({ conversations, ... }) { ... });
+export const ChatBubble = memo(function ChatBubble({ message, isStreaming }) { ... });
+export const SmoothStreamText = memo(...);
+export const WorkspaceDrawer = memo(...);
+export const ChatInput = memo(...);
+export const Sidebar = memo(...);
+export const ToolCallCard = memo(..., areToolCallCardPropsEqual);
+export const WorkGroupCard = memo(...);
 ```
 
-The audit that motivated it (commit `e8eed55`): the unmemoized `WorkspaceDrawer` ran `ReactMarkdown` over the active file **on every 15 ms delta** — a length-scaled freeze hotspot. Memoizing the drawer (plus stable handlers, §5.5) made a long streaming session with an open drawer go from stutter to smooth.
+The motivated Strata AI reported that the unmemoized `WorkspaceDrawer` ran `ReactMarkdown` over the active file on every 15 ms delta — a length-scaled freeze hotspot. Memoizing the drawer (plus stable handlers, §5.5) made a long streaming session with an open drawer go from stutter to smooth.
 
-**Caveat:** `React.memo` is only as good as its props' stability. If parents pass inline arrow functions, every memo dies — hence §5.5.
+**Caveat:** `React.memo` is only as good as its props' stability. If parents pass inline arrow functions, every memo is dead on arrival — hence §5.5/§5.6.
 
 ### 5.4 Custom comparators for streaming props
 
-Tool-card props contain **multi-KB argument strings** (`writeFile` content) that legitimately change on every delta. A shallow prop compare fails fast and re-renders the card constantly. Strata AI's `ToolCallCard` passes a custom comparator that ignores argument identity unless the *state* transitioned:
+Tool-card props contain **multi-KB argument strings** (`writeFile` content) that legitimately change on every delta — a shallow prop compare would fail and re-render constantly. `ToolCallCard` passes a custom comparator that ignores argument identity unless the *state* transitioned (`src/components/chat/ToolCallCard.tsx`):
 
 ```ts
-// src/components/chat/ToolCallCard.tsx
-export const areToolCallCardPropsEqual = (prev, next) => {
-  if (prev.toolName !== next.toolName) return false;
-  if (prev.status !== next.status) return false;
-  // ignore args/result identity during streaming; only the status badge matters
+export function areToolCallCardPropsEqual(prevProps, nextProps) {
+  const prevInv = prevProps.part?.toolInvocation || prevProps.part;
+  const nextInv = nextProps.part?.toolInvocation || nextProps.part;
+  if (prevProps.onOpenDrawer !== nextProps.onOpenDrawer) return false;
+  if (prevProps.label !== nextProps.label || prevProps.status !== nextProps.status) return false;
+  if (!prevPart && !nextPart) return true;
+  if (prevPart.toolCallId || nextPart.toolCallId differs) return false;
+  // On terminal states, re-render when success/error output changes.
+  if (terminal(nextInv.state)) return prevResult.success === nextResult.success && prevResult.error === nextResult.error;
+  // During streaming, ignore growing args/inputs entirely:
   return true;
-};
-
-export const ToolCallCard = memo(function ToolCallCard(props) {
-  // ...
-}, areToolCallCardPropsEqual);
+}
+export default React.memo(ToolCallCard, areToolCallCardPropsEqual);
 ```
 
-Rule of thumb: the comparator should encode **what the user sees change** (status badge, icon, summary), not what the model sent. Intermediate argument chunks are invisible — skip them.
+Rule of thumb: the comparator encodes **what the user sees change** — status, icon, summary — never the raw argument stream.
 
 ### 5.5 Stable handlers with `useCallback`
 
-Every `React.memo` in the app is paid for by `useCallback` at the source. The audit fixed the workspace + model handlers (`src/hooks/useWorkspaceFiles.ts`, `src/hooks/useModelSettings.ts`) and the page-level drawer/sidebar callbacks (`src/app/chat-id/[id]/page.tsx`):
+Every `React.memo` is paid for by `useCallback` at the source. `useChatSession`, `useWorkspaceFiles`, `useModelSettings`, and the chat page (`src/app/chat-id/[id]/page.tsx`) define stable handlers:
 
 ```ts
-const handleSelectFile = useCallback((fileId: string) => { ... }, [deps]);
+const handleSelectFile = useCallback((fileId: string) => { ... }, []);
 const handleCloseDrawer = useCallback(() => setIsWorkspaceDrawerOpen(false), [setIsWorkspaceDrawerOpen]);
 ```
 
-The pattern: hooks return stable callbacks; the page passes them straight down; presentational components memoize. No inline `onClick={() => ...}` in hot paths.
+The pattern: hooks return stable callbacks → the page passes them straight down → presentational components memoize. No inline `onClick={() => ...}` in hot paths. `WorkspaceDrawer` additionally collapses its rapid `handleUpdateFile` saves by debouncing within a 150 ms window, reducing Dexie rewrites while the `data-workspace` events flow in.
 
 ### 5.6 Memoize resolved UI with `useMemo`
 
-Derived UI config should be computed once, not per render. The tool resolver (`src/components/chat/tools/resolver.tsx`) builds `ToolCardProps` (icon, label, accent, summary) **inside the card's own `useMemo`**, keyed on the parts that matter — so the parent list never pays for tool UI resolution:
+Derived UI config should be computed once, not per render. The tool resolver (`src/components/chat/tools/resolver.tsx`) turns a raw tool call into `ToolCardProps` (label, icon, accent classes, status, summary); the card computes it **inside its own `useMemo`** keyed on the parts that matter (the `part` reference + `onOpenDrawer`), so the parent list never pays for tool UI resolution:
 
 ```ts
-const props = useMemo(
-  () => resolveToolDisplay(part.toolInvocation),
-  [part.toolInvocation.toolName, part.toolInvocation.state],
-);
+const resolved = React.useMemo(() => {
+  if (part) return resolveToolDisplay(part, onOpenDrawer);
+  return null;
+}, [part, onOpenDrawer]);
 ```
 
-The counter-pattern that shipped first (and was removed): resolving tool display *in the parent list render* — re-resolving every card's UI for every card on every delta. Keep resolution local and memoized.
+The counter-pattern (which shipped first and was removed): resolving tool display in the *parent list render* — re-resolving every card's UI for every card on every delta. Keep resolution local and memoized.
 
 ### 5.7 Plain-text segments while streaming
 
-The single biggest per-frame win: **do not re-parse Markdown during streaming** (§2.4–2.5).
+The single biggest per-frame win: **do not re-parse markdown while streaming** (§2.4–2.5). The active text part renders as cheap plain text (`SmoothStreamText`), and completed parts get `ReactMarkdown` with what must be a **referentially-stable components** object:
 
-- Active text part → `<SmoothStreamText text={seg.content} isStreaming={true} />` (diffs stream updates and animates newly appended token deltas via 450ms `.animate-token-fade` CSS opacity & blur transition).
-- Completed parts → `ReactMarkdown` with a **memoized components map**:
-
-```tsx
-const mdComponents = useMemo(() => ({
-  h1: ({ children }) => <h1 className="text-title font-display">{children}</h1>,
-  h2: ({ children }) => <h2 className="text-heading font-display">{children}</h2>,
-  p: ({ children }) => <p className="text-body">{children}</p>,
-  code: ({ children }) => <code className="text-micro font-mono">{children}</code>,
-  // table, blockquote, li, pre-with-copy-button ...
-}), []);
+```ts
+{isActiveStreamingText
+  ? <SmoothStreamText text={seg.content} isStreaming={true} />
+  : <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{seg.content}</ReactMarkdown>}
 ```
 
-Rule: a components map passed to `ReactMarkdown` must be referentially stable (memoized), or every render re-creates the whole tree.
+Same discipline inside the `WorkGroupCard` for historical items. A fresh `components` object every render forces `ReactMarkdown` to tear down nodes — memoize it (`useMemo(..., [])`).
 
 ### 5.8 Type-system styling discipline
 
-Tailwind's default size scale invites fragmentation (`text-[11px]` in 30 places). Strata AI defines a **semantic type scale** in `@theme` (`src/app/globals.css`):
+Tailwind's raw size scale invites fragmentation (`text-[11px]` in dozens of places). Strata AI defines a **semantic type scale** in the `@theme` block of `src/app/globals.css`:
 
-```css
-@theme {
-  --text-micro: 0.6875rem;      /* 11px - eyebrows, inline code, badges */
-  --text-caption: 0.75rem;      /* 12px - meta lines, tool cards, sidebar */
-  --text-label: 0.875rem;       /* 14px - buttons, form labels, nav */
-  --text-body: 1rem;            /* 16px - paragraphs, chat bubbles */
-  --text-subheading: 1.125rem;  /* 18px - h3, section titles */
-  --text-heading: 1.25rem;      /* 20px - h2, empty states */
-  --text-title: 1.5rem;         /* 24px - h1 */
-  --text-display: 2rem;         /* 32px - auth hero, 404 */
-}
+```
+--text-micro: 0.6875rem;  /* 11px - eyebrows, inline code, badges */
+--text-caption: 0.75rem;  /* 12px - meta lines, tool cards, sidebar */
+--text-label: 0.875rem;   /* 14px - buttons, labels, nav */
+--text-body: 1rem;        /* 16px - paragraphs, chat bubbles */
+--text-subheading: 1.125rem; /* 18px - h3, section titles */
+--text-heading: 1.25rem;  /* 20px - h2, empty states */
+--text-title: 1.5rem;     /* 24px - h1 */
+--text-display: 2rem;     /* 32px - hero, 404 */
 ```
 
-Conventions (documented in AGENTS.md): use tokens only; never raw size classes (`text-xs`/`text-sm`) or arbitrary `text-[10px]`; unify markdown hierarchy (h1→title, h2→heading, h3→subheading, p/li→body, code→micro, table/blockquote→caption); never attach `prose` (no typography plugin installed). Design tokens are a performance technique too — they make sweeping visual changes a two-line diff instead of a 30-file hunt.
+Rules (from `docs/SUMMARY.md` / AGENTS.md): never raw size classes (`text-xs`/`text-sm`/`text-[10px]`), never hardcoded colors/shadows/radius — use the Milo `@theme` tokens (`primary`, `secondary`, `danger`, `surface-*`, `text-*`, `edge-*`, `accent-*`, `shadow-*`). Design tokens are a **performance and maintainability technique**: sweeping visual changes are a two-line diff instead of a 30-file hunt, and they keep components style-sys cohesive.
 
-### 5.9 Server-side tool input delta coalescing (`coalesceToolInputDeltas`)
+### 5.9 Server-side tool input delta coalescing (`coalesceToolInputDelta`)
 
-When a model streams large tool arguments (e.g. multi-KB payloads for `writeFile` or `editFile`), AI SDK 7 emits high-frequency `tool-input-delta` SSE chunks. On the client, the SDK's message reducer executes `parsePartialJson` and `fixJson()` on *every single token chunk*. For a 5,000-character code block delivered across hundreds of chunks, this creates quadratic $\mathcal{O}(N \times L)$ parsing work that freezes the browser main thread.
-
-Strata AI solves this by adding a custom `coalesceToolInputDeltas()` stream transform on the server (`src/lib/ai/agent-runner.ts`):
+When a model streams large tool arguments (`writeFile`/`editFile` content) the SDK emits high-frequency `tool-input-delta` SSE chunks. Client-side, the AI SDK message reducer would run partial-JSON parse/fix on **every chunk** — quadratic work for multi-KB code. Strata AI coalesces them **server-side** in `src/lib/ai/agent-runner.ts`:
 
 ```ts
 function coalesceToolInputDeltas() {
   return () => {
     const buffers = new Map<string, { delta: string; chunkCount: number; providerMetadata?: unknown }>();
 
-    function flush(id: string, controller: TransformStreamDefaultController) {
-      const entry = buffers.get(id);
-      if (entry && entry.delta.length > 0) {
-        controller.enqueue({
-          type: "tool-input-delta",
-          id,
-          delta: entry.delta,
-          ...(entry.providerMetadata ? { providerMetadata: entry.providerMetadata } : {}),
-        });
-        buffers.delete(id);
-      }
-    }
+    function flush(id, controller) { /* emit one tool-input-delta with all buffered text, then delete */ }
 
     return new TransformStream({
-      async transform(chunk: any, controller) {
-        if (chunk.type === "tool-input-delta") {
-          const existing = buffers.get(chunk.id);
-          if (existing) {
-            existing.delta += chunk.delta;
-            existing.chunkCount += 1;
-          } else {
-            buffers.set(chunk.id, { delta: chunk.delta, chunkCount: 1 });
-          }
-        } else {
-          // Flush pending deltas before non-delta chunks (e.g. tool-call completion)
-          if (chunk.type === "tool-call" && buffers.has(chunk.toolCallId)) {
-            flush(chunk.toolCallId, controller);
-          }
-          controller.enqueue(chunk);
+      async transform(chunk, controller) {
+        if (chunk.type === 'tool-input-delta') {
+          // accumulate into buffers by tool-call id
+          // if existing: delta += chunk.delta, chunkCount += 1, merge providerMetadata
+          // else: buffers.set(id, { delta: chunk.delta, chunkCount: 1 })
+          return;
         }
+        if ((chunk.type === 'tool-input-end' || chunk.type === 'tool-call') && chunk.id) flush(chunk.id, controller);
+        controller.enqueue(chunk);
       },
-      flush(controller) {
-        for (const id of buffers.keys()) {
-          flush(id, controller);
-        }
-      },
+      flush(controller) { for (const id of [...buffers.keys()]) flush(id, controller); },
     });
   };
 }
 ```
 
-By coalescing argument chunks per tool call before emitting SSE events, client-side partial JSON re-parsing is reduced to a single batch parse, keeping long multi-KB code streaming perfectly fluid.
+Registered in `experimental_transform` **after** `smoothStream`, it turns $O(N \times L)$ client partial-JSON re-parses into a single batch parse per tool call. This keeps long multi-KB code streaming perfectly fluid. The exact production shape (per-tool buffers, `tool-input-end`/`tool-call` flush triggers, `providerMetadata` merge, and a coalescing log) lives in `src/lib/ai/agent-runner.ts`.
 
 ### 5.10 Measure, don't guess
 
-The full audit sequence Strata AI used (and that caught every "hotspot" claim):
+- **React DevTools Profiler** on a long streaming session — which components re-render per delta and their render durations. (The profiler itself slows rendering; compare relative cost.)
+- **The scaling test** — a conversation with 1 vs. 50 messages. Any component whose cost grows with history is a quadratic suspect.
+- **Chrome Performance tab** — long tasks (> 50 ms) during streaming are frame drops; identify the owning script.
+- **Sanity-check assumptions in the SDK source** — memo strategies (§5.2) live or die on implementation details; verify after upgrades.
 
-1. **React DevTools Profiler** on a long streaming session — identify which components re-render per delta and their render durations. (Note: the profiler itself slows rendering; compare relative costs.)
-2. **The scaling test** — a conversation with 1 vs 50 messages. Any component whose render cost grows with history is a quadratic suspect.
-3. **Chrome Performance tab** — long tasks > 50 ms during streaming are frame drops; find the script that owns them.
-4. **Sanity-check assumptions in the SDK source** — memo strategies live or die on implementation details like §5.2; re-verify on upgrades.
+---
 
 ## Part 6 — Best Practices & Anti-Patterns
 
@@ -1079,45 +1138,48 @@ The full audit sequence Strata AI used (and that caught every "hotspot" claim):
 
 **Server (agent route)**
 
-- [ ] Thin route (auth → quota → zod → clamp) delegating all `streamText` config to `runAgentResponse` (`agent-runner.ts`).
-- [ ] Stateless workspace via `createMutableWorkspace` closures; never persists server-side.
-- [ ] Auth verified server-side (`getSession`), not just cookie-presence.
-- [ ] Zod-validate the body; `maxSteps` clamped (1-30); message length enforced server-side.
-- [ ] `abortSignal: req.signal` wired; `stopWhen: isStepCount` bounds the loop.
-- [ ] `prepareStep` re-injects the system prompt with live state.
-- [ ] Provider wiring confined to one resolver module; runner stays provider-agnostic.
-- [ ] Tool errors returned in results (`{ error }`), not thrown.
-- [ ] File tools stream live `data-workspace` events via injected `writer` (§4.6).
+- [ ] Thin route: auth → quota → zod → clamp → delegate; all `streamText` config in `runAgentResponse`.
+- [ ] Stateless workspace via `createMutableWorkspace` closures; never persist server-side.
+- [ ] Auth double-verified: fast cookie check in `proxy.ts` + full `auth.api.getSession` in the route.
+- [ ] Zod-validate the body; `maxSteps` clamped to 1–30; message length enforced server-side.
+- [ ] `abortSignal: req.signal` wired; `stopWhen: isStepCount(maxSteps)` bounds the loop.
+- [ ] `prepareStep` re-injects the system prompt with live file state + token budget.
+- [ ] Provider wiring confined to `resolveModelProvider`; the route stays provider-agnostic.
+- [ ] Tool errors returned in results (`{ error }`), not thrown (except hard resource rules).
+- [ ] File tools stream live `data-workspace` events via the injected `writer`.
 
 **Client**
 
-- [ ] `useChat` status is the only source of truth for loading/streaming UI.
-- [ ] `onData` handler applies live `data-workspace` file events to the workspace (§4.6).
-- [ ] Memoized transport; live values via the refs bridge (§4.7).
+- [ ] `useChat` `status` is the only loading/streaming source of truth.
+- [ ] `onData` applies live `data-workspace` file events to the workspace.
+- [ ] Memoized transport; live values via the refs-bridge (`body` reads refs).
 - [ ] `React.memo` on every hot surface + stable `useCallback` handlers + custom comparators where props are large.
-- [ ] Stream plain text, markdown late, memoized components map (§5.7).
-- [ ] Group intermediate work only after inference finishes; render it ungrouped while streaming (§2.6).
+- [ ] Stream plain text, markdown late, memoized `components` object.
+- [ ] Group intermediate work only after inference finishes (§2.6).
 - [ ] Auto-scroll owned by `StickToBottom`; zero manual `scrollIntoView`.
-- [ ] All persistence in one `onFinish` reconciliation, atomic transaction, native `UIMessage` shape.
-- [ ] Semantic design tokens only; no raw sizes/colors.
+- [ ] All persistence in one `onFinish` reconciliation, atomic Dexie transaction, native `UIMessage` shape.
+- [ ] Semantic Milo design tokens only; no raw sizes/colors/shadows.
 
 **Prompt & model**
 
-- [ ] Metadata-only listings; the model must call `readFile` for content.
-- [ ] Hard constraints and a numbered workflow protocol in the system prompt.
-- [ ] `thinkingConfig.includeThoughts`-style reasoning enabled where supported; thoughts rendered per §2.4.
+- [ ] Metadata-only file listings; the model must call `readFile` for content.
+- [ ] Hard constraints + numbered workflow protocol in the system prompt.
+- [ ] GFM output rules section (the renderer is `react-markdown`).
+- [ ] `thinkingConfig.includeThoughts`/per-provider reasoning enabled where supported; thoughts rendered per §2.4.
+- [ ] Token budget + context-window guard wired end-to-end (§3.6/§4.9).
 
 ### 6.2 Mistakes we actually made
 
-Every item below shipped to production and was later fixed. Learn from the receipts:
+Every item shipped and was later fixed. Learn from the receipts:
 
-1. **Unmemoized drawer re-parsing Markdown per delta.** The classic quadratic: an open file drawer + long stream = main-thread meltdown. Fix: memo + stable handlers (commit `e8eed55`).
-2. **Tool UI resolution in the parent render.** Every list delta re-resolved every card. Fix: resolve inside each card's `useMemo`, keyed on state transitions.
-3. **Raw `text-[11px]` fragmentation.** 30+ spots, each a deliberate "small tweak". Fix: semantic type scale + audit greps (`text-\[1[01]px\]`) in verification.
+1. **Unmemoized drawer re-parsing markdown per delta.** Classic quadratic: open file drawer + long stream = main-thread meltdown. Fix: `React.memo` + stable handlers.
+2. **Tool UI resolution in the parent render.** Every delta re-resolved every card. Fix: resolve inside each card's `useMemo`, keyed on the tool part identity.
+3. **Raw `text-[11px]` fragmentation across the codebase.** Fix: a semantic type scale + audit greps (`text-\[1[01]px\]`) in CI/verification.
 4. **Dumping file contents into the system prompt.** Token-blowing and hallucination fuel. Fix: metadata-only listings + `readFile` discipline.
-5. **`append()`-style sends on the old SDK.** Transports + `sendMessage` are the v7 way; mixing generations of the API is how subtle bugs creep in.
-6. **Manual scroll effects.** Janky, fights the user, double-fires on stream start. Fix: `StickToBottom` owns the DOM, period.
-7. **Trusting model prose over tool results.** "I updated notes.md" with no file change. Fix: persistence is driven by tool-result parts, never by narrative.
+5. **Mixing SDK generations** (legacy `append`-style sends). Use transports + `sendMessage` in v7 only.
+6. **Manual scroll effects.** Janky, fights the user, double-fires. `StickToBottom` owns the DOM.
+7. **Trusting model prose over tool results** ("I updated notes.md" with no file change). Fix: persistence driven by tool-result parts, never narrative.
+8. **Letting a single timestamp tie message ordering.** Position-derived timestamps fixed silent reorders.
 
 ### 6.3 Where everything lives in Strata AI
 
@@ -1125,21 +1187,28 @@ Every item below shipped to production and was later fixed. Learn from the recei
 |---------|------|
 | Chat session orchestration (transport + chat + reconciler wiring) | `src/hooks/useChatSession.ts` |
 | Custom transport + quota header parsing | `src/hooks/useChatTransport.ts` |
-| Agent stream assembly (`runAgentResponse`: model, tools, transforms, stop cap, SSE + quota headers) | `src/lib/ai/agent-runner.ts` |
+| Agent stream assembly (`runAgentResponse`: model, tools, transforms, step cap, SSE + quota headers) | `src/lib/ai/agent-runner.ts` |
 | Streaming agent route (thin auth/quota/validation shell) | `src/app/api/agent/route.ts` |
 | Mutable workspace factory + file-merge helpers | `src/lib/ai/workspace.ts` |
 | Provider resolver (the only provider seam) | `src/lib/ai/providers.ts` |
-| Model catalog + thinking levels + context/output caps | `src/lib/models.ts` |
+| Model catalog + thinking levels + caps + localStorage helpers | `src/lib/models.ts` |
+| Token accounting (`computeCumulativeUsage`, formatters) | `src/lib/token-usage.ts` |
+| App limits (`MAX_*`) + formatting helpers | `src/lib/limits.ts` |
 | Tool factories + barrel | `src/lib/ai/tools/` + `src/lib/ai/tools.ts` |
-| System prompt builder (GFM rules, tone, metadata listings) | `src/lib/ai/prompts.ts` |
-| Surgical edit engine | `src/lib/edit-engine.ts` |
+| System prompt builder (metadata, constraints, GFM rules, token budget) | `src/lib/ai/prompts.ts` |
+| Surgical edit engine (`StringEditEngine`) | `src/lib/edit-engine.ts` |
 | Dexie schema + CRUD | `src/lib/db/db.ts` |
-| onFinish reconciliation | `src/lib/ai/chat-reconciler.ts` |
+| `onFinish` reconciliation | `src/lib/ai/chat-reconciler.ts` |
 | Tool-result file extraction | `src/lib/ai/message-extractor.ts` |
-| Memoized chat surfaces | `src/components/chat/*` (ChatBubble, SmoothStreamText, ChatInput, ToolCallCard, WorkGroupCard, resolver) |
+| Friendly error mapping | `src/lib/ai/chat-error-handler.ts` |
+| Memoized chat surfaces (ChatBubble, SmoothStreamText, ChatInput, ToolCallCard, WorkGroupCard, resolver) | `src/components/chat/*` |
+| Global quota context (SSR hydration + header sync) | `src/contexts/RateLimitContext.tsx` |
+| Route guard + security headers (`proxy`) | `src/proxy.ts` |
 | Confirm dialog (portal into `document.body`) | `src/components/ui/ConfirmDialog.tsx` |
-| Design tokens (type scale, colors, shadows) | `src/app/globals.css` |
-| Thin shell page + auto-scroll | `src/app/chat-id/[id]/page.tsx` |
+| Design tokens (type scale, colors, shadows, keyframes) | `src/app/globals.css` |
+| Thin-shell chat page + auto-scroll | `src/app/chat-id/[id]/page.tsx` |
+| Auth (server + client) | `src/lib/auth.ts`, `src/lib/auth-client.ts`, `src/app/api/auth/[...all]/route.ts` |
+| Rate limiting (DB sliding windows) | `src/lib/rate-limit.ts` |
 | Architecture reference | `docs/SUMMARY.md` |
 
 That's the full ladder: a streamed reply, a smooth UX, a bounded tool loop, a production architecture, and the performance discipline that keeps it all at 60 fps. Build well.
