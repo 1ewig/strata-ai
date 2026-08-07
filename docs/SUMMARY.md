@@ -51,7 +51,7 @@
 | Build Tooling | ESLint 9 (`eslint-config-next`) | Linting | `bun run lint` = `eslint .` |
 | Testing | NONE | — | No test framework configured; no unit/integration tests in repo |
 
-**Environment variables** (`.env.example` is authoritative): `GOOGLE_GENERATIVE_AI_API_KEY` (required), `NEXT_PUBLIC_GEMINI_MODEL` (default model), `APP_URL`, `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Supabase project), `DATABASE_URL` (Postgres pooler), `BETTER_AUTH_SECRET` (min 32 chars), `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL` (auth client base URL), `TAVILY_API_KEY` (optional, for web search & extraction).
+**Environment variables** (`.env.example` is authoritative): `GOOGLE_GENERATIVE_AI_API_KEY` (required), `FIREWORKS_API_KEY` (required for Fireworks-hosted models), `NEXT_PUBLIC_GEMINI_MODEL` (default model), `APP_URL`, `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Supabase project), `DATABASE_URL` (Postgres pooler), `BETTER_AUTH_SECRET` (min 32 chars), `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL` (auth client base URL), `TAVILY_API_KEY` (optional, for web search & extraction).
 
 **Runtime scripts** (all via `bun run`):
 
@@ -91,6 +91,15 @@
 - **No data cache layer, no ISR/SSG, no revalidate tags.** The product is fully dynamic: every route responds per-request; chat content is streamed live.
 - The only "caching" is (a) Better Auth `session.cookieCache` (5-min in-memory session cache on the server), and (b) `localStorage` for model + thinking-level preferences.
 - Rendering is dynamic SSR for the root layout and client-side rendering everywhere else; streaming is used for the agent response.
+
+### 3.3a Next.js 16 features in use (explicit map)
+
+- **`proxy.ts` (middleware replacement):** Next 16 `proxy` export with a `config.matcher` (`/`, `/chat-id/:path*`, `/api/agent`) doing the pre-render session guard + security headers — not a `middleware.ts` file.
+- **Route Handlers are the only server surface:** `/api/agent`, `/api/auth/[...all]`, `/api/user/rate-limit` are the sole server components besides the async `layout.tsx`, a redirect page, and the static 404.
+- **Dynamic routes only:** no `generateStaticParams`/`dynamicParams`; `chat-id/[id]` uses async `params` unwrapped with `use(params)` (Next 16 convention).
+- **Streaming:** SSE UI-message responses (`createUIMessageStreamResponse`) for the agent endpoint; no Suspense-based HTML streaming is used.
+- **Rendering posture:** RSC only where it pays off (layout hydration, redirects, metadata, 404); every interactive page is `'use client'`.
+- **Build/deploy:** `output: 'standalone'` for `node .next/standalone/server.js`; strict TS build errors; `reactStrictMode`; no partial pre-rendering.
 
 ### 3.4 Authentication & authorization flow
 
@@ -180,12 +189,14 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── rate-limit.ts         # DB sliding-window limiter (message_log): checkAndIncrement + getRateLimitStatus
     │   │   ├── models.ts             # Model registry, descriptions, thinking-level config, localStorage helpers
     │   │   ├── schemas.ts            # Zod: WorkspaceFile
+    │   │   ├── limits.ts             # Centralized app limits (message/file/workspace/conversation caps) + formatting helpers
+    │   │   ├── token-usage.ts        # Cumulative provider-reported usage folding (computeCumulativeUsage) + compact token/context formatters
     │   │   ├── id.ts                 # crypto.randomUUID with fallback
     │   │   ├── edit-engine.ts        # StringEditEngine: 3-tier surgical string matching
     │   │   ├── db/db.ts              # Dexie ChatDatabase (v5), Conversation/DBMessage types, CRUD helpers
     │   │   └── ai/
     │   │       ├── index.ts          # Re-exports prompts + tools
-    │   │       ├── prompts.ts        # buildSystemInstruction(files) — 6-section advanced system prompt
+    │   │       ├── prompts.ts        # buildSystemInstruction(files) — 8-section advanced system prompt + Context & Token Budget section
     │   │       ├── providers.ts      # SERVER-ONLY model→provider resolver (google/fireworks streamText config)
     │   │       ├── agent-runner.ts   # SERVER-ONLY runAgentResponse: streamText assembly, transforms, lifecycle, SSE + quota headers
     │   │       ├── workspace.ts      # Shared upsertFileIntoWorkspace/removeFileFromWorkspace + createMutableWorkspace
@@ -213,6 +224,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 
 - **`conversations`** table (keyPath `id`; indexes `id, userId, updatedAt, createdAt`):
   - `id` (UUID, matches the `/chat-id/:id` URL), `userId?` (Better Auth user ID), `title` (auto-title from first message or "New Chat"), `model` (Gemini model id), `thinkingLevel?` ("minimal"|"low"|"medium"|"high"), `files?` (embedded array of WorkspaceFile — the active workspace snapshot), `activeFileId?`, `createdAt`/`updatedAt` (ISO strings).
+  - **Legacy-inclusion rule:** `useConversations` lists records that are *unowned* (`!userId`) alongside the signed-in user's own, so conversations that predate v5 user-scoping are never hidden.
 - **`messages`** table (keyPath `id`; indexes `id, chatId, userId, timestamp`):
   - `DBMessage` extends AI SDK `UIMessage` (native parts array) with `chatId` (indexed FK to conversations), `userId?` (Better Auth user ID) + `timestamp`. Stored as native UI messages — no shape conversion. **`timestamp` is a position-derived ordering key**: `chat-reconciler.ts` stamps each message with a strictly increasing value derived from its index in `allMessages`, so `sortBy('timestamp')` deterministically reproduces conversation order (a single shared timestamp would tie and fall back to random UUID ordering).
 - **`WorkspaceFile`** entity (embedded in conversations.files): `id`, `name`, `content`, `language` (default "markdown"), `createdAt`, `updatedAt`. Note: no per-file indexes; the whole array is read/written as one column.
@@ -242,7 +254,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 | `gemma-4-26b-a4b-it` | Gemma 4 | none (provider default) | — |
 | `accounts/fireworks/models/deepseek-v4-flash-0731` | DeepSeek (Fireworks) | low / high | high |
 
-- **Context-window caps:** every catalog entry is capped at `contextWindow: 131072` (128k tokens) with a `maxOutput: 65536` (64k) output allowance. `getModelContextWindow(modelId)` in `lib/models.ts` resolves a model's window (falling back to the first catalog entry). The server attaches provider-reported usage (`metadata.usage`) to finished assistant messages via AI SDK 7's `messageMetadata`, the client folds it into a cumulative per-conversation total (`computeCumulativeUsage` in `lib/token-usage.ts`), and `handleSendMessage` refuses further sends once `totalTokens >= contextWindow` ("Context window reached. Start a new chat to continue.").
+- **Context-window caps:** every catalog entry is capped at `contextWindow: 131072` (128k tokens) with a `maxOutput: 65536` (64k) output allowance. `getModelContextWindow(modelId)` in `lib/models.ts` resolves a model's window (falling back to the first catalog entry). The server attaches provider-reported usage (`metadata.usage`) to finished assistant messages via AI SDK 7's `messageMetadata`, the client folds it into a cumulative per-conversation total (`computeCumulativeUsage` in `lib/token-usage.ts`), and `handleSendMessage` refuses further sends once `totalTokens >= contextWindow` ("Context window reached. Start a new chat to continue."). The ChatHeader surfaces this as a live "tokens used / context window (pct%)" meter (`formatTokens`/`formatContextWindow`).
 
 - Each entry also has a user-facing label + one-line description (`MODEL_DESCRIPTIONS`) shown in the ChatInput model popover.
 - Model entries may declare a `provider` ('google' or 'fireworks'); the server routes to the matching provider via `lib/ai/providers.ts` (`resolveAgentModel`). The model selector menu and transport are provider-agnostic.
