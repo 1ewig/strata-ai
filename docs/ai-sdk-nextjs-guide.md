@@ -41,6 +41,7 @@
   - [4.6 Tool-result file extraction](#46-tool-result-file-extraction)
   - [4.7 The refs-as-transport-bridge](#47-the-refs-as-transport-bridge)
   - [4.8 Quota via response headers](#48-quota-via-response-headers)
+  - [4.9 Provider-accurate token accounting via `messageMetadata`](#49-provider-accurate-token-accounting-via-messagemetadata)
 - [Part 5 — Performance Optimization Techniques](#part-5-performance-optimization-techniques)
   - [5.1 The streaming re-render audit](#51-the-streaming-re-render-audit)
   - [5.2 The key insight: only the in-flight message is re-created](#52-the-key-insight-only-the-in-flight-message-is-re-created)
@@ -50,7 +51,8 @@
   - [5.6 Memoize resolved UI with `useMemo`](#56-memoize-resolved-ui-with-usememo)
   - [5.7 Plain-text segments while streaming](#57-plain-text-segments-while-streaming)
   - [5.8 Type-system styling discipline](#58-type-system-styling-discipline)
-  - [5.9 Measure, don't guess](#59-measure-dont-guess)
+  - [5.9 Server-side tool input delta coalescing](#59-server-side-tool-input-delta-coalescing)
+  - [5.10 Measure, don't guess](#510-measure-dont-guess)
 - [Part 6 — Best Practices & Anti-Patterns](#part-6-best-practices--anti-patterns)
   - [6.1 The checklist](#61-the-checklist)
   - [6.2 Mistakes we actually made](#62-mistakes-we-actually-made)
@@ -688,15 +690,15 @@ export interface ModelOption {
 }
 
 export const MODELS: ModelOption[] = [
-  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite', family: 'Gemini 3.5', contextWindow: 1048576, maxOutput: 65536 },
-  { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', family: 'Gemma 4', contextWindow: 262144 },
+  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite', family: 'Gemini 3.5', contextWindow: 131072, maxOutput: 65536 },
+  { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536 },
   {
     id: 'accounts/fireworks/models/deepseek-v4-flash-0731',
     label: 'DeepSeek V4 Flash 0731',
     family: 'DeepSeek',
     provider: 'fireworks',
-    contextWindow: 1048576,
-    maxOutput: 1048576,
+    contextWindow: 131072,
+    maxOutput: 65536,
   },
 ];
 ```
@@ -852,6 +854,38 @@ Server-enforced quotas belong on **every response**, not just failures. Strata A
 - On 429, stop the in-flight stream (`chatRef.current?.stop()`) and prune the empty trailing assistant bubble.
 - The error path surfaces as a friendly assistant-style bubble, never a raw stack (Strata AI: `chat-error-handler.ts`).
 
+### 4.9 Provider-accurate token accounting via `messageMetadata`
+
+Rather than relying on character-based estimation heuristics, Strata AI captures real provider-reported usage attached to assistant messages via AI SDK 7's `messageMetadata` stream option (`src/lib/token-usage.ts`).
+
+```ts
+// src/lib/token-usage.ts
+export interface ChatMetadata {
+  usage?: LanguageModelUsage;
+  modelId?: string;
+}
+
+export function computeCumulativeUsage(
+  messages: Array<{ role?: string; metadata?: ChatMetadata }> | undefined
+): CumulativeUsage | null {
+  if (!messages || messages.length === 0) return null;
+  let inputTokens = 0, outputTokens = 0, totalTokens = 0;
+
+  for (const m of messages) {
+    if (m.role !== 'assistant') continue;
+    const usage = m.metadata?.usage;
+    if (!usage) continue;
+    inputTokens += usage.inputTokens ?? 0;
+    outputTokens += usage.outputTokens ?? 0;
+    totalTokens += usage.totalTokens ?? (usage.inputTokens + usage.outputTokens);
+  }
+
+  return totalTokens > 0 ? { inputTokens, outputTokens, totalTokens } : null;
+}
+```
+
+The computed total is displayed in `ChatHeader.tsx` alongside the active model's context window limit (`formatTokens(totalTokens) / formatContextWindow(contextWindow) tokens (pct%)`).
+
 ---
 
 ## Part 5 — Performance Optimization Techniques
@@ -976,7 +1010,61 @@ Tailwind's default size scale invites fragmentation (`text-[11px]` in 30 places)
 
 Conventions (documented in AGENTS.md): use tokens only; never raw size classes (`text-xs`/`text-sm`) or arbitrary `text-[10px]`; unify markdown hierarchy (h1→title, h2→heading, h3→subheading, p/li→body, code→micro, table/blockquote→caption); never attach `prose` (no typography plugin installed). Design tokens are a performance technique too — they make sweeping visual changes a two-line diff instead of a 30-file hunt.
 
-### 5.9 Measure, don't guess
+### 5.9 Server-side tool input delta coalescing (`coalesceToolInputDeltas`)
+
+When a model streams large tool arguments (e.g. multi-KB payloads for `writeFile` or `editFile`), AI SDK 7 emits high-frequency `tool-input-delta` SSE chunks. On the client, the SDK's message reducer executes `parsePartialJson` and `fixJson()` on *every single token chunk*. For a 5,000-character code block delivered across hundreds of chunks, this creates quadratic $\mathcal{O}(N \times L)$ parsing work that freezes the browser main thread.
+
+Strata AI solves this by adding a custom `coalesceToolInputDeltas()` stream transform on the server (`src/lib/ai/agent-runner.ts`):
+
+```ts
+function coalesceToolInputDeltas() {
+  return () => {
+    const buffers = new Map<string, { delta: string; chunkCount: number; providerMetadata?: unknown }>();
+
+    function flush(id: string, controller: TransformStreamDefaultController) {
+      const entry = buffers.get(id);
+      if (entry && entry.delta.length > 0) {
+        controller.enqueue({
+          type: "tool-input-delta",
+          id,
+          delta: entry.delta,
+          ...(entry.providerMetadata ? { providerMetadata: entry.providerMetadata } : {}),
+        });
+        buffers.delete(id);
+      }
+    }
+
+    return new TransformStream({
+      async transform(chunk: any, controller) {
+        if (chunk.type === "tool-input-delta") {
+          const existing = buffers.get(chunk.id);
+          if (existing) {
+            existing.delta += chunk.delta;
+            existing.chunkCount += 1;
+          } else {
+            buffers.set(chunk.id, { delta: chunk.delta, chunkCount: 1 });
+          }
+        } else {
+          // Flush pending deltas before non-delta chunks (e.g. tool-call completion)
+          if (chunk.type === "tool-call" && buffers.has(chunk.toolCallId)) {
+            flush(chunk.toolCallId, controller);
+          }
+          controller.enqueue(chunk);
+        }
+      },
+      flush(controller) {
+        for (const id of buffers.keys()) {
+          flush(id, controller);
+        }
+      },
+    });
+  };
+}
+```
+
+By coalescing argument chunks per tool call before emitting SSE events, client-side partial JSON re-parsing is reduced to a single batch parse, keeping long multi-KB code streaming perfectly fluid.
+
+### 5.10 Measure, don't guess
 
 The full audit sequence Strata AI used (and that caught every "hotspot" claim):
 

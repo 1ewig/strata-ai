@@ -242,6 +242,8 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 | `gemma-4-26b-a4b-it` | Gemma 4 | none (provider default) | — |
 | `accounts/fireworks/models/deepseek-v4-flash-0731` | DeepSeek (Fireworks) | low / high | high |
 
+- **Context-window caps:** every catalog entry is capped at `contextWindow: 131072` (128k tokens) with a `maxOutput: 65536` (64k) output allowance. `getModelContextWindow(modelId)` in `lib/models.ts` resolves a model's window (falling back to the first catalog entry). The server attaches provider-reported usage (`metadata.usage`) to finished assistant messages via AI SDK 7's `messageMetadata`, the client folds it into a cumulative per-conversation total (`computeCumulativeUsage` in `lib/token-usage.ts`), and `handleSendMessage` refuses further sends once `totalTokens >= contextWindow` ("Context window reached. Start a new chat to continue.").
+
 - Each entry also has a user-facing label + one-line description (`MODEL_DESCRIPTIONS`) shown in the ChatInput model popover.
 - Model entries may declare a `provider` ('google' or 'fireworks'); the server routes to the matching provider via `lib/ai/providers.ts` (`resolveAgentModel`). The model selector menu and transport are provider-agnostic.
 - DeepSeek V4 Flash reasoning maps to Fireworks' `reasoning_effort` (low/high — the model's `max` effort is not expressible via the AI SDK's top-level `reasoning` option); reasoning text arrives as native reasoning parts from `reasoning_content`, feeding the same ThoughtAccordion.

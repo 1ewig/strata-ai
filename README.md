@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0.3-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind-v4.1-38BDF8?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 
-**Strata AI** is a state-of-the-art, local-first agentic workspace studio designed for creating, analyzing, editing, and managing dynamic multi-file workspaces. Powered by **Google Gemini** and **Fireworks-hosted open-weight models** (e.g. DeepSeek V4 Flash) via **Vercel AI SDK 7**, Strata AI combines autonomous multi-step tool execution with local IndexedDB persistence, a 3-tier surgical string edit engine, and a fluid, non-glitchy streaming UX.
+**Strata AI** is a state-of-the-art, local-first agentic workspace studio designed for creating, analyzing, editing, and managing dynamic multi-file workspaces. Powered by **Google Gemini** and **Fireworks-hosted open-weight models** (e.g. DeepSeek V4 Flash) via **Vercel AI SDK 7**, Strata AI combines autonomous multi-step tool execution with local IndexedDB persistence, a 3-tier surgical string edit engine, and a fluid, non-glitchy streaming UX — including provider-accurate cumulative token accounting and a context-window guard that keeps every run within budget.
 
 🚀 **Live Production App:** [strata-ai-five.vercel.app](https://strata-ai-five.vercel.app)  
 📁 **Repository:** [github.com/1ewig/strata-ai](https://github.com/1ewig/strata-ai)
@@ -26,7 +26,9 @@
 ## 🌟 Key Features & Capabilities
 
 - **Autonomous Agentic Workspace Tools**: 8 schema-validated tools enabling the AI to inspect, read, create, surgically edit, rename, and delete workspace documents, plus perform real-time Tavily web searches (`webSearch`, advanced depth, domain/time filters, raw-content mode) and deep Markdown page extraction (`extractUrl`).
-- **Real-Time Live Workspace Updates**: Tools emit custom `data-workspace` SSE stream events via AI SDK 7's `createUIMessageStream` (`writer.write`). Client `onData` handler updates the Workspace Drawer and IndexedDB in real-time the instant a tool finishes executing, without waiting for the inference run to complete.
+- **Provider-Accurate Cumulative Token Accounting**: Every assistant message carries its real provider-reported usage (`metadata.usage`) via AI SDK 7's `messageMetadata` stream option. The chat header shows a rolling, per-conversation total of `tokens used / context window (pct%)` — no character-based estimation.
+- **Context-Window Guard**: Once cumulative usage crosses the active model's 128k context window, further sends in that conversation are gracefully blocked — the composer swaps to an inline "Context window reached. Start a new chat to continue." warning and disables submission, prompting the user to start a fresh chat.
+- **Real-Time Live Workspace Updates**: Tools emit custom `data-workspace` SSE stream events via AI SDK 7's `createUIMessageStream` (`writer.write`). The client `onData` handler updates the Workspace Drawer and IndexedDB in real time the instant a tool finishes executing, without waiting for the inference run to complete.
 - **Significantly Reduced Context Footprint**: System prompts inject lightweight file metadata (`name`, `language`, `charCount`, `id`) rather than raw content. The agent calls `readFile` only when precise code context is required.
 - **3-Tier Surgical Edit Engine (`StringEditEngine`)**: Performs precise string manipulation through exact matching, whitespace normalization, and 2-point anchor bounded matching without breaking document structure.
 - **Local-First Client Persistence**: Complete conversation histories, dynamic file states, and user preferences persist client-side via **Dexie.js (IndexedDB v5)** with per-user session isolation—no server round-trips for workspace state.
@@ -34,18 +36,18 @@
 - **Auto-Continuation Execution Loop**: Automatically detects step-limit finish reasons (`finishReason === 'step-limit'`) and dispatches multi-pass continuation requests for complex agent tasks up to 75 steps.
 - **Word-Paced Smooth Streaming & Token Fade**: Powered by `smoothStream` (25ms pacing), server-side `coalesceToolInputDeltas()` transform (buffers tool argument chunks to prevent AI SDK partial JSON re-parsing freezes), and `SmoothStreamText` with smooth CSS token opacity & blur fade transitions (`animate-token-fade`, 750ms) to ensure continuous, natural token flow without jarring chunk bursts.
 - **DOM-Observer Auto-Scroll**: Leverages `use-stick-to-bottom` (`ResizeObserver`/`MutationObserver`) for reliable, non-glitchy chat scrolling that respects manual user scroll interventions.
-- **Polymorphic Tool UI Resolver & Compact Tool Outputs**: Isolates visual presentation logic in `src/components/chat/tools/resolver.tsx` with AI SDK 7 lifecycle state resolution, compact metadata-only tool outputs (`fileSummarySchema`), concise file/URL summaries, and a custom `areToolCallCardPropsEqual` comparator in `ToolCallCard.tsx` that skips 100% of intermediate re-renders while multi-KB file arguments stream in.
-- **Single Collapsed Work Card**: Reasoning, tool calls, and intermediate narration stream live and ungrouped while the agent works, then fold into one auto-collapsing "Worked for Xs" `WorkGroupCard` once inference ends — only the final answer remains as a message bubble.
+- **Polymorphic Tool UI Resolver & Compact Tool Outputs**: Isolates visual presentation logic in `src/components/chat/tools/resolver.tsx` with AI SDK 7 lifecycle state resolution, compact metadata-only tool outputs (`fileSummarySchema`), concise file/URL summaries, and a custom `areToolCallCardPropsEqual` comparator in `ToolCallCard.tsx` that skips re-renders while multi-KB file arguments stream in.
+- **Single Collapsed Work Card**: Reasoning, tool calls, and intermediate narration stream live and ungrouped while the agent works, then fold into one auto-collapsing "Worked for Xs" card once inference ends — only the final answer remains as a message bubble.
 - **Guarded Destructive Actions**: A reusable portaled `ConfirmDialog` confirms sign-out, workspace file deletion, and chat deletion before destructive actions execute.
 - **Streaming Stop Control**: The send button morphs into a stop button while the agent is streaming, letting users cancel long inference runs mid-flight.
-- **Decoupled Pure Presentation Components**: UI components (`Sidebar.tsx`, `theme-toggle.tsx`, auth forms, `user-button.tsx`) contain zero business logic — pages call specialized custom React hooks (`useConversations`, `useLatestConversationRedirect`, `useSignIn`, `useSignUp`, `useSignOut`, `useTheme`) and pass data + callbacks down as props. Hot streaming surfaces (`ChatBubble`, `WorkspaceDrawer`, `ChatInput`, `Sidebar`) are `React.memo`'d with stable `useCallback` handlers to skip re-renders on every stream delta.
-- **Secure Email/Password Auth & Quota Enforcement**: Better Auth 1.6 on Supabase PostgreSQL with proxy-level session guards, plus database-backed 5-hour/7-day sliding window rate limiting (10 msgs / 5h, 50 msgs / week) with server-side SSR initial hydration, real-time streaming header sync, live countdown reset timers, and inline input alerts.
+- **Decoupled Pure Presentation Components**: UI components contain zero business logic — pages call specialized custom hooks and pass data + callbacks down as props. Hot streaming surfaces are `React.memo`'d with stable handlers to skip re-renders on every stream delta.
+- **Secure Email/Password Auth & Quota Enforcement**: Better Auth on Supabase PostgreSQL with proxy-level session guards, plus database-backed 5-hour/7-day sliding window rate limiting (10 msgs / 5h, 50 msgs / week) with SSR initial hydration, streaming header sync, live countdown reset timers, and inline input alerts.
 
 ---
 
 ## 🤖 Workspace Tool Suite
 
-The agent interacts with user workspaces and the web via 8 core tools — factories live in `src/lib/ai/tools/` (`workspace-tools.ts`, `tavily-tools.ts`), bundled by the `src/lib/ai/tools.ts` barrel:
+The agent interacts with user workspaces and the web via 8 core tools — factories live in `lib/ai/tools/` (`workspace-tools.ts`, `tavily-tools.ts`), bundled by the `lib/ai/tools.ts` barrel:
 
 | Tool | Parameters | Output / Action |
 |------|------------|-----------------|
@@ -60,59 +62,52 @@ The agent interacts with user workspaces and the web via 8 core tools — factor
 
 ---
 
-## 📐 Architecture & Data Flow
+## 📐 Architecture Overview
+
+<details>
+<summary>High-level request flow</summary>
 
 ```
-User Input in ChatInput
-  │
-  ▼
-useChatSession.handleSendMessage(text)
-  │
-  ▼
-chat.sendMessage({ text }) ──► DefaultChatTransport (POST /api/agent)
-  │                              │ Body: { messages, model, thinkingLevel, files }
-  │                              ▼
-  │                        POST /api/agent
-  │                              ├── Zod body validation
-  │                              ├── Closure Context: WorkspaceToolsContext(mutableFiles, writer)
-  │                              ├── createUIMessageStream + writer.write({ type: "data-workspace" })
-  │                              ├── streamText() + smoothStream(25ms)
-  │                              └── prepareStep: re-injects metadata system prompt
-  │                              ▼
-  │                        SSE Response Stream (createUIMessageStreamResponse)
-  ▼
-useChat UI Stream Update + onData ◄───┘
-  │
-  ▼
-onFinish(message, allMessages)
-  ├── Persist native UIMessage objects to Dexie IndexedDB
-  ├── Extract file creations/edits via extractFilesFromMessage()
-  ├── Extract file deletions via extractDeletedFilesFromMessage()
-  └── Merge & persist updated workspace file collection in Dexie
+User message → useChatSession.handleSendMessage
+  → chat.sendMessage → DefaultChatTransport (POST /api/agent)
+  → runAgentResponse (lib/ai/agent-runner.ts):
+       resolveAgentModel → buildSystemInstruction(files)
+       createUIMessageStream + writer.write({ type: "data-workspace" })
+       streamText + smoothStream(25ms) + coalesceToolInputDeltas()
+       messageMetadata: attach per-message provider usage
+  → SSE response (createUIMessageStreamResponse), streaming headers
+  → useChat UI stream + onData
+  → onFinish: persist native UIMessage → Dexie; extract file create/edit/delete
+       deltas and merge into the conversation's files array
 ```
+
+</details>
+
+Concurrency and streaming details, domain models, persistence touchpoints, and extension recipes live in the [System Context & Architecture Guide](docs/SUMMARY.md).
 
 ---
 
-## ⚙️ Model Support & Thinking Levels
+## ⚙️ Model Support, Thinking Levels & Context Windows
 
-Strata AI supports dynamic hot-swapping between flagship Gemini models and open-weights models across multiple providers:
+All catalog models are capped at a **128k-token context window (131,072 tokens)** and **64k max output (65,536 tokens)** — the token budget the context-window guard enforces per conversation.
 
-- **Gemini Flagship Models**: `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3-flash-preview`
-- **Gemma Open-Weights Models**: `gemma-4-31b-it`, `gemma-4-26b-a4b-it`
-- **Fireworks-Hosted Models**: `accounts/fireworks/models/deepseek-v4-flash-0731` (DeepSeek V4 Flash 0731 — fast open-weight reasoning via Fireworks AI; requires `FIREWORKS_API_KEY`)
-- **Configurable Thinking Levels**: Fine-tune agent reasoning depth (`minimal`, `low`, `medium`, `high`, model-dependent — Gemma models support none, DeepSeek V4 Flash exposes `low`/`high`).
+- **Gemini flagship models**: `gemini-3.5-flash-lite`, `gemini-3.1-flash-lite`, `gemini-3-flash-preview`
+- **Gemma open-weight models**: `gemma-4-31b-it`, `gemma-4-26b-a4b-it`
+- **Fireworks-hosted**: `accounts/fireworks/models/deepseek-v4-flash-0731` (DeepSeek V4 Flash 0731 — requires `FIREWORKS_API_KEY`)
+- **Configurable thinking levels**: `minimal` / `low` / `medium` / `high` (model-dependent — Gemma models support none, DeepSeek V4 Flash exposes `low`/`high`).
 
 ---
 
 ## 🔒 Free-Tier Guardrails & Limits
 
-Centralized in `src/lib/limits.ts` for client-side UX enforcement, API validation, and tool safety:
+Centralized in `lib/limits.ts` for client-side UX enforcement, API validation, and tool safety:
 
-- **Max Prompt Input**: 2,000 characters per message (`maxLength={2000}` on `<textarea>` + API HTTP 400 validation).
-- **Max File Size**: 10,000 characters per workspace document (`WorkspaceDrawer` + tool clamping).
-- **Max Total Workspace Size**: 50,000 characters total across all workspace files.
-- **Max Conversations per User**: 5 active conversations (cap enforced in the `useConversations` hook; `Sidebar` renders the disabled button and list counter).
-- **Max Files per Workspace**: 3 files per workspace (`WorkspaceDrawer` creation guard and AI tool rejection).
+- **Message length**: 2,000 characters per message (`maxLength={2000}` on `<textarea>` + HTTP 400 validation).
+- **Per-file size**: 10,000 characters per workspace document.
+- **Total workspace size**: 50,000 characters across all workspace files.
+- **Conversations per user**: 5 active conversations (cap enforced in the `useConversations` hook).
+- **Files per workspace**: 3 files per workspace.
+- **Token budget (per conversation)**: every model's context window is 128k tokens; cumulative provider-reported usage is shown live in the header, and once exhausted the app refuses further sends ("Context window reached. Start a new chat to continue.").
 
 ---
 
@@ -121,7 +116,7 @@ Centralized in `src/lib/limits.ts` for client-side UX enforcement, API validatio
 ### 1. Clone & Install Dependencies
 
 ```bash
-git clone https://github.com/1ewig/strata-ai.git
+git clone git@github.com:1ewig/strata-ai.git
 cd strata-ai
 bun install
 ```
@@ -134,61 +129,53 @@ Create a `.env.local` file in the root directory:
 # Required: Google Gemini API Key
 GOOGLE_GENERATIVE_AI_API_KEY="your-gemini-api-key-here"
 
-# Required: Fireworks API Key (for Fireworks-hosted models like DeepSeek V4 Flash)
+# Required for Fireworks-hosted models (DeepSeek etc.)
 FIREWORKS_API_KEY="your-fireworks-api-key-here"
 
-# Required: Supabase Project
+# Required: Supabase project (auth & rate-limiting)
 NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="your-supabase-publishable-key"
 
-# Required: Supabase PostgreSQL Pooler connection string
-DATABASE_URL="postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres"
+# Required: Supabase PostgreSQL connection string (auth + rate-limit tables)
+DATABASE_URL="postgresql://postgres.user:[password]@aws-0-[region].pooler.supabase.com:6543/postgres"
 
-# Required: Better Auth
-BETTER_AUTH_SECRET="your-secret-min-32-chars"
-BETTER_AUTH_URL="http://localhost:3000"
-NEXT_PUBLIC_APP_URL="http://localhost:3000"
-
-# Optional: Tavily API Key (for web search & page extraction)
+# Required: Web search access
 TAVILY_API_KEY="tvly-your-tavily-api-key-here"
 
-# Optional: Default Model ID
+# Optional: default model override
 NEXT_PUBLIC_GEMINI_MODEL="gemini-3.5-flash-lite"
 
-# Optional: Base URL
-APP_URL="http://localhost:3000"
+# Better Auth
+BETTER_AUTH_SECRET="your-secret"
+BETTER_AUTH_URL="http://localhost:3000"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
 ```
 
-See `.env.example` for the full annotated reference.
+See `.env.example` for the authoritative reference.
 
-### 3. Set Up Database
-
-The app uses Supabase PostgreSQL for authentication and rate limiting:
+### 3. Set Up Database (Auth + Rate Limiting)
 
 ```bash
-# Create the Better Auth schema and tables
-bun run db:migrate
-
-# Optional: verify the database connection and schema
-bun run db:test
+bun run db:migrate   # create the better_auth schema & tables
+bun run db:test      # optional: verify connection + schema
 ```
 
-### 4. Run Development Server
+### 4. Run the Development Server
 
 ```bash
 bun run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser. You'll be prompted to sign up / sign in with email + password — no email verification required.
+Open [http://localhost:3000](http://localhost:3000) and sign in with email + password (no verification needed).
+
+Other scripts: `bun run build`, `bun run start`, `bun run lint`, `bun run clean`.
 
 ---
 
 ## 📚 Technical Documentation
 
-For in-depth architectural breakdown, data flow details, and engineering design decisions:
-
-- [📘 Complete Chatbot & Agentic AI Guide (`docs/ai-sdk-nextjs-guide.md`)](docs/ai-sdk-nextjs-guide.md) — Beginner-to-advanced tutorial: build a chatbot, then a multi-tool agent with AI SDK 7 + Next.js 16, including streaming UX, provider abstraction, persistence, performance optimization, and best practices.
-- [📄 System Context & Architecture Guide (`docs/SUMMARY.md`)](docs/SUMMARY.md) — Canonical architecture guide: stack, data flow, domain models, routing, conventions, and extension recipes.
+- [📘 Complete Chatbot & Agentic AI Guide](docs/ai-sdk-nextjs-guide.md) — Beginner-to-advanced tutorial on building with AI SDK 7 + Next.js 16.
+- [📄 System Context & Architecture Guide](docs/SUMMARY.md) — canonical architecture, data flow, domain models, and extension recipes.
 
 ---
 
