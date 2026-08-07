@@ -59,6 +59,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     activeFileId,
     displayMessages,
     tokenUsage,
+    isContextWindowExhausted,
     streamingContent,
     isLoading,
     rateLimitData,
@@ -123,6 +124,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
       onModelSelect={handleModelSelect}
       onThinkingLevelChange={handleThinkingLevelChange}
       rateLimitData={rateLimitData}
+      isContextWindowExhausted={isContextWindowExhausted}
     />
   );
 

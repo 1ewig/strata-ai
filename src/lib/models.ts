@@ -59,6 +59,15 @@ export const MODEL_DESCRIPTIONS: Record<string, string> = {
 /** Unique family names derived from MODELS, preserving insertion order. */
 export const MODEL_FAMILIES = [...new Set(MODELS.map(m => m.family))];
 
+/**
+ * Resolves the context window (in tokens) for a model id.
+ * @param modelId - The model id to look up.
+ * @returns The model's context window, falling back to the first catalog entry.
+ */
+export function getModelContextWindow(modelId: string): number {
+  return MODELS.find((m) => m.id === modelId)?.contextWindow ?? MODELS[0].contextWindow;
+}
+
 /** Supported thinking-effort levels for models that expose the setting. */
 export type ThinkingLevelId = 'minimal' | 'low' | 'medium' | 'high';
 
