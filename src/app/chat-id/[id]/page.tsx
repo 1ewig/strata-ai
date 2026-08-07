@@ -160,6 +160,8 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               title={headerTitle}
               files={files}
               activeFileId={activeFileId}
+              model={model}
+              messages={displayMessages}
               onOpenFile={handleOpenFile}
               onOpenDrawer={handleOpenDrawer}
               onOpenSidebar={handleOpenSidebar}
