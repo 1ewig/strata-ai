@@ -6,6 +6,7 @@ import {
   toUIMessageStream,
   smoothStream,
   createUIMessageStream,
+  LanguageModelUsage,
 } from "ai";
 import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
 import { resolveAgentModel } from "@/lib/ai/providers";
@@ -146,6 +147,8 @@ export async function runAgentResponse({
         writer,
       };
 
+      let lastStepUsage: LanguageModelUsage | undefined;
+
       const result = streamText({
         model: resolvedModel.model,
         ...(resolvedModel.reasoning !== undefined
@@ -174,7 +177,10 @@ export async function runAgentResponse({
         onStart() {
           console.log("[agent] Generation stream started.");
         },
-        onStepEnd({ stepNumber, toolCalls }) {
+        onStepEnd({ stepNumber, toolCalls, usage }) {
+          if (usage) {
+            lastStepUsage = usage;
+          }
           console.log(
             `[agent] Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`
           );
@@ -195,11 +201,14 @@ export async function runAgentResponse({
         toUIMessageStream({
           stream: result.stream,
           messageMetadata: ({ part }) => {
-            // Attach the provider-reported usage to the finished assistant message so the
-            // client can sum real token usage without a character-based estimator.
+            // Attach the provider-reported usage to the finished assistant message.
+            // Following Claude Code / OpenCode / Codex standard, we record the final step's
+            // usage as the active conversation context snapshot (avoiding multi-step N-pass inflation),
+            // while preserving stepTotalUsage for cumulative session analytics.
             if (part.type === 'finish') {
               return {
-                usage: part.totalUsage,
+                usage: lastStepUsage || part.totalUsage,
+                stepTotalUsage: part.totalUsage,
                 modelId: modelId || "gemini-3.5-flash-lite",
               };
             }

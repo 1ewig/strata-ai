@@ -6,7 +6,10 @@ import { LanguageModelUsage } from 'ai';
  * client never needs a character-based token estimator.
  */
 export interface ChatMetadata {
+  /** Active context window usage snapshot at the completion of this turn. */
   usage?: LanguageModelUsage;
+  /** Aggregate multi-step API execution tokens across all tool iterations in this turn. */
+  stepTotalUsage?: LanguageModelUsage;
   modelId?: string;
 }
 
@@ -89,7 +92,8 @@ export function calculateTokenMetrics(
     const total = usage.totalTokens ?? input + output;
 
     totalOutputTokens += output;
-    totalApiTokens += total;
+    const apiTotal = m.metadata?.stepTotalUsage?.totalTokens ?? total;
+    totalApiTokens += apiTotal;
   }
 
   if (!latestUsage) return null;
