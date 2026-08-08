@@ -27,6 +27,20 @@ export interface ActiveContextUsage {
   remainingTokens: number;
 }
 
+import { MODELS, getModelPricing } from '@/lib/models';
+
+/** Per-model token volume and cost breakdown for a conversation. */
+export interface ModelUsageStats {
+  modelId: string;
+  modelLabel: string;
+  turnCount: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  apiTokens: number;
+  cost: number;
+}
+
 /** Cumulative session metrics across the conversation lifetime. */
 export interface SessionTokenUsage {
   /** Sum of all generated assistant tokens in this conversation. */
@@ -37,16 +51,50 @@ export interface SessionTokenUsage {
   turnCount: number;
 }
 
-/** Unified token metrics combining active context and session metrics. */
+/** Unified token metrics combining active context, session metrics, and dollar cost breakdown. */
 export interface ConversationTokenMetrics {
   /** Active context window utilization (Claude Code / OpenCode / Codex standard). */
   active: ActiveContextUsage;
   /** Lifetime session output and API metrics. */
   session: SessionTokenUsage;
+  /** Total estimated dollar cost across all turns and models in this conversation. */
+  totalCost: number;
+  /** Distinct list of model labels used in this conversation. */
+  modelsUsed: string[];
+  /** Detailed token and dollar cost breakdown grouped by model. */
+  modelBreakdowns: ModelUsageStats[];
   /** Backward-compatibility aliases mapping to active context. */
   inputTokens: number;
   outputTokens: number;
   totalTokens: number;
+}
+
+/**
+ * Calculates the dollar cost for a specific model based on input and output tokens.
+ * @param modelId - The model ID used for inference.
+ * @param inputTokens - Prompt and context input tokens.
+ * @param outputTokens - Generated output and reasoning tokens.
+ */
+export function calculateTokenCost(
+  modelId: string,
+  inputTokens: number,
+  outputTokens: number
+): number {
+  const pricing = getModelPricing(modelId);
+  const inputCost = (inputTokens / 1_000_000) * pricing.inputPerMillion;
+  const outputCost = (outputTokens / 1_000_000) * pricing.outputPerMillion;
+  return inputCost + outputCost;
+}
+
+/**
+ * Formats a dollar cost for compact UI display (e.g. "$0.0014" or "<$0.0001").
+ * @param costInUSD - Cost in US dollars.
+ */
+export function formatCost(costInUSD: number): string {
+  if (!costInUSD || costInUSD <= 0) return '$0.00';
+  if (costInUSD < 0.0001) return '<$0.0001';
+  if (costInUSD < 0.01) return `$${costInUSD.toFixed(4)}`;
+  return `$${costInUSD.toFixed(3)}`;
 }
 
 /** Legacy cumulative usage type maintained for backward compatibility. */
@@ -58,11 +106,8 @@ export interface CumulativeUsage {
 
 /**
  * Calculates accurate token metrics for a conversation adhering to the
- * Claude Code / OpenCode / Codex active context window paradigm.
- *
- * The current context window utilization is determined by the most recent
- * assistant message's input and output tokens, as the provider's input tokens
- * already encapsulate the entire conversation history and system instructions.
+ * Claude Code / OpenCode / Codex active context window paradigm, and groups
+ * costs and token volume by model.
  *
  * @param messages - UI messages array containing assistant turns with ChatMetadata.
  * @param contextWindow - Active model's context window limit (e.g. 131,072 tokens).
@@ -77,7 +122,17 @@ export function calculateTokenMetrics(
   let latestUsage: LanguageModelUsage | null = null;
   let totalOutputTokens = 0;
   let totalApiTokens = 0;
+  let totalCost = 0;
   let turnCount = 0;
+
+  const modelStatsMap = new Map<string, {
+    turnCount: number;
+    inputTokens: number;
+    outputTokens: number;
+    totalTokens: number;
+    apiTokens: number;
+    cost: number;
+  }>();
 
   for (const m of messages) {
     if (m.role !== 'assistant') continue;
@@ -90,10 +145,36 @@ export function calculateTokenMetrics(
     const input = usage.inputTokens ?? 0;
     const output = usage.outputTokens ?? 0;
     const total = usage.totalTokens ?? input + output;
+    const apiTotal = m.metadata?.stepTotalUsage?.totalTokens ?? total;
+    const modelId = m.metadata?.modelId || 'gemini-3.5-flash-lite';
 
     totalOutputTokens += output;
-    const apiTotal = m.metadata?.stepTotalUsage?.totalTokens ?? total;
     totalApiTokens += apiTotal;
+
+    // Multi-step tool calls consume apiTotal tokens across passes; we compute cost from execution usage
+    const stepUsage = m.metadata?.stepTotalUsage;
+    const stepInput = stepUsage?.inputTokens ?? input;
+    const stepOutput = stepUsage?.outputTokens ?? output;
+    const turnCost = calculateTokenCost(modelId, stepInput, stepOutput);
+    totalCost += turnCost;
+
+    const existing = modelStatsMap.get(modelId) || {
+      turnCount: 0,
+      inputTokens: 0,
+      outputTokens: 0,
+      totalTokens: 0,
+      apiTokens: 0,
+      cost: 0,
+    };
+
+    existing.turnCount += 1;
+    existing.inputTokens += stepInput;
+    existing.outputTokens += stepOutput;
+    existing.totalTokens += stepInput + stepOutput;
+    existing.apiTokens += apiTotal;
+    existing.cost += turnCost;
+
+    modelStatsMap.set(modelId, existing);
   }
 
   if (!latestUsage) return null;
@@ -122,9 +203,26 @@ export function calculateTokenMetrics(
     turnCount,
   };
 
+  const modelBreakdowns: ModelUsageStats[] = Array.from(modelStatsMap.entries()).map(
+    ([id, stats]) => {
+      const option = MODELS.find((m) => m.id === id);
+      const modelLabel = option?.label || id;
+      return {
+        modelId: id,
+        modelLabel,
+        ...stats,
+      };
+    }
+  );
+
+  const modelsUsed = modelBreakdowns.map((m) => m.modelLabel);
+
   return {
     active,
     session,
+    totalCost,
+    modelsUsed,
+    modelBreakdowns,
     inputTokens: activeInput,
     outputTokens: activeOutput,
     totalTokens: activeTotal,
