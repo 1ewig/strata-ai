@@ -93,18 +93,13 @@ export default React.memo(function ChatHeader({
             aria-expanded={isPopoverOpen}
           >
             <span
-              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                isNearLimit ? 'bg-warning animate-pulse' : 'bg-primary'
-              }`}
-            />
-            <span
               className={`text-micro font-mono truncate leading-none transition-colors ${
                 isNearLimit
                   ? 'text-warning font-medium'
                   : 'text-text-muted group-hover:text-text-primary'
               }`}
             >
-              {formatTokens(activeTokens)} / {formatContextWindow(contextWindow)} ({pct}%)
+              Context window: {formatTokens(activeTokens)} / {formatContextWindow(contextWindow)}
             </span>
           </button>
         </div>
