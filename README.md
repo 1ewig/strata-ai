@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.0.3-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind-v4.1-38BDF8?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 
-**Strata AI** is a state-of-the-art, local-first agentic workspace studio designed for creating, analyzing, editing, and managing dynamic multi-file workspaces. Powered by **Google Gemini** and **Fireworks-hosted open-weight models** (e.g. DeepSeek V4 Flash) via **Vercel AI SDK 7**, Strata AI combines autonomous multi-step tool execution with local IndexedDB persistence, a 3-tier surgical string edit engine, and a fluid, non-glitchy streaming UX — including provider-accurate cumulative token accounting and a context-window guard that keeps every run within budget.
+**Strata AI** is a state-of-the-art, local-first agentic workspace studio designed for creating, analyzing, editing, and managing dynamic multi-file workspaces. Powered by **Google Gemini** and **Fireworks-hosted open-weight models** (e.g. DeepSeek V4 Flash) via **Vercel AI SDK 7**, Strata AI combines autonomous multi-step tool execution with local IndexedDB persistence, a 3-tier surgical string edit engine, and a fluid, non-glitchy streaming UX — including provider-accurate active context window accounting with per-model cost tracking and a context-window guard that keeps every run within budget.
 
 🚀 **Live Production App:** [strata-ai-five.vercel.app](https://strata-ai-five.vercel.app)  
 📁 **Repository:** [github.com/1ewig/strata-ai](https://github.com/1ewig/strata-ai)
@@ -26,6 +26,7 @@
 ## 🌟 Key Features & Capabilities
 - **Autonomous Agentic Workspace Tools**: 8 schema-validated tools enabling the AI to inspect, read, create, surgically edit, rename, and delete workspace documents, plus perform real-time Tavily web searches (`webSearch`, advanced depth, domain/time filters, raw-content mode) and deep Markdown page extraction (`extractUrl`).
 - **Provider-Accurate Active Context Window Accounting**: Every assistant message carries its real provider-reported usage (`metadata.usage`) via AI SDK 7's `messageMetadata` stream option. Following the Claude Code, OpenCode, and Codex standard, the chat header displays the real-time **active context window occupancy** (`active tokens / context window (pct%)`) with a detailed breakdown of prompt input, generation output, and remaining headroom — without inflating historical turns.
+- **Per-Model Token Cost Tracking**: Each catalog model carries per-1M-token pricing (`lib/models.ts` / `metadata.json`). A compact `TokenUsagePopover` shows the running conversation at cost in USD alongside a per-model cost breakdown, so users can see exactly how much each turn and each model consumed.
 - **Context-Window Guard**: Once active context occupancy crosses the active model's 128k context window, further sends in that conversation are gracefully blocked — the composer swaps to an inline "Context window reached. Start a new chat to continue." warning and disables submission, prompting the user to start a fresh chat.
 - **Real-Time Live Workspace Updates**: Tools emit custom `data-workspace` SSE stream events via AI SDK 7's `createUIMessageStream` (`writer.write`). The client `onData` handler updates the Workspace Drawer and IndexedDB in real time the instant a tool finishes executing, without waiting for the inference run to complete.
 - **Significantly Reduced Context Footprint**: System prompts inject lightweight file metadata (`name`, `language`, `charCount`, `id`) rather than raw content. The agent calls `readFile` only when precise code context is required.
@@ -106,7 +107,7 @@ Centralized in `lib/limits.ts` for client-side UX enforcement, API validation, a
 - **Total workspace size**: 50,000 characters across all workspace files.
 - **Conversations per user**: 5 active conversations (cap enforced in the `useConversations` hook).
 - **Files per workspace**: 3 files per workspace.
-- **Token budget (per conversation)**: every model's context window is 128k tokens; cumulative provider-reported usage is shown live in the header, and once exhausted the app refuses further sends ("Context window reached. Start a new chat to continue.").
+- **Token budget (per conversation)**: every model's context window is 128k tokens; active context occupancy is shown live in the header (with a detailed cost breakdown popover), and once exhausted the app refuses further sends ("Context window reached. Start a new chat to continue.").
 
 ---
 

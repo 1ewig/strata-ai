@@ -161,7 +161,8 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   │   ├── ChatInput.tsx     # Shell for textarea input, auto-resizing, submit handling & composition
     │   │   │   ├── ModelSelectorMenu.tsx # Model dropdown trigger, featured models, effort flyout & overflow submenus
     │   │   │   ├── RateLimitRing.tsx # Quota progress SVG ring & hover popover tooltip (rendered in sidebar footer)
-    │   │   │   ├── ChatHeader.tsx    # Mobile hamburger, title, mobile "New chat" plus button, workspace Files dropdown
+    │   │   │   ├── ChatHeader.tsx    # Mobile hamburger, title, active context-window meter, mobile "New chat" plus button, workspace Files dropdown
+    │   │   │   ├── TokenUsagePopover.tsx # Popover card: active context bar, input/output, session total, total estimated $ cost + per-model breakdown (tap-away dismiss)
     │   │   │   ├── QuotaErrorCard.tsx# Alert with live countdown when quota exhausted
     │   │   │   ├── ThoughtAccordion.tsx  # Collapsible reasoning/thought display
     │   │   │   ├── ToolCallCard.tsx  # Generic accordion tool-card chrome — NEVER needs edits when tools change
@@ -190,7 +191,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── models.ts             # Model registry, descriptions, thinking-level config, localStorage helpers
     │   │   ├── schemas.ts            # Zod: WorkspaceFile
     │   │   ├── limits.ts             # Centralized app limits (message/file/workspace/conversation caps) + formatting helpers
-    │   │   ├── token-usage.ts        # Active context window metrics (calculateTokenMetrics) + session usage folding & compact token formatters
+    │   │   ├── token-usage.ts        # Active context window metrics (calculateTokenMetrics) + session usage folding, per-model $ cost breakdown (calculateTokenCost/formatCost), compact token formatters
     │   │   ├── id.ts                 # crypto.randomUUID with fallback
     │   │   ├── edit-engine.ts        # StringEditEngine: 3-tier surgical string matching
     │   │   ├── db/db.ts              # Dexie ChatDatabase (v5), Conversation/DBMessage types, CRUD helpers
@@ -254,7 +255,9 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 | `gemma-4-26b-a4b-it` | Gemma 4 | none (provider default) | — |
 | `accounts/fireworks/models/deepseek-v4-flash-0731` | DeepSeek (Fireworks) | low / high | high |
 
-- **Context-window caps:** every catalog entry is capped at `contextWindow: 131072` (128k tokens) with a `maxOutput: 65536` (64k) output allowance. `getModelContextWindow(modelId)` in `lib/models.ts` resolves a model's window (falling back to the first catalog entry). The server attaches provider-reported usage (`metadata.usage`) to finished assistant messages via AI SDK 7's `messageMetadata`, the client tracks active context window occupancy (`calculateTokenMetrics` in `lib/token-usage.ts`, following the Claude Code / OpenCode / Codex standard), and `handleSendMessage` refuses further sends once active context tokens cross `contextWindow` ("Context window reached. Start a new chat to continue."). The ChatHeader surfaces this as a live "active tokens / context window (pct%)" meter (`formatTokens`/`formatContextWindow`) with a rich tooltip breaking down prompt context, generation output, and headroom.
+- **Context-window caps:** every catalog entry is capped at `contextWindow: 131072` (128k tokens) with a `maxOutput: 65536` (64k) output allowance. `getModelContextWindow(modelId)` in `lib/models.ts` resolves a model's window (falling back to the first catalog entry). The server attaches provider-reported usage to finished assistant messages via AI SDK 7's `messageMetadata` (final-step `usage` as the active snapshot, `stepTotalUsage` for session/cost accounting, `modelId` for attribution), the client tracks active context window occupancy (`calculateTokenMetrics` in `lib/token-usage.ts`, following the Claude Code / OpenCode / Codex standard), and `handleSendMessage` refuses further sends once active context tokens cross `contextWindow` ("Context window reached. Start a new chat to continue."). The ChatHeader surfaces this as a live "active tokens / context window (pct%)" meter (`formatTokens`/`formatContextWindow`) whose popover (`TokenUsagePopover.tsx`) breaks down prompt input, generation output, headroom, total estimated $ cost, and per-model cost.
+
+- **Per-model pricing:** every catalog entry carries an optional `pricing` block (USD per 1M tokens: `inputPerMillion` / `outputPerMillion` / optional `cachedInputPerMillion`), mirrored in `metadata.json`'s `supportedModels`. `getModelPricing(modelId)` in `lib/models.ts` resolves it, falling back to Gemini 3.5 Flash Lite rates; `calculateTokenCost(modelId, in, out)` in `lib/token-usage.ts` turns per-turn usage into dollars (computed from `stepTotalUsage`, since multi-step tool turns burn API tokens across passes).
 
 - Each entry also has a user-facing label + one-line description (`MODEL_DESCRIPTIONS`) shown in the ChatInput model popover.
 - Model entries may declare a `provider` ('google' or 'fireworks'); the server routes to the matching provider via `lib/ai/providers.ts` (`resolveAgentModel`). The model selector menu and transport are provider-agnostic.
