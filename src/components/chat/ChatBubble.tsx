@@ -379,19 +379,17 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
 
   return (
     <div
-      className={`group relative flex items-start gap-3.5 ${
-        isUser ? 'flex-row-reverse animate-slide-up' : ''
-      } ${!isUser ? 'fade-in' : ''}`}
+      className={`group relative flex items-start gap-3.5 ${isUser ? 'flex-row-reverse animate-slide-up' : ''
+        } ${!isUser ? 'fade-in' : ''}`}
     >
       {/* Avatar Container: hidden on mobile (< sm) to give messages maximum width */}
       <div
         className={`
           hidden sm:flex relative w-8 h-8 rounded-xl items-center justify-center text-label font-semibold shrink-0 mt-0.5
           transition-all duration-500
-          ${
-            isUser
-              ? 'bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-sm'
-              : `bg-gradient-to-tr from-primary to-secondary text-surface
+          ${isUser
+            ? 'bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-sm'
+            : `bg-gradient-to-tr from-primary to-secondary text-surface
                  ${isStreaming ? 'shadow-glow-primary scale-[1.03]' : 'shadow-card'}`
           }
         `}
@@ -483,7 +481,11 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
 
                 <div className="text-body text-text-primary leading-relaxed relative">
                   {isStreamingActiveSegment ? (
-                    <SmoothStreamText text={seg.content} isStreaming={true} />
+                    <SmoothStreamText
+                      text={seg.content}
+                      isStreaming={true}
+                      components={markdownComponents}
+                    />
                   ) : (
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                       {seg.content}
