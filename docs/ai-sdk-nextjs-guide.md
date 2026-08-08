@@ -404,13 +404,13 @@ experimental_transform: [
 Weight-conscious notes:
 
 - `chunking: 'word'` reads as natural prose; `'character'` feels more incremental but costs more re-renders (§5).
-- Strata AI pairs server-side `smoothStream` with client-side `SmoothStreamText` (`src/components/chat/SmoothStreamText.tsx`), which diffs incoming stream updates and animates **newly appended** token deltas with a smooth 750 ms opacity & blur fade (`animate-token-fade` — from `src/app/globals.css`, `--animate-token-fade` / keyframe `tokenFadeIn`):
+- Strata AI pairs server-side `smoothStream` with client-side `SmoothStreamText` (`src/components/chat/SmoothStreamText.tsx`), which parses live Markdown with 60ms throttled AST batching, an AST remark plugin (`createTokenFadePlugin`), and animates **newly appended** token deltas with a smooth 750 ms opacity & blur fade (`animate-token-fade` — from `src/app/globals.css`, `--animate-token-fade` / keyframe `tokenFadeIn`):
 
 ```
 .animate-token-fade { animation: tokenFadeIn 750ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 ```
 
-`SmoothStreamText` splits the live text into a static `prefix` and an animated `delta` chunk, keyed by a monotonic `chunkCount` ref so each new delta mounts with a fresh fade — and stops animating as soon as `isStreaming` flips false (rendering plain text). Its running caret (`animate-caret`, 1.1 s blink) shows exactly where the stream is writing.
+`SmoothStreamText` batches incoming updates at ~60ms intervals (preventing 60 Hz AST CPU spikes) and uses an AST remark plugin (`createTokenFadePlugin`) to target the trailing text node with an `animate-token-fade` span. Its running caret (`animate-caret`, 1.1 s blink) shows exactly where the stream is writing.
 
 ### 2.2 Status-driven chrome
 
@@ -461,13 +461,13 @@ Open reasoning models emit their *thoughts* as a separate part type. The Strata 
 
 Why two phases? Because re-parsing a Markdown AST on every 15 ms delta is a top cause of stream jank — quantified in §5.7. `ThoughtAccordion` (`src/components/chat/ThoughtAccordion.tsx`) is fed `isStreaming={isStreaming && isLastSegment}` so the in-flight thought stays cheap.
 
-### 2.5 Stream plain text, markdown late
+### 2.5 Live Markdown with throttled AST batching
 
-The active (in-flight) text part renders as cheap plain text via `SmoothStreamText`; completed parts go through `ReactMarkdown` with a memoized component map. From `src/components/chat/ChatBubble.tsx`:
+The active (in-flight) text part renders formatted Markdown via `SmoothStreamText` with 60ms throttled AST batching and token fade; completed parts maintain a memoized component map. From `src/components/chat/ChatBubble.tsx`:
 
 ```tsx
 {isActiveStreamingText ? (
-  <SmoothStreamText text={seg.content} isStreaming={true} />
+  <SmoothStreamText text={seg.content} isStreaming={true} components={markdownComponents} />
 ) : (
   <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
     {seg.content}
@@ -990,7 +990,7 @@ export function calculateTokenMetrics(messages, contextWindow = 131072): Convers
 
 The `active` block is the live context meter, the `modelBreakdowns` array feeds the cost UI, and the top-level `inputTokens`/`outputTokens`/`totalTokens` aliases keep old callers working.
 
-The header (`src/components/chat/ChatHeader.tsx`) shows a compact, live **active-context meter**: `formatTokens(active.totalTokens) / formatContextWindow(contextWindow) tokens (pct%)`, with the dot turning `warning` + pulsing past 80% (`isNearLimit = pct >= 80`). Clicking/tapping it opens the separated **`TokenUsagePopover`** (`src/components/chat/TokenUsagePopover.tsx`) — a compact card with a visual context-usage progress bar, input/output split, total session tokens, the total estimated cost (`formatCost(totalCost)`), and a per-model cost breakdown. It dismisses on outside click/tap via a transparent backdrop plus `mousedown`/`touchstart` listeners that ignore the trigger button.
+The header (`src/components/chat/ChatHeader.tsx`) shows a compact, live **active-context meter**: `Context window: formatTokens(active.totalTokens) / formatContextWindow(contextWindow)`. Clicking/tapping it opens the separated **`TokenUsagePopover`** (`src/components/chat/TokenUsagePopover.tsx`) — a compact card with a visual context-usage progress bar, input/output split, total session tokens, the total estimated cost (`formatCost(totalCost)`), and a per-model cost breakdown. It dismisses on outside click/tap via a transparent backdrop plus `mousedown`/`touchstart` listeners that ignore the trigger button.
 
 When active occupancy reaches the window — `isContextWindowExhausted` checks `tokenMetrics.active.totalTokens >= contextWindow` in `useChatSession` — `handleSendMessage` refuses further sends with "Context window reached. Start a new chat to continue." — a **context-window guard** that keeps every run within budget by refusing sends, not by silently truncating.
 
@@ -1118,13 +1118,13 @@ const resolved = React.useMemo(() => {
 
 The counter-pattern (which shipped first and was removed): resolving tool display in the *parent list render* — re-resolving every card's UI for every card on every delta. Keep resolution local and memoized.
 
-### 5.7 Plain-text segments while streaming
+### 5.7 Throttled AST batching while streaming
 
-The single biggest per-frame win: **do not re-parse markdown while streaming** (§2.4–2.5). The active text part renders as cheap plain text (`SmoothStreamText`), and completed parts get `ReactMarkdown` with what must be a **referentially-stable components** object:
+The single biggest per-frame win: **throttle Markdown AST re-parsing while streaming** to ~60ms intervals (§2.4–2.5) via `SmoothStreamText`, avoiding 60 Hz re-parse locks while still delivering formatted live Markdown and animated token fade transitions:
 
 ```ts
 {isActiveStreamingText
-  ? <SmoothStreamText text={seg.content} isStreaming={true} />
+  ? <SmoothStreamText text={seg.content} isStreaming={true} components={markdownComponents} />
   : <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{seg.content}</ReactMarkdown>}
 ```
 

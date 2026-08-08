@@ -1,80 +1,162 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface SmoothStreamTextProps {
   /** The full accumulated text of the message segment so far. */
   text: string;
   /** Whether the message is actively streaming tokens. */
   isStreaming: boolean;
+  /** Custom ReactMarkdown component dictionary. */
+  components?: any;
 }
 
 /**
- * Renders streaming text with a ChatGPT-style opacity/blur fade effect on newly appended tokens.
- * Splits text into static baseline prefix and animated delta token chunk for smooth visual pacing.
+ * Remark plugin that locates the trailing text node in the markdown AST
+ * and wraps the newest delta tokens in an `animate-token-fade` span for
+ * smooth, ChatGPT-style opacity & blur fade-in transitions.
  */
-export function SmoothStreamText({ text, isStreaming }: SmoothStreamTextProps) {
+function createTokenFadePlugin(deltaLength: number, chunkKey: number) {
+  return () => (tree: any) => {
+    if (!deltaLength || deltaLength <= 0) return;
+
+    let lastTextNode: any = null;
+    let parentNode: any = null;
+    let nodeIndex: number = -1;
+
+    function walk(node: any, parent: any, index: number) {
+      if (node.type === 'text') {
+        lastTextNode = node;
+        parentNode = parent;
+        nodeIndex = index;
+      }
+      if (node.children && node.children.length > 0) {
+        for (let i = 0; i < node.children.length; i++) {
+          walk(node.children[i], node, i);
+        }
+      }
+    }
+
+    walk(tree, null, -1);
+
+    if (lastTextNode && parentNode && nodeIndex !== -1) {
+      const fullText = lastTextNode.value;
+      const deltaLen = Math.min(deltaLength, fullText.length);
+      const prefix = fullText.slice(0, fullText.length - deltaLen);
+      const delta = fullText.slice(fullText.length - deltaLen);
+
+      const newNodes: any[] = [];
+      if (prefix) {
+        newNodes.push({ type: 'text', value: prefix });
+      }
+      if (delta) {
+        newNodes.push({
+          type: 'tokenFade',
+          data: {
+            hName: 'span',
+            hProperties: {
+              className: 'animate-token-fade inline',
+            },
+          },
+          children: [{ type: 'text', value: delta }],
+        });
+      }
+
+      parentNode.children.splice(nodeIndex, 1, ...newNodes);
+    }
+  };
+}
+
+/**
+ * Renders live streaming Markdown with:
+ * 1. Real-time GFM formatting (headings, bold, lists, inline code, and syntax blocks).
+ * 2. 60ms throttled AST batching to prevent CPU spikes.
+ * 3. Smooth token fade-in animation (`animate-token-fade`) on newly appended token chunks.
+ * 4. A pulsing streaming caret at the active typing edge.
+ */
+export function SmoothStreamText({ text, isStreaming, components }: SmoothStreamTextProps) {
   const prevTextRef = useRef('');
   const chunkCountRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastRenderTimeRef = useRef<number>(0);
+
   const [streamState, setStreamState] = useState<{
-    prefix: string;
-    delta: string;
-    key: number;
+    content: string;
+    deltaLength: number;
+    chunkKey: number;
   }>({
-    prefix: '',
-    delta: text,
-    key: 0,
+    content: text,
+    deltaLength: 0,
+    chunkKey: 0,
   });
 
   useEffect(() => {
-    if (!isStreaming) {
-      prevTextRef.current = text;
-      setStreamState({
-        prefix: text,
-        delta: '',
-        key: chunkCountRef.current,
-      });
-      return;
-    }
+    if (!isStreaming) return;
 
     const prev = prevTextRef.current;
+    const current = text;
+    const now = Date.now();
+    const timeSinceLastRender = now - lastRenderTimeRef.current;
+    const THROTTLE_MS = 60;
 
-    if (text.startsWith(prev) && text.length > prev.length) {
-      const prefix = prev;
-      const delta = text.slice(prev.length);
+    const commitUpdate = () => {
+      const delta = current.length > prev.length && current.startsWith(prev)
+        ? current.length - prev.length
+        : current.length;
       chunkCountRef.current += 1;
+      prevTextRef.current = current;
+      lastRenderTimeRef.current = Date.now();
 
       setStreamState({
-        prefix,
-        delta,
-        key: chunkCountRef.current,
+        content: current,
+        deltaLength: delta,
+        chunkKey: chunkCountRef.current,
       });
-    } else {
-      // Full replacement or non-contiguous update fallback
-      setStreamState({
-        prefix: '',
-        delta: text,
-        key: chunkCountRef.current + 1,
-      });
+    };
+
+    if (timeSinceLastRender >= THROTTLE_MS) {
+      commitUpdate();
+    } else if (!timerRef.current) {
+      timerRef.current = setTimeout(() => {
+        timerRef.current = null;
+        commitUpdate();
+      }, THROTTLE_MS - timeSinceLastRender);
     }
 
-    prevTextRef.current = text;
+    return () => {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+    };
   }, [text, isStreaming]);
 
-  if (!isStreaming) {
-    return <span className="whitespace-pre-wrap leading-relaxed font-sans">{text}</span>;
-  }
+  // When inference finishes, render the final complete markdown string directly
+  const activeContent = isStreaming ? streamState.content : text;
+  const activeDeltaLength = isStreaming ? streamState.deltaLength : 0;
+  const activeChunkKey = isStreaming ? streamState.chunkKey : 0;
+
+  const plugins = useMemo(() => {
+    if (!isStreaming || activeDeltaLength <= 0) {
+      return [remarkGfm];
+    }
+    return [remarkGfm, createTokenFadePlugin(activeDeltaLength, activeChunkKey)];
+  }, [isStreaming, activeDeltaLength, activeChunkKey]);
 
   return (
-    <span className="whitespace-pre-wrap leading-relaxed font-sans relative inline">
-      <span>{streamState.prefix}</span>
-      {streamState.delta ? (
-        <span key={streamState.key} className="animate-token-fade inline">
-          {streamState.delta}
-        </span>
-      ) : null}
-      <span className="inline-block w-[1.5px] h-[1.05em] ml-0.5 -mb-0.5 bg-primary/90 rounded-full animate-caret align-text-bottom" />
-    </span>
+    <div className="relative">
+      <ReactMarkdown remarkPlugins={plugins} components={components}>
+        {activeContent}
+      </ReactMarkdown>
+      {isStreaming && (
+        <span
+          className="inline-block w-[2px] h-[1.05em] ml-1 -mb-0.5 bg-primary/90 rounded-full animate-caret align-text-bottom"
+          aria-hidden="true"
+        />
+      )}
+    </div>
   );
 }
 
