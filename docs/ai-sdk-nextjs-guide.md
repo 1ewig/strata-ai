@@ -43,7 +43,7 @@
   - [4.6 Tool-result extraction & live `data-workspace` events](#46-tool-result-extraction--live-data-workspace-events)
   - [4.7 The refs-as-transport-bridge](#47-the-refs-as-transport-bridge)
   - [4.8 Quota via response headers](#48-quota-via-response-headers)
-  - [4.9 Provider-accurate token accounting & the context-window guard](#49-provider-accurate-token-accounting--the-context-window-guard)
+  - [4.9 Provider-accurate token accounting, cost tracking, & the context-window guard](#49-provider-accurate-token-accounting-cost-tracking--the-context-window-guard)
   - [4.10 SSR rate-limit hydration](#410-ssr-rate-limit-hydration)
   - [4.11 The three persistence touchpoints](#411-the-three-persistence-touchpoints)
 - [Part 5 — Performance Optimization Techniques](#part-5-performance-optimization-techniques)
@@ -375,7 +375,7 @@ A finished send flow (see `handleSendMessage` in `useChatSession.ts`):
 
 - Trim the text; only send when the status allows (`chat.status` is not actively streaming), calling `chat.stop()` first if a previous run is in-flight.
 - **Quota pre-check:** if `rateLimitData.remaining5h <= 0 || remainingWeek <= 0`, set a `quotaError` instead of sending (§4.8).
-- **Context-window pre-check:** if cumulative token usage has crossed the active model's window, refuse with a friendly message and disable the composer (§4.9).
+- **Context-window pre-check:** if the active context occupancy has crossed the active model's window, refuse with a friendly message and disable the composer (§4.9).
 - On a user's first message, **auto-title** the conversation: `trimmed.slice(0, 40) + '...'` when longer than 40 chars.
 - Send: `chat.sendMessage({ text: trimmed })`; `status` flips `ready → submitted → streaming`.
 
@@ -681,7 +681,7 @@ Workspace Files Listing (Metadata Only):
 
 The prompt also carries **hard constraints** (max files, max sizes — from `src/lib/limits.ts`) and a **numbered workflow protocol** (inspect → mutate → verify), a strict **GFM output-rule section** (since replies render through `react-markdown` + `remark-gfm`, the model must emit valid GFM: tables, task lists, fenced code with language tags), and an explicit **tone & persona section**. Two sections worth calling out:
 
-- **Context & Token Budget** (new): `buildSystemInstruction(files, tokenBudget)` appends the cumulative provider-reported usage and the active model's context window, so the model sizes replies accordingly. When usage is past 80% of the window, it adds a directive to "be concise" and proactively suggest a new chat. The budget is recomputed each `prepareStep` (so it stays current) and initially injected into the first `system` call too.
+- **Context & Token Budget** (new): `buildSystemInstruction(files, tokenBudget)` appends the active context occupancy (`active.totalTokens` / `remainingTokens` / `percentUsed`) and the active model's context window, so the model sizes replies accordingly. When usage is past 80% of the window, it adds a directive to "be concise" and proactively suggest a new chat. The budget is recomputed each `prepareStep` (so it stays current) and initially injected into the first `system` call too.
 - **Streamed live workspace hint:** the same `writer` used by tools is passed to the tools list so edits stream out live.
 
 ### 3.8 Bonus technique: a surgical edit engine
@@ -707,6 +707,13 @@ Production agents fail on three axes if you don't architect them: provider coupl
 Models are data, not code. One catalog record per model (`src/lib/models.ts`):
 
 ```ts
+export interface ModelPricing {
+  inputPerMillion: number;
+  outputPerMillion: number;
+  cachedInputPerMillion?: number;
+  currency: string;
+}
+
 export interface ModelOption {
   id: string;
   label: string;
@@ -714,21 +721,20 @@ export interface ModelOption {
   provider?: 'google' | 'fireworks'; // defaults to 'google'
   contextWindow: number;   // approximate context window in tokens
   maxOutput?: number;      // max output tokens when the provider publishes one
+  pricing?: ModelPricing;  // USD per 1M tokens, used for cost tracking (§4.9)
 }
 
 export const MODELS: ModelOption[] = [
-  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite', family: 'Gemini 3.5', contextWindow: 131072, maxOutput: 65536 },
-  { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', family: 'Gemini 3.1', contextWindow: 131072, maxOutput: 65536 },
-  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview', family: 'Gemini 3', contextWindow: 131072, maxOutput: 65536 },
-  { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536 },
-  { id: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536 },
-  { id: 'accounts/fireworks/models/deepseek-v4-flash-0731', label: 'DeepSeek V4 Flash 0731', family: 'DeepSeek', provider: 'fireworks', contextWindow: 131072, maxOutput: 65536 },
+  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite', family: 'Gemini 3.5', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.30, outputPerMillion: 2.50, cachedInputPerMillion: 0.075, currency: 'USD' } },
+  { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', family: 'Gemini 3.1', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.25, outputPerMillion: 1.50, cachedInputPerMillion: 0.0625, currency: 'USD' } },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview', family: 'Gemini 3', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.50, outputPerMillion: 3.00, cachedInputPerMillion: 0.125, currency: 'USD' } },
+  { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.14, outputPerMillion: 0.35, currency: 'USD' } },
+  { id: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.07, outputPerMillion: 0.34, currency: 'USD' } },
+  { id: 'accounts/fireworks/models/deepseek-v4-flash-0731', label: 'DeepSeek V4 Flash 0731', family: 'DeepSeek', provider: 'fireworks', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.14, outputPerMillion: 0.28, cachedInputPerMillion: 0.028, currency: 'USD' } },
 ];
 ```
 
 Plus, per `src/lib/models.ts`:
-
-- `MODEL_DESCRIPTIONS` — one-line user-facing descriptions for the picker.
 - `MODEL_THINKING_LEVELS` — `{ levels, defaultLevel }` per model:
   - Gemini 3.5 Flash Lite: minimal / low / medium / high (default **low**).
   - Gemini 3.1 Flash Lite: minimal / high (default **minimal**).
@@ -737,6 +743,7 @@ Plus, per `src/lib/models.ts`:
   - **Gemma 4**: *none* — the resolver must omit the reasoning field entirely (see §4.3).
 - `getInitialModel()` / `saveModelPreference()` / `getStoredThinkingLevel()` — localStorage helpers. `getInitialModel` only trusts a stored id still in the catalog, falling back to `NEXT_PUBLIC_GEMINI_MODEL` then `gemini-3.5-flash-lite`.
 - `getValidThinkingLevelForModel(modelId, level)` — clamps a chosen level to a model's allowed set, else returns the default.
+- `getModelPricing(modelId)` — resolves `ModelPricing` for a model id, falling back to Gemini 3.5 Flash Lite rates for unknown ids. The same pricing block is mirrored in `metadata.json`'s `supportedModels` so the extension manifest and the app catalog never drift.
 
 The catalog is the single source of truth that drives the model picker UI (`ModelSelectorMenu`), validation of stored preferences, and — via the `provider` field — server routing (`resolveAgentModel`, §4.2). The default model falls back to `NEXT_PUBLIC_GEMINI_MODEL`, then `gemini-3.5-flash-lite`. Conversation-level state (`conversations.model` / `thinkingLevel`) wins over stored preferences on load (`useModelSettings`).
 
@@ -901,17 +908,31 @@ Server-enforced quotas belong on **every response**, not just failures. Strata A
 - On **429**, stop the in-flight stream (`chatRef.current?.stop()`) and prune the empty trailing assistant bubble via an effect in `useChatSession`.
 - **Friendly error surface:** `src/lib/ai/chat-error-handler.ts` maps `Failed to fetch`/network/401/400/429 patterns to clean assistant-style copy and replaces the pending bubble — no raw stack, and it persists the corrected message list to Dexie with position-derived timestamps.
 
-### 4.9 Provider-accurate token accounting & the context-window guard
+### 4.9 Provider-accurate token accounting, cost tracking, & the context-window guard
 
-Rather than estimate tokens by characters, Strata AI captures **real provider-reported usage** and attaches it to the finished assistant message via AI SDK 7's `messageMetadata`. From `src/lib/ai/agent-runner.ts`:
+Rather than estimate tokens by characters, Strata AI captures **real provider-reported usage** and attaches it to the finished assistant message via AI SDK 7's `messageMetadata`. Every assistant turn carries three pieces of metadata, from `src/lib/ai/agent-runner.ts`:
 
 ```ts
+let lastStepUsage: LanguageModelUsage | undefined;
+
+const result = streamText({
+  // ...
+  onStepEnd({ stepNumber, toolCalls, usage }) {
+    if (usage) lastStepUsage = usage;        // final step's usage = active context snapshot
+  },
+  // ...
+});
+
 writer.merge(
   toUIMessageStream({
     stream: result.stream,
     messageMetadata: ({ part }) => {
       if (part.type === 'finish') {
-        return { usage: part.totalUsage, modelId: modelId || 'gemini-3.5-flash-lite' };
+        return {
+          usage: lastStepUsage || part.totalUsage,   // active context window occupancy
+          stepTotalUsage: part.totalUsage,           // aggregate across multi-step passes
+          modelId: modelId || 'gemini-3.5-flash-lite',
+        };
       }
       return undefined;
     },
@@ -919,28 +940,61 @@ writer.merge(
 );
 ```
 
-`src/lib/token-usage.ts` folds that into a per-conversation total:
+- **`usage`** (`lastStepUsage`): the final step's usage — following the Claude Code / OpenCode / Codex standard, this is the **active context window** snapshot. Because the provider's input-token figure already encapsulates the full conversation history + system prompt, summing *every* multi-step pass would inflate the guard O(N)-style; recording only the last landed step keeps the meter truthful.
+- **`stepTotalUsage`** (`part.totalUsage`): the aggregate execution volume across all tool passes in that turn. Used for **session** analytics and **per-model cost** (multi-step turns burn API tokens N times, so cost uses this, not the active snapshot).
+- **`modelId`**: which catalog model produced the turn, so per-model cost can be attributed correctly even when models switch mid-conversation.
+
+`src/lib/token-usage.ts` folds all of that into three aggregated structures — active context, session totals, and dollar cost grouped by model:
 
 ```ts
-export interface ChatMetadata { usage?: LanguageModelUsage; modelId?: string; }
-export interface CumulativeUsage { inputTokens: number; outputTokens: number; totalTokens: number; }
+export interface ChatMetadata { usage?: LanguageModelUsage; stepTotalUsage?: LanguageModelUsage; modelId?: string; }
 
-export function computeCumulativeUsage(messages): CumulativeUsage | null {
-  if (!messages || messages.length === 0) return null;
-  let in = 0, out = 0, total = 0;
-  for (const m of messages) {
-    if (m.role !== 'assistant') continue;
-    const usage = m.metadata?.usage;
-    if (!usage) continue;
-    in += usage.inputTokens ?? 0;
-    out += usage.outputTokens ?? 0;
-    total += usage.totalTokens ?? (usage.inputTokens + usage.outputTokens);
-  }
-  return total > 0 ? { inputTokens: in, outputTokens: out, totalTokens: total } : null;
+export interface ActiveContextUsage {
+  inputTokens: number; outputTokens: number; totalTokens: number;
+  percentUsed: number;           // 0 - 100
+  remainingTokens: number;       // contextWindow - totalTokens
+}
+export interface SessionTokenUsage {
+  totalOutputTokens: number; totalApiTokens: number; turnCount: number;
+}
+export interface ModelUsageStats {
+  modelId: string; modelLabel: string; turnCount: number;
+  inputTokens: number; outputTokens: number; totalTokens: number;
+  apiTokens: number; cost: number;
+}
+export interface ConversationTokenMetrics {
+  active: ActiveContextUsage;
+  session: SessionTokenUsage;
+  totalCost: number;                 // summed across turns & models
+  modelsUsed: string[];
+  modelBreakdowns: ModelUsageStats[];
+  inputTokens: number; outputTokens: number; totalTokens: number;  // aliases → active
+}
+
+export function calculateTokenCost(modelId, inputTokens, outputTokens): number {
+  const pricing = getModelPricing(modelId);
+  return (inputTokens / 1_000_000) * pricing.inputPerMillion
+       + (outputTokens / 1_000_000) * pricing.outputPerMillion;
+}
+export function formatCost(cost: number): string {
+  // '$0.00' | '<$0.0001' | '$0.0014' | '$0.123'
+}
+
+export function calculateTokenMetrics(messages, contextWindow = 131072): ConversationTokenMetrics | null {
+  // walks assistant turns; `latestUsage = usage` keeps the LAST turn's snapshot as `active`
+  // while accumulating session totals AND per-model buckets keyed by metadata.modelId,
+  // computing each turn's cost from stepTotalUsage (execution volume, not the snapshot);
+  // returns null until real provider usage exists (activeTotal <= 0)
 }
 ```
 
-The header (`src/components/chat/ChatHeader.tsx`) shows a live, cumulative meter: `formatTokens(total) / formatContextWindow(contextWindow) tokens (pct%)`. When `totalTokens >= contextWindow` (`isContextWindowExhausted` in `useChatSession`), `handleSendMessage` refuses further sends with "Context window reached. Start a new chat to continue." — a **context-window guard** that keeps every run within budget by refusing sends, not by silently truncating.
+The `active` block is the live context meter, the `modelBreakdowns` array feeds the cost UI, and the top-level `inputTokens`/`outputTokens`/`totalTokens` aliases keep old callers working.
+
+The header (`src/components/chat/ChatHeader.tsx`) shows a compact, live **active-context meter**: `formatTokens(active.totalTokens) / formatContextWindow(contextWindow) tokens (pct%)`, with the dot turning `warning` + pulsing past 80% (`isNearLimit = pct >= 80`). Clicking/tapping it opens the separated **`TokenUsagePopover`** (`src/components/chat/TokenUsagePopover.tsx`) — a compact card with a visual context-usage progress bar, input/output split, total session tokens, the total estimated cost (`formatCost(totalCost)`), and a per-model cost breakdown. It dismisses on outside click/tap via a transparent backdrop plus `mousedown`/`touchstart` listeners that ignore the trigger button.
+
+When active occupancy reaches the window — `isContextWindowExhausted` checks `tokenMetrics.active.totalTokens >= contextWindow` in `useChatSession` — `handleSendMessage` refuses further sends with "Context window reached. Start a new chat to continue." — a **context-window guard** that keeps every run within budget by refusing sends, not by silently truncating.
+
+The same `tokenBudget` object feeds the system prompt (§3.7), so the model sizes replies against real current headroom.
 
 ### 4.10 SSR rate-limit hydration
 
@@ -1191,8 +1245,8 @@ Every item shipped and was later fixed. Learn from the receipts:
 | Streaming agent route (thin auth/quota/validation shell) | `src/app/api/agent/route.ts` |
 | Mutable workspace factory + file-merge helpers | `src/lib/ai/workspace.ts` |
 | Provider resolver (the only provider seam) | `src/lib/ai/providers.ts` |
-| Model catalog + thinking levels + caps + localStorage helpers | `src/lib/models.ts` |
-| Token accounting (`computeCumulativeUsage`, formatters) | `src/lib/token-usage.ts` |
+| Model catalog + thinking levels + caps + pricing + localStorage helpers | `src/lib/models.ts` |
+| Token accounting (`calculateTokenMetrics`: active context + session + per-model cost, formatters) | `src/lib/token-usage.ts` |
 | App limits (`MAX_*`) + formatting helpers | `src/lib/limits.ts` |
 | Tool factories + barrel | `src/lib/ai/tools/` + `src/lib/ai/tools.ts` |
 | System prompt builder (metadata, constraints, GFM rules, token budget) | `src/lib/ai/prompts.ts` |
@@ -1202,6 +1256,7 @@ Every item shipped and was later fixed. Learn from the receipts:
 | Tool-result file extraction | `src/lib/ai/message-extractor.ts` |
 | Friendly error mapping | `src/lib/ai/chat-error-handler.ts` |
 | Memoized chat surfaces (ChatBubble, SmoothStreamText, ChatInput, ToolCallCard, WorkGroupCard, resolver) | `src/components/chat/*` |
+| Token usage popover (context meter, cost breakdown, outside-tap dismissal) | `src/components/chat/TokenUsagePopover.tsx` |
 | Global quota context (SSR hydration + header sync) | `src/contexts/RateLimitContext.tsx` |
 | Route guard + security headers (`proxy`) | `src/proxy.ts` |
 | Confirm dialog (portal into `document.body`) | `src/components/ui/ConfirmDialog.tsx` |

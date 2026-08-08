@@ -4,11 +4,69 @@
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"],
   "supportedModels": [
-    { "id": "gemini-3.5-flash-lite", "contextWindow": 131072, "maxOutput": 65536 },
-    { "id": "gemini-3.1-flash-lite", "contextWindow": 131072, "maxOutput": 65536 },
-    { "id": "gemini-3-flash-preview", "contextWindow": 131072, "maxOutput": 65536 },
-    { "id": "gemma-4-31b-it", "contextWindow": 131072, "maxOutput": 65536 },
-    { "id": "gemma-4-26b-a4b-it", "contextWindow": 131072, "maxOutput": 65536 },
-    { "id": "accounts/fireworks/models/deepseek-v4-flash-0731", "contextWindow": 131072, "maxOutput": 65536 }
+    {
+      "id": "gemini-3.5-flash-lite",
+      "contextWindow": 131072,
+      "maxOutput": 65536,
+      "pricing": {
+        "inputPerMillion": 0.30,
+        "outputPerMillion": 2.50,
+        "cachedInputPerMillion": 0.075,
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "gemini-3.1-flash-lite",
+      "contextWindow": 131072,
+      "maxOutput": 65536,
+      "pricing": {
+        "inputPerMillion": 0.25,
+        "outputPerMillion": 1.50,
+        "cachedInputPerMillion": 0.0625,
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "gemini-3-flash-preview",
+      "contextWindow": 131072,
+      "maxOutput": 65536,
+      "pricing": {
+        "inputPerMillion": 0.50,
+        "outputPerMillion": 3.00,
+        "cachedInputPerMillion": 0.125,
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "gemma-4-31b-it",
+      "contextWindow": 131072,
+      "maxOutput": 65536,
+      "pricing": {
+        "inputPerMillion": 0.14,
+        "outputPerMillion": 0.35,
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "gemma-4-26b-a4b-it",
+      "contextWindow": 131072,
+      "maxOutput": 65536,
+      "pricing": {
+        "inputPerMillion": 0.07,
+        "outputPerMillion": 0.34,
+        "currency": "USD"
+      }
+    },
+    {
+      "id": "accounts/fireworks/models/deepseek-v4-flash-0731",
+      "contextWindow": 131072,
+      "maxOutput": 65536,
+      "pricing": {
+        "inputPerMillion": 0.14,
+        "outputPerMillion": 0.28,
+        "cachedInputPerMillion": 0.028,
+        "currency": "USD"
+      }
+    }
   ]
 }

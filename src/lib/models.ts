@@ -1,3 +1,11 @@
+/** Pricing per 1M tokens for a model. */
+export interface ModelPricing {
+  inputPerMillion: number;
+  outputPerMillion: number;
+  cachedInputPerMillion?: number;
+  currency: string;
+}
+
 /** A selectable AI model option shown in the model picker. */
 export interface ModelOption {
   id: string;
@@ -9,6 +17,8 @@ export interface ModelOption {
   contextWindow: number;
   /** Maximum output tokens when the provider publishes one. */
   maxOutput?: number;
+  /** Token pricing metadata per 1M tokens. */
+  pricing?: ModelPricing;
 }
 
 /** The catalog of AI models available for chat. */
@@ -19,6 +29,12 @@ export const MODELS: ModelOption[] = [
     family: 'Gemini 3.5',
     contextWindow: 131072,
     maxOutput: 65536,
+    pricing: {
+      inputPerMillion: 0.30,
+      outputPerMillion: 2.50,
+      cachedInputPerMillion: 0.075,
+      currency: 'USD',
+    },
   },
   {
     id: 'gemini-3.1-flash-lite',
@@ -26,6 +42,12 @@ export const MODELS: ModelOption[] = [
     family: 'Gemini 3.1',
     contextWindow: 131072,
     maxOutput: 65536,
+    pricing: {
+      inputPerMillion: 0.25,
+      outputPerMillion: 1.50,
+      cachedInputPerMillion: 0.0625,
+      currency: 'USD',
+    },
   },
   {
     id: 'gemini-3-flash-preview',
@@ -33,9 +55,37 @@ export const MODELS: ModelOption[] = [
     family: 'Gemini 3',
     contextWindow: 131072,
     maxOutput: 65536,
+    pricing: {
+      inputPerMillion: 0.50,
+      outputPerMillion: 3.00,
+      cachedInputPerMillion: 0.125,
+      currency: 'USD',
+    },
   },
-  { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536 },
-  { id: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536 },
+  {
+    id: 'gemma-4-31b-it',
+    label: 'Gemma 4 31B IT',
+    family: 'Gemma 4',
+    contextWindow: 131072,
+    maxOutput: 65536,
+    pricing: {
+      inputPerMillion: 0.14,
+      outputPerMillion: 0.35,
+      currency: 'USD',
+    },
+  },
+  {
+    id: 'gemma-4-26b-a4b-it',
+    label: 'Gemma 4 26B A4B IT',
+    family: 'Gemma 4',
+    contextWindow: 131072,
+    maxOutput: 65536,
+    pricing: {
+      inputPerMillion: 0.07,
+      outputPerMillion: 0.34,
+      currency: 'USD',
+    },
+  },
   {
     id: 'accounts/fireworks/models/deepseek-v4-flash-0731',
     label: 'DeepSeek V4 Flash 0731',
@@ -43,8 +93,27 @@ export const MODELS: ModelOption[] = [
     provider: 'fireworks',
     contextWindow: 131072,
     maxOutput: 65536,
+    pricing: {
+      inputPerMillion: 0.14,
+      outputPerMillion: 0.28,
+      cachedInputPerMillion: 0.028,
+      currency: 'USD',
+    },
   },
 ];
+
+/** Resolves model pricing per 1M tokens, falling back to default lite rates. */
+export function getModelPricing(modelId?: string): ModelPricing {
+  const found = MODELS.find((m) => m.id === modelId)?.pricing;
+  return (
+    found || {
+      inputPerMillion: 0.30,
+      outputPerMillion: 2.50,
+      cachedInputPerMillion: 0.075,
+      currency: 'USD',
+    }
+  );
+}
 
 /** One-line descriptions keyed by model id, for tooltips and detail views. */
 export const MODEL_DESCRIPTIONS: Record<string, string> = {

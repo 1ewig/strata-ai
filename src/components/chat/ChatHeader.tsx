@@ -1,12 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { Folder, Menu, Plus } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
-
-/** Props for the ChatHeader component. */
 import { MODELS } from '@/lib/models';
-import { formatContextWindow, formatTokens, CumulativeUsage } from '@/lib/token-usage';
+import {
+  formatContextWindow,
+  formatTokens,
+  ConversationTokenMetrics,
+  CumulativeUsage,
+} from '@/lib/token-usage';
+import TokenUsagePopover from './TokenUsagePopover';
 
 /** Props for the ChatHeader component. */
 interface ChatHeaderProps {
@@ -14,7 +18,7 @@ interface ChatHeaderProps {
   files: WorkspaceFile[];
   activeFileId: string | null;
   model?: string;
-  tokenUsage?: CumulativeUsage | null;
+  tokenUsage?: ConversationTokenMetrics | CumulativeUsage | null;
   onOpenFile?: (fileId: string) => void;
   onOpenDrawer: () => void;
   onOpenSidebar?: () => void;
@@ -22,18 +26,8 @@ interface ChatHeaderProps {
 }
 
 /**
- * Sticky chat header with the conversation title, token usage / context window indicator,
- * mobile sidebar toggle, and a workspace files action button that opens the Workspace Drawer.
- *
- * @param title - Optional chat/workspace title; falls back to "Chat Workspace".
- * @param files - Workspace files listed in the workspace.
- * @param activeFileId - Id of the currently open file.
- * @param model - Active catalog model id.
- * @param tokenUsage - Cumulative provider-reported token usage across the conversation.
- * @param onOpenFile - Optional callback when selecting a file.
- * @param onOpenDrawer - Opens the workspace files drawer.
- * @param onOpenSidebar - Opens the mobile sidebar; hides the toggle when omitted.
- * @param onNewChat - Creates and navigates to a fresh conversation (mobile only).
+ * Sticky chat header with conversation title, active context window indicator badge
+ * with separated hover/tap details popover, mobile sidebar toggle, and workspace files drawer button.
  */
 export default React.memo(function ChatHeader({
   title,
@@ -44,16 +38,33 @@ export default React.memo(function ChatHeader({
   onOpenSidebar,
   onNewChat,
 }: ChatHeaderProps) {
+  // Context window popover state (desktop click/hover & mobile tap)
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
   const modelOption = React.useMemo(() => {
     return MODELS.find((m) => m.id === model) || MODELS[0];
   }, [model]);
 
   const { contextWindow } = modelOption;
-  const totalTokens = tokenUsage?.totalTokens ?? 0;
-  const pct = contextWindow > 0 ? Math.min(100, Math.round((totalTokens / contextWindow) * 100)) : 0;
+
+  // Resolve active context window tokens
+  const activeMetrics = tokenUsage && 'active' in tokenUsage ? tokenUsage.active : null;
+  const activeTokens = activeMetrics?.totalTokens ?? tokenUsage?.totalTokens ?? 0;
+
+  const pct =
+    contextWindow > 0
+      ? Math.min(100, Math.round((activeTokens / contextWindow) * 100))
+      : 0;
+
+  const isNearLimit = pct >= 80;
+
+  const togglePopover = () => {
+    setIsPopoverOpen((prev) => !prev);
+  };
 
   return (
-    <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40">
+    <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40 relative">
       <div className="flex items-center gap-2 min-w-0">
         {onOpenSidebar && (
           <button
@@ -65,22 +76,50 @@ export default React.memo(function ChatHeader({
           </button>
         )}
 
-        {/* Conversation title & token usage indicator */}
+        {/* Conversation title & active context window indicator */}
         <div className="flex flex-col min-w-0">
           <span className="text-label font-semibold text-text-primary truncate max-w-[160px] sm:max-w-md">
             {title || 'Chat Workspace'}
           </span>
-          <span
-            className="text-micro font-mono text-text-muted truncate max-w-[220px] sm:max-w-xs leading-none"
-            title={tokenUsage
-              ? `Cumulative ${tokenUsage.totalTokens.toLocaleString()} tokens used (${tokenUsage.inputTokens.toLocaleString()} in / ${tokenUsage.outputTokens.toLocaleString()} out) of ${contextWindow.toLocaleString()} context limit`
-              : `No token usage recorded yet of ${contextWindow.toLocaleString()} context limit`}
+
+          {/* Interactive Context Window Button (Click/hover on desktop, tap on mobile) */}
+          <button
+            ref={triggerRef}
+            type="button"
+            onClick={togglePopover}
+            className="flex items-center gap-1.5 px-1.5 py-0.5 -mx-1.5 rounded-lg hover:bg-surface-hover/80 text-left transition-all cursor-pointer group max-w-[220px] sm:max-w-xs"
+            title="Click or tap to view token usage and context window details"
+            aria-label="View token usage details"
+            aria-expanded={isPopoverOpen}
           >
-            {formatTokens(totalTokens)} / {formatContextWindow(contextWindow)} tokens ({pct}%)
-          </span>
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                isNearLimit ? 'bg-warning animate-pulse' : 'bg-primary'
+              }`}
+            />
+            <span
+              className={`text-micro font-mono truncate leading-none transition-colors ${
+                isNearLimit
+                  ? 'text-warning font-medium'
+                  : 'text-text-muted group-hover:text-text-primary'
+              }`}
+            >
+              {formatTokens(activeTokens)} / {formatContextWindow(contextWindow)} ({pct}%)
+            </span>
+          </button>
         </div>
       </div>
 
+      {/* Separated Clean Token Usage Popover */}
+      <TokenUsagePopover
+        modelOption={modelOption}
+        tokenUsage={tokenUsage}
+        isOpen={isPopoverOpen}
+        onClose={() => setIsPopoverOpen(false)}
+        triggerRef={triggerRef}
+      />
+
+      {/* Right Side Buttons */}
       <div className="flex items-center gap-3">
         {/* Mobile New Chat Button (Creates a fresh conversation) */}
         <button

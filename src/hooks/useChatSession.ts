@@ -13,7 +13,7 @@ import { useWorkspaceFiles } from './useWorkspaceFiles';
 import { useChatTransport } from './useChatTransport';
 import { handleChatError } from '@/lib/ai/chat-error-handler';
 import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
-import { computeCumulativeUsage, ChatMetadata } from '@/lib/token-usage';
+import { calculateTokenMetrics, ConversationTokenMetrics, ChatMetadata } from '@/lib/token-usage';
 import { getModelContextWindow } from '@/lib/models';
 import { useRateLimit } from '@/contexts/RateLimitContext';
 import { useSession } from '@/lib/auth-client';
@@ -189,13 +189,17 @@ export function useChatSession(chatId: string) {
 
   const currentConvTitle = currentConv?.title;
 
-  // Real provider-reported token usage summed across every assistant message.
-  const tokenUsage = useMemo(() => computeCumulativeUsage(chat.messages as UsageMessage[]), [chat.messages]);
-
   // The active model's context window in tokens.
   const contextWindow = getModelContextWindow(modelSettings.model);
-  // Refuse further sends in this conversation once usage has crossed the window.
-  const isContextWindowExhausted = tokenUsage != null && tokenUsage.totalTokens >= contextWindow;
+
+  // Accurate active context window metrics and session totals (Claude Code / OpenCode / Codex standard).
+  const tokenMetrics = useMemo(
+    () => calculateTokenMetrics(chat.messages as UsageMessage[], contextWindow),
+    [chat.messages, contextWindow],
+  );
+
+  // Refuse further sends in this conversation once active context usage has crossed the model window.
+  const isContextWindowExhausted = tokenMetrics != null && tokenMetrics.active.totalTokens >= contextWindow;
 
   /**
    * Sends a user message after validating quota, auto-titling the conversation on its first message.
@@ -255,7 +259,8 @@ export function useChatSession(chatId: string) {
     files: workspace.files,
     activeFileId: workspace.activeFileId,
     displayMessages: chat.messages,
-    tokenUsage,
+    tokenUsage: tokenMetrics,
+    tokenMetrics,
     isContextWindowExhausted,
     contextWindow,
     streamingContent: null,

@@ -30,6 +30,28 @@ interface UserButtonProps {
 export default function UserButton({ session, isSigningOut, onSignOut }: UserButtonProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const menuContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Close the profile overflow menu when clicking or tapping anywhere outside
+  React.useEffect(() => {
+    if (!menuOpen) return;
+
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
+      if (
+        menuContainerRef.current &&
+        !menuContainerRef.current.contains(e.target as Node)
+      ) {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [menuOpen]);
 
   // Guests get a sign-in link instead of the profile menu.
   if (!session?.user) {
@@ -60,7 +82,7 @@ export default function UserButton({ session, isSigningOut, onSignOut }: UserBut
 
   return (
     <>
-      <div className="relative w-full">
+      <div ref={menuContainerRef} className="relative w-full">
         {/* Dropdown Menu */}
         {menuOpen && (
           <div className="absolute bottom-full left-0 right-0 mb-2 p-1.5 bg-surface-overlay border border-edge-raised rounded-xl shadow-xl space-y-1 animate-fade-in z-50">
