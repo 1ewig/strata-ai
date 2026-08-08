@@ -9,10 +9,76 @@ import {
   LanguageModelUsage,
 } from "ai";
 import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
-import { resolveAgentModel } from "@/lib/ai/providers";
+import { resolveAgentModel, getModelProvider, DEFAULT_AGENT_MODEL } from "@/lib/ai/providers";
 import { WorkspaceToolsContext } from "@/lib/ai/tools/types";
 import { getModelContextWindow } from "@/lib/models";
 import { calculateTokenMetrics, ChatMetadata } from "@/lib/token-usage";
+
+/**
+ * Strips provider-specific metadata from conversation messages that belongs to a
+ * provider other than the one serving the current request.
+ *
+ * Prevents cross-provider metadata leaks that break strict-schema providers.
+ * The classic failure: a Gemini (Google) tool-call part carries a stored thought
+ * signature (UI `callProviderMetadata.google.thoughtSignature`); when that
+ * history is later replayed into a Fireworks/DeepSeek request,
+ * `convertToModelMessages` re-emits it as `providerOptions` on the tool-call
+ * part and the openai-compatible converter turns it into `extra_content`, which
+ * Fireworks rejects with:
+ * "Extra inputs are not permitted, field: 'messages[N].tool_calls[0].extra_content'".
+ * Keeping the active provider's own keys is intentional so Google's thought
+ * signatures still round-trip for Gemini requests.
+ *
+ * All three metadata field shapes are pruned: `providerMetadata` (text/reasoning
+ * parts), `callProviderMetadata` / `resultProviderMetadata` (tool parts).
+ *
+ * @param messages - The UI message parts arriving in the request body.
+ * @param provider - The active backend provider ('google' | 'fireworks').
+ * @returns A shallow-copied message array with non-active provider metadata pruned.
+ */
+function sanitizeMessagesForProvider(
+  messages: Parameters<typeof convertToModelMessages>[0],
+  provider: "google" | "fireworks",
+): Parameters<typeof convertToModelMessages>[0] {
+  const prune = (metadata?: Record<string, unknown>) => {
+    if (!metadata) {
+      return undefined;
+    }
+    const pruned = Object.fromEntries(
+      Object.entries(metadata).filter(([key]) => key === provider),
+    );
+    return Object.keys(pruned).length > 0 ? pruned : undefined;
+  };
+
+  return messages.map((message) => {
+    const parts = message.parts;
+    if (!Array.isArray(parts)) {
+      return message;
+    }
+    return {
+      ...message,
+      parts: parts.map((part) => {
+        const typedPart = part as {
+          providerMetadata?: Record<string, unknown>;
+          callProviderMetadata?: Record<string, unknown>;
+          resultProviderMetadata?: Record<string, unknown>;
+        };
+        return {
+          ...part,
+          ...(typedPart.providerMetadata !== undefined
+            ? { providerMetadata: prune(typedPart.providerMetadata) }
+            : {}),
+          ...(typedPart.callProviderMetadata !== undefined
+            ? { callProviderMetadata: prune(typedPart.callProviderMetadata) }
+            : {}),
+          ...(typedPart.resultProviderMetadata !== undefined
+            ? { resultProviderMetadata: prune(typedPart.resultProviderMetadata) }
+            : {}),
+        };
+      }),
+    };
+  }) as Parameters<typeof convertToModelMessages>[0];
+}
 
 /**
  * Server-side agent run configuration.
@@ -123,13 +189,21 @@ export async function runAgentResponse({
   remainingWeek,
 }: RunAgentResponseParams): Promise<Response> {
   // Resolve the requested model to its provider-specific config (Google or Fireworks).
-  const resolvedModel = resolveAgentModel(modelId || "gemini-3.5-flash-lite", thinkingLevel);
+  const resolvedModel = resolveAgentModel(modelId || DEFAULT_AGENT_MODEL, thinkingLevel);
+
+  // Prune provider metadata belonging to other providers before the message
+  // converters run, so stale Gemini thought signatures (or any other
+  // cross-provider leftovers) never leak into a Fireworks/DeepSeek payload.
+  const sanitizedMessages = sanitizeMessagesForProvider(
+    messages,
+    getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+  );
 
   // Token budget: active model's context window + active context occupancy from the
   // latest assistant message (metadata.usage round-trips through the request body).
-  const contextWindow = getModelContextWindow(modelId || "gemini-3.5-flash-lite");
+  const contextWindow = getModelContextWindow(modelId || DEFAULT_AGENT_MODEL);
   const tokenMetrics = calculateTokenMetrics(
-    messages as Array<{ role?: string; metadata?: ChatMetadata }>,
+    sanitizedMessages as Array<{ role?: string; metadata?: ChatMetadata }>,
     contextWindow,
   );
   const tokenBudget = {
@@ -156,7 +230,7 @@ export async function runAgentResponse({
           : {}),
         ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
         system: buildSystemInstruction(workspaceWithWriter.getCurrentFiles()),
-        messages: await convertToModelMessages(messages),
+        messages: await convertToModelMessages(sanitizedMessages),
         tools: createWorkspaceTools(workspaceWithWriter),
         abortSignal: signal,
         experimental_transform: [
