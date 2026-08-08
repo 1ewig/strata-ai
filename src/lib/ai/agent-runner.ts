@@ -11,7 +11,7 @@ import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
 import { resolveAgentModel } from "@/lib/ai/providers";
 import { WorkspaceToolsContext } from "@/lib/ai/tools/types";
 import { getModelContextWindow } from "@/lib/models";
-import { computeCumulativeUsage, ChatMetadata } from "@/lib/token-usage";
+import { calculateTokenMetrics, ChatMetadata } from "@/lib/token-usage";
 
 /**
  * Server-side agent run configuration.
@@ -124,13 +124,18 @@ export async function runAgentResponse({
   // Resolve the requested model to its provider-specific config (Google or Fireworks).
   const resolvedModel = resolveAgentModel(modelId || "gemini-3.5-flash-lite", thinkingLevel);
 
-  // Token budget: active model's context window + cumulative provider-reported usage from
-  // prior assistant messages (metadata.usage round-trips through the request body).
+  // Token budget: active model's context window + active context occupancy from the
+  // latest assistant message (metadata.usage round-trips through the request body).
   const contextWindow = getModelContextWindow(modelId || "gemini-3.5-flash-lite");
-  const cumulativeUsage = computeCumulativeUsage(messages as Array<{ role?: string; metadata?: ChatMetadata }>);
+  const tokenMetrics = calculateTokenMetrics(
+    messages as Array<{ role?: string; metadata?: ChatMetadata }>,
+    contextWindow,
+  );
   const tokenBudget = {
     contextWindow,
-    totalTokens: cumulativeUsage?.totalTokens,
+    totalTokens: tokenMetrics?.active.totalTokens,
+    remainingTokens: tokenMetrics?.active.remainingTokens,
+    percentUsed: tokenMetrics?.active.percentUsed,
   };
 
   // Wrap streamText with createUIMessageStream so tools can emit live data-workspace events.

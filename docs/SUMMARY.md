@@ -190,7 +190,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── models.ts             # Model registry, descriptions, thinking-level config, localStorage helpers
     │   │   ├── schemas.ts            # Zod: WorkspaceFile
     │   │   ├── limits.ts             # Centralized app limits (message/file/workspace/conversation caps) + formatting helpers
-    │   │   ├── token-usage.ts        # Cumulative provider-reported usage folding (computeCumulativeUsage) + compact token/context formatters
+    │   │   ├── token-usage.ts        # Active context window metrics (calculateTokenMetrics) + session usage folding & compact token formatters
     │   │   ├── id.ts                 # crypto.randomUUID with fallback
     │   │   ├── edit-engine.ts        # StringEditEngine: 3-tier surgical string matching
     │   │   ├── db/db.ts              # Dexie ChatDatabase (v5), Conversation/DBMessage types, CRUD helpers
@@ -254,7 +254,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 | `gemma-4-26b-a4b-it` | Gemma 4 | none (provider default) | — |
 | `accounts/fireworks/models/deepseek-v4-flash-0731` | DeepSeek (Fireworks) | low / high | high |
 
-- **Context-window caps:** every catalog entry is capped at `contextWindow: 131072` (128k tokens) with a `maxOutput: 65536` (64k) output allowance. `getModelContextWindow(modelId)` in `lib/models.ts` resolves a model's window (falling back to the first catalog entry). The server attaches provider-reported usage (`metadata.usage`) to finished assistant messages via AI SDK 7's `messageMetadata`, the client folds it into a cumulative per-conversation total (`computeCumulativeUsage` in `lib/token-usage.ts`), and `handleSendMessage` refuses further sends once `totalTokens >= contextWindow` ("Context window reached. Start a new chat to continue."). The ChatHeader surfaces this as a live "tokens used / context window (pct%)" meter (`formatTokens`/`formatContextWindow`).
+- **Context-window caps:** every catalog entry is capped at `contextWindow: 131072` (128k tokens) with a `maxOutput: 65536` (64k) output allowance. `getModelContextWindow(modelId)` in `lib/models.ts` resolves a model's window (falling back to the first catalog entry). The server attaches provider-reported usage (`metadata.usage`) to finished assistant messages via AI SDK 7's `messageMetadata`, the client tracks active context window occupancy (`calculateTokenMetrics` in `lib/token-usage.ts`, following the Claude Code / OpenCode / Codex standard), and `handleSendMessage` refuses further sends once active context tokens cross `contextWindow` ("Context window reached. Start a new chat to continue."). The ChatHeader surfaces this as a live "active tokens / context window (pct%)" meter (`formatTokens`/`formatContextWindow`) with a rich tooltip breaking down prompt context, generation output, and headroom.
 
 - Each entry also has a user-facing label + one-line description (`MODEL_DESCRIPTIONS`) shown in the ChatInput model popover.
 - Model entries may declare a `provider` ('google' or 'fireworks'); the server routes to the matching provider via `lib/ai/providers.ts` (`resolveAgentModel`). The model selector menu and transport are provider-agnostic.

@@ -13,14 +13,18 @@ import {
 export interface TokenBudgetContext {
   /** The active model's context window in tokens. */
   contextWindow?: number;
-  /** Cumulative provider-reported token usage across the conversation. */
+  /** Active tokens occupying the context window (input + output from latest turn). */
   totalTokens?: number;
+  /** Tokens remaining in the active context window. */
+  remainingTokens?: number;
+  /** Percentage of the context window consumed. */
+  percentUsed?: number;
 }
 
 /**
  * Builds the agent's system instruction, embedding workspace file metadata and constraints.
  * @param filesInput - Workspace files to reference (metadata only).
- * @param tokenBudget - Optional cumulative token usage / context window for budget awareness.
+ * @param tokenBudget - Optional active token usage / context window for budget awareness.
  * @returns The complete system instruction string for the model.
  */
 export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget?: TokenBudgetContext): string {
@@ -35,20 +39,32 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget
     )
     .join("\n");
 
-  // Token budget awareness: cumulative use vs context window, with a sizing hint near the ceiling.
-  const { contextWindow, totalTokens } = tokenBudget ?? {};
+  // Token budget awareness: active context occupancy vs context window, with headroom sizing hints.
+  const { contextWindow, totalTokens, remainingTokens, percentUsed } = tokenBudget ?? {};
   const windowText = contextWindow ? contextWindow.toLocaleString() : "unknown";
   const usageText = totalTokens != null ? totalTokens.toLocaleString() : "0";
-  const nearLimit =
-    contextWindow && totalTokens != null && totalTokens > 0 && totalTokens / contextWindow >= 0.8;
+  const pct =
+    percentUsed != null
+      ? Math.round(percentUsed)
+      : contextWindow && totalTokens != null && totalTokens > 0
+      ? Math.round((totalTokens / contextWindow) * 100)
+      : 0;
+  const remainingText =
+    remainingTokens != null
+      ? remainingTokens.toLocaleString()
+      : contextWindow && totalTokens != null
+      ? Math.max(0, contextWindow - totalTokens).toLocaleString()
+      : windowText;
+  const nearLimit = pct >= 80;
+
   const tokenBudgetSection = [
     "",
     "## Context & Token Budget",
-    `- Cumulative conversation token usage: ${usageText} tokens (provider-reported).`,
-    `- Active model context window: ${windowText} tokens.`,
+    `- Active conversation context occupancy: ${usageText} / ${windowText} tokens (${pct}% used).`,
+    `- Available context headroom: ${remainingText} tokens.`,
     nearLimit
-      ? "- You are near or above 80% of the context window: be concise, avoid repeating content already in files, and if the user needs far more room, proactively suggest starting a new chat to continue."
-      : "- Keep replies reasonably sized to stay well within the context window.",
+      ? "- You are near or above 80% of the active context window: be concise, avoid repeating content already in files, and if the user needs far more room, proactively suggest starting a new chat to continue."
+      : "- Keep replies reasonably sized to stay well within the active context window.",
   ].join("\n");
 
   // Format current date, day of week, and year for real-time temporal awareness.

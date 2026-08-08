@@ -3,10 +3,13 @@
 import React from 'react';
 import { Folder, Menu, Plus } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
-
-/** Props for the ChatHeader component. */
 import { MODELS } from '@/lib/models';
-import { formatContextWindow, formatTokens, CumulativeUsage } from '@/lib/token-usage';
+import {
+  formatContextWindow,
+  formatTokens,
+  ConversationTokenMetrics,
+  CumulativeUsage,
+} from '@/lib/token-usage';
 
 /** Props for the ChatHeader component. */
 interface ChatHeaderProps {
@@ -14,7 +17,7 @@ interface ChatHeaderProps {
   files: WorkspaceFile[];
   activeFileId: string | null;
   model?: string;
-  tokenUsage?: CumulativeUsage | null;
+  tokenUsage?: ConversationTokenMetrics | CumulativeUsage | null;
   onOpenFile?: (fileId: string) => void;
   onOpenDrawer: () => void;
   onOpenSidebar?: () => void;
@@ -22,14 +25,14 @@ interface ChatHeaderProps {
 }
 
 /**
- * Sticky chat header with the conversation title, token usage / context window indicator,
- * mobile sidebar toggle, and a workspace files action button that opens the Workspace Drawer.
+ * Sticky chat header with the conversation title, active context window indicator
+ * (Claude Code / OpenCode / Codex standard), mobile sidebar toggle, and workspace files drawer button.
  *
  * @param title - Optional chat/workspace title; falls back to "Chat Workspace".
  * @param files - Workspace files listed in the workspace.
  * @param activeFileId - Id of the currently open file.
  * @param model - Active catalog model id.
- * @param tokenUsage - Cumulative provider-reported token usage across the conversation.
+ * @param tokenUsage - Active context and session token metrics across the conversation.
  * @param onOpenFile - Optional callback when selecting a file.
  * @param onOpenDrawer - Opens the workspace files drawer.
  * @param onOpenSidebar - Opens the mobile sidebar; hides the toggle when omitted.
@@ -49,8 +52,38 @@ export default React.memo(function ChatHeader({
   }, [model]);
 
   const { contextWindow } = modelOption;
-  const totalTokens = tokenUsage?.totalTokens ?? 0;
-  const pct = contextWindow > 0 ? Math.min(100, Math.round((totalTokens / contextWindow) * 100)) : 0;
+
+  // Resolve active context window tokens vs lifetime session metrics
+  const activeMetrics = tokenUsage && 'active' in tokenUsage ? tokenUsage.active : null;
+  const sessionMetrics = tokenUsage && 'session' in tokenUsage ? tokenUsage.session : null;
+
+  const activeTokens = activeMetrics?.totalTokens ?? tokenUsage?.totalTokens ?? 0;
+  const inputTokens = activeMetrics?.inputTokens ?? tokenUsage?.inputTokens ?? 0;
+  const outputTokens = activeMetrics?.outputTokens ?? tokenUsage?.outputTokens ?? 0;
+  const remainingTokens =
+    activeMetrics?.remainingTokens ?? Math.max(0, contextWindow - activeTokens);
+
+  const pct =
+    contextWindow > 0
+      ? Math.min(100, Math.round((activeTokens / contextWindow) * 100))
+      : 0;
+
+  const isNearLimit = pct >= 80;
+
+  // Detailed hover tooltip breakdown
+  const tooltipText = tokenUsage
+    ? [
+        `Active Context: ${activeTokens.toLocaleString()} / ${contextWindow.toLocaleString()} tokens (${pct}% used)`,
+        `• Prompt Context (Input): ${inputTokens.toLocaleString()} tokens`,
+        `• Response Generation (Output): ${outputTokens.toLocaleString()} tokens`,
+        `• Remaining Headroom: ${remainingTokens.toLocaleString()} tokens`,
+        sessionMetrics && sessionMetrics.turnCount > 1
+          ? `• Total Session Output: ${sessionMetrics.totalOutputTokens.toLocaleString()} tokens (${sessionMetrics.turnCount} turns)`
+          : null,
+      ]
+        .filter(Boolean)
+        .join('\n')
+    : `No token usage recorded yet of ${contextWindow.toLocaleString()} context limit`;
 
   return (
     <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40">
@@ -65,18 +98,18 @@ export default React.memo(function ChatHeader({
           </button>
         )}
 
-        {/* Conversation title & token usage indicator */}
+        {/* Conversation title & active context window indicator */}
         <div className="flex flex-col min-w-0">
           <span className="text-label font-semibold text-text-primary truncate max-w-[160px] sm:max-w-md">
             {title || 'Chat Workspace'}
           </span>
           <span
-            className="text-micro font-mono text-text-muted truncate max-w-[220px] sm:max-w-xs leading-none"
-            title={tokenUsage
-              ? `Cumulative ${tokenUsage.totalTokens.toLocaleString()} tokens used (${tokenUsage.inputTokens.toLocaleString()} in / ${tokenUsage.outputTokens.toLocaleString()} out) of ${contextWindow.toLocaleString()} context limit`
-              : `No token usage recorded yet of ${contextWindow.toLocaleString()} context limit`}
+            className={`text-micro font-mono truncate max-w-[220px] sm:max-w-xs leading-none transition-colors ${
+              isNearLimit ? 'text-warning font-medium' : 'text-text-muted'
+            }`}
+            title={tooltipText}
           >
-            {formatTokens(totalTokens)} / {formatContextWindow(contextWindow)} tokens ({pct}%)
+            {formatTokens(activeTokens)} / {formatContextWindow(contextWindow)} tokens ({pct}%)
           </span>
         </div>
       </div>
@@ -115,3 +148,4 @@ export default React.memo(function ChatHeader({
     </header>
   );
 });
+
