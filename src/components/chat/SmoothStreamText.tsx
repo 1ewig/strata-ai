@@ -58,7 +58,6 @@ function createTokenFadePlugin(deltaLength: number, chunkKey: number) {
             hName: 'span',
             hProperties: {
               className: 'animate-token-fade inline',
-              key: `fade-${chunkKey}`,
             },
           },
           children: [{ type: 'text', value: delta }],
