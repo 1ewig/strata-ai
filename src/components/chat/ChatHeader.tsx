@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { Folder, Menu, Plus } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MODELS } from '@/lib/models';
@@ -10,6 +10,7 @@ import {
   ConversationTokenMetrics,
   CumulativeUsage,
 } from '@/lib/token-usage';
+import TokenUsagePopover from './TokenUsagePopover';
 
 /** Props for the ChatHeader component. */
 interface ChatHeaderProps {
@@ -25,18 +26,8 @@ interface ChatHeaderProps {
 }
 
 /**
- * Sticky chat header with the conversation title, active context window indicator
- * (Claude Code / OpenCode / Codex standard), mobile sidebar toggle, and workspace files drawer button.
- *
- * @param title - Optional chat/workspace title; falls back to "Chat Workspace".
- * @param files - Workspace files listed in the workspace.
- * @param activeFileId - Id of the currently open file.
- * @param model - Active catalog model id.
- * @param tokenUsage - Active context and session token metrics across the conversation.
- * @param onOpenFile - Optional callback when selecting a file.
- * @param onOpenDrawer - Opens the workspace files drawer.
- * @param onOpenSidebar - Opens the mobile sidebar; hides the toggle when omitted.
- * @param onNewChat - Creates and navigates to a fresh conversation (mobile only).
+ * Sticky chat header with conversation title, active context window indicator badge
+ * with separated hover/tap details popover, mobile sidebar toggle, and workspace files drawer button.
  */
 export default React.memo(function ChatHeader({
   title,
@@ -47,21 +38,19 @@ export default React.memo(function ChatHeader({
   onOpenSidebar,
   onNewChat,
 }: ChatHeaderProps) {
+  // Context window popover state (desktop click/hover & mobile tap)
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
   const modelOption = React.useMemo(() => {
     return MODELS.find((m) => m.id === model) || MODELS[0];
   }, [model]);
 
   const { contextWindow } = modelOption;
 
-  // Resolve active context window tokens vs lifetime session metrics
+  // Resolve active context window tokens
   const activeMetrics = tokenUsage && 'active' in tokenUsage ? tokenUsage.active : null;
-  const sessionMetrics = tokenUsage && 'session' in tokenUsage ? tokenUsage.session : null;
-
   const activeTokens = activeMetrics?.totalTokens ?? tokenUsage?.totalTokens ?? 0;
-  const inputTokens = activeMetrics?.inputTokens ?? tokenUsage?.inputTokens ?? 0;
-  const outputTokens = activeMetrics?.outputTokens ?? tokenUsage?.outputTokens ?? 0;
-  const remainingTokens =
-    activeMetrics?.remainingTokens ?? Math.max(0, contextWindow - activeTokens);
 
   const pct =
     contextWindow > 0
@@ -70,23 +59,12 @@ export default React.memo(function ChatHeader({
 
   const isNearLimit = pct >= 80;
 
-  // Detailed hover tooltip breakdown
-  const tooltipText = tokenUsage
-    ? [
-        `Active Context: ${activeTokens.toLocaleString()} / ${contextWindow.toLocaleString()} tokens (${pct}% used)`,
-        `• Prompt Context (Input): ${inputTokens.toLocaleString()} tokens`,
-        `• Response Generation (Output): ${outputTokens.toLocaleString()} tokens`,
-        `• Remaining Headroom: ${remainingTokens.toLocaleString()} tokens`,
-        sessionMetrics && sessionMetrics.turnCount > 1
-          ? `• Total Session Output: ${sessionMetrics.totalOutputTokens.toLocaleString()} tokens (${sessionMetrics.turnCount} turns)`
-          : null,
-      ]
-        .filter(Boolean)
-        .join('\n')
-    : `No token usage recorded yet of ${contextWindow.toLocaleString()} context limit`;
+  const togglePopover = () => {
+    setIsPopoverOpen((prev) => !prev);
+  };
 
   return (
-    <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40">
+    <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40 relative">
       <div className="flex items-center gap-2 min-w-0">
         {onOpenSidebar && (
           <button
@@ -103,17 +81,45 @@ export default React.memo(function ChatHeader({
           <span className="text-label font-semibold text-text-primary truncate max-w-[160px] sm:max-w-md">
             {title || 'Chat Workspace'}
           </span>
-          <span
-            className={`text-micro font-mono truncate max-w-[220px] sm:max-w-xs leading-none transition-colors ${
-              isNearLimit ? 'text-warning font-medium' : 'text-text-muted'
-            }`}
-            title={tooltipText}
+
+          {/* Interactive Context Window Button (Click/hover on desktop, tap on mobile) */}
+          <button
+            ref={triggerRef}
+            type="button"
+            onClick={togglePopover}
+            className="flex items-center gap-1.5 px-1.5 py-0.5 -mx-1.5 rounded-lg hover:bg-surface-hover/80 text-left transition-all cursor-pointer group max-w-[220px] sm:max-w-xs"
+            title="Click or tap to view token usage and context window details"
+            aria-label="View token usage details"
+            aria-expanded={isPopoverOpen}
           >
-            {formatTokens(activeTokens)} / {formatContextWindow(contextWindow)} tokens ({pct}%)
-          </span>
+            <span
+              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                isNearLimit ? 'bg-warning animate-pulse' : 'bg-primary'
+              }`}
+            />
+            <span
+              className={`text-micro font-mono truncate leading-none transition-colors ${
+                isNearLimit
+                  ? 'text-warning font-medium'
+                  : 'text-text-muted group-hover:text-text-primary'
+              }`}
+            >
+              {formatTokens(activeTokens)} / {formatContextWindow(contextWindow)} ({pct}%)
+            </span>
+          </button>
         </div>
       </div>
 
+      {/* Separated Clean Token Usage Popover */}
+      <TokenUsagePopover
+        modelOption={modelOption}
+        tokenUsage={tokenUsage}
+        isOpen={isPopoverOpen}
+        onClose={() => setIsPopoverOpen(false)}
+        triggerRef={triggerRef}
+      />
+
+      {/* Right Side Buttons */}
       <div className="flex items-center gap-3">
         {/* Mobile New Chat Button (Creates a fresh conversation) */}
         <button
@@ -148,4 +154,3 @@ export default React.memo(function ChatHeader({
     </header>
   );
 });
-
