@@ -9,7 +9,6 @@ import {
   CumulativeUsage,
 } from '@/lib/token-usage';
 
-/** Props for the TokenUsagePopover component. */
 export interface TokenUsagePopoverProps {
   modelOption: ModelOption;
   tokenUsage?: ConversationTokenMetrics | CumulativeUsage | null;
@@ -18,12 +17,6 @@ export interface TokenUsagePopoverProps {
   triggerRef?: React.RefObject<HTMLElement | null>;
 }
 
-/**
- * Clean, separated popover card detailing active context and token metrics:
- * Input tokens, Output tokens, Context Used, Context Window, Total Token Usage,
- * Total Estimated Cost, and Per-Model Cost Breakdown.
- * Tapping or clicking anywhere outside dismisses the popover.
- */
 export default function TokenUsagePopover({
   modelOption,
   tokenUsage,
@@ -33,7 +26,6 @@ export default function TokenUsagePopover({
 }: TokenUsagePopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  // Close on outside click/tap
   useEffect(() => {
     if (!isOpen) return;
 
@@ -68,7 +60,6 @@ export default function TokenUsagePopover({
   const outputTokens = activeMetrics?.outputTokens ?? tokenUsage?.outputTokens ?? 0;
   const totalApiUsage = sessionMetrics?.totalApiTokens ?? activeTokens;
 
-  // Cost and multi-model breakdowns
   const totalCost = tokenUsage && 'totalCost' in tokenUsage ? tokenUsage.totalCost : 0;
   const modelBreakdowns =
     tokenUsage && 'modelBreakdowns' in tokenUsage ? tokenUsage.modelBreakdowns : [];
@@ -82,106 +73,70 @@ export default function TokenUsagePopover({
 
   return (
     <>
-      {/* Click-away backdrop without blur to keep header crisp */}
+      {/* Click-away backdrop */}
       <div
         className="fixed inset-0 z-40 bg-transparent"
         onClick={onClose}
         onTouchStart={onClose}
       />
 
-      {/* Floating Popover Card */}
+      {/* Popover Card */}
       <div
         ref={popoverRef}
-        className="absolute top-14 left-3 sm:left-6 z-50 w-72 sm:w-80 bg-surface-raised border border-edge-raised rounded-2xl p-4 shadow-card-lg animate-in fade-in zoom-in-95 duration-150 text-text-primary font-sans max-h-[85vh] overflow-y-auto"
+        className="absolute top-14 left-3 sm:left-6 z-50 w-72 bg-surface-raised border border-edge-raised rounded-xl p-3.5 shadow-lg animate-in fade-in zoom-in-95 duration-150 text-text-primary text-xs font-sans max-h-[85vh] overflow-y-auto space-y-3"
       >
         {/* Header */}
-        <div className="pb-2.5 border-b border-edge-default">
-          <span className="text-label font-bold text-text-primary">
-            Token & Context Breakdown
-          </span>
+        <div className="flex items-center justify-between pb-2 border-b border-edge-default">
+          <span className="font-semibold text-text-primary">Token Usage</span>
+          <span className="font-bold text-primary">{formatCost(totalCost)}</span>
         </div>
 
-        {/* Clean Metrics List */}
-        <div className="flex flex-col gap-2 py-3 text-caption font-mono border-b border-edge-default">
-          <div className="flex items-center justify-between">
-            <span className="text-text-muted">Input Tokens:</span>
-            <span className="text-text-primary font-semibold">
-              {inputTokens.toLocaleString()}
+        {/* Visual Context Usage Bar */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between text-[11px] text-text-muted">
+            <span>Context Limit</span>
+            <span className={isNearLimit ? 'text-warning font-semibold' : ''}>
+              {pct}% ({formatContextWindow(contextWindow)})
             </span>
           </div>
+          <div className="w-full bg-surface-elevated rounded-full h-1.5 overflow-hidden">
+            <div
+              className={`h-full transition-all duration-300 ${isNearLimit ? 'bg-warning' : 'bg-primary'
+                }`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+        </div>
 
-          <div className="flex items-center justify-between">
-            <span className="text-text-muted">Output Tokens:</span>
-            <span className="text-text-primary font-semibold">
-              {outputTokens.toLocaleString()}
+        {/* Key Metrics List */}
+        <div className="space-y-1.5 font-mono text-[11px]">
+          <div className="flex justify-between">
+            <span className="text-text-muted font-sans">Input / Output</span>
+            <span>
+              {inputTokens.toLocaleString()} / {outputTokens.toLocaleString()}
             </span>
           </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-text-muted">Context Used:</span>
-            <span
-              className={`font-semibold ${
-                isNearLimit ? 'text-warning font-bold' : 'text-text-primary'
-              }`}
-            >
-              {activeTokens.toLocaleString()} tokens ({pct}%)
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-text-muted">Context Window:</span>
-            <span className="text-text-primary font-semibold">
-              {formatContextWindow(contextWindow)} ({contextWindow.toLocaleString()})
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <span className="text-text-muted">Total Token Usage:</span>
-            <span className="text-primary font-bold">
-              {totalApiUsage.toLocaleString()} tokens
-            </span>
-          </div>
-
-          <div className="flex items-center justify-between pt-1 border-t border-edge-default/60">
-            <span className="text-text-muted">Total Estimated Cost:</span>
-            <span className="text-primary font-bold">
-              {formatCost(totalCost)}
+          <div className="flex justify-between">
+            <span className="text-text-muted font-sans">Total Session Tokens</span>
+            <span className="font-bold text-text-primary">
+              {totalApiUsage.toLocaleString()}
             </span>
           </div>
         </div>
 
-        {/* Models Used & Cost Breakdown Section */}
+        {/* Cost Breakdown */}
         {modelBreakdowns.length > 0 && (
-          <div className="pt-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-micro font-bold uppercase tracking-wider text-text-muted">
-                Cost Breakdown ({modelBreakdowns.length} {modelBreakdowns.length === 1 ? 'model' : 'models'})
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-2">
+          <div className="pt-2 border-t border-edge-default space-y-1.5">
+            <span className="text-[10px] font-semibold uppercase text-text-muted tracking-wider block">
+              Cost Breakdown
+            </span>
+            <div className="space-y-1">
               {modelBreakdowns.map((m) => (
-                <div
-                  key={m.modelId}
-                  className="bg-surface-elevated border border-edge-default/70 rounded-xl p-2.5 flex flex-col gap-1 text-micro font-mono"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="font-sans font-semibold text-text-primary truncate max-w-[170px]">
-                      {m.modelLabel}
-                    </span>
-                    <span className="font-bold text-primary">
-                      {formatCost(m.cost)}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-text-muted text-[11px]">
-                    <span>
-                      {m.turnCount} {m.turnCount === 1 ? 'turn' : 'turns'}
-                    </span>
-                    <span>
-                      In: {m.inputTokens.toLocaleString()} · Out: {m.outputTokens.toLocaleString()}
-                    </span>
-                  </div>
+                <div key={m.modelId} className="flex items-center justify-between text-[11px]">
+                  <span className="text-text-muted truncate max-w-[160px]" title={m.modelLabel}>
+                    {m.modelLabel}
+                  </span>
+                  <span className="font-mono font-medium">{formatCost(m.cost)}</span>
                 </div>
               ))}
             </div>

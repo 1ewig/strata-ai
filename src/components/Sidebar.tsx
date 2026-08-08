@@ -123,7 +123,6 @@ export default React.memo(function Sidebar({
     if (!chatToDelete) return;
     await onDelete(chatToDelete.id);
     setChatToDelete(null);
-    onClose?.();
   };
 
   const handleNewChat = () => {

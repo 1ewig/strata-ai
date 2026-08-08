@@ -41,7 +41,12 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const { isDark, toggle: toggleTheme } = useTheme();
   // Anchor div passed to ChatPanel for the message list scroll position.
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('strata_sidebar_open') === 'true';
+    }
+    return false;
+  });
 
   // Redirect unauthenticated visitors to auth, preserving the return URL.
   React.useEffect(() => {
@@ -80,9 +85,19 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
   const handleCloseDrawer = React.useCallback(() => setIsWorkspaceDrawerOpen(false), [setIsWorkspaceDrawerOpen]);
 
-  const handleOpenSidebar = React.useCallback(() => setIsSidebarOpen(true), []);
+  const handleOpenSidebar = React.useCallback(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('strata_sidebar_open', 'true');
+    }
+    setIsSidebarOpen(true);
+  }, []);
 
-  const handleCloseSidebar = React.useCallback(() => setIsSidebarOpen(false), []);
+  const handleCloseSidebar = React.useCallback(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('strata_sidebar_open');
+    }
+    setIsSidebarOpen(false);
+  }, []);
 
   const handleOpenFile = React.useCallback(
     (fileId: string) => {
