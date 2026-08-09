@@ -156,25 +156,6 @@ body::before {
   50%, 100% { opacity: 0.15; }
 }
 
-.animate-token-fade {
-  display: inline;
-  animation: tokenFadeIn 750ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  will-change: opacity, filter, transform;
-}
-
-@keyframes tokenFadeIn {
-  from {
-    opacity: 0;
-    filter: blur(3px);
-    transform: translateY(1.5px);
-  }
-  to {
-    opacity: 1;
-    filter: blur(0);
-    transform: translateY(0);
-  }
-}
-
 
 /* Dark theme (deep warm obsidian & luminous fiery orange) */
 .dark {
