@@ -23,13 +23,13 @@ The app ships light + dark themes (light default; dark via `theme-toggle.tsx` + 
 
 - **NEVER hardcode colors, hex values, arbitrary shadows, or Tailwind color names (e.g. `emerald`, `rose`, `red-*`, `amber`, `cyan`, `violet`, `slate`) in components.** Use semantic tokens only.
 - **Tokens** (see `globals.css` for full list):
-  - `primary` (orange `#F15A2B`) — CTAs, active states, avatars, streaming indicators, spinners
-  - `secondary` (sunshine yellow `#FFC229`) — highlights, playful accents
+  - `primary` (electric fiery orange `#FF5520` / `#FF6433` dark) — CTAs, active states, avatars, streaming indicators, spinners
+  - `secondary` (warm golden amber `#FFAA1D`) — highlights, playful accents
   - `danger` / `warning` / `info` — errors, alerts, informational accents
   - `surface` (white) — on-brand fills (`text-surface` for white-on-orange buttons/icons)
   - `scrim` — overlay backdrops (not `bg-black/60`)
   - `primary-soft` / `danger-soft` / `accent-*` — tinted background fills
-- **Shadows:** use `shadow-button` (hard offset `0 4px 0 #231F3A`), `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`, `shadow-glow-secondary`. Never arbitrary `shadow-[...]`.
+- **Shadows:** use `shadow-button` (hard offset `0 4px 0 #121118` / `#07060A` dark), `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`, `shadow-glow-secondary`. Never arbitrary `shadow-[...]`.
 - **Radius remap:** `rounded-lg` = 12px (badges/chips), `rounded-xl` = 20px (buttons/inputs), `rounded-2xl` = 32px (cards).
 - **Type scale remap:** use semantic size tokens only — NEVER raw Tailwind size names (`text-xs`/`text-sm`/`text-base`/`text-lg`/`text-xl`/`text-2xl`) or arbitrary `text-[10px]`/`text-[11px]` in components:
   - `text-micro` (11px) — eyebrows, inline code, status badges
@@ -41,7 +41,7 @@ The app ships light + dark themes (light default; dark via `theme-toggle.tsx` + 
   - `text-title` (24px) — h1
   - `text-display` (32px) — auth hero, 404
 - **Markdown hierarchy convention** (mirrors the `ChatBubble` component map): `h1`→`text-title font-display`, `h2`→`text-heading font-display`, `h3`→`text-subheading`, `p`/`li`→`text-body`, `code`→`text-micro font-mono`, `table`/`blockquote`→`text-caption`. Never attach `prose` classes (no typography plugin is installed).
-- **Fonts:** `font-display` (Fredoka) for headings/logo, `font-sans` (Nunito) for body. Keep token names (`surface-*`, `text-*`, `edge-*`); add new colors only as `@theme` vars in `globals.css`.
+- **Fonts:** `font-display` and `font-sans` (Plus Jakarta Sans). Keep token names (`surface-*`, `text-*`, `edge-*`); add new colors only as `@theme` vars in `globals.css`.
 
 ## Architecture
 

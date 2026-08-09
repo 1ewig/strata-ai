@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32" fill="none">
+  <defs>
+    <linearGradient id="strata-gradient" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FF5520" />
+      <stop offset="1" stop-color="#FFAA1D" />
+    </linearGradient>
+  </defs>
+  <circle cx="12" cy="12" r="9" fill="url(#strata-gradient)" />
+</svg>

@@ -61,13 +61,13 @@
   --radius-xl: 20px;
   --radius-2xl: 32px;
 
-  /* Typography */
-  --font-sans: 'Nunito', ui-sans-serif, system-ui, sans-serif;
-  --font-display: 'Fredoka', 'Nunito', ui-sans-serif, system-ui, sans-serif;
+  /* Typography (Plus Jakarta Sans geometric sans for asad.dev theme) */
+  --font-sans: var(--font-sans), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-sans), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
 
   /* Type scale: canonical sizes for the whole app. Use these tokens instead
-     of arbitrary text-[px] utilities. Display/title/heading are Fredoka
-     display type; body/label/caption/micro are body copy sizes. */
+     of arbitrary text-[px] utilities. Display/title/heading are display type;
+     body/label/caption/micro are body copy sizes. */
   --text-micro: 0.6875rem; /* 11px - eyebrows, inline code, status badges */
   --text-caption: 0.75rem; /* 12px - meta lines, tool cards, sidebar items */
   --text-label: 0.875rem; /* 14px - buttons, form labels/inputs, nav */

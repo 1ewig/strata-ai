@@ -1,20 +1,15 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
-import { Fredoka, Nunito } from 'next/font/google';
+import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { RateLimitProvider } from '@/contexts/RateLimitContext';
 import { auth } from '@/lib/auth';
 import { getRateLimitStatus, RateLimitResult } from '@/lib/rate-limit';
 
-const fredoka = Fredoka({
-  subsets: ['latin'],
-  variable: '--font-display',
-  weight: ['500', '600', '700'],
-});
-
-const nunito = Nunito({
+const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
   variable: '--font-sans',
+  weight: ['400', '500', '600', '700', '800'],
 });
 
 /** Mobile viewport config: device-width scale with resizable interactive widgets. */
@@ -29,6 +24,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: 'Strata AI - Agentic Workspace & Document Studio',
   description: 'Create, edit, and orchestrate documents with AI tools and live workspace canvas',
+  icons: {
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
+  },
 };
 
 /**
@@ -64,7 +64,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body
         suppressHydrationWarning
-        className={`${fredoka.variable} ${nunito.variable} bg-surface-base text-text-primary antialiased selection:bg-primary/20 selection:text-text-bright relative font-sans`}
+        className={`${plusJakartaSans.variable} bg-surface-base text-text-primary antialiased selection:bg-primary/20 selection:text-text-bright relative font-sans`}
       >
         <RateLimitProvider initialData={initialRateLimit}>{children}</RateLimitProvider>
       </body>
