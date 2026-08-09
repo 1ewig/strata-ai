@@ -156,7 +156,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── chat/
     │   │   │   ├── ChatPanel.tsx     # Message list, empty state, typing dots, QuotaErrorCard slot
     │   │   │   ├── ChatBubble.tsx    # Per-message renderer: user bubble / markdown + ThoughtAccordion + ToolCallCard segments, grouped via WorkGroupCard
-    │   │   │   ├── SmoothStreamText.tsx # Render-ready text stream with smooth opacity & blur token fade transitions
+    │   │   │   ├── SmoothStreamText.tsx # Renders live streaming Markdown with an active streaming caret
     │   │   │   ├── WorkGroupCard.tsx # Single auto-collapsing group of all pre-answer output (intermediate text + reasoning + tool calls)
     │   │   │   ├── ChatInput.tsx     # Shell for textarea input, auto-resizing, submit handling & composition
     │   │   │   ├── ModelSelectorMenu.tsx # Model dropdown trigger, featured models, effort flyout & overflow submenus

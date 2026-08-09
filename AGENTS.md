@@ -29,7 +29,7 @@ The app ships light + dark themes (light default; dark via `theme-toggle.tsx` + 
   - `surface` (white) — on-brand fills (`text-surface` for white-on-orange buttons/icons)
   - `scrim` — overlay backdrops (not `bg-black/60`)
   - `primary-soft` / `danger-soft` / `accent-*` — tinted background fills
-- **Shadows:** use `shadow-button` (soft modern elevation `0 1px 3px rgba(0, 0, 0, 0.08)` / `rgba(0, 0, 0, 0.4)` dark), `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`, `shadow-glow-secondary`. Never arbitrary `shadow-[...]`.
+- **Shadows:** use `shadow-button` (soft modern elevation `0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04)` / `0 1px 3px rgba(0, 0, 0, 0.4)` dark), `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`, `shadow-glow-secondary`. Never arbitrary `shadow-[...]`.
 - **Radius remap:** `rounded-lg` = 12px (badges/chips), `rounded-xl` = 20px (buttons/inputs), `rounded-2xl` = 32px (cards).
 - **Type scale remap:** use semantic size tokens only — NEVER raw Tailwind size names (`text-xs`/`text-sm`/`text-base`/`text-lg`/`text-xl`/`text-2xl`) or arbitrary `text-[10px]`/`text-[11px]` in components:
   - `text-micro` (11px) — eyebrows, inline code, status badges
