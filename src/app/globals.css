@@ -1,42 +1,42 @@
 @import "tailwindcss";
 
 @theme {
-  /* Surfaces (light / warm canvas) */
-  --color-surface-base: #f5f3ed;
+  /* Surfaces (light / warm asad.dev cream canvas) */
+  --color-surface-base: #faf7f2;
   --color-surface-raised: #ffffff;
-  --color-surface-overlay: #fffefa;
-  --color-surface-elevated: #f0ece0;
-  --color-surface-hover: #e7e2d3;
+  --color-surface-overlay: #fffdf9;
+  --color-surface-elevated: #f2eee4;
+  --color-surface-hover: #e9e3d5;
   --color-surface: #ffffff;
 
-  /* Text (high-contrast dark navy) */
-  --color-text-bright: #231f3a;
-  --color-text-primary: #3a3554;
-  --color-text-secondary: #55506f;
-  --color-text-muted: #7a7594;
-  --color-text-faint: #a6a1bc;
+  /* Text (high-contrast jet charcoal from asad.dev branding) */
+  --color-text-bright: #121118;
+  --color-text-primary: #2b2836;
+  --color-text-secondary: #555166;
+  --color-text-muted: #7e7992;
+  --color-text-faint: #aba6bf;
 
   /* Edges */
-  --color-edge-default: rgba(35, 31, 58, 0.08);
-  --color-edge-raised: rgba(35, 31, 58, 0.14);
-  --color-edge-hover: rgba(35, 31, 58, 0.24);
+  --color-edge-default: rgba(18, 17, 24, 0.07);
+  --color-edge-raised: rgba(18, 17, 24, 0.12);
+  --color-edge-hover: rgba(18, 17, 24, 0.22);
 
-  /* Brand */
-  --color-primary: #f15a2b;
-  --color-primary-hover: #d9491d;
-  --color-primary-soft: rgba(241, 90, 43, 0.12);
-  --color-primary-soft-strong: rgba(241, 90, 43, 0.2);
-  --color-secondary: #ffc229;
-  --color-secondary-light: #ffea9f;
-  --color-secondary-soft: rgba(255, 194, 41, 0.22);
-  --color-dark: #231f3a;
-  --color-dark-muted: #55506f;
+  /* Brand (asad.dev signature electric fiery orange + amber accents) */
+  --color-primary: #ff5520;
+  --color-primary-hover: #e04312;
+  --color-primary-soft: rgba(255, 85, 32, 0.11);
+  --color-primary-soft-strong: rgba(255, 85, 32, 0.19);
+  --color-secondary: #ffaa1d;
+  --color-secondary-light: #ffe5a3;
+  --color-secondary-soft: rgba(255, 170, 29, 0.22);
+  --color-dark: #121118;
+  --color-dark-muted: #555166;
 
   /* Pastel accents */
-  --color-accent-blue: #90c2e7;
-  --color-accent-blue-soft: rgba(144, 194, 231, 0.22);
+  --color-accent-blue: #84bde7;
+  --color-accent-blue-soft: rgba(132, 189, 231, 0.2);
   --color-accent-pink: #f1b5e1;
-  --color-accent-pink-soft: rgba(241, 181, 225, 0.22);
+  --color-accent-pink-soft: rgba(241, 181, 225, 0.2);
   --color-accent-olive: #9cb438;
   --color-accent-olive-soft: rgba(156, 180, 56, 0.2);
 
@@ -44,17 +44,17 @@
   --color-danger: #e5484d;
   --color-danger-soft: rgba(229, 72, 77, 0.12);
   --color-warning: #b45309;
-  --color-warning-soft: rgba(255, 194, 41, 0.28);
+  --color-warning-soft: rgba(255, 170, 29, 0.28);
   --color-info: #2d7db5;
   --color-accent-pink-deep: #b2499a;
-  --color-scrim: rgba(35, 31, 58, 0.55);
+  --color-scrim: rgba(18, 17, 24, 0.6);
 
   /* Shadows */
-  --shadow-card: 0 8px 24px rgba(35, 31, 58, 0.05);
-  --shadow-card-lg: 0 12px 32px rgba(35, 31, 58, 0.09);
-  --shadow-button: 0 4px 0 #231f3a;
-  --shadow-glow-primary: 0 0 24px -6px rgba(241, 90, 43, 0.45);
-  --shadow-glow-secondary: 0 0 20px -6px rgba(255, 194, 41, 0.5);
+  --shadow-card: 0 8px 24px rgba(18, 17, 24, 0.05);
+  --shadow-card-lg: 0 12px 32px rgba(18, 17, 24, 0.09);
+  --shadow-button: 0 4px 0 #121118;
+  --shadow-glow-primary: 0 0 24px -4px rgba(255, 85, 32, 0.45);
+  --shadow-glow-secondary: 0 0 20px -5px rgba(255, 170, 29, 0.5);
 
   /* Milo shape language: badges/chips 12px, buttons/inputs 20px, cards 32px */
   --radius-lg: 12px;
@@ -83,8 +83,8 @@
 }
 
 :root {
-  --scrollbar-thumb: rgba(35, 31, 58, 0.12);
-  --scrollbar-thumb-hover: rgba(35, 31, 58, 0.22);
+  --scrollbar-thumb: rgba(18, 17, 24, 0.12);
+  --scrollbar-thumb-hover: rgba(18, 17, 24, 0.22);
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -97,9 +97,9 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse 100% 60% at 50% -20%, rgba(241, 90, 43, 0.06), transparent),
-    radial-gradient(ellipse 80% 50% at 85% 85%, rgba(255, 194, 41, 0.07), transparent),
-    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(144, 194, 231, 0.06), transparent);
+    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(255, 85, 32, 0.08), transparent),
+    radial-gradient(ellipse 70% 50% at 85% 85%, rgba(255, 170, 29, 0.06), transparent),
+    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(255, 85, 32, 0.04), transparent);
   pointer-events: none;
   z-index: 0;
 }
@@ -176,34 +176,34 @@ body::before {
 }
 
 
-/* Dark theme (subtle deep navy/charcoal) */
+/* Dark theme (deep warm obsidian & luminous fiery orange) */
 .dark {
-  --color-surface-base: #14121f;
-  --color-surface-raised: #1c1a2c;
-  --color-surface-overlay: #1e1c30;
-  --color-surface-elevated: #262338;
-  --color-surface-hover: #302c44;
+  --color-surface-base: #0f0e14;
+  --color-surface-raised: #16151f;
+  --color-surface-overlay: #1a1926;
+  --color-surface-elevated: #222030;
+  --color-surface-hover: #2c293d;
   --color-surface: #ffffff;
 
-  --color-text-bright: #f5f3ed;
-  --color-text-primary: #e6e2d4;
-  --color-text-secondary: #c3bfd4;
-  --color-text-muted: #938fab;
-  --color-text-faint: #6f6b8a;
+  --color-text-bright: #faf7f2;
+  --color-text-primary: #ece8dd;
+  --color-text-secondary: #c5c1d6;
+  --color-text-muted: #938ea8;
+  --color-text-faint: #6e6983;
 
-  --color-edge-default: rgba(255, 255, 255, 0.1);
-  --color-edge-raised: rgba(255, 255, 255, 0.16);
-  --color-edge-hover: rgba(255, 255, 255, 0.26);
+  --color-edge-default: rgba(255, 255, 255, 0.09);
+  --color-edge-raised: rgba(255, 255, 255, 0.15);
+  --color-edge-hover: rgba(255, 255, 255, 0.25);
 
-  --color-primary: #ff6b3d;
-  --color-primary-hover: #ff8357;
-  --color-primary-soft: rgba(255, 107, 61, 0.16);
-  --color-primary-soft-strong: rgba(255, 107, 61, 0.26);
-  --color-secondary: #ffc229;
-  --color-secondary-light: #ffea9f;
-  --color-secondary-soft: rgba(255, 194, 41, 0.22);
-  --color-dark: #231f3a;
-  --color-dark-muted: #c3bfd4;
+  --color-primary: #ff6433;
+  --color-primary-hover: #ff7e54;
+  --color-primary-soft: rgba(255, 100, 51, 0.16);
+  --color-primary-soft-strong: rgba(255, 100, 51, 0.26);
+  --color-secondary: #ffaa1d;
+  --color-secondary-light: #ffe5a3;
+  --color-secondary-soft: rgba(255, 170, 29, 0.22);
+  --color-dark: #121118;
+  --color-dark-muted: #c5c1d6;
 
   --color-accent-blue: #7db4dc;
   --color-accent-blue-soft: rgba(125, 180, 220, 0.18);
@@ -218,13 +218,13 @@ body::before {
   --color-warning-soft: rgba(245, 166, 35, 0.24);
   --color-info: #5ea8e8;
   --color-accent-pink-deep: #e07bc8;
-  --color-scrim: rgba(8, 6, 15, 0.7);
+  --color-scrim: rgba(8, 7, 12, 0.75);
 
   --shadow-card: 0 8px 24px rgba(0, 0, 0, 0.45);
   --shadow-card-lg: 0 12px 32px rgba(0, 0, 0, 0.55);
-  --shadow-button: 0 4px 0 #0b0a14;
-  --shadow-glow-primary: 0 0 24px -6px rgba(255, 107, 61, 0.5);
-  --shadow-glow-secondary: 0 0 20px -6px rgba(255, 194, 41, 0.5);
+  --shadow-button: 0 4px 0 #07060a;
+  --shadow-glow-primary: 0 0 24px -5px rgba(255, 100, 51, 0.5);
+  --shadow-glow-secondary: 0 0 20px -5px rgba(255, 170, 29, 0.5);
 
   --scrollbar-thumb: rgba(255, 255, 255, 0.12);
   --scrollbar-thumb-hover: rgba(255, 255, 255, 0.22);
@@ -232,7 +232,7 @@ body::before {
 
 .dark body::before {
   background:
-    radial-gradient(ellipse 100% 60% at 50% -20%, rgba(255, 107, 61, 0.1), transparent),
-    radial-gradient(ellipse 80% 50% at 85% 85%, rgba(255, 194, 41, 0.08), transparent),
-    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(125, 180, 220, 0.07), transparent);
+    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(255, 100, 51, 0.12), transparent),
+    radial-gradient(ellipse 70% 50% at 85% 85%, rgba(255, 170, 29, 0.08), transparent),
+    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(255, 100, 51, 0.05), transparent);
 }

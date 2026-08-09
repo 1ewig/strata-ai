@@ -64,7 +64,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body
         suppressHydrationWarning
-        className={`${fredoka.variable} ${nunito.variable} bg-surface-base text-text-primary antialiased selection:bg-secondary selection:text-dark relative font-sans`}
+        className={`${fredoka.variable} ${nunito.variable} bg-surface-base text-text-primary antialiased selection:bg-primary/20 selection:text-text-bright relative font-sans`}
       >
         <RateLimitProvider initialData={initialRateLimit}>{children}</RateLimitProvider>
       </body>
