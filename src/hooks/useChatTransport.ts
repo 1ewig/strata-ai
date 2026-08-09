@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { DefaultChatTransport } from 'ai';
 import { findLatestCompactedMessageIndex } from '@/lib/token-usage';
+import { QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT } from '@/lib/limits';
 
 /** Ref-based inputs passed by the parent session hook, so the transport can read latest values without re-creating itself. */
 interface UseChatTransportParams {
@@ -80,7 +81,7 @@ export function useChatTransport({
           if (res.status === 429) {
             const data = await res.clone().json().catch(() => null);
             setQuotaError({
-              message: data?.message || 'Usage quota reached (10 msgs per 5 hours, 50 msgs per week). Please try again later.',
+              message: data?.message || `Usage quota reached (${QUOTA_5H_LIMIT} msgs per 5 hours, ${QUOTA_WEEK_LIMIT} msgs per week). Please try again later.`,
               retryAfter: retryAfterSec || data?.retryAfter,
             });
             // Stop the in-flight stream on the next tick so the partial message is dropped

@@ -4,12 +4,13 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { UIMessage } from 'ai';
-import { Check, Code2, User, Sparkles } from 'lucide-react';
+import { User, Sparkles } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
 import WorkGroupCard from './WorkGroupCard';
 import SmoothStreamText from './SmoothStreamText';
+import { createMarkdownComponents } from './create-markdown-components';
 
 /** Props for the ChatBubble message component. */
 interface ChatBubbleProps {
@@ -169,216 +170,13 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
 
   // Memoize custom markdown components so ReactMarkdown does not tear down DOM nodes on every token render.
   const markdownComponents = React.useMemo(
-    () => ({
-      h1: ({ children }: any) => (
-        <h1 className="text-title font-display font-bold text-text-bright mt-3 mb-2 border-b border-edge-raised/80 pb-1.5 flex items-center gap-2">
-          {children}
-        </h1>
-      ),
-      h2: ({ children }: any) => (
-        <h2 className="text-heading font-display font-bold text-primary/90 mt-3 mb-1.5 tracking-wide">
-          {children}
-        </h2>
-      ),
-      h3: ({ children }: any) => (
-        <h3 className="text-subheading font-semibold text-text-primary mt-2 mb-1">
-          {children}
-        </h3>
-      ),
-      p: ({ children }: any) => <p className="text-body mb-2.5 leading-relaxed last:mb-0">{children}</p>,
-      ul: ({ children }: any) => (
-        <ul className="list-disc list-inside space-y-1.5 mb-3 text-text-secondary">
-          {children}
-        </ul>
-      ),
-      ol: ({ children }: any) => (
-        <ol className="list-decimal list-inside space-y-1.5 mb-3 text-text-secondary">
-          {children}
-        </ol>
-      ),
-      li: ({ children }: any) => <li className="text-body leading-relaxed">{children}</li>,
-      strong: ({ children }: any) => (
-        <strong className="font-semibold text-text-bright">{children}</strong>
-      ),
-      code: ({ className, children, ...props }: any) => {
-        const isInline = !className;
-        const rawCode = String(children).replace(/\n$/, '');
-        const snippetId = `snippet-${rawCode.slice(0, 15)}`;
-
-        if (isInline) {
-          return (
-            <code className="bg-surface-elevated/90 text-primary font-mono px-1.5 py-0.5 rounded text-micro border border-edge-hover/60" {...props}>
-              {children}
-            </code>
-          );
-        }
-        return (
-          <div className="my-2.5 rounded-xl bg-surface-base border border-edge-raised/80 overflow-hidden font-mono text-micro shadow-sm">
-            <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-micro text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
-              <span className="text-text-muted">Code Snippet</span>
-              <button
-                onClick={() => handleCopyCodeSnippet(rawCode, snippetId)}
-                className="flex items-center gap-1 text-micro text-text-muted hover:text-primary transition-colors cursor-pointer"
-              >
-                {copiedCodeId === snippetId ? (
-                  <>
-                    <Check className="w-3 h-3 text-primary" />
-                    <span className="text-primary">Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Code2 className="w-3 h-3" />
-                    <span>Copy</span>
-                  </>
-                )}
-              </button>
-            </div>
-            <pre className="p-3 overflow-x-auto text-text-secondary leading-relaxed">
-              <code>{children}</code>
-            </pre>
-          </div>
-        );
-      },
-      table: ({ children }: any) => (
-        <div className="overflow-x-auto my-3 rounded-xl border border-edge-raised/80 bg-surface-base/40">
-          <table className="min-w-full text-caption text-left text-text-secondary">{children}</table>
-        </div>
-      ),
-      th: ({ children }: any) => (
-        <th className="bg-surface-elevated/70 px-3 py-2 border-b border-edge-raised font-semibold text-text-primary">
-          {children}
-        </th>
-      ),
-      td: ({ children }: any) => (
-        <td className="px-3 py-2 border-b border-edge-raised/40 hover:bg-surface-hover/20">{children}</td>
-      ),
-      blockquote: ({ children }: any) => (
-        <blockquote className="border-l-2 border-primary/60 pl-3 my-2 text-text-muted italic text-caption">
-          {children}
-        </blockquote>
-      ),
-      hr: () => <hr className="my-3.5 border-edge-raised" />,
-      a: ({ href, children, ...props }: any) => (
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary underline decoration-primary/50 hover:decoration-primary font-medium transition-colors"
-          {...props}
-        >
-          {children}
-        </a>
-      ),
-    }),
+    () => createMarkdownComponents('assistant', copiedCodeId, handleCopyCodeSnippet),
     [copiedCodeId],
   );
 
   // Memoize user-specific markdown components styled for the solid primary background.
   const userMarkdownComponents = React.useMemo(
-    () => ({
-      h1: ({ children }: any) => (
-        <h1 className="text-title font-display font-bold text-surface mt-2 mb-1.5 border-b border-surface/30 pb-1 flex items-center gap-2">
-          {children}
-        </h1>
-      ),
-      h2: ({ children }: any) => (
-        <h2 className="text-heading font-display font-bold text-surface mt-2 mb-1 tracking-wide">
-          {children}
-        </h2>
-      ),
-      h3: ({ children }: any) => (
-        <h3 className="text-subheading font-semibold text-surface mt-1.5 mb-0.5">
-          {children}
-        </h3>
-      ),
-      p: ({ children }: any) => <p className="text-body mb-2 leading-relaxed last:mb-0 text-surface">{children}</p>,
-      ul: ({ children }: any) => (
-        <ul className="list-disc list-inside space-y-1 my-1.5 text-surface/95">
-          {children}
-        </ul>
-      ),
-      ol: ({ children }: any) => (
-        <ol className="list-decimal list-inside space-y-1 my-1.5 text-surface/95">
-          {children}
-        </ol>
-      ),
-      li: ({ children }: any) => <li className="text-body leading-relaxed">{children}</li>,
-      strong: ({ children }: any) => (
-        <strong className="font-semibold text-surface">{children}</strong>
-      ),
-      em: ({ children }: any) => (
-        <em className="italic text-surface/90">{children}</em>
-      ),
-      code: ({ className, children, ...props }: any) => {
-        const isInline = !className;
-        const rawCode = String(children).replace(/\n$/, '');
-        const snippetId = `user-snippet-${rawCode.slice(0, 15)}`;
-
-        if (isInline) {
-          return (
-            <code className="bg-surface/20 text-surface font-mono px-1.5 py-0.5 rounded text-micro border border-surface/30" {...props}>
-              {children}
-            </code>
-          );
-        }
-        return (
-          <div className="my-2.5 rounded-xl bg-surface-base border border-edge-raised/80 overflow-hidden font-mono text-micro shadow-sm text-text-primary text-left">
-            <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-micro text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
-              <span className="text-text-muted">Code Snippet</span>
-              <button
-                onClick={() => handleCopyCodeSnippet(rawCode, snippetId)}
-                className="flex items-center gap-1 text-micro text-text-muted hover:text-primary transition-colors cursor-pointer"
-              >
-                {copiedCodeId === snippetId ? (
-                  <>
-                    <Check className="w-3 h-3 text-primary" />
-                    <span className="text-primary">Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Code2 className="w-3 h-3" />
-                    <span>Copy</span>
-                  </>
-                )}
-              </button>
-            </div>
-            <pre className="p-3 overflow-x-auto text-text-secondary leading-relaxed">
-              <code>{children}</code>
-            </pre>
-          </div>
-        );
-      },
-      table: ({ children }: any) => (
-        <div className="overflow-x-auto my-2.5 rounded-xl border border-surface/30 bg-surface/10">
-          <table className="min-w-full text-caption text-left text-surface">{children}</table>
-        </div>
-      ),
-      th: ({ children }: any) => (
-        <th className="bg-surface/20 px-3 py-1.5 border-b border-surface/30 font-semibold text-surface">
-          {children}
-        </th>
-      ),
-      td: ({ children }: any) => (
-        <td className="px-3 py-1.5 border-b border-surface/20 hover:bg-surface/15">{children}</td>
-      ),
-      blockquote: ({ children }: any) => (
-        <blockquote className="border-l-2 border-surface/60 pl-3 my-2 text-surface/90 italic text-caption">
-          {children}
-        </blockquote>
-      ),
-      hr: () => <hr className="my-3 border-surface/30" />,
-      a: ({ href, children, ...props }: any) => (
-        <a
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="underline decoration-surface/60 hover:decoration-surface transition-colors font-medium text-surface"
-          {...props}
-        >
-          {children}
-        </a>
-      ),
-    }),
+    () => createMarkdownComponents('user', copiedCodeId, handleCopyCodeSnippet),
     [copiedCodeId],
   );
 

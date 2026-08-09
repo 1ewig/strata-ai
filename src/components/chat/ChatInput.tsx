@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { ArrowUp, AlertCircle, Square } from 'lucide-react';
-import { MAX_MESSAGE_CHARS } from '@/lib/limits';
+import { MAX_MESSAGE_CHARS, QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT } from '@/lib/limits';
 import ModelSelectorMenu from './ModelSelectorMenu';
 
 /** Props for the ChatInput composer. */
@@ -152,8 +152,8 @@ export default React.memo(function ChatInput({
               {isContextWindowExhausted
                 ? 'Context window reached. Start a new chat to continue.'
                 : rateLimitData?.remaining5h === 0
-                  ? '5-hour limit reached (10/10 msgs used).'
-                  : 'Weekly limit reached (50/50 msgs used).'}
+                  ? `5-hour limit reached (${QUOTA_5H_LIMIT}/${QUOTA_5H_LIMIT} msgs used).`
+                  : `Weekly limit reached (${QUOTA_WEEK_LIMIT}/${QUOTA_WEEK_LIMIT} msgs used).`}
               {!isContextWindowExhausted && rateLimitData?.retryAfter
                 ? ` Resets in ~${Math.ceil(rateLimitData.retryAfter / 60)} min.`
                 : !isContextWindowExhausted

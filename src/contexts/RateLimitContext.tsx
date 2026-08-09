@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { useSession } from '@/lib/auth-client';
+import { QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT, buildQuotaError } from '@/lib/limits';
 
 /** Global usage quota state reported by the API on each chat response. */
 export interface RateLimitData {
@@ -40,15 +41,9 @@ interface RateLimitProviderProps {
  * @param data - Current usage data, or null/undefined when unknown.
  * @returns A quota error if a window is exhausted, otherwise null.
  */
-const buildQuotaError = (data: RateLimitData | null | undefined): QuotaError | null => {
+const buildQuotaErrorFromData = (data: RateLimitData | null | undefined): QuotaError | null => {
   if (!data) return null;
-  if (data.remaining5h > 0 && data.remainingWeek > 0) return null;
-  return {
-    message: data.remaining5h <= 0
-      ? 'Your 5-hour quota is exhausted (10/10 messages used).'
-      : 'Your weekly quota is exhausted (50/50 messages used).',
-    retryAfter: data.retryAfter,
-  };
+  return buildQuotaError(data.remaining5h, data.remainingWeek, data.retryAfter) as QuotaError | null;
 };
 
 /**
@@ -61,7 +56,7 @@ export function RateLimitProvider({ children, initialData }: RateLimitProviderPr
   const userId = session?.user?.id ?? null;
 
   const [rateLimitData, setRateLimitData] = useState<RateLimitData | null>(initialData ?? null);
-  const [quotaError, setQuotaError] = useState<QuotaError | null>(() => buildQuotaError(initialData));
+  const [quotaError, setQuotaError] = useState<QuotaError | null>(() => buildQuotaErrorFromData(initialData));
 
   // String key so prop identity changes alone don't trigger the sync below
   const initialDataKey = initialData
@@ -90,7 +85,7 @@ export function RateLimitProvider({ children, initialData }: RateLimitProviderPr
       setQuotaError(null);
     } else if (ssrData) {
       setRateLimitData(ssrData);
-      setQuotaError(buildQuotaError(ssrData));
+      setQuotaError(buildQuotaErrorFromData(ssrData));
     } else {
       setRateLimitData(null);
       setQuotaError(null);
@@ -107,12 +102,12 @@ export function RateLimitProvider({ children, initialData }: RateLimitProviderPr
       if (res.ok) {
         const data = await res.json();
         const next: RateLimitData = {
-          remaining5h: data.remaining5h ?? 10,
-          remainingWeek: data.remainingWeek ?? 50,
+          remaining5h: data.remaining5h ?? QUOTA_5H_LIMIT,
+          remainingWeek: data.remainingWeek ?? QUOTA_WEEK_LIMIT,
           retryAfter: data.retryAfter,
         };
         setRateLimitData(next);
-        setQuotaError(buildQuotaError(next));
+        setQuotaError(buildQuotaErrorFromData(next));
       }
     } catch {
       // ignore
@@ -131,12 +126,12 @@ export function RateLimitProvider({ children, initialData }: RateLimitProviderPr
       .then((data) => {
         if (!active || !data) return;
         const next: RateLimitData = {
-          remaining5h: data.remaining5h ?? 10,
-          remainingWeek: data.remainingWeek ?? 50,
+          remaining5h: data.remaining5h ?? QUOTA_5H_LIMIT,
+          remainingWeek: data.remainingWeek ?? QUOTA_WEEK_LIMIT,
           retryAfter: data.retryAfter,
         };
         setRateLimitData(next);
-        setQuotaError(buildQuotaError(next));
+        setQuotaError(buildQuotaErrorFromData(next));
       })
       .catch(() => {});
     return () => {
@@ -151,8 +146,8 @@ export function RateLimitProvider({ children, initialData }: RateLimitProviderPr
    */
   const updateRateLimitData = useCallback((data: Partial<RateLimitData>) => {
     setRateLimitData((prev) => ({
-      remaining5h: data.remaining5h ?? prev?.remaining5h ?? 10,
-      remainingWeek: data.remainingWeek ?? prev?.remainingWeek ?? 50,
+      remaining5h: data.remaining5h ?? prev?.remaining5h ?? QUOTA_5H_LIMIT,
+      remainingWeek: data.remainingWeek ?? prev?.remainingWeek ?? QUOTA_WEEK_LIMIT,
       retryAfter: data.retryAfter !== undefined ? data.retryAfter : prev?.retryAfter,
     }));
   }, []);

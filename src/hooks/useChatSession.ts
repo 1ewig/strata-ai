@@ -20,7 +20,7 @@ import {
   findLatestCompactedMessageIndex,
 } from '@/lib/token-usage';
 import { getModelContextWindow } from '@/lib/models';
-import { isContextCompactionRequired, CONTEXT_COMPACTION_THRESHOLD_PERCENT } from '@/lib/limits';
+import { isContextCompactionRequired, CONTEXT_COMPACTION_THRESHOLD_PERCENT, buildQuotaError } from '@/lib/limits';
 import { useRateLimit } from '@/contexts/RateLimitContext';
 import { useSession } from '@/lib/auth-client';
 
@@ -369,12 +369,8 @@ export function useChatSession(chatId: string) {
           chat.stop();
         }
         if (rateLimitData && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0)) {
-          setQuotaError({
-            message: rateLimitData.remaining5h <= 0
-              ? 'Your 5-hour quota is exhausted (10/10 messages used).'
-              : 'Your weekly quota is exhausted (50/50 messages used).',
-            retryAfter: rateLimitData.retryAfter,
-          });
+          const err = buildQuotaError(rateLimitData.remaining5h, rateLimitData.remainingWeek, rateLimitData.retryAfter);
+          if (err) { setQuotaError(err); }
           return;
         }
         if (isContextWindowExhausted) {
