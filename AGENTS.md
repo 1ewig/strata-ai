@@ -23,13 +23,13 @@ The app ships light + dark themes (light default; dark via `theme-toggle.tsx` + 
 
 - **NEVER hardcode colors, hex values, arbitrary shadows, or Tailwind color names (e.g. `emerald`, `rose`, `red-*`, `amber`, `cyan`, `violet`, `slate`) in components.** Use semantic tokens only.
 - **Tokens** (see `globals.css` for full list):
-  - `primary` (electric fiery orange `#FF5520` / `#FF6433` dark) — CTAs, active states, avatars, streaming indicators, spinners
+  - `primary` (electric fiery orange `#FF5520` / `#FF5C28` dark) — CTAs, active states, avatars, streaming indicators, spinners
   - `secondary` (warm golden amber `#FFAA1D`) — highlights, playful accents
   - `danger` / `warning` / `info` — errors, alerts, informational accents
   - `surface` (white) — on-brand fills (`text-surface` for white-on-orange buttons/icons)
   - `scrim` — overlay backdrops (not `bg-black/60`)
   - `primary-soft` / `danger-soft` / `accent-*` — tinted background fills
-- **Shadows:** use `shadow-button` (hard offset `0 4px 0 #121118` / `#07060A` dark), `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`, `shadow-glow-secondary`. Never arbitrary `shadow-[...]`.
+- **Shadows:** use `shadow-button` (soft modern elevation `0 1px 3px rgba(0, 0, 0, 0.08)` / `rgba(0, 0, 0, 0.4)` dark), `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`, `shadow-glow-secondary`. Never arbitrary `shadow-[...]`.
 - **Radius remap:** `rounded-lg` = 12px (badges/chips), `rounded-xl` = 20px (buttons/inputs), `rounded-2xl` = 32px (cards).
 - **Type scale remap:** use semantic size tokens only — NEVER raw Tailwind size names (`text-xs`/`text-sm`/`text-base`/`text-lg`/`text-xl`/`text-2xl`) or arbitrary `text-[10px]`/`text-[11px]` in components:
   - `text-micro` (11px) — eyebrows, inline code, status badges
