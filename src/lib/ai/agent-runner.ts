@@ -344,6 +344,16 @@ export async function runCompactionResponse({
     getModelProvider(modelId || DEFAULT_AGENT_MODEL),
   );
 
+  const modelMessages = await convertToModelMessages(sanitizedMessages);
+  const promptMessages = [
+    ...modelMessages,
+    {
+      role: "user" as const,
+      content:
+        "Please generate the comprehensive context compaction summary for the conversation and workspace state above now, following the required structured format.",
+    },
+  ];
+
   const result = streamText({
     model: resolvedModel.model,
     ...(resolvedModel.reasoning !== undefined
@@ -351,7 +361,7 @@ export async function runCompactionResponse({
       : {}),
     ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
     system: buildCompactionInstruction(files),
-    messages: await convertToModelMessages(sanitizedMessages),
+    messages: promptMessages,
     abortSignal: signal,
     experimental_transform: [
       smoothStream({

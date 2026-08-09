@@ -137,6 +137,11 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       rawSegments.push({ type: 'text', content: (message as any).content, key: 'text-fallback' });
     }
 
+    // Ensure streaming or compaction messages always have a text segment to render
+    if (rawSegments.length === 0 && (isStreaming || (message as any).metadata?.isCompactedSummary)) {
+      rawSegments.push({ type: 'text', content: '', key: 'text-initial' });
+    }
+
     // While streaming, render each part live and ungrouped so thoughts, tool
     // calls, and intermediate text stream in place. Grouping happens only once
     // the inference finishes (isStreaming flips false and the memo recomputes).
@@ -459,8 +464,13 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
             return <ToolCallCard key={seg.key} part={seg.part} onOpenDrawer={onOpenDrawer} />;
           }
 
-          if (seg.type === 'text' && seg.content) {
+          if (seg.type === 'text') {
             const isStreamingActiveSegment = isStreaming && isLastSegment;
+            const textContent = seg.content || '';
+            const isCompacted = (message as any).metadata?.isCompactedSummary === true;
+            if (!textContent && !isStreamingActiveSegment && !isCompacted) {
+              return null;
+            }
             return (
               <div
                 key={seg.key}
@@ -488,13 +498,13 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   )}
                   {isStreamingActiveSegment ? (
                     <SmoothStreamText
-                      text={seg.content}
+                      text={textContent}
                       isStreaming={true}
                       components={markdownComponents}
                     />
                   ) : (
                     <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-                      {seg.content}
+                      {textContent}
                     </ReactMarkdown>
                   )}
                 </div>
