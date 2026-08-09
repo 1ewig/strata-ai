@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ArrowUp, AlertCircle, Square, Plus } from 'lucide-react';
+import { ArrowUp, AlertCircle, Square } from 'lucide-react';
 import { MAX_MESSAGE_CHARS } from '@/lib/limits';
 import ModelSelectorMenu from './ModelSelectorMenu';
 
@@ -20,6 +20,15 @@ interface ChatInputProps {
   isContextWindowExhausted?: boolean;
 }
 
+/** Rotating placeholder prompts for the chat input. */
+const ROTATING_PLACEHOLDERS = [
+  "How can Strata help?",
+  "What are you working on?",
+  "Research, write, or build...",
+  "Draft, edit, or search...",
+  "Ask, plan, or create...",
+];
+
 /**
  * Renders the message composer: auto-growing textarea, model/thinking-level
  * selector, and send button with floating island aesthetics.
@@ -37,6 +46,15 @@ export default React.memo(function ChatInput({
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState('');
+  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+
+  // Rotate placeholders every 3.5s when the input is empty
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setPlaceholderIndex((prev) => (prev + 1) % ROTATING_PLACEHOLDERS.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, []);
 
   // Coerce the optional quota payload to null so all downstream checks can be null-based.
   const rateLimitData = rateLimitDataProp ?? null;
@@ -112,11 +130,10 @@ export default React.memo(function ChatInput({
       className="relative z-10 w-full"
     >
       <div
-        className={`flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${
-          isBlocked
+        className={`flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${isBlocked
             ? 'border-danger/40 bg-danger-soft/20'
             : 'border-edge-raised hover:border-edge-hover focus-within:border-primary/60 focus-within:shadow-glow-primary/20'
-        } rounded-2xl md:rounded-3xl p-3 sm:p-4 transition-all shadow-card`}
+          } rounded-2xl md:rounded-3xl p-3 sm:p-4 transition-all shadow-card`}
       >
         {/* Row 1: Text Field Input or Blocking Warning directly on the input field */}
         {isBlocked ? (
@@ -142,7 +159,7 @@ export default React.memo(function ChatInput({
             rows={1}
             disabled={isLoading}
             maxLength={MAX_MESSAGE_CHARS}
-            placeholder="Ask Strata to research, write, edit, or execute..."
+            placeholder={ROTATING_PLACEHOLDERS[placeholderIndex]}
             value={inputValue}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
@@ -151,25 +168,8 @@ export default React.memo(function ChatInput({
         )}
 
         {/* Row 2: Bottom Toolbar */}
-        <div className="flex items-center justify-between pt-1 gap-2 flex-wrap sm:flex-nowrap">
-          {/* Left Side Controls: Workspace Drawer quick toggle */}
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new CustomEvent('open-workspace-drawer'));
-                }
-              }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-surface-elevated hover:bg-surface-hover text-caption font-semibold text-text-secondary hover:text-text-bright transition-colors cursor-pointer border border-edge-raised"
-              title="Open Workspace Files"
-            >
-              <Plus className="w-3.5 h-3.5 text-primary" />
-              <span>Files</span>
-            </button>
-          </div>
-
-          {/* Right Side Controls: Model Dropdown, Send / Stop Button */}
+        <div className="flex items-center justify-end pt-1 gap-2">
+          {/* Right Side: Model Dropdown, Send / Stop Button */}
           <div className="flex items-center gap-2 shrink-0 ml-auto">
             <ModelSelectorMenu
               model={model}
@@ -183,7 +183,7 @@ export default React.memo(function ChatInput({
                 id="chat-stop-btn"
                 type="button"
                 onClick={onStop}
-                className="p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all focus:outline-none bg-danger hover:bg-danger/90 cursor-pointer shadow-button text-surface animate-in fade-in flex items-center gap-1.5"
+                className="p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-colors focus:outline-none bg-danger hover:bg-danger/90 cursor-pointer text-surface border border-transparent animate-in fade-in flex items-center gap-1.5"
                 title="Stop generating"
               >
                 <Square className="w-3.5 h-3.5 fill-surface text-surface" />
@@ -194,10 +194,10 @@ export default React.memo(function ChatInput({
                 id="chat-submit-btn"
                 type="submit"
                 disabled={!inputValue.trim() || isBlocked || isCharOverLimit}
-                className={`p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-all focus:outline-none flex items-center gap-1.5 ${
+                className={`p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-colors focus:outline-none flex items-center gap-1.5 border ${
                   !inputValue.trim() || isBlocked || isCharOverLimit
-                    ? 'bg-surface-elevated text-text-muted cursor-not-allowed border border-edge-raised'
-                    : 'bg-primary hover:bg-primary-hover text-surface cursor-pointer shadow-button'
+                    ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised'
+                    : 'bg-primary hover:bg-primary-hover text-surface border-transparent cursor-pointer'
                 }`}
                 title={
                   isContextWindowExhausted

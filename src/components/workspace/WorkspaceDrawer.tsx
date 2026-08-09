@@ -288,7 +288,7 @@ export default React.memo(function WorkspaceDrawer({
                     </p>
                     <button
                       onClick={() => setIsCreatingNew(true)}
-                      className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-surface text-label font-semibold px-3.5 py-2 rounded-lg transition-colors cursor-pointer shadow-button"
+                      className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-surface text-label font-semibold px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
                     >
                       <Plus className="w-4 h-4" /> Create New File
                     </button>
@@ -436,7 +436,7 @@ export default React.memo(function WorkspaceDrawer({
                           className={`flex items-center gap-1.5 text-label font-semibold rounded-xl transition-colors shrink-0 ${
                             isFileOverLimit
                               ? 'bg-surface-elevated text-text-muted opacity-40 cursor-not-allowed border border-edge-raised'
-                              : 'text-surface bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
+                              : 'text-surface bg-primary hover:bg-primary-hover cursor-pointer'
                           } px-4 py-1.5`}
                           title={
                             isFileOverLimit

@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Globe, FileText, Sparkles, Compass } from 'lucide-react';
+import { Globe, FileText, Compass } from 'lucide-react';
 import ChatBubble from '@/components/chat/ChatBubble';
 import { QuotaErrorCard } from '@/components/chat/QuotaErrorCard';
 import { StrataIcon } from '@/components/ui/strata-icon';
@@ -17,11 +17,6 @@ const SUGGESTION_CHIPS = [
     icon: FileText,
     label: 'Draft Document',
     prompt: 'Create a structured project proposal document in the workspace with milestones and technical architecture.',
-  },
-  {
-    icon: Sparkles,
-    label: 'Surgical Edits',
-    prompt: 'Inspect workspace files and refactor key functions for readability and performance.',
   },
   {
     icon: Compass,
@@ -85,6 +80,18 @@ export default React.memo(function ChatPanel({
   isNewChat,
   chatInputNode,
 }: ChatPanelProps) {
+  // Pick a stable welcome message from the pool based on the conversation ID
+  const welcomeMessage = React.useMemo(() => {
+    if (!chatId) return WELCOME_MESSAGES[0];
+    let hash = 0;
+    for (let i = 0; i < chatId.length; i++) {
+      hash = (hash << 5) - hash + chatId.charCodeAt(i);
+      hash |= 0;
+    }
+    const index = Math.abs(hash) % WELCOME_MESSAGES.length;
+    return WELCOME_MESSAGES[index];
+  }, [chatId]);
+
   const handleChipClick = (promptText: string) => {
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('insert-chat-prompt', { detail: promptText }));
@@ -93,26 +100,16 @@ export default React.memo(function ChatPanel({
 
   if (isNewChat) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[62vh] text-center space-y-6 max-w-2xl mx-auto w-full px-2 pt-10 sm:pt-14 fade-in">
-        {/* Luminous Pulsing Brand Avatar Orb */}
-        <div className="relative flex items-center justify-center">
-          <div className="absolute w-28 h-28 rounded-full bg-primary/20 dark:bg-primary/25 blur-2xl animate-pulse" />
-          <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-primary to-secondary p-0.5 shadow-glow-primary flex items-center justify-center relative z-10">
-            <div className="w-full h-full rounded-full bg-surface-raised dark:bg-surface-elevated flex items-center justify-center">
-              <StrataIcon className="w-8 h-8" />
-            </div>
-          </div>
+      <div className="flex flex-col items-center justify-center text-center space-y-6 max-w-2xl mx-auto w-full px-2 py-4 fade-in">
+        {/* Brand Icon matching Sidebar */}
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-glow-primary">
+          <StrataIcon className="w-7 h-7 text-surface" />
         </div>
 
         {/* Hero Greeting */}
-        <div className="space-y-2">
-          <h2 className="text-title sm:text-display font-bold text-text-bright font-display tracking-tight">
-            Hey, I&apos;m <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Strata</span>. How can I help you today?
-          </h2>
-          <p className="text-caption sm:text-label text-text-muted max-w-md mx-auto">
-            Autonomous workspace studio for document drafting, surgical editing, and deep real-time research.
-          </p>
-        </div>
+        <h2 className="text-title sm:text-display font-bold text-text-bright font-display tracking-tight">
+          {welcomeMessage}
+        </h2>
 
         {/* Quick Action Suggestion Chips */}
         <div className="flex flex-wrap items-center justify-center gap-2 pt-1 max-w-xl">
