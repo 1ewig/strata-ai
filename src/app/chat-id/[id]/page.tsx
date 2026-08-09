@@ -191,7 +191,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         <StickToBottom className="flex-1 min-h-0" resize="auto" initial="instant">
           {(context) => (
             <>
-              <StickToBottom.Content className="max-w-4xl w-full mx-auto px-4 pb-36">
+              <StickToBottom.Content className={`max-w-4xl w-full mx-auto px-4 ${isNewChat ? 'min-h-full flex flex-col justify-center py-6' : 'pb-36'}`}>
                 <ChatPanel
                   messages={displayMessages}
                   streamingContent={streamingContent}

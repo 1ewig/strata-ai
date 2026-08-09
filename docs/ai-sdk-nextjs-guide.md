@@ -404,13 +404,7 @@ experimental_transform: [
 Weight-conscious notes:
 
 - `chunking: 'word'` reads as natural prose; `'character'` feels more incremental but costs more re-renders (§5).
-- Strata AI pairs server-side `smoothStream` with client-side `SmoothStreamText` (`src/components/chat/SmoothStreamText.tsx`), which parses live Markdown with 60ms throttled AST batching, an AST remark plugin (`createTokenFadePlugin`), and animates **newly appended** token deltas with a smooth 750 ms opacity & blur fade (`animate-token-fade` — from `src/app/globals.css`, `--animate-token-fade` / keyframe `tokenFadeIn`):
-
-```
-.animate-token-fade { animation: tokenFadeIn 750ms cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-```
-
-`SmoothStreamText` batches incoming updates at ~60ms intervals (preventing 60 Hz AST CPU spikes) and uses an AST remark plugin (`createTokenFadePlugin`) to target the trailing text node with an `animate-token-fade` span. Its running caret (`animate-caret`, 1.1 s blink) shows exactly where the stream is writing.
+- Strata AI pairs server-side `smoothStream` with client-side `SmoothStreamText` (`src/components/chat/SmoothStreamText.tsx`), which renders accumulated text through `ReactMarkdown` in real time with an animated streaming caret (`animate-caret`, 1.1 s blink) appended to the trailing span. No throttling or token-fade transitions are needed — the caret alone signals liveness, and `React.memo(ChatBubble)` (§5.2–5.3) keeps completed bubbles from re-rendering.
 
 ### 2.2 Status-driven chrome
 
@@ -461,9 +455,9 @@ Open reasoning models emit their *thoughts* as a separate part type. The Strata 
 
 Why two phases? Because re-parsing a Markdown AST on every 15 ms delta is a top cause of stream jank — quantified in §5.7. `ThoughtAccordion` (`src/components/chat/ThoughtAccordion.tsx`) is fed `isStreaming={isStreaming && isLastSegment}` so the in-flight thought stays cheap.
 
-### 2.5 Live Markdown with throttled AST batching
+### 2.5 Live Markdown via SmoothStreamText
 
-The active (in-flight) text part renders formatted Markdown via `SmoothStreamText` with 60ms throttled AST batching and token fade; completed parts maintain a memoized component map. From `src/components/chat/ChatBubble.tsx`:
+The active (in-flight) text part renders formatted Markdown via `SmoothStreamText`, which simply wraps `ReactMarkdown` and appends a streaming caret; completed parts fall back to plain `ReactMarkdown` with a memoized component map. From `src/components/chat/ChatBubble.tsx`:
 
 ```tsx
 {isActiveStreamingText ? (
@@ -1118,17 +1112,19 @@ const resolved = React.useMemo(() => {
 
 The counter-pattern (which shipped first and was removed): resolving tool display in the *parent list render* — re-resolving every card's UI for every card on every delta. Keep resolution local and memoized.
 
-### 5.7 Throttled AST batching while streaming
+### 5.7 Plain-text reasoning segments while streaming
 
-The single biggest per-frame win: **throttle Markdown AST re-parsing while streaming** to ~60ms intervals (§2.4–2.5) via `SmoothStreamText`, avoiding 60 Hz re-parse locks while still delivering formatted live Markdown and animated token fade transitions:
+The single biggest per-frame win: **skip Markdown AST re-parsing entirely for in-flight reasoning text** (§2.4). While the model is actively thinking, `ThoughtAccordion` renders thought text as plain `font-mono whitespace-pre-wrap` — no `ReactMarkdown`, no AST, no re-render tax. Only once thinking completes does the accordion upgrade to a memoized `ReactMarkdown` render:
 
-```ts
-{isActiveStreamingText
-  ? <SmoothStreamText text={seg.content} isStreaming={true} components={markdownComponents} />
-  : <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{seg.content}</ReactMarkdown>}
+```tsx
+{isStreaming && isLastSegment ? (
+  <pre className="font-mono whitespace-pre-wrap text-caption text-text-secondary">{text}</pre>
+) : (
+  <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>{text}</ReactMarkdown>
+)}
 ```
 
-Same discipline inside the `WorkGroupCard` for historical items. A fresh `components` object every render forces `ReactMarkdown` to tear down nodes — memoize it (`useMemo(..., [])`).
+Why this beats throttled batching: throttling still pays O(N) per frame for up to 60ms of work; removing the parser from the hot path drives the per-frame cost to zero. A fresh `components` object every render forces `ReactMarkdown` to tear down nodes — memoize it (`useMemo(..., [])`).
 
 ### 5.8 Type-system styling discipline
 

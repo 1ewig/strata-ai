@@ -140,7 +140,7 @@ export default React.memo(function Sidebar({
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface-raised border-r border-edge-raised flex flex-col h-dvh shrink-0 select-none shadow-2xl transition-transform duration-300 md:static md:translate-x-0 md:shadow-none md:bg-surface-raised/60 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface-raised border-r border-edge-raised flex flex-col h-dvh shrink-0 select-none shadow-2xl transition-transform duration-300 md:static md:translate-x-0 md:shadow-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -170,7 +170,7 @@ export default React.memo(function Sidebar({
           className={`w-full flex items-center justify-center gap-2 font-semibold px-3 py-2 rounded-xl text-label transition-colors ${
             isMaxConversationsReached
               ? 'bg-surface-elevated text-text-muted opacity-50 cursor-not-allowed border border-edge-raised'
-              : 'bg-primary hover:bg-primary-hover text-surface shadow-button cursor-pointer'
+              : 'bg-primary hover:bg-primary-hover text-surface cursor-pointer'
           }`}
           title={
             isMaxConversationsReached

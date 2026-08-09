@@ -165,7 +165,7 @@ export default function ConfirmDialog({
                   onConfirm();
                 }}
                 disabled={isLoading}
-                className={`flex-1 sm:flex-initial sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-label font-semibold transition-all cursor-pointer shadow-button disabled:opacity-50 disabled:cursor-not-allowed text-center ${
+                className={`flex-1 sm:flex-initial sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-label font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-center ${
                   isDanger
                     ? 'bg-danger hover:bg-danger/90 text-surface'
                     : 'bg-primary hover:bg-primary-hover text-surface'
