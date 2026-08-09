@@ -67,6 +67,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     isContextWindowExhausted,
     streamingContent,
     isLoading,
+    isCompacting,
     rateLimitData,
     quotaError,
     clearQuotaError,
@@ -134,6 +135,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
       onSendMessage={handleSendMessage}
       onStop={handleStop}
       isLoading={isLoading}
+      isCompacting={isCompacting}
       model={model}
       thinkingLevel={thinkingLevel}
       onModelSelect={handleModelSelect}

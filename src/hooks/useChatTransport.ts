@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { DefaultChatTransport } from 'ai';
+import { findLatestCompactedMessageIndex } from '@/lib/token-usage';
 
 /** Ref-based inputs passed by the parent session hook, so the transport can read latest values without re-creating itself. */
 interface UseChatTransportParams {
@@ -37,7 +38,29 @@ export function useChatTransport({
           files: filesRef.current,
         }),
         fetch: async (url, options) => {
-          const res = await fetch(url, options);
+          let requestOptions = options;
+
+          // Prune history before the latest compaction summary point before sending to the model,
+          // so the model receives [Compacted Summary, ...newMessages] without context blowup.
+          if (typeof options?.body === 'string') {
+            try {
+              const parsedBody = JSON.parse(options.body);
+              if (Array.isArray(parsedBody.messages) && parsedBody.messages.length > 0) {
+                const compactIdx = findLatestCompactedMessageIndex(parsedBody.messages);
+                if (compactIdx >= 0) {
+                  parsedBody.messages = parsedBody.messages.slice(compactIdx);
+                  requestOptions = {
+                    ...options,
+                    body: JSON.stringify(parsedBody),
+                  };
+                }
+              }
+            } catch {
+              // Ignore parse errors and proceed with original options
+            }
+          }
+
+          const res = await fetch(url, requestOptions);
           // Rate-limit state is returned on every response; surface it to the global quota context
           const rem5h = res.headers.get('X-RateLimit-Remaining-5h');
           const remWeek = res.headers.get('X-RateLimit-Remaining-Week');

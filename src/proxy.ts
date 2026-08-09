@@ -53,5 +53,5 @@ export async function proxy(request: NextRequest) {
  * Route matcher scoping the middleware to the app shell and agent API only.
  */
 export const config = {
-  matcher: ["/", "/chat-id/:path*", "/api/agent"],
+  matcher: ["/", "/chat-id/:path*", "/api/agent", "/api/agent/:path*"],
 };

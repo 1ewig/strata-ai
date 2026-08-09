@@ -8,9 +8,14 @@ import {
   createUIMessageStream,
   LanguageModelUsage,
 } from "ai";
-import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
+import {
+  buildSystemInstruction,
+  buildCompactionInstruction,
+  createWorkspaceTools,
+} from "@/lib/ai";
 import { resolveAgentModel, getModelProvider, DEFAULT_AGENT_MODEL } from "@/lib/ai/providers";
 import { WorkspaceToolsContext } from "@/lib/ai/tools/types";
+import { WorkspaceFile } from "@/lib/schemas";
 import { getModelContextWindow } from "@/lib/models";
 import { calculateTokenMetrics, ChatMetadata } from "@/lib/token-usage";
 
@@ -302,3 +307,71 @@ export async function runAgentResponse({
     },
   });
 }
+
+/**
+ * Server-side compaction run configuration.
+ * @property files - The workspace files to reference in the compaction prompt.
+ * @property messages - The conversation messages to summarize.
+ * @property modelId - Optional catalog model id; defaults to the lite Gemini model.
+ * @property thinkingLevel - Optional thinking effort requested by the client.
+ * @property signal - Optional abort signal tied to the incoming request.
+ */
+export interface RunCompactionResponseParams {
+  files?: WorkspaceFile[];
+  messages: Parameters<typeof convertToModelMessages>[0];
+  modelId?: string;
+  thinkingLevel?: string;
+  signal?: AbortSignal;
+}
+
+/**
+ * Builds and returns the streaming UI-message response for a context compaction run.
+ *
+ * @param params - The resolved model, messages, files, and abort signal.
+ * @returns The SSE UI-message streaming `Response`.
+ */
+export async function runCompactionResponse({
+  files,
+  messages,
+  modelId,
+  thinkingLevel,
+  signal,
+}: RunCompactionResponseParams): Promise<Response> {
+  const resolvedModel = resolveAgentModel(modelId || DEFAULT_AGENT_MODEL, thinkingLevel);
+
+  const sanitizedMessages = sanitizeMessagesForProvider(
+    messages,
+    getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+  );
+
+  const result = streamText({
+    model: resolvedModel.model,
+    ...(resolvedModel.reasoning !== undefined
+      ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
+      : {}),
+    ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
+    system: buildCompactionInstruction(files),
+    messages: await convertToModelMessages(sanitizedMessages),
+    abortSignal: signal,
+    experimental_transform: [
+      smoothStream({
+        delayInMs: 25,
+        chunking: "word",
+      }),
+    ],
+    onStart() {
+      console.log("[compaction] Context compaction stream started.");
+    },
+    onEnd({ finishReason, usage }) {
+      console.log(
+        `[compaction] Compaction stream finished (${finishReason}). Usage:`,
+        usage
+      );
+    },
+    onError({ error }) {
+      console.error("[compaction] Stream error:", error);
+    },
+  });
+
+  return result.toTextStreamResponse();
+}

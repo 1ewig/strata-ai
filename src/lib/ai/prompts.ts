@@ -4,6 +4,7 @@ import {
   MAX_FILES_PER_WORKSPACE,
   MAX_MESSAGE_CHARS,
   MAX_WORKSPACE_TOTAL_CHARS,
+  CONTEXT_COMPACTION_THRESHOLD_PERCENT,
 } from "@/lib/limits";
 
 /**
@@ -55,7 +56,7 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget
       : contextWindow && totalTokens != null
       ? Math.max(0, contextWindow - totalTokens).toLocaleString()
       : windowText;
-  const nearLimit = pct >= 80;
+  const nearLimit = pct >= CONTEXT_COMPACTION_THRESHOLD_PERCENT;
 
   const tokenBudgetSection = [
     "",
@@ -63,7 +64,7 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget
     `- Active conversation context occupancy: ${usageText} / ${windowText} tokens (${pct}% used).`,
     `- Available context headroom: ${remainingText} tokens.`,
     nearLimit
-      ? "- You are near or above 80% of the active context window: be concise, avoid repeating content already in files, and if the user needs far more room, proactively suggest starting a new chat to continue."
+      ? `- You are near or above ${CONTEXT_COMPACTION_THRESHOLD_PERCENT}% of the active context window: be concise, avoid repeating content already in files, and if the user needs far more room, context compaction will automatically summarize this history.`
       : "- Keep replies reasonably sized to stay well within the active context window.",
   ].join("\n");
 
@@ -166,4 +167,63 @@ Your chat replies are rendered with full GitHub-Flavored Markdown (GFM) with cus
    - Feature lists and properties -> Bold Lead-in Bullet Points
    - Key caveats and takeaways -> Styled Callout Blockquotes
    - Prose -> Short, punchy paragraphs with clean spacing.`;
+}
+
+/**
+ * Builds the system instruction for the context compaction endpoint.
+ * Directs the model to synthesize a detailed, structured, high-fidelity summary
+ * of the conversation history and workspace state.
+ *
+ * @param filesInput - Workspace files to reference (metadata only).
+ * @returns The complete system instruction string for context compaction.
+ */
+export function buildCompactionInstruction(filesInput?: WorkspaceFile[]): string {
+  const activeFiles = (filesInput ?? []).filter((f) => f.content?.trim());
+  const hasFiles = activeFiles.length > 0;
+
+  const formattedFilesList = activeFiles
+    .map(
+      (f) =>
+        `- ${f.name} (${f.language || "markdown"}, ${f.content.length.toLocaleString()}/${MAX_FILE_CHARS.toLocaleString()} chars, id: ${f.id})`,
+    )
+    .join("\n");
+
+  const currentDate = new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  return `You are Strata AI's Context Compaction Engine. Your role is to analyze the preceding conversation history and workspace state, then produce an exhaustive, highly structured, and dense context distillation that will serve as the memory foundation for all subsequent turns in this workspace.
+
+Current Date: ${currentDate}
+Workspace Files Status: ${hasFiles ? "Populated" : "Empty"}
+${
+  hasFiles
+    ? `Current Workspace Files:\n${formattedFilesList}`
+    : "No workspace files exist currently."
+}
+
+## Compaction Objectives & Directives
+1. **Lossless Technical Context Retention**:
+   - Capture all user requirements, specifications, constraints, coding preferences, and domain rules established across the conversation.
+   - Summarize key architectural decisions, design choices, algorithms chosen, and libraries or APIs discussed.
+   - Record exact file names, symbols, types, functions, endpoints, and data structures created or modified.
+
+2. **Workspace & Progress Tracking**:
+   - Detail what tasks have been completed and verified.
+   - Highlight any ongoing work, pending questions, unresolved edge cases, or planned next steps.
+   - Mention any external research findings (from web search or page extraction) that remain relevant.
+
+3. **Format & Visual Presentation**:
+   - Write in clear, dense, beautifully structured GitHub-Flavored Markdown.
+   - Use structured sections with descriptive headings:
+     - \`### Key Objectives & User Requirements\`
+     - \`### Architecture & Technical Decisions\`
+     - \`### Workspace Files & Current State\`
+     - \`### Completed Work & Key Solutions\`
+     - \`### Next Steps & Pending Context\`
+   - Use bold lead-in bullet points and backtick inline code for all file paths, functions, and parameters.
+   - Ensure the summary is self-contained so that a model reading only this summary has 100% of the context required to seamlessly continue assisting the user.`;
 }

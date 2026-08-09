@@ -8,6 +8,8 @@ export const MAX_WORKSPACE_TOTAL_CHARS = 50000;
 export const MAX_CONVERSATIONS_PER_USER = 5;
 /** Maximum number of files allowed per workspace. */
 export const MAX_FILES_PER_WORKSPACE = 3;
+/** Context window occupancy percentage that triggers automatic background context compaction. */
+export const CONTEXT_COMPACTION_THRESHOLD_PERCENT = 80;
 
 /**
  * Formats a character count against its limit.
@@ -45,3 +47,13 @@ export function isFileOverLimit(length: number): boolean {
 export function isWorkspaceTotalOverLimit(totalLength: number): boolean {
   return totalLength > MAX_WORKSPACE_TOTAL_CHARS;
 }
+
+/**
+ * Checks whether an active context occupancy percentage has crossed the compaction threshold.
+ * @param percentUsed - The context occupancy percentage (0 - 100).
+ * @returns True if percentUsed is at or above the threshold.
+ */
+export function isContextCompactionRequired(percentUsed: number): boolean {
+  return percentUsed >= CONTEXT_COMPACTION_THRESHOLD_PERCENT;
+}
+

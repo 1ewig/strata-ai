@@ -11,6 +11,8 @@ export interface ChatMetadata {
   /** Aggregate multi-step API execution tokens across all tool iterations in this turn. */
   stepTotalUsage?: LanguageModelUsage;
   modelId?: string;
+  /** True when this message represents an automated context compaction summary. */
+  isCompactedSummary?: boolean;
 }
 
 /** Active context window usage for the current conversation state. */
@@ -120,6 +122,7 @@ export function calculateTokenMetrics(
   if (!messages || messages.length === 0) return null;
 
   let latestUsage: LanguageModelUsage | null = null;
+  let isLatestTurnCompacted = false;
   let totalOutputTokens = 0;
   let totalApiTokens = 0;
   let totalCost = 0;
@@ -140,6 +143,7 @@ export function calculateTokenMetrics(
     if (!usage) continue;
 
     latestUsage = usage;
+    isLatestTurnCompacted = m.metadata?.isCompactedSummary === true;
     turnCount += 1;
 
     const input = usage.inputTokens ?? 0;
@@ -179,9 +183,19 @@ export function calculateTokenMetrics(
 
   if (!latestUsage) return null;
 
-  const activeInput = latestUsage.inputTokens ?? 0;
-  const activeOutput = latestUsage.outputTokens ?? 0;
-  const activeTotal = latestUsage.totalTokens ?? activeInput + activeOutput;
+  let activeInput = latestUsage.inputTokens ?? 0;
+  let activeOutput = latestUsage.outputTokens ?? 0;
+
+  // When the latest assistant message is a context compaction summary, active context
+  // resets to the baseline system context plus the summary length, dropping the discarded history.
+  if (isLatestTurnCompacted) {
+    activeInput = 1000;
+    activeOutput = latestUsage.outputTokens ?? 1000;
+  }
+
+  const activeTotal = isLatestTurnCompacted
+    ? activeInput + activeOutput
+    : latestUsage.totalTokens ?? activeInput + activeOutput;
 
   if (activeTotal <= 0) return null;
 
@@ -267,3 +281,20 @@ export function formatContextWindow(contextWindow: number): string {
     ? `${(contextWindow / 1000000).toFixed(1)}M`
     : `${Math.round(contextWindow / 1000)}k`;
 }
+
+/**
+ * Finds the index of the latest compaction summary message in a messages array.
+ * @param messages - Array of messages to search.
+ * @returns The index of the latest compaction summary message, or -1 if none exists.
+ */
+export function findLatestCompactedMessageIndex(
+  messages: Array<{ metadata?: ChatMetadata; [key: string]: any }> | undefined,
+): number {
+  if (!messages || messages.length === 0) return -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]?.metadata?.isCompactedSummary === true) {
+      return i;
+    }
+  }
+  return -1;
+}

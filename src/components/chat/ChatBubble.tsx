@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { UIMessage } from 'ai';
-import { Check, Code2, User } from 'lucide-react';
+import { Check, Code2, User, Sparkles } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
@@ -480,6 +480,12 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                 )}
 
                 <div className="text-body text-text-primary leading-relaxed relative">
+                  {(message as any).metadata?.isCompactedSummary && (
+                    <div className="flex items-center gap-1.5 text-micro font-semibold uppercase tracking-wider text-primary mb-2.5 pb-1.5 border-b border-edge-raised/70">
+                      <Sparkles className="w-3.5 h-3.5 text-primary" />
+                      <span>Context Compaction Summary</span>
+                    </div>
+                  )}
                   {isStreamingActiveSegment ? (
                     <SmoothStreamText
                       text={seg.content}

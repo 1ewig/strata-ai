@@ -8,6 +8,7 @@ interface ChatInputProps {
   onSendMessage: (text: string) => void;
   onStop?: () => void;
   isLoading: boolean;
+  isCompacting?: boolean;
   model: string;
   thinkingLevel: string;
   onModelSelect: (modelId: string) => void;
@@ -37,6 +38,7 @@ export default React.memo(function ChatInput({
   onSendMessage,
   onStop,
   isLoading,
+  isCompacting = false,
   model,
   thinkingLevel,
   onModelSelect,
@@ -60,8 +62,8 @@ export default React.memo(function ChatInput({
   const rateLimitData = rateLimitDataProp ?? null;
   // Sending is blocked once either the 5-hour or weekly quota is exhausted.
   const isQuotaExhausted = rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
-  // Sending is also blocked once cumulative usage crosses the model's context window.
-  const isBlocked = isQuotaExhausted || isContextWindowExhausted;
+  // Sending is also blocked once cumulative usage crosses the model's context window or during compaction.
+  const isBlocked = isQuotaExhausted || isContextWindowExhausted || isCompacting;
 
   /** Keeps the input state in sync with the textarea value. */
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -121,7 +123,7 @@ export default React.memo(function ChatInput({
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (isLoading && onStop) {
+        if (isLoading && onStop && !isCompacting) {
           onStop();
         } else {
           handleSend();
@@ -130,13 +132,20 @@ export default React.memo(function ChatInput({
       className="relative z-10 w-full"
     >
       <div
-        className={`flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${isBlocked
+        className={`flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${isCompacting
+            ? 'border-primary/40 bg-primary-soft/10'
+            : isBlocked
             ? 'border-danger/40 bg-danger-soft/20'
             : 'border-edge-raised hover:border-edge-hover focus-within:border-primary/60 focus-within:shadow-glow-primary/20'
           } rounded-2xl md:rounded-3xl p-3 sm:p-4 transition-all shadow-card`}
       >
-        {/* Row 1: Text Field Input or Blocking Warning directly on the input field */}
-        {isBlocked ? (
+        {/* Row 1: Text Field Input, Compacting Notice, or Blocking Warning */}
+        {isCompacting ? (
+          <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-primary text-label font-medium animate-in fade-in">
+            <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
+            <span>Optimizing conversation context (Compacting)... Please wait.</span>
+          </div>
+        ) : isBlocked ? (
           <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
             <span>
@@ -178,7 +187,7 @@ export default React.memo(function ChatInput({
               onThinkingLevelChange={onThinkingLevelChange}
             />
 
-            {isLoading ? (
+            {isLoading && !isCompacting ? (
               <button
                 id="chat-stop-btn"
                 type="button"
@@ -200,7 +209,9 @@ export default React.memo(function ChatInput({
                     : 'bg-primary hover:bg-primary-hover text-surface border-transparent cursor-pointer'
                 }`}
                 title={
-                  isContextWindowExhausted
+                  isCompacting
+                    ? 'Context compaction in progress'
+                    : isContextWindowExhausted
                     ? 'Context window reached'
                     : isQuotaExhausted
                       ? 'Quota limit reached'
