@@ -146,7 +146,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const isNewChat = displayMessages.length === 0 && streamingContent === null && !isLoading && !quotaError;
 
   return (
-    <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
+    <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans p-0 md:p-3 md:gap-3">
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={handleCloseSidebar}
@@ -166,7 +166,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         rateLimitData={rateLimitData}
       />
 
-      <div className="flex-1 flex flex-col h-dvh overflow-hidden min-w-0 relative">
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0 relative bg-surface-raised/90 dark:bg-surface-raised/75 border-0 md:border md:border-edge-raised rounded-none md:rounded-3xl shadow-none md:shadow-card backdrop-blur-xl transition-all duration-300">
         {(() => {
           const activeConversation = conversations?.find(c => c.id === chatId);
           const headerTitle = displayMessages.length > 0
@@ -223,7 +223,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         </StickToBottom>
 
         {!isNewChat && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30 animate-slide-up">
+          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-raised/95 dark:from-surface-raised/95 via-surface-raised/80 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30 animate-slide-up">
             <div className="max-w-4xl mx-auto pointer-events-auto">
               {chatInputNode}
             </div>

@@ -1,7 +1,5 @@
-'use client';
-
 import React, { useRef, useEffect, useState } from 'react';
-import { ArrowUp, AlertCircle, Square } from 'lucide-react';
+import { ArrowUp, AlertCircle, Square, Plus } from 'lucide-react';
 import { MAX_MESSAGE_CHARS } from '@/lib/limits';
 import ModelSelectorMenu from './ModelSelectorMenu';
 
@@ -24,19 +22,7 @@ interface ChatInputProps {
 
 /**
  * Renders the message composer: auto-growing textarea, model/thinking-level
- * selector, and send button. When streaming is active, the send
- * button is swapped for an interactive Stop button to cancel inference.
- *
- * @param onSendMessage - Fires with the trimmed text when the user submits.
- * @param onStop - Fires when the user clicks the stop button during inference.
- * @param isLoading - Indicates an active streaming response; swaps send for stop button.
- * @param model - Currently selected model id.
- * @param thinkingLevel - Currently selected thinking effort level.
- * @param onModelSelect - Called when the user picks a model.
- * @param onThinkingLevelChange - Called when the user changes thinking effort.
- * @param onThinkingLevelChange - Called when the user changes thinking effort.
- * @param rateLimitData - Remaining 5-hour/weekly message quota and optional retry window.
- * @param isContextWindowExhausted - True once cumulative token usage crosses the active model's context window.
+ * selector, and send button with floating island aesthetics.
  */
 export default React.memo(function ChatInput({
   onSendMessage,
@@ -63,6 +49,23 @@ export default React.memo(function ChatInput({
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
   };
+
+  // Listen for suggestion chip clicks from the empty state
+  useEffect(() => {
+    const handleInsertPrompt = (e: Event) => {
+      const customEvent = e as CustomEvent<string>;
+      if (customEvent.detail) {
+        setInputValue(customEvent.detail);
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+        }
+      }
+    };
+    window.addEventListener('insert-chat-prompt', handleInsertPrompt);
+    return () => {
+      window.removeEventListener('insert-chat-prompt', handleInsertPrompt);
+    };
+  }, []);
 
   // Auto-grow the textarea up to a 160px cap as the user types.
   useEffect(() => {
@@ -106,14 +109,18 @@ export default React.memo(function ChatInput({
           handleSend();
         }
       }}
-      className="relative z-10"
+      className="relative z-10 w-full"
     >
-      <div className={`flex flex-col gap-2 bg-surface-raised border ${isBlocked ? 'border-danger/40 bg-danger-soft/20' : 'border-edge-hover/60 focus-within:border-edge-hover'
-        } rounded-2xl p-3.5 transition-all shadow-lg`}>
-
+      <div
+        className={`flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${
+          isBlocked
+            ? 'border-danger/40 bg-danger-soft/20'
+            : 'border-edge-raised hover:border-edge-hover focus-within:border-primary/60 focus-within:shadow-glow-primary/20'
+        } rounded-2xl md:rounded-3xl p-3 sm:p-4 transition-all shadow-card`}
+      >
         {/* Row 1: Text Field Input or Blocking Warning directly on the input field */}
         {isBlocked ? (
-          <div className="w-full min-h-[24px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in">
+          <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in">
             <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
             <span>
               {isContextWindowExhausted
@@ -135,22 +142,35 @@ export default React.memo(function ChatInput({
             rows={1}
             disabled={isLoading}
             maxLength={MAX_MESSAGE_CHARS}
-            placeholder="Message Strata AI..."
+            placeholder="Ask Strata to research, write, edit, or execute..."
             value={inputValue}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            className="w-full bg-transparent text-text-primary placeholder-text-muted border-none text-label focus:outline-none resize-none min-h-[24px] max-h-48 py-1 focus:ring-0 disabled:opacity-50"
+            className="w-full bg-transparent text-text-primary placeholder-text-muted border-none text-label sm:text-body focus:outline-none resize-none min-h-[28px] max-h-48 py-1 focus:ring-0 disabled:opacity-50"
           />
         )}
 
         {/* Row 2: Bottom Toolbar */}
-        <div className="flex items-center justify-between pt-1">
-
-          {/* Left Side Controls */}
-          <div className="flex items-center gap-2" />
+        <div className="flex items-center justify-between pt-1 gap-2 flex-wrap sm:flex-nowrap">
+          {/* Left Side Controls: Workspace Drawer quick toggle */}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('open-workspace-drawer'));
+                }
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-surface-elevated hover:bg-surface-hover text-caption font-semibold text-text-secondary hover:text-text-bright transition-colors cursor-pointer border border-edge-raised"
+              title="Open Workspace Files"
+            >
+              <Plus className="w-3.5 h-3.5 text-primary" />
+              <span>Files</span>
+            </button>
+          </div>
 
           {/* Right Side Controls: Model Dropdown, Send / Stop Button */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 ml-auto">
             <ModelSelectorMenu
               model={model}
               thinkingLevel={thinkingLevel}
@@ -163,20 +183,22 @@ export default React.memo(function ChatInput({
                 id="chat-stop-btn"
                 type="button"
                 onClick={onStop}
-                className="p-2 rounded-xl shrink-0 transition-all focus:outline-none bg-danger hover:bg-danger/90 cursor-pointer shadow-button text-surface animate-in fade-in"
+                className="p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all focus:outline-none bg-danger hover:bg-danger/90 cursor-pointer shadow-button text-surface animate-in fade-in flex items-center gap-1.5"
                 title="Stop generating"
               >
-                <Square className="w-4 h-4 fill-surface text-surface" />
+                <Square className="w-3.5 h-3.5 fill-surface text-surface" />
+                <span className="hidden sm:inline text-caption font-bold">Stop</span>
               </button>
             ) : (
               <button
                 id="chat-submit-btn"
                 type="submit"
                 disabled={!inputValue.trim() || isBlocked || isCharOverLimit}
-                className={`p-2 rounded-xl shrink-0 transition-all focus:outline-none ${!inputValue.trim() || isBlocked || isCharOverLimit
-                    ? 'bg-surface-elevated cursor-not-allowed'
-                    : 'bg-primary hover:bg-primary-hover cursor-pointer shadow-button'
-                  }`}
+                className={`p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-all focus:outline-none flex items-center gap-1.5 ${
+                  !inputValue.trim() || isBlocked || isCharOverLimit
+                    ? 'bg-surface-elevated text-text-muted cursor-not-allowed border border-edge-raised'
+                    : 'bg-primary hover:bg-primary-hover text-surface cursor-pointer shadow-button'
+                }`}
                 title={
                   isContextWindowExhausted
                     ? 'Context window reached'
@@ -189,12 +211,12 @@ export default React.memo(function ChatInput({
                           : 'Send message'
                 }
               >
-                <ArrowUp className={`w-4 h-4 ${!inputValue.trim() || isBlocked || isCharOverLimit ? 'text-text-muted' : 'text-surface'}`} />
+                <span className="hidden sm:inline text-caption font-bold">Send</span>
+                <ArrowUp className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
         </div>
-
       </div>
     </form>
   );

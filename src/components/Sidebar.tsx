@@ -140,7 +140,7 @@ export default React.memo(function Sidebar({
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface-raised border-r border-edge-raised flex flex-col h-dvh shrink-0 select-none shadow-2xl transition-transform duration-300 md:static md:translate-x-0 md:shadow-none md:bg-surface-raised/60 ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface-raised/95 dark:bg-surface-raised/90 border border-edge-raised flex flex-col h-dvh md:h-full shrink-0 select-none shadow-2xl transition-transform duration-300 md:static md:translate-x-0 md:shadow-card rounded-none md:rounded-3xl backdrop-blur-xl overflow-hidden ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
