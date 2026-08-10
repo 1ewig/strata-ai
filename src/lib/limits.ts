@@ -45,30 +45,3 @@ export function formatCharCount(count: number, max: number): string {
   return `${count.toLocaleString()} / ${max.toLocaleString()}`;
 }
 
-/**
- * Checks whether a message length exceeds the per-message limit.
- * @param length - The message length in characters.
- * @returns True if the message is over the limit.
- */
-export function isMessageOverLimit(length: number): boolean {
-  return length > MAX_MESSAGE_CHARS;
-}
-
-/**
- * Checks whether a file length exceeds the per-file limit.
- * @param length - The file content length in characters.
- * @returns True if the file is over the limit.
- */
-export function isFileOverLimit(length: number): boolean {
-  return length > MAX_FILE_CHARS;
-}
-
-/**
- * Checks whether a workspace's combined content length exceeds the total limit.
- * @param totalLength - The sum of all file lengths in characters.
- * @returns True if the workspace total is over the limit.
- */
-export function isWorkspaceTotalOverLimit(totalLength: number): boolean {
-  return totalLength > MAX_WORKSPACE_TOTAL_CHARS;
-}
-

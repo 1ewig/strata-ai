@@ -8,7 +8,6 @@ import {
   formatContextWindow,
   formatTokens,
   ConversationTokenMetrics,
-  CumulativeUsage,
 } from '@/lib/token-usage';
 import TokenUsagePopover from './TokenUsagePopover';
 
@@ -18,7 +17,7 @@ interface ChatHeaderProps {
   files: WorkspaceFile[];
   activeFileId: string | null;
   model?: string;
-  tokenUsage?: ConversationTokenMetrics | CumulativeUsage | null;
+  tokenUsage?: ConversationTokenMetrics | null;
   onOpenFile?: (fileId: string) => void;
   onOpenDrawer: () => void;
   onOpenSidebar?: () => void;
@@ -49,8 +48,7 @@ export default React.memo(function ChatHeader({
   const { contextWindow } = modelOption;
 
   // Resolve active context window tokens
-  const activeMetrics = tokenUsage && 'active' in tokenUsage ? tokenUsage.active : null;
-  const activeTokens = activeMetrics?.totalTokens ?? tokenUsage?.totalTokens ?? 0;
+  const activeTokens = tokenUsage?.active.totalTokens ?? 0;
 
   const pct =
     contextWindow > 0

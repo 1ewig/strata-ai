@@ -70,7 +70,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     rateLimitData,
     quotaError,
     clearQuotaError,
-    checkQuotaStatus,
     handleSendMessage,
     handleTriggerCompaction,
     handleStop,

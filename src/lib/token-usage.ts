@@ -65,10 +65,6 @@ export interface ConversationTokenMetrics {
   modelsUsed: string[];
   /** Detailed token and dollar cost breakdown grouped by model. */
   modelBreakdowns: ModelUsageStats[];
-  /** Backward-compatibility aliases mapping to active context. */
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
 }
 
 /**
@@ -97,13 +93,6 @@ export function formatCost(costInUSD: number): string {
   if (costInUSD < 0.0001) return '<$0.0001';
   if (costInUSD < 0.01) return `$${costInUSD.toFixed(4)}`;
   return `$${costInUSD.toFixed(3)}`;
-}
-
-/** Legacy cumulative usage type maintained for backward compatibility. */
-export interface CumulativeUsage {
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
 }
 
 /**
@@ -237,25 +226,7 @@ export function calculateTokenMetrics(
     totalCost,
     modelsUsed,
     modelBreakdowns,
-    inputTokens: activeInput,
-    outputTokens: activeOutput,
-    totalTokens: activeTotal,
   };
-}
-
-/**
- * Backward-compatible helper that delegates to calculateTokenMetrics and returns
- * active context window usage.
- *
- * @param messages - The conversation's UI messages, each typed with ChatMetadata.
- * @param contextWindow - Optional context window for calculations.
- * @returns ConversationTokenMetrics (representing active context), or null before any real provider usage exists.
- */
-export function computeCumulativeUsage(
-  messages: Array<{ role?: string; metadata?: ChatMetadata }> | undefined,
-  contextWindow: number = 131072,
-): ConversationTokenMetrics | null {
-  return calculateTokenMetrics(messages, contextWindow);
 }
 
 /**

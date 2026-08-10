@@ -50,7 +50,6 @@ export function useChatSession(chatId: string) {
     updateRateLimitData,
     setQuotaError,
     clearQuotaError,
-    checkQuotaStatus,
   } = useRateLimit();
 
   const dexieMessages = useLiveQuery(
@@ -411,7 +410,6 @@ export function useChatSession(chatId: string) {
     rateLimitData,
     quotaError,
     clearQuotaError,
-    checkQuotaStatus,
     handleSendMessage,
     handleTriggerCompaction,
     handleStop,
