@@ -1,11 +1,30 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ArrowUp, AlertCircle, Square } from 'lucide-react';
+import { ArrowUp, AlertCircle, Square, Minimize2 } from 'lucide-react';
 import { MAX_MESSAGE_CHARS, QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT } from '@/lib/limits';
 import ModelSelectorMenu from './ModelSelectorMenu';
+
+/** Available slash command definition. */
+interface SlashCommand {
+  id: string;
+  name: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+/** Registry of supported slash commands. */
+const SLASH_COMMANDS: SlashCommand[] = [
+  {
+    id: 'compact',
+    name: '/compact',
+    description: 'Condense conversation history to optimize context window',
+    icon: Minimize2,
+  },
+];
 
 /** Props for the ChatInput composer. */
 interface ChatInputProps {
   onSendMessage: (text: string) => void;
+  onTriggerCompaction?: () => void;
   onStop?: () => void;
   isLoading: boolean;
   isCompacting?: boolean;
@@ -31,11 +50,12 @@ const ROTATING_PLACEHOLDERS = [
 ];
 
 /**
- * Renders the message composer: auto-growing textarea, model/thinking-level
- * selector, and send button with floating island aesthetics.
+ * Renders the message composer: auto-growing textarea, slash command popup,
+ * model/thinking-level selector, and send button with floating island aesthetics.
  */
 export default React.memo(function ChatInput({
   onSendMessage,
+  onTriggerCompaction,
   onStop,
   isLoading,
   isCompacting = false,
@@ -49,6 +69,7 @@ export default React.memo(function ChatInput({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState('');
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
 
   // Rotate placeholders every 3.5s when the input is empty
   useEffect(() => {
@@ -64,6 +85,18 @@ export default React.memo(function ChatInput({
   const isQuotaExhausted = rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
   // Sending is also blocked once cumulative usage crosses the model's context window or during compaction.
   const isBlocked = isQuotaExhausted || isContextWindowExhausted || isCompacting;
+
+  // Slash commands menu state
+  const isSlashMenuOpen = inputValue.startsWith('/') && !isLoading && !isBlocked;
+  const slashFilter = inputValue.toLowerCase().trim();
+  const filteredCommands = SLASH_COMMANDS.filter((cmd) =>
+    cmd.name.toLowerCase().startsWith(slashFilter)
+  );
+
+  // Reset selected command index on input changes
+  useEffect(() => {
+    setSelectedCommandIndex(0);
+  }, [inputValue]);
 
   /** Keeps the input state in sync with the textarea value. */
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -99,20 +132,57 @@ export default React.memo(function ChatInput({
   // Guard flag: input exceeds the hard character cap.
   const isCharOverLimit = inputValue.length > MAX_MESSAGE_CHARS;
 
+  /** Executes a selected slash command. */
+  const executeCommand = (command: SlashCommand) => {
+    if (command.id === 'compact') {
+      setInputValue('');
+      onTriggerCompaction?.();
+    }
+  };
+
   /**
    * Validates the trimmed input against the loading/quota/limit guards,
-   * submits the message, and clears the composer on success.
+   * submits the message or command, and clears the composer on success.
    */
   const handleSend = () => {
     const text = inputValue.trim();
+    if (text.toLowerCase() === '/compact') {
+      setInputValue('');
+      onTriggerCompaction?.();
+      return;
+    }
+
     if (text && !isLoading && !isBlocked && !isCharOverLimit) {
       onSendMessage(text);
       setInputValue('');
     }
   };
 
-  /** Enter submits the message; Shift+Enter inserts a newline instead. */
+  /** Enter submits the message or selects the command; Shift+Enter inserts a newline instead. */
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (isSlashMenuOpen && filteredCommands.length > 0) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedCommandIndex((prev) => (prev + 1) % filteredCommands.length);
+        return;
+      }
+      if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedCommandIndex((prev) => (prev - 1 + filteredCommands.length) % filteredCommands.length);
+        return;
+      }
+      if (e.key === 'Enter' || e.key === 'Tab') {
+        e.preventDefault();
+        executeCommand(filteredCommands[selectedCommandIndex]);
+        return;
+      }
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setInputValue('');
+        return;
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -131,6 +201,50 @@ export default React.memo(function ChatInput({
       }}
       className="relative z-10 w-full"
     >
+      {/* Floating Slash Command Menu */}
+      {isSlashMenuOpen && filteredCommands.length > 0 && (
+        <div className="absolute bottom-full left-0 mb-2 w-full max-w-sm sm:max-w-md bg-surface-raised/95 dark:bg-surface-elevated/95 border border-edge-raised rounded-2xl shadow-card backdrop-blur-xl p-1.5 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
+          <div className="text-micro font-semibold uppercase tracking-wider text-text-muted px-2.5 py-1.5">
+            Commands
+          </div>
+          <div className="flex flex-col gap-0.5">
+            {filteredCommands.map((cmd, idx) => {
+              const Icon = cmd.icon;
+              const isSelected = idx === selectedCommandIndex;
+              return (
+                <button
+                  key={cmd.id}
+                  type="button"
+                  onMouseEnter={() => setSelectedCommandIndex(idx)}
+                  onClick={() => executeCommand(cmd)}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left w-full transition-colors cursor-pointer ${
+                    isSelected
+                      ? 'bg-primary-soft text-primary'
+                      : 'hover:bg-surface-hover text-text-primary'
+                  }`}
+                >
+                  <div
+                    className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
+                      isSelected
+                        ? 'bg-primary/20 text-primary'
+                        : 'bg-surface-raised border border-edge-raised text-text-secondary'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-label font-bold leading-tight">{cmd.name}</span>
+                    <span className="text-caption text-text-secondary truncate leading-tight">
+                      {cmd.description}
+                    </span>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div
         className={`flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${isCompacting
             ? 'border-primary/40 bg-primary-soft/10'
@@ -143,7 +257,7 @@ export default React.memo(function ChatInput({
         {isCompacting ? (
           <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-primary text-label font-medium animate-in fade-in">
             <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
-            <span>Optimizing conversation context (Compacting)... Please wait.</span>
+            <span>Compacting conversation context... Please wait.</span>
           </div>
         ) : isBlocked ? (
           <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in">

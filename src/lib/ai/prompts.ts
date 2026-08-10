@@ -64,7 +64,7 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget
     `- Active conversation context occupancy: ${usageText} / ${windowText} tokens (${pct}% used).`,
     `- Available context headroom: ${remainingText} tokens.`,
     nearLimit
-      ? `- You are near or above ${CONTEXT_COMPACTION_THRESHOLD_PERCENT}% of the active context window: be concise, avoid repeating content already in files, and if the user needs far more room, context compaction will automatically summarize this history.`
+      ? `- You are utilizing a significant portion of the active context window: be concise, avoid repeating content already in files, and note that the user can use /compact to condense conversation history if needed.`
       : "- Keep replies reasonably sized to stay well within the active context window.",
   ].join("\n");
 

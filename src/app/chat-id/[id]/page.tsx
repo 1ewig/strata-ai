@@ -73,6 +73,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     clearQuotaError,
     checkQuotaStatus,
     handleSendMessage,
+    handleTriggerCompaction,
     handleStop,
     handleSelectFile,
     handleCreateFile,
@@ -133,6 +134,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const chatInputNode = (
     <ChatInput
       onSendMessage={handleSendMessage}
+      onTriggerCompaction={handleTriggerCompaction}
       onStop={handleStop}
       isLoading={isLoading}
       isCompacting={isCompacting}

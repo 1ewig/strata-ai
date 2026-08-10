@@ -354,34 +354,61 @@ export async function runCompactionResponse({
     },
   ];
 
-  const result = streamText({
-    model: resolvedModel.model,
-    ...(resolvedModel.reasoning !== undefined
-      ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
-      : {}),
-    ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
-    system: buildCompactionInstruction(files),
-    messages: promptMessages,
-    abortSignal: signal,
-    experimental_transform: [
-      smoothStream({
-        delayInMs: 25,
-        chunking: "word",
-      }),
-    ],
-    onStart() {
-      console.log("[compaction] Context compaction stream started.");
-    },
-    onEnd({ finishReason, usage }) {
-      console.log(
-        `[compaction] Compaction stream finished (${finishReason}). Usage:`,
-        usage
+  const stream = createUIMessageStream({
+    execute: async ({ writer }) => {
+      let lastStepUsage: LanguageModelUsage | undefined;
+      const result = streamText({
+        model: resolvedModel.model,
+        ...(resolvedModel.reasoning !== undefined
+          ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
+          : {}),
+        ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
+        system: buildCompactionInstruction(files),
+        messages: promptMessages,
+        abortSignal: signal,
+        experimental_transform: [
+          smoothStream({
+            delayInMs: 25,
+            chunking: "word",
+          }),
+        ],
+        onStart() {
+          console.log("[compaction] Context compaction stream started.");
+        },
+        onStepEnd({ usage }) {
+          if (usage) {
+            lastStepUsage = usage;
+          }
+        },
+        onEnd({ finishReason, usage }) {
+          console.log(
+            `[compaction] Compaction stream finished (${finishReason}). Usage:`,
+            usage
+          );
+        },
+        onError({ error }) {
+          console.error("[compaction] Stream error:", error);
+        },
+      });
+
+      writer.merge(
+        toUIMessageStream({
+          stream: result.stream,
+          messageMetadata: ({ part }) => {
+            if (part.type === "finish") {
+              return {
+                isCompactedSummary: true,
+                usage: lastStepUsage || part.totalUsage,
+                stepTotalUsage: part.totalUsage,
+                modelId: modelId || DEFAULT_AGENT_MODEL,
+              };
+            }
+            return undefined;
+          },
+        })
       );
-    },
-    onError({ error }) {
-      console.error("[compaction] Stream error:", error);
     },
   });
 
-  return result.toTextStreamResponse();
+  return createUIMessageStreamResponse({ stream });
 }

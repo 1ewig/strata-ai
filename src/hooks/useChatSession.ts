@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
 import { useChat } from '@ai-sdk/react';
+import { readUIMessageStream, parseJsonEventStream, uiMessageChunkSchema } from 'ai';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   db,
@@ -20,7 +21,7 @@ import {
   findLatestCompactedMessageIndex,
 } from '@/lib/token-usage';
 import { getModelContextWindow } from '@/lib/models';
-import { isContextCompactionRequired, CONTEXT_COMPACTION_THRESHOLD_PERCENT, buildQuotaError } from '@/lib/limits';
+import { buildQuotaError } from '@/lib/limits';
 import { useRateLimit } from '@/contexts/RateLimitContext';
 import { useSession } from '@/lib/auth-client';
 
@@ -115,12 +116,12 @@ export function useChatSession(chatId: string) {
   });
 
   /**
-   * Executes the automated context compaction stream against /api/agent/compact,
-   * streams the summary into the conversation, and reconciles into Dexie.
+   * Executes the manual context compaction stream against /api/agent/compact,
+   * streams the summary (including reasoning and markdown) into the conversation, and reconciles into Dexie.
    */
   const triggerCompaction = useCallback(
     async (messagesToCompact: any[]) => {
-      if (isCompactingRef.current || !chatId) return;
+      if (isCompactingRef.current || !chatId || messagesToCompact.length === 0) return;
 
       isCompactingRef.current = true;
       setIsCompacting(true);
@@ -130,7 +131,7 @@ export function useChatSession(chatId: string) {
         id: compactionMessageId,
         role: 'assistant',
         content: '',
-        parts: [{ type: 'text', text: '' }],
+        parts: [],
         metadata: {
           isCompactedSummary: true,
           modelId: modelRef.current,
@@ -156,48 +157,58 @@ export function useChatSession(chatId: string) {
           throw new Error(`[Compaction Error] Failed to stream context compaction: HTTP ${res.status}`);
         }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let accumulatedText = '';
+        const chunkStream = parseJsonEventStream({
+          stream: res.body,
+          schema: uiMessageChunkSchema,
+        }).pipeThrough(
+          new TransformStream({
+            transform(chunk, controller) {
+              if (chunk.success) {
+                controller.enqueue(chunk.value);
+              }
+            },
+          }),
+        );
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          accumulatedText += chunk;
+        let latestCompactionMsg: any = initialCompactionMsg;
 
-          const updatedMsg: any = {
+        for await (const uiMessage of readUIMessageStream({ stream: chunkStream })) {
+          latestCompactionMsg = {
+            ...uiMessage,
             id: compactionMessageId,
             role: 'assistant',
-            content: accumulatedText,
-            parts: [{ type: 'text', text: accumulatedText }],
             metadata: {
+              ...(uiMessage.metadata || {}),
               isCompactedSummary: true,
               modelId: modelRef.current,
             },
           };
 
-          chatRef.current?.setMessages([...messagesToCompact, updatedMsg]);
+          chatRef.current?.setMessages([...messagesToCompact, latestCompactionMsg]);
         }
 
-        // Finalize compaction message with calculated post-compaction baseline usage
-        const finalOutputTokens = Math.max(1, Math.ceil(accumulatedText.length / 4));
+        // Finalize compaction message with usage metrics
+        const fullText =
+          latestCompactionMsg.parts
+            ?.filter((p: any) => p.type === 'text')
+            .map((p: any) => p.text)
+            .join('') || latestCompactionMsg.content || '';
+        const outputTokens = Math.max(1, Math.ceil(fullText.length / 4));
+
         const finalCompactionMsg: any = {
-          id: compactionMessageId,
-          role: 'assistant',
-          content: accumulatedText,
-          parts: [{ type: 'text', text: accumulatedText }],
+          ...latestCompactionMsg,
           metadata: {
+            ...(latestCompactionMsg.metadata || {}),
             isCompactedSummary: true,
-            usage: {
+            usage: latestCompactionMsg.metadata?.usage || {
               inputTokens: 1000,
-              outputTokens: finalOutputTokens,
-              totalTokens: 1000 + finalOutputTokens,
+              outputTokens,
+              totalTokens: 1000 + outputTokens,
             },
-            stepTotalUsage: {
+            stepTotalUsage: latestCompactionMsg.metadata?.stepTotalUsage || {
               inputTokens: 1000,
-              outputTokens: finalOutputTokens,
-              totalTokens: 1000 + finalOutputTokens,
+              outputTokens,
+              totalTokens: 1000 + outputTokens,
             },
             modelId: modelRef.current,
           },
@@ -282,31 +293,8 @@ export function useChatSession(chatId: string) {
           continuationCountRef,
           sendMessageRef,
         });
-
-        // Trigger context compaction strictly AFTER streaming has ended and never mid-continuation
-        if (finishReason !== 'step-limit' && !isCompactingRef.current) {
-          const currentContextWindow = getModelContextWindow(modelRef.current);
-          const currentMetrics = calculateTokenMetrics(fullMessages as UsageMessage[], currentContextWindow);
-          const percentUsed = currentMetrics?.active.percentUsed ?? 0;
-
-          if (isContextCompactionRequired(percentUsed)) {
-            const lastMsg: any = fullMessages[fullMessages.length - 1];
-            const isLastAlreadyCompacted = lastMsg?.metadata?.isCompactedSummary === true;
-            const latestCompactedIdx = findLatestCompactedMessageIndex(fullMessages as any);
-            const hasUncompactedMessages = latestCompactedIdx < fullMessages.length - 1;
-
-            if (!isLastAlreadyCompacted && hasUncompactedMessages) {
-              console.log(
-                `[useChatSession] Context occupancy is ${percentUsed.toFixed(1)}% (>= ${CONTEXT_COMPACTION_THRESHOLD_PERCENT}%). Initiating context compaction...`,
-              );
-              setTimeout(() => {
-                triggerCompaction(fullMessages);
-              }, 150);
-            }
-          }
-        }
       },
-      [chatId, userId, triggerCompaction],
+      [chatId, userId],
     ),
   });
 
@@ -401,31 +389,11 @@ export function useChatSession(chatId: string) {
 
   const isLoading = ((chat.status === 'streaming' || chat.status === 'submitted') && !quotaError) || isCompacting;
 
-  // Auto-trigger context compaction if active context usage crosses the threshold
-  useEffect(() => {
-    if (
-      !isLoading &&
-      !isCompactingRef.current &&
-      tokenMetrics &&
-      chat.status === 'ready' &&
-      chat.messages.length > 0
-    ) {
-      const percentUsed = tokenMetrics.active.percentUsed;
-      if (isContextCompactionRequired(percentUsed)) {
-        const lastMsg: any = chat.messages[chat.messages.length - 1];
-        const isLastAlreadyCompacted = lastMsg?.metadata?.isCompactedSummary === true;
-        const latestCompactedIdx = findLatestCompactedMessageIndex(chat.messages as any);
-        const hasUncompactedMessages = latestCompactedIdx < chat.messages.length - 1;
-
-        if (!isLastAlreadyCompacted && hasUncompactedMessages) {
-          console.log(
-            `[useChatSession] Context occupancy is ${percentUsed.toFixed(1)}% (>= ${CONTEXT_COMPACTION_THRESHOLD_PERCENT}%). Auto-triggering context compaction...`,
-          );
-          triggerCompaction(chat.messages);
-        }
-      }
+  const handleTriggerCompaction = useCallback(() => {
+    if (chat.messages.length > 0 && !isCompacting && !isLoading) {
+      triggerCompaction(chat.messages);
     }
-  }, [tokenMetrics, isLoading, chat.status, chat.messages, triggerCompaction]);
+  }, [chat.messages, isCompacting, isLoading, triggerCompaction]);
 
   return {
     model: modelSettings.model,
@@ -448,6 +416,7 @@ export function useChatSession(chatId: string) {
     clearQuotaError,
     checkQuotaStatus,
     handleSendMessage,
+    handleTriggerCompaction,
     handleStop,
     handleSelectFile: workspace.handleSelectFile,
     handleCreateFile: workspace.handleCreateFile,

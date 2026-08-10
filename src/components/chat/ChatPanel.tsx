@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Globe, FileText, Compass, Sparkles } from 'lucide-react';
+import { Globe, FileText, Compass } from 'lucide-react';
 import ChatBubble from '@/components/chat/ChatBubble';
 import { QuotaErrorCard } from '@/components/chat/QuotaErrorCard';
 import { StrataIcon } from '@/components/ui/strata-icon';
@@ -167,13 +167,12 @@ export default React.memo(function ChatPanel({
         return (
           <React.Fragment key={message.id}>
             {isCompacted && (
-              <div className="my-6 flex items-center justify-center relative fade-in" role="separator" aria-label="Compaction divider">
+              <div className="my-6 flex items-center justify-center relative fade-in" role="separator" aria-label="Compaction started divider">
                 <div className="absolute inset-0 flex items-center" aria-hidden="true">
                   <div className="w-full border-t border-edge-raised" />
                 </div>
-                <div className="relative px-3.5 py-1 rounded-full bg-surface-elevated/95 dark:bg-surface-elevated/90 border border-edge-raised text-micro font-semibold uppercase tracking-wider text-primary shadow-sm flex items-center gap-1.5 backdrop-blur-md">
-                  <Sparkles className="w-3.5 h-3.5 text-primary" />
-                  <span>Compaction</span>
+                <div className="relative px-3.5 py-1 rounded-full bg-surface-elevated/95 dark:bg-surface-elevated/90 border border-edge-raised text-micro font-semibold uppercase tracking-wider text-text-muted dark:text-text-secondary shadow-sm backdrop-blur-md">
+                  <span>Compaction started</span>
                 </div>
               </div>
             )}
@@ -182,6 +181,16 @@ export default React.memo(function ChatPanel({
               isStreaming={isLastAssistant}
               onOpenDrawer={onOpenDrawer}
             />
+            {isCompacted && !isLastAssistant && (
+              <div className="my-6 flex items-center justify-center relative fade-in" role="separator" aria-label="Compaction completed divider">
+                <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                  <div className="w-full border-t border-edge-raised" />
+                </div>
+                <div className="relative px-3.5 py-1 rounded-full bg-surface-elevated/95 dark:bg-surface-elevated/90 border border-edge-raised text-micro font-semibold uppercase tracking-wider text-text-muted dark:text-text-secondary shadow-sm backdrop-blur-md">
+                  <span>Compaction completed</span>
+                </div>
+              </div>
+            )}
           </React.Fragment>
         );
       })}
