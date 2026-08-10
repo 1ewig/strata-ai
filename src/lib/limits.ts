@@ -14,6 +14,9 @@ export const QUOTA_5H_LIMIT = 10;
 /** Maximum messages allowed in the 7-day sliding window. */
 export const QUOTA_WEEK_LIMIT = 50;
 
+/** Context-window occupancy percentage that flips the UI and system prompt into "near limit" warning mode. */
+export const NEAR_LIMIT_PERCENT = 80;
+
 /**
  * Builds a quota error message and retry hint when a window is exhausted.
  * @param remaining5h - Remaining messages in the 5-hour window.
@@ -33,6 +36,16 @@ export function buildQuotaError(
       : `Your weekly quota is exhausted (${QUOTA_WEEK_LIMIT}/${QUOTA_WEEK_LIMIT} messages used).`,
     retryAfter,
   };
+}
+
+/**
+ * Canonical rate-limit rejection message used by the server-side 429 responses.
+ * @param retryAfter - Optional seconds until the oldest entry expires.
+ * @returns A human-readable summary of the enforced quotas and retry hint.
+ */
+export function buildRateLimitErrorMessage(retryAfter?: number): string {
+  const retryHint = retryAfter != null ? ` Try again in ${Math.ceil(retryAfter / 60)} min.` : " Please try again later.";
+  return `Max ${QUOTA_5H_LIMIT} messages per 5 hours, ${QUOTA_WEEK_LIMIT} per week.${retryHint}`;
 }
 
 /**

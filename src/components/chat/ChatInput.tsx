@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { ArrowUp, AlertCircle, Square, Minimize2 } from 'lucide-react';
-import { MAX_MESSAGE_CHARS, QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT } from '@/lib/limits';
+import { MAX_MESSAGE_CHARS, buildQuotaError } from '@/lib/limits';
 import ModelSelectorMenu from './ModelSelectorMenu';
 
 /** Available slash command definition. */
@@ -85,6 +85,20 @@ export default React.memo(function ChatInput({
   const isQuotaExhausted = rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
   // Sending is also blocked once cumulative usage crosses the model's context window or during compaction.
   const isBlocked = isQuotaExhausted || isContextWindowExhausted || isCompacting;
+
+  // Canonical quota-exhausted copy (from buildQuotaError) with a retry hint.
+  const blockedQuotaCopy = React.useMemo(() => {
+    const err = buildQuotaError(
+      rateLimitData?.remaining5h ?? 0,
+      rateLimitData?.remainingWeek ?? 0,
+      rateLimitData?.retryAfter,
+    );
+    if (!err) return '';
+    const retryHint = err.retryAfter
+      ? ` Resets in ~${Math.ceil(err.retryAfter / 60)} min.`
+      : ' Please wait before sending.';
+    return `${err.message}${retryHint}`;
+  }, [rateLimitData]);
 
   // Slash commands menu state
   const isSlashMenuOpen = inputValue.startsWith('/') && !isLoading && !isBlocked;
@@ -265,14 +279,7 @@ export default React.memo(function ChatInput({
             <span>
               {isContextWindowExhausted
                 ? 'Context window reached. Start a new chat to continue.'
-                : rateLimitData?.remaining5h === 0
-                  ? `5-hour limit reached (${QUOTA_5H_LIMIT}/${QUOTA_5H_LIMIT} msgs used).`
-                  : `Weekly limit reached (${QUOTA_WEEK_LIMIT}/${QUOTA_WEEK_LIMIT} msgs used).`}
-              {!isContextWindowExhausted && rateLimitData?.retryAfter
-                ? ` Resets in ~${Math.ceil(rateLimitData.retryAfter / 60)} min.`
-                : !isContextWindowExhausted
-                  ? ' Please wait before sending.'
-                  : ''}
+                : blockedQuotaCopy}
             </span>
           </div>
         ) : (

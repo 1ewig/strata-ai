@@ -4,6 +4,7 @@ import React, { useState, useRef } from 'react';
 import { Folder, Menu, Plus } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MODELS } from '@/lib/models';
+import { NEAR_LIMIT_PERCENT } from '@/lib/limits';
 import {
   formatContextWindow,
   formatTokens,
@@ -55,7 +56,7 @@ export default React.memo(function ChatHeader({
       ? Math.min(100, Math.round((activeTokens / contextWindow) * 100))
       : 0;
 
-  const isNearLimit = pct >= 80;
+  const isNearLimit = pct >= NEAR_LIMIT_PERCENT;
 
   const togglePopover = () => {
     setIsPopoverOpen((prev) => !prev);

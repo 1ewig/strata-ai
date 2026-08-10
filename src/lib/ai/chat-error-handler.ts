@@ -1,6 +1,6 @@
 import { db } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
-import { QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT } from '@/lib/limits';
+import { buildQuotaError } from '@/lib/limits';
 
 /**
  * Maps raw error messages to user-friendly copy based on detected patterns.
@@ -54,9 +54,12 @@ export async function handleChatError({
   // Quota hits short-circuit: show the quota card instead of an error message.
   const isQuota = errMsg.includes('429') || errMsg.toLowerCase().includes('rate limit');
 
+  // Canonical exhausted-quota copy (no remaining values are known on this path).
+  const quotaMessage = buildQuotaError(0, 0)?.message;
+
   if (isQuota) {
     setQuotaError((prev: any) => prev || {
-      message: `Usage quota reached (${QUOTA_5H_LIMIT} msgs / 5h, ${QUOTA_WEEK_LIMIT} msgs / week). Please wait before trying again.`,
+      message: quotaMessage || 'Usage quota reached. Please wait before trying again.',
     });
     return;
   }

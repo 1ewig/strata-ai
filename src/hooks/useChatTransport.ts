@@ -2,8 +2,7 @@
 
 import { useMemo } from 'react';
 import { DefaultChatTransport } from 'ai';
-import { findLatestCompactedMessageIndex } from '@/lib/token-usage';
-import { QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT } from '@/lib/limits';
+import { QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT, buildQuotaError } from '@/lib/limits';
 
 /** Ref-based inputs passed by the parent session hook, so the transport can read latest values without re-creating itself. */
 interface UseChatTransportParams {
@@ -39,38 +38,22 @@ export function useChatTransport({
           files: filesRef.current,
         }),
         fetch: async (url, options) => {
-          let requestOptions = options;
-
-          // Prune history before the latest compaction summary point before sending to the model,
-          // so the model receives [Compacted Summary, ...newMessages] without context blowup.
-          if (typeof options?.body === 'string') {
-            try {
-              const parsedBody = JSON.parse(options.body);
-              if (Array.isArray(parsedBody.messages) && parsedBody.messages.length > 0) {
-                const compactIdx = findLatestCompactedMessageIndex(parsedBody.messages);
-                if (compactIdx >= 0) {
-                  parsedBody.messages = parsedBody.messages.slice(compactIdx);
-                  requestOptions = {
-                    ...options,
-                    body: JSON.stringify(parsedBody),
-                  };
-                }
-              }
-            } catch {
-              // Ignore parse errors and proceed with original options
-            }
-          }
-
-          const res = await fetch(url, requestOptions);
+          // History pruning to the latest compaction summary is handled server-side
+          // in /api/agent (shared sliceMessagesAfterCompaction), so this transport
+          // stays a pure network/header layer.
+          const res = await fetch(url, options);
           // Rate-limit state is returned on every response; surface it to the global quota context
           const rem5h = res.headers.get('X-RateLimit-Remaining-5h');
           const remWeek = res.headers.get('X-RateLimit-Remaining-Week');
           const retryHeader = res.headers.get('X-RateLimit-Retry-After') || res.headers.get('Retry-After');
           const retryAfterSec = retryHeader ? parseInt(retryHeader, 10) : undefined;
 
+          // Parse header values once so both the context sync and the 429 fallback
+          // agree on the remaining quantities (headers may be absent on non-stream errors).
+          const num5h = rem5h !== null ? parseInt(rem5h, 10) : QUOTA_5H_LIMIT;
+          const numWeek = remWeek !== null ? parseInt(remWeek, 10) : QUOTA_WEEK_LIMIT;
+
           if (rem5h !== null && remWeek !== null) {
-            const num5h = parseInt(rem5h, 10);
-            const numWeek = parseInt(remWeek, 10);
             updateRateLimitData({
               remaining5h: num5h,
               remainingWeek: numWeek,
@@ -81,7 +64,10 @@ export function useChatTransport({
           if (res.status === 429) {
             const data = await res.clone().json().catch(() => null);
             setQuotaError({
-              message: data?.message || `Usage quota reached (${QUOTA_5H_LIMIT} msgs per 5 hours, ${QUOTA_WEEK_LIMIT} msgs per week). Please try again later.`,
+              message:
+                data?.message ||
+                buildQuotaError(num5h, numWeek)?.message ||
+                `Usage quota reached. Please try again later.`,
               retryAfter: retryAfterSec || data?.retryAfter,
             });
             // Stop the in-flight stream on the next tick so the partial message is dropped

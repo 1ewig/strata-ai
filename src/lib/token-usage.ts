@@ -253,21 +253,4 @@ export function formatContextWindow(contextWindow: number): string {
   return contextWindow >= 1000000
     ? `${(contextWindow / 1000000).toFixed(1)}M`
     : `${Math.round(contextWindow / 1000)}k`;
-}
-
-/**
- * Finds the index of the latest compaction summary message in a messages array.
- * @param messages - Array of messages to search.
- * @returns The index of the latest compaction summary message, or -1 if none exists.
- */
-export function findLatestCompactedMessageIndex(
-  messages: Array<{ metadata?: ChatMetadata; [key: string]: any }> | undefined,
-): number {
-  if (!messages || messages.length === 0) return -1;
-  for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i]?.metadata?.isCompactedSummary === true) {
-      return i;
-    }
-  }
-  return -1;
 }

@@ -14,10 +14,7 @@ import { useWorkspaceFiles } from './useWorkspaceFiles';
 import { useChatTransport } from './useChatTransport';
 import { handleChatError } from '@/lib/ai/chat-error-handler';
 import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
-import {
-  calculateTokenMetrics,
-  ChatMetadata,
-} from '@/lib/token-usage';
+import { calculateTokenMetrics, ChatMetadata } from '@/lib/token-usage';
 import { getModelContextWindow } from '@/lib/models';
 import { buildQuotaError } from '@/lib/limits';
 import { useRateLimit } from '@/contexts/RateLimitContext';
@@ -143,6 +140,7 @@ export function useChatSession(chatId: string) {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
+            // History pruning to the latest compaction summary happens server-side.
             messages: messagesToCompact,
             files: filesRef.current,
             model: modelRef.current,

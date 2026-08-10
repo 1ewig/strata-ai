@@ -7,6 +7,7 @@ import {
   formatCost,
   ConversationTokenMetrics,
 } from '@/lib/token-usage';
+import { NEAR_LIMIT_PERCENT } from '@/lib/limits';
 
 export interface TokenUsagePopoverProps {
   modelOption: ModelOption;
@@ -63,7 +64,7 @@ export default function TokenUsagePopover({
       ? Math.min(100, Math.round((activeTokens / contextWindow) * 100))
       : 0;
 
-  const isNearLimit = pct >= 80;
+  const isNearLimit = pct >= NEAR_LIMIT_PERCENT;
 
   return (
     <>

@@ -4,7 +4,39 @@ import {
   MAX_FILES_PER_WORKSPACE,
   MAX_MESSAGE_CHARS,
   MAX_WORKSPACE_TOTAL_CHARS,
+  NEAR_LIMIT_PERCENT,
 } from "@/lib/limits";
+
+/**
+ * Returns only files that carry actual content worth surfacing to the model.
+ */
+function getActiveFiles(filesInput?: WorkspaceFile[]): WorkspaceFile[] {
+  return (filesInput ?? []).filter((f) => f.content?.trim());
+}
+
+/**
+ * Formats the metadata-only workspace file listing injected into system prompts.
+ */
+function buildWorkspaceFileListing(activeFiles: WorkspaceFile[]): string {
+  return activeFiles
+    .map(
+      (f) =>
+        `- ${f.name} (${f.language || "markdown"}, ${f.content.length.toLocaleString()}/${MAX_FILE_CHARS.toLocaleString()} chars, id: ${f.id})`,
+    )
+    .join("\n");
+}
+
+/**
+ * Formats the current date, day of week, and year for real-time temporal awareness.
+ */
+function formatCurrentDate(): string {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 /**
  * Token-budget context shared with the model so it can size replies and flag
@@ -29,15 +61,10 @@ export interface TokenBudgetContext {
  */
 export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget?: TokenBudgetContext): string {
   // Only files with actual content are worth surfacing to the model.
-  const activeFiles = (filesInput ?? []).filter((f) => f.content?.trim());
+  const activeFiles = getActiveFiles(filesInput);
   const hasFiles = activeFiles.length > 0;
 
-  const formattedFilesList = activeFiles
-    .map(
-      (f) =>
-        `- ${f.name} (${f.language || "markdown"}, ${f.content.length.toLocaleString()}/${MAX_FILE_CHARS.toLocaleString()} chars, id: ${f.id})`,
-    )
-    .join("\n");
+  const formattedFilesList = buildWorkspaceFileListing(activeFiles);
 
   // Token budget awareness: active context occupancy vs context window, with headroom sizing hints.
   const { contextWindow, totalTokens, remainingTokens, percentUsed } = tokenBudget ?? {};
@@ -56,8 +83,8 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget
       ? Math.max(0, contextWindow - totalTokens).toLocaleString()
       : windowText;
   // Occupancy threshold that flips the system prompt into "be concise" mode.
-  // Standalone concision heuristic (no longer tied to any compaction trigger).
-  const nearLimit = pct >= 70;
+  // Shared with the UI warning state via NEAR_LIMIT_PERCENT so both agree.
+  const nearLimit = pct >= NEAR_LIMIT_PERCENT;
 
   const tokenBudgetSection = [
     "",
@@ -70,12 +97,7 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget
   ].join("\n");
 
   // Format current date, day of week, and year for real-time temporal awareness.
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const currentDate = formatCurrentDate();
 
   return `You are Strata AI — an elite autonomous AI workspace studio architect, technical document engineer, and a genuinely helpful assistant. Your mission is to create, analyze, edit, organize, and maintain dynamic multi-file workspaces (code, notes, specifications, and documentation) with surgical precision — while communicating clearly, honestly, and with the user's actual goal in mind.
 
@@ -179,22 +201,12 @@ Your chat replies are rendered with full GitHub-Flavored Markdown (GFM) with cus
  * @returns The complete system instruction string for context compaction.
  */
 export function buildCompactionInstruction(filesInput?: WorkspaceFile[]): string {
-  const activeFiles = (filesInput ?? []).filter((f) => f.content?.trim());
+  const activeFiles = getActiveFiles(filesInput);
   const hasFiles = activeFiles.length > 0;
 
-  const formattedFilesList = activeFiles
-    .map(
-      (f) =>
-        `- ${f.name} (${f.language || "markdown"}, ${f.content.length.toLocaleString()}/${MAX_FILE_CHARS.toLocaleString()} chars, id: ${f.id})`,
-    )
-    .join("\n");
+  const formattedFilesList = buildWorkspaceFileListing(activeFiles);
 
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const currentDate = formatCurrentDate();
 
   return `You are Strata AI's Context Compaction Engine. Your role is to analyze the preceding conversation history and workspace state, then produce an exhaustive, highly structured, and dense context distillation that will serve as the memory foundation for all subsequent turns in this workspace.
 

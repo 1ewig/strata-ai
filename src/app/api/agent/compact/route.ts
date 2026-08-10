@@ -1,19 +1,9 @@
-import { z } from "zod";
-import { WorkspaceFile } from "@/lib/schemas";
+import { agentRequestBodySchema } from "@/lib/schemas";
+import { buildRateLimitErrorMessage } from "@/lib/limits";
 import { runCompactionResponse } from "@/lib/ai/agent-runner";
 import { auth } from "@/lib/auth";
 import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
-
-/**
- * Schema for the compaction request body: conversation messages plus optional
- * workspace files and model configuration.
- */
-const compactionBodySchema = z.object({
-  messages: z.array(z.any()),
-  files: z.array(z.any()).optional(),
-  model: z.string().optional(),
-  thinkingLevel: z.string().optional(),
-});
+import { sliceMessagesAfterCompaction } from "@/lib/ai/message-extractor";
 
 /**
  * POST /api/agent/compact - streams a high-density context compaction summary
@@ -40,7 +30,7 @@ export async function POST(req: Request) {
     return new Response(
       JSON.stringify({
         error: "Rate limit exceeded",
-        message: `Max 10 messages per 5 hours, 50 per week. Try again in ${Math.ceil(rateLimit.retryAfter! / 60)} min.`,
+        message: buildRateLimitErrorMessage(rateLimit.retryAfter),
         retryAfter: rateLimit.retryAfter,
       }),
       {
@@ -57,7 +47,7 @@ export async function POST(req: Request) {
   }
 
   // Validate the body shape before use.
-  const parsed = compactionBodySchema.safeParse(await req.json());
+  const parsed = agentRequestBodySchema.safeParse(await req.json());
 
   if (!parsed.success) {
     return new Response(
@@ -68,10 +58,13 @@ export async function POST(req: Request) {
 
   const { messages, files, model, thinkingLevel } = parsed.data;
 
+  // Prune pre-compacted dialogue: if earlier compaction exists, slice from it to avoid re-summarizing old history.
+  const effectiveMessages = sliceMessagesAfterCompaction(messages);
+
   // Delegate compaction streaming to the agent runner.
   return runCompactionResponse({
-    files: (files as WorkspaceFile[]) || [],
-    messages,
+    files: files || [],
+    messages: effectiveMessages,
     modelId: model,
     thinkingLevel,
     signal: req.signal,
