@@ -182,14 +182,16 @@ export default React.memo(function ChatPanel({
         />
       )}
 
-      {/* Standalone working indicator before the first assistant message mounts */}
+      {/* Standalone typing bubble before the first assistant tokens arrive. */}
       {!quotaError && isLoading && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
         <div className="flex items-start gap-3.5 fade-in">
           <div className="hidden sm:flex w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary items-center justify-center text-surface shrink-0 mt-0.5 shadow-glow-primary">
             <StrataIcon className="w-4.5 h-4.5" />
           </div>
-          <div className="flex items-center py-1.5 text-text-muted font-mono text-caption">
-            <span className="font-semibold text-text-secondary">Working...</span>
+          <div className="px-4 py-3 rounded-2xl rounded-tl-xs bg-surface-overlay/90 border border-edge-raised flex items-center gap-1.5 backdrop-blur-sm">
+            <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
+            <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
+            <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
           </div>
         </div>
       )}
