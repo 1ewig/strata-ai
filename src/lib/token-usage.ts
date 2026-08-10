@@ -11,7 +11,7 @@ export interface ChatMetadata {
   /** Aggregate multi-step API execution tokens across all tool iterations in this turn. */
   stepTotalUsage?: LanguageModelUsage;
   modelId?: string;
-  /** True when this message represents an automated context compaction summary. */
+  /** True when this message is a context compaction summary (created via the /compact slash command). */
   isCompactedSummary?: boolean;
 }
 
@@ -176,10 +176,12 @@ export function calculateTokenMetrics(
   let activeOutput = latestUsage.outputTokens ?? 0;
 
   // When the latest assistant message is a context compaction summary, active context
-  // resets to the baseline system context plus the summary length, dropping the discarded history.
+  // resets to the baseline system prompt footprint plus the real summary output tokens,
+  // accurately reflecting the trimmed prompt working memory for subsequent turns.
   if (isLatestTurnCompacted) {
-    activeInput = 1000;
-    activeOutput = latestUsage.outputTokens ?? 1000;
+    const estimatedSystemBaseline = 1500;
+    activeInput = estimatedSystemBaseline;
+    activeOutput = latestUsage.outputTokens ?? 0;
   }
 
   const activeTotal = isLatestTurnCompacted

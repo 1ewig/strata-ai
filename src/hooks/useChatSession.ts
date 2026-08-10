@@ -93,7 +93,7 @@ export function useChatSession(chatId: string) {
     });
   }, [chatId, modelSettings.model, modelSettings.thinkingLevel, userId]);
 
-  // Tracks automated background context compaction state
+  // Tracks in-flight context compaction state (manual via /compact)
   const [isCompacting, setIsCompacting] = useState(false);
   const isCompactingRef = useRef(false);
 
@@ -150,8 +150,35 @@ export function useChatSession(chatId: string) {
           }),
         });
 
+        const rem5h = res.headers.get('X-RateLimit-Remaining-5h');
+        const remWeek = res.headers.get('X-RateLimit-Remaining-Week');
+        const retryHeader = res.headers.get('X-RateLimit-Retry-After') || res.headers.get('Retry-After');
+        const retryAfterSec = retryHeader ? parseInt(retryHeader, 10) : undefined;
+
+        if (rem5h !== null && remWeek !== null) {
+          const num5h = parseInt(rem5h, 10);
+          const numWeek = parseInt(remWeek, 10);
+          updateRateLimitData({
+            remaining5h: num5h,
+            remainingWeek: numWeek,
+            retryAfter: retryAfterSec,
+          });
+        }
+
+        if (res.status === 429) {
+          const data = await res.clone().json().catch(() => null);
+          setQuotaError({
+            message: data?.message || `Usage quota reached (10 msgs per 5 hours, 50 msgs per week). Please try again later.`,
+            retryAfter: retryAfterSec || data?.retryAfter,
+          });
+          chatRef.current?.setMessages(messagesToCompact);
+          return;
+        }
+
         if (!res.ok || !res.body) {
-          throw new Error(`[Compaction Error] Failed to stream context compaction: HTTP ${res.status}`);
+          const data = await res.clone().json().catch(() => null);
+          const detailMsg = data?.error || data?.message || `HTTP ${res.status}`;
+          throw new Error(`[Compaction Error] ${detailMsg}`);
         }
 
         const chunkStream = parseJsonEventStream({
@@ -184,29 +211,11 @@ export function useChatSession(chatId: string) {
           chatRef.current?.setMessages([...messagesToCompact, latestCompactionMsg]);
         }
 
-        // Finalize compaction message with usage metrics
-        const fullText =
-          latestCompactionMsg.parts
-            ?.filter((p: any) => p.type === 'text')
-            .map((p: any) => p.text)
-            .join('') || latestCompactionMsg.content || '';
-        const outputTokens = Math.max(1, Math.ceil(fullText.length / 4));
-
         const finalCompactionMsg: any = {
           ...latestCompactionMsg,
           metadata: {
             ...(latestCompactionMsg.metadata || {}),
             isCompactedSummary: true,
-            usage: latestCompactionMsg.metadata?.usage || {
-              inputTokens: 1000,
-              outputTokens,
-              totalTokens: 1000 + outputTokens,
-            },
-            stepTotalUsage: latestCompactionMsg.metadata?.stepTotalUsage || {
-              inputTokens: 1000,
-              outputTokens,
-              totalTokens: 1000 + outputTokens,
-            },
             modelId: modelRef.current,
           },
         };
@@ -231,7 +240,7 @@ export function useChatSession(chatId: string) {
         setIsCompacting(false);
       }
     },
-    [chatId, userId],
+    [chatId, userId, updateRateLimitData, setQuotaError],
   );
 
   const chat = useChat({

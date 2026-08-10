@@ -322,6 +322,8 @@ export interface RunCompactionResponseParams {
   modelId?: string;
   thinkingLevel?: string;
   signal?: AbortSignal;
+  remaining5h?: number;
+  remainingWeek?: number;
 }
 
 /**
@@ -336,6 +338,8 @@ export async function runCompactionResponse({
   modelId,
   thinkingLevel,
   signal,
+  remaining5h,
+  remainingWeek,
 }: RunCompactionResponseParams): Promise<Response> {
   const resolvedModel = resolveAgentModel(modelId || DEFAULT_AGENT_MODEL, thinkingLevel);
 
@@ -410,5 +414,11 @@ export async function runCompactionResponse({
     },
   });
 
-  return createUIMessageStreamResponse({ stream });
+  return createUIMessageStreamResponse({
+    stream,
+    headers: {
+      ...(remaining5h !== undefined ? { "X-RateLimit-Remaining-5h": String(remaining5h) } : {}),
+      ...(remainingWeek !== undefined ? { "X-RateLimit-Remaining-Week": String(remainingWeek) } : {}),
+    },
+  });
 }
