@@ -3,6 +3,7 @@
 import React from 'react';
 import { Globe, FileText, Compass } from 'lucide-react';
 import ChatBubble from '@/components/chat/ChatBubble';
+import CompactionDivider from '@/components/chat/CompactionDivider';
 import { QuotaErrorCard } from '@/components/chat/QuotaErrorCard';
 import { StrataIcon } from '@/components/ui/strata-icon';
 
@@ -162,31 +163,13 @@ export default React.memo(function ChatPanel({
 
         return (
           <React.Fragment key={message.id}>
-            {isCompacted && (
-              <div className="my-6 flex items-center justify-center relative fade-in" role="separator" aria-label="Compaction started divider">
-                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div className="w-full border-t border-edge-raised" />
-                </div>
-                <div className="relative px-3.5 py-1 rounded-full bg-surface-elevated/95 dark:bg-surface-elevated/90 border border-edge-raised text-micro font-semibold uppercase tracking-wider text-text-muted dark:text-text-secondary shadow-sm backdrop-blur-md">
-                  <span>Compaction started</span>
-                </div>
-              </div>
-            )}
+            {isCompacted && <CompactionDivider label="Compaction started" />}
             <ChatBubble
               message={message}
               isStreaming={isLastAssistant}
               onOpenDrawer={onOpenDrawer}
             />
-            {isCompacted && !isLastAssistant && (
-              <div className="my-6 flex items-center justify-center relative fade-in" role="separator" aria-label="Compaction completed divider">
-                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                  <div className="w-full border-t border-edge-raised" />
-                </div>
-                <div className="relative px-3.5 py-1 rounded-full bg-surface-elevated/95 dark:bg-surface-elevated/90 border border-edge-raised text-micro font-semibold uppercase tracking-wider text-text-muted dark:text-text-secondary shadow-sm backdrop-blur-md">
-                  <span>Compaction completed</span>
-                </div>
-              </div>
-            )}
+            {isCompacted && !isLastAssistant && <CompactionDivider label="Compaction completed" />}
           </React.Fragment>
         );
       })}
@@ -199,16 +182,14 @@ export default React.memo(function ChatPanel({
         />
       )}
 
-      {/* Standalone typing bubble before the first assistant tokens arrive. */}
+      {/* Standalone working indicator before the first assistant message mounts */}
       {!quotaError && isLoading && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
         <div className="flex items-start gap-3.5 fade-in">
           <div className="hidden sm:flex w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary items-center justify-center text-surface shrink-0 mt-0.5 shadow-glow-primary">
             <StrataIcon className="w-4.5 h-4.5" />
           </div>
-          <div className="px-4 py-3 rounded-2xl rounded-tl-xs bg-surface-overlay/90 border border-edge-raised flex items-center gap-1.5 backdrop-blur-sm">
-            <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
-            <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
-            <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
+          <div className="flex items-center py-1.5 text-text-muted font-mono text-caption">
+            <span className="font-semibold text-text-secondary">Working...</span>
           </div>
         </div>
       )}

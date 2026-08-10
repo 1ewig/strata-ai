@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { BrainCircuit, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { createMarkdownComponents } from './create-markdown-components';
 
 /**
  * Props for the ThoughtAccordion component.
@@ -49,18 +50,7 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
   const displaySeconds = isThinking ? elapsedSeconds : Math.max(elapsedSeconds, estimatedSeconds);
 
   const markdownComponents = React.useMemo(
-    () => ({
-      p: ({ children }: any) => <p className="mb-2 leading-relaxed text-text-secondary">{children}</p>,
-      ul: ({ children }: any) => <ul className="list-disc list-inside space-y-1 mb-2 text-text-muted">{children}</ul>,
-      ol: ({ children }: any) => <ol className="list-decimal list-inside space-y-1 mb-2 text-text-muted">{children}</ol>,
-      li: ({ children }: any) => <li className="text-caption leading-relaxed">{children}</li>,
-      strong: ({ children }: any) => <strong className="font-semibold text-info">{children}</strong>,
-      code: ({ children }: any) => (
-        <code className="bg-surface-raised text-info px-1 py-0.5 rounded text-micro font-mono border border-edge-raised">
-          {children}
-        </code>
-      ),
-    }),
+    () => createMarkdownComponents('thought'),
     [],
   );
 

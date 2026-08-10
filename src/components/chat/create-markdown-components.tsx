@@ -3,7 +3,7 @@
 import React from 'react';
 import { Check, Code2 } from 'lucide-react';
 
-type Variant = 'assistant' | 'user';
+export type MarkdownVariant = 'assistant' | 'user' | 'thought' | 'canvas';
 
 interface TokenSet {
   heading1Text: string;
@@ -40,7 +40,7 @@ interface TokenSet {
   emEl: (({ children }: any) => React.ReactNode) | null;
 }
 
-const TOKENS: Record<Variant, TokenSet> = {
+const TOKENS: Record<MarkdownVariant, TokenSet> = {
   assistant: {
     heading1Text: 'text-text-bright',
     heading1Border: 'border-edge-raised/80',
@@ -109,16 +109,87 @@ const TOKENS: Record<Variant, TokenSet> = {
     linkClass: 'underline decoration-surface/60 hover:decoration-surface transition-colors font-medium text-surface',
     emEl: ({ children }: any) => <em className="italic text-surface/90">{children}</em>,
   },
+  thought: {
+    heading1Text: 'text-subheading font-bold text-text-primary',
+    heading1Border: 'border-edge-raised/50',
+    heading1MT: 'mt-2',
+    heading1MB: 'mb-1',
+    heading1PB: 'pb-1',
+    heading2Text: 'text-label font-bold text-text-primary',
+    heading2MT: 'mt-2',
+    heading2MB: 'mb-1',
+    heading3Text: 'text-caption font-semibold text-text-primary',
+    heading3MT: 'mt-1.5',
+    heading3MB: 'mb-0.5',
+    paraText: 'text-text-secondary',
+    paraMB: 'mb-2',
+    listText: 'text-text-muted',
+    listSpacing: 'space-y-1',
+    listMT: 'mb-2',
+    listMB: 'mb-2',
+    strongText: 'font-semibold text-info',
+    codeInline: 'bg-surface-raised text-info px-1 py-0.5 rounded text-micro font-mono border border-edge-raised',
+    codeBlockBorder: 'border-edge-raised/60',
+    codeBlockExtra: '',
+    snippetPrefix: 'thought-snippet-',
+    tableWrap: 'my-2 rounded-lg border border-edge-raised bg-surface-base/30',
+    tableText: 'text-text-secondary text-micro',
+    thCell: 'bg-surface-elevated/60 px-2 py-1 border-b border-edge-raised font-semibold text-text-primary',
+    tdCell: 'px-2 py-1 border-b border-edge-raised/30',
+    blockquoteText: 'text-text-muted text-caption',
+    blockquoteBorder: 'border-edge-raised',
+    hrBorder: 'border-edge-raised',
+    hrMy: 'my-2',
+    linkClass: 'text-info underline decoration-info/50 hover:decoration-info font-medium transition-colors',
+    emEl: null,
+  },
+  canvas: {
+    heading1Text: 'text-title font-display font-bold text-text-bright tracking-tight',
+    heading1Border: 'border-edge-raised',
+    heading1MT: 'mt-4',
+    heading1MB: 'mb-3',
+    heading1PB: 'pb-2',
+    heading2Text: 'text-heading font-display font-bold text-primary/90 tracking-wide',
+    heading2MT: 'mt-6',
+    heading2MB: 'mb-2',
+    heading3Text: 'text-subheading font-semibold text-text-primary',
+    heading3MT: 'mt-3',
+    heading3MB: 'mb-1',
+    paraText: 'text-text-secondary',
+    paraMB: 'mb-2.5',
+    listText: 'text-text-secondary',
+    listSpacing: 'space-y-1.5',
+    listMT: 'my-2',
+    listMB: 'my-2',
+    strongText: 'text-text-bright',
+    codeInline: 'bg-surface-elevated/90 text-primary font-mono px-1.5 py-0.5 rounded text-micro border border-edge-hover/60',
+    codeBlockBorder: 'border-edge-raised/80',
+    codeBlockExtra: '',
+    snippetPrefix: 'canvas-snippet-',
+    tableWrap: 'my-3 rounded-xl border border-edge-raised/80 bg-surface-base/40',
+    tableText: 'text-text-secondary',
+    thCell: 'bg-surface-elevated/70 px-3 py-2 border-b border-edge-raised font-semibold text-text-primary',
+    tdCell: 'px-3 py-2 border-b border-edge-raised/40 hover:bg-surface-hover/20',
+    blockquoteText: 'text-text-muted',
+    blockquoteBorder: 'border-primary/60',
+    hrBorder: 'border-edge-raised',
+    hrMy: 'my-4',
+    linkClass: 'text-primary underline decoration-primary/50 hover:decoration-primary font-medium transition-colors',
+    emEl: ({ children }: any) => <em className="text-text-muted not-italic text-caption">{children}</em>,
+  },
 };
 
 /**
- * Builds a ReactMarkdown component dictionary for a given bubble variant.
- * Assistant theme uses dark-on-light tokens; user theme uses light-on-primary tokens.
+ * Builds a ReactMarkdown component dictionary for a given bubble or canvas variant.
+ * - `assistant`: dark-on-light theme for assistant bubbles.
+ * - `user`: light-on-primary theme for user bubbles.
+ * - `thought`: compact typography for reasoning accordions and intermediate work groups.
+ * - `canvas`: rich document typography for the workspace file preview drawer.
  */
 export function createMarkdownComponents(
-  variant: Variant,
-  copiedCodeId: string | null,
-  onCopy: (code: string, id: string) => void,
+  variant: MarkdownVariant = 'assistant',
+  copiedCodeId?: string | null,
+  onCopy?: (code: string, id: string) => void,
 ) {
   const T = TOKENS[variant];
 
@@ -167,22 +238,24 @@ export function createMarkdownComponents(
         <div className={`my-2.5 rounded-xl bg-surface-base border ${T.codeBlockBorder} overflow-hidden font-mono text-micro shadow-sm ${T.codeBlockExtra}`}>
           <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-micro text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
             <span className="text-text-muted">Code Snippet</span>
-            <button
-              onClick={() => onCopy(rawCode, snippetId)}
-              className="flex items-center gap-1 text-micro text-text-muted hover:text-primary transition-colors cursor-pointer"
-            >
-              {copiedCodeId === snippetId ? (
-                <>
-                  <Check className="w-3 h-3 text-primary" />
-                  <span className="text-primary">Copied</span>
-                </>
-              ) : (
-                <>
-                  <Code2 className="w-3 h-3" />
-                  <span>Copy</span>
-                </>
-              )}
-            </button>
+            {onCopy && (
+              <button
+                onClick={() => onCopy(rawCode, snippetId)}
+                className="flex items-center gap-1 text-micro text-text-muted hover:text-primary transition-colors cursor-pointer"
+              >
+                {copiedCodeId === snippetId ? (
+                  <>
+                    <Check className="w-3 h-3 text-primary" />
+                    <span className="text-primary">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Code2 className="w-3 h-3" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
+            )}
           </div>
           <pre className="p-3 overflow-x-auto text-text-secondary leading-relaxed">
             <code>{children}</code>

@@ -1,25 +1,8 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ArrowUp, AlertCircle, Square, Minimize2 } from 'lucide-react';
+import { ArrowUp, AlertCircle, Square } from 'lucide-react';
 import { MAX_MESSAGE_CHARS, buildQuotaError } from '@/lib/limits';
 import ModelSelectorMenu from './ModelSelectorMenu';
-
-/** Available slash command definition. */
-interface SlashCommand {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-}
-
-/** Registry of supported slash commands. */
-const SLASH_COMMANDS: SlashCommand[] = [
-  {
-    id: 'compact',
-    name: '/compact',
-    description: 'Condense conversation history to optimize context window',
-    icon: Minimize2,
-  },
-];
+import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './SlashCommandMenu';
 
 /** Props for the ChatInput composer. */
 interface ChatInputProps {
@@ -216,48 +199,13 @@ export default React.memo(function ChatInput({
       className="relative z-10 w-full"
     >
       {/* Floating Slash Command Menu */}
-      {isSlashMenuOpen && filteredCommands.length > 0 && (
-        <div className="absolute bottom-full left-0 mb-2 w-full max-w-sm sm:max-w-md bg-surface-raised/95 dark:bg-surface-elevated/95 border border-edge-raised rounded-2xl shadow-card backdrop-blur-xl p-1.5 z-50 animate-in fade-in slide-in-from-bottom-2 duration-150">
-          <div className="text-micro font-semibold uppercase tracking-wider text-text-muted px-2.5 py-1.5">
-            Commands
-          </div>
-          <div className="flex flex-col gap-0.5">
-            {filteredCommands.map((cmd, idx) => {
-              const Icon = cmd.icon;
-              const isSelected = idx === selectedCommandIndex;
-              return (
-                <button
-                  key={cmd.id}
-                  type="button"
-                  onMouseEnter={() => setSelectedCommandIndex(idx)}
-                  onClick={() => executeCommand(cmd)}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left w-full transition-colors cursor-pointer ${
-                    isSelected
-                      ? 'bg-primary-soft text-primary'
-                      : 'hover:bg-surface-hover text-text-primary'
-                  }`}
-                >
-                  <div
-                    className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ${
-                      isSelected
-                        ? 'bg-primary/20 text-primary'
-                        : 'bg-surface-raised border border-edge-raised text-text-secondary'
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="flex flex-col min-w-0">
-                    <span className="text-label font-bold leading-tight">{cmd.name}</span>
-                    <span className="text-caption text-text-secondary truncate leading-tight">
-                      {cmd.description}
-                    </span>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
+      <SlashCommandMenu
+        isOpen={isSlashMenuOpen}
+        commands={filteredCommands}
+        selectedIndex={selectedCommandIndex}
+        onSelectIndex={setSelectedCommandIndex}
+        onExecute={executeCommand}
+      />
 
       <div
         className={`flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${isCompacting

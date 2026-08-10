@@ -6,13 +6,8 @@ import remarkGfm from 'remark-gfm';
 import { ChevronDown, ChevronUp, Loader2, Workflow } from 'lucide-react';
 import ThoughtAccordion from './ThoughtAccordion';
 import ToolCallCard from './ToolCallCard';
-
-interface Segment {
-  type: string;
-  content?: string;
-  part?: any;
-  key: string;
-}
+import { createMarkdownComponents } from './create-markdown-components';
+import { Segment } from '@/lib/ai/message-segments';
 
 interface WorkGroupCardProps {
   items: Segment[];
@@ -74,15 +69,7 @@ function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps)
   const displaySeconds = isStreaming ? elapsedSeconds : Math.max(elapsedSeconds, estimatedSeconds);
 
   const textComponents = React.useMemo(
-    () => ({
-      p: ({ children }: any) => <p className="mb-2 leading-relaxed text-text-secondary">{children}</p>,
-      strong: ({ children }: any) => <strong className="font-semibold text-text-primary">{children}</strong>,
-      code: ({ children }: any) => (
-        <code className="bg-surface-raised text-info px-1 py-0.5 rounded text-micro font-mono border border-edge-raised">
-          {children}
-        </code>
-      ),
-    }),
+    () => createMarkdownComponents('thought'),
     [],
   );
 

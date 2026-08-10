@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { UIMessage } from 'ai';
@@ -11,24 +11,13 @@ import ThoughtAccordion from './ThoughtAccordion';
 import WorkGroupCard from './WorkGroupCard';
 import SmoothStreamText from './SmoothStreamText';
 import { createMarkdownComponents } from './create-markdown-components';
+import { flattenMessageSegments, Segment } from '@/lib/ai/message-segments';
 
 /** Props for the ChatBubble message component. */
 interface ChatBubbleProps {
   message: UIMessage | { id: string; role: string; content?: string; parts?: any[] };
   isStreaming?: boolean;
   onOpenDrawer?: () => void;
-}
-
-/**
- * A flattened, render-ready slice of a message: user text, markdown text,
- * reasoning/thought content, a tool invocation part, or a work group of reasoning + tools.
- */
-interface Segment {
-  type: string;
-  content?: string;
-  part?: any;
-  items?: Segment[];
-  key: string;
 }
 
 /**
@@ -44,6 +33,29 @@ interface Segment {
 function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
+  const startTimeRef = useRef<number | null>(null);
+  const [elapsedSeconds, setElapsedSeconds] = useState<number>(1);
+
+  // Live timer tracking the in-flight inference duration
+  useEffect(() => {
+    if (!isStreaming) {
+      startTimeRef.current = null;
+      return;
+    }
+
+    if (!startTimeRef.current) {
+      startTimeRef.current = Date.now();
+    }
+
+    const interval = setInterval(() => {
+      if (startTimeRef.current) {
+        const seconds = Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000));
+        setElapsedSeconds(seconds);
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isStreaming]);
 
   /**
    * Copies a code snippet to the clipboard and flashes a temporary "Copied"
@@ -61,112 +73,10 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
   // Flatten the raw message into render-ready segments (user text, markdown
   // text, reasoning, tool invocations, grouped work items) so each part can be
   // rendered by its own sub-component below.
-  const segments: Segment[] = React.useMemo(() => {
-    if (isUser) {
-      // User bubbles show a single combined bubble: join every text part.
-      let userText = '';
-      if (Array.isArray(message.parts)) {
-        userText = message.parts
-          .filter(p => p.type === 'text' && typeof p.text === 'string')
-          .map(p => p.text)
-          .join('');
-      }
-      if (!userText && typeof (message as any).content === 'string') {
-        userText = (message as any).content;
-      }
-      return [{ type: 'user-text', content: userText, key: 'user-text' }];
-    }
-
-    // Legacy messages without parts fall back to the raw content string.
-    if (!Array.isArray(message.parts) || message.parts.length === 0) {
-      const text = typeof (message as any).content === 'string' ? (message as any).content : '';
-      return text ? [{ type: 'text', content: text, key: 'text-0' }] : [];
-    }
-
-    const rawSegments: Segment[] = [];
-    let currentText = '';
-
-    // Detect tool invocations and reasoning/thought parts across both the
-    // streaming parts schema and legacy shape variants.
-    message.parts.forEach((p, idx) => {
-      const isTool =
-        p.type === 'tool-invocation' ||
-        p.type === 'dynamic-tool' ||
-        (typeof p.type === 'string' && p.type.startsWith('tool')) ||
-        (p as any).toolInvocation !== undefined;
-
-      const isReasoning =
-        p.type === 'reasoning' ||
-        p.type === 'thought' ||
-        p.type === 'thinking' ||
-        typeof (p as any).reasoning === 'string' ||
-        typeof (p as any).reasoningText === 'string';
-
-      if (isReasoning) {
-        if (currentText) {
-          rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}` });
-          currentText = '';
-        }
-        const reasoningText =
-          (p as any).reasoning ||
-          (p as any).reasoningText ||
-          (p as any).thought ||
-          (p.type === 'reasoning' || p.type === 'thought' || p.type === 'thinking' ? p.text : '') ||
-          '';
-        if (reasoningText) {
-          rawSegments.push({ type: 'reasoning', content: reasoningText, key: `reasoning-${idx}` });
-        }
-      } else if (isTool) {
-        if (currentText) {
-          rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}` });
-          currentText = '';
-        }
-        const inv = (p as any).toolInvocation || p;
-        const key = inv.toolCallId || p.toolCallId || `tool-${idx}`;
-        rawSegments.push({ type: 'tool', part: p, key });
-      } else if (p.type === 'text' && typeof p.text === 'string') {
-        currentText += p.text;
-      }
-    });
-
-    if (currentText) {
-      rawSegments.push({ type: 'text', content: currentText, key: `text-final` });
-    }
-
-    // Last resort: render the raw content string if segmentation produced nothing.
-    if (rawSegments.length === 0 && typeof (message as any).content === 'string' && (message as any).content) {
-      rawSegments.push({ type: 'text', content: (message as any).content, key: 'text-fallback' });
-    }
-
-    // Ensure streaming or compaction messages always have a text segment to render
-    if (rawSegments.length === 0 && (isStreaming || (message as any).metadata?.isCompactedSummary)) {
-      rawSegments.push({ type: 'text', content: '', key: 'text-initial' });
-    }
-
-    // While streaming, render each part live and ungrouped so thoughts, tool
-    // calls, and intermediate text stream in place. Grouping happens only once
-    // the inference finishes (isStreaming flips false and the memo recomputes).
-    if (isStreaming) {
-      return rawSegments;
-    }
-
-    // Group ALL pre-answer output (intermediate text + reasoning + tool calls) into
-    // a single work group so a multi-response inference reads as one compact block.
-    // Only the final text segment renders as the assistant message bubble.
-    const result: Segment[] = [];
-    const lastSegment = rawSegments[rawSegments.length - 1];
-    const hasFinalText = lastSegment?.type === 'text';
-    const workItems = hasFinalText ? rawSegments.slice(0, -1) : rawSegments;
-
-    if (workItems.length > 0) {
-      result.push({ type: 'work-group', items: workItems, key: 'work-group-single' });
-    }
-    if (hasFinalText) {
-      result.push(lastSegment);
-    }
-
-    return result;
-  }, [message, isUser, isStreaming]);
+  const segments: Segment[] = React.useMemo(
+    () => flattenMessageSegments(message, isStreaming),
+    [message, isStreaming],
+  );
 
   // Memoize custom markdown components so ReactMarkdown does not tear down DOM nodes on every token render.
   const markdownComponents = React.useMemo(
@@ -214,17 +124,6 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           ${isUser ? 'items-end w-fit max-w-[90%] sm:max-w-[82%] ms-auto' : 'items-start w-fit max-w-full'}
         `}
       >
-        {/* Empty streaming state before first tokens */}
-        {!isUser && isStreaming && segments.length === 0 && (
-          <div className="rounded-2xl px-4.5 py-3.5 bg-surface-overlay/70 border border-edge-raised/60 backdrop-blur-sm fade-in w-fit">
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.3s]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce [animation-delay:-0.15s]" />
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-bounce" />
-            </div>
-          </div>
-        )}
-
         {segments.map((seg, segIdx) => {
           const isLastSegment = segIdx === segments.length - 1;
 
@@ -306,6 +205,15 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
 
           return null;
         })}
+
+        {/* Constant working state visible below streaming parts until inference finishes */}
+        {!isUser && isStreaming && (
+          <div className="flex items-center py-1 text-text-muted font-mono text-caption fade-in">
+            <span className="font-semibold text-text-secondary">
+              {`Working (${elapsedSeconds}s)...`}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

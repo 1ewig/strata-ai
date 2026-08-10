@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MAX_FILE_CHARS, MAX_FILES_PER_WORKSPACE, formatCharCount } from '@/lib/limits';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { createMarkdownComponents } from '@/components/chat/create-markdown-components';
 
 /** Props for the WorkspaceDrawer component. */
 interface WorkspaceDrawerProps {
@@ -56,10 +57,22 @@ export default React.memo(function WorkspaceDrawer({
   const [fileName, setFileName] = useState(activeFile?.name || '');
   const [contentValue, setContentValue] = useState(activeFile?.content || '');
   const [copied, setCopied] = useState(false);
+  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [fileToDelete, setFileToDelete] = useState<WorkspaceFile | null>(null);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  const handleCopyCodeSnippet = (codeText: string, id: string) => {
+    navigator.clipboard.writeText(codeText);
+    setCopiedCodeId(id);
+    setTimeout(() => setCopiedCodeId(null), 2000);
+  };
+
+  const canvasMarkdownComponents = React.useMemo(
+    () => createMarkdownComponents('canvas', copiedCodeId, handleCopyCodeSnippet),
+    [copiedCodeId],
+  );
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -330,49 +343,7 @@ export default React.memo(function WorkspaceDrawer({
                     {/* Markdown renders as styled typography; other files as plain text */}
                     <ReactMarkdown
                       remarkPlugins={[remarkGfm]}
-                      components={{
-                        h1: ({ children }) => (
-                          <h1 className="text-title font-display font-bold text-text-bright tracking-tight border-b border-edge-raised pb-2 mb-3">
-                            {children}
-                          </h1>
-                        ),
-                        h2: ({ children }) => (
-                          <h2 className="text-heading font-display font-bold text-primary/90 tracking-wide border-b border-edge-raised/60 pb-1 mt-6 mb-2">
-                            {children}
-                          </h2>
-                        ),
-                        h3: ({ children }) => (
-                          <h3 className="text-subheading font-semibold text-text-primary mt-3 mb-1">
-                            {children}
-                          </h3>
-                        ),
-                        p: ({ children }) => (
-                          <p className="text-body text-text-secondary leading-normal my-1">
-                            {children}
-                          </p>
-                        ),
-                        ul: ({ children }) => (
-                          <ul className="list-disc list-outside pl-4 space-y-1.5 my-2 text-body text-text-secondary">
-                            {children}
-                          </ul>
-                        ),
-                        li: ({ children }) => (
-                          <li className="text-body text-text-secondary leading-normal">
-                            {children}
-                          </li>
-                        ),
-                        strong: ({ children }) => (
-                          <strong className="font-semibold text-text-bright">
-                            {children}
-                          </strong>
-                        ),
-                        em: ({ children }) => (
-                          <em className="text-text-muted not-italic text-caption">
-                            {children}
-                          </em>
-                        ),
-                        hr: () => <hr className="border-edge-raised my-4" />,
-                      }}
+                      components={canvasMarkdownComponents}
                     >
                       {activeFile.content}
                     </ReactMarkdown>
