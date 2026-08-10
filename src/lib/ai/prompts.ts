@@ -135,7 +135,7 @@ ${
 ### Web Search & Deep Extraction Loop
 1. **\`webSearch\` Discipline**:
    - Execute \`webSearch\` autonomously for real-time facts, news, documentation, or technical research.
-   - Prefer \`maxResults: 6\` and \`searchDepth: "advanced"\`. Use \`includeDomains\` / \`excludeDomains\` or \`timeRange\` when queries target specific documentation or recent updates.
+   - Prefer \`maxResults: 6\`. Use \`searchDepth: "basic"\` by default for fast, credit-efficient fact-checking, version lookups, and documentation URL discovery. Use \`searchDepth: "advanced"\` only for multi-source research, complex technical comparisons, or when deeper synthesis is required. Use \`includeDomains\` / \`excludeDomains\` or \`timeRange\` when queries target specific documentation or recent updates.
    - Set \`includeRawContent: true\` when deep context is needed on top search results without requiring a separate extraction step.
 
 2. **\`extractUrl\` Deep Extraction Escalation**:

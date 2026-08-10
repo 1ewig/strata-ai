@@ -314,7 +314,7 @@ The two web tools (`lib/ai/tools/tavily-tools.ts`, shared `callTavilyApi` helper
 
 | Tool | Input (Zod) | Output (Zod) | Behavior / Notes |
 |------|-------------|--------------|------------------|
-| `webSearch` | `query`, `searchDepth?` (basic\|advanced, default advanced), `topic?` (general\|news\|finance), `maxResults?` (1–10, default 6), `includeRawContent?`, `includeImages?`, `timeRange?` (day\|week\|month\|year), `includeDomains?`, `excludeDomains?` | `{ success, query, results? [{title,url,content,rawContent?,score?,publishedDate?}], images?, error? }` | Tavily `/search` via `Authorization: Bearer`; 30s fetch timeout; raw content capped at 12k chars per result |
+| `webSearch` | `query`, `searchDepth?` (basic\|advanced, default basic), `topic?` (general\|news\|finance), `maxResults?` (1–10, default 6), `includeRawContent?`, `includeImages?`, `timeRange?` (day\|week\|month\|year), `includeDomains?`, `excludeDomains?` | `{ success, query, results? [{title,url,content,rawContent?,score?,publishedDate?}], images?, error? }` | Tavily `/search` via `Authorization: Bearer`; 30s fetch timeout; raw content capped at 12k chars per result |
 | `extractUrl` | `urls` (1–3), `extractDepth?` (default advanced) | `{ success, extracted [{url,title?,rawContent}], failed? [{url,error}], error? }` | Tavily `/extract`; 45s fetch timeout; content capped at 18k chars per URL |
 
 ### 7.2 Agent endpoint configuration (`/api/agent`)

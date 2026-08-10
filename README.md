@@ -57,7 +57,7 @@ The agent interacts with user workspaces and the web via 8 core tools — factor
 | `editFile` | `nameOrId`, `searchString`, `replaceString`, `explanation` | Surgically edits code blocks using the 3-tier `StringEditEngine`. |
 | `renameFile` | `nameOrId`, `newName` | Renames an existing file with collision checking. |
 | `deleteFile` | `nameOrId` | Removes a target file from the current workspace collection. |
-| `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?`, `includeRawContent?`, `includeImages?`, `timeRange?`, `includeDomains?`, `excludeDomains?` | Real-time web search via Tavily (`searchDepth: "advanced"` default) — ranked results with content snippets, optional raw page content, images, and publish dates (the app's own model synthesizes the answer). |
+| `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?`, `includeRawContent?`, `includeImages?`, `timeRange?`, `includeDomains?`, `excludeDomains?` | Real-time web search via Tavily (`searchDepth: "basic"` default for fast, 1-credit lookups; `"advanced"` for 2-credit deep research) — ranked results with content snippets, optional raw page content, images, and publish dates (the app's own model synthesizes the answer). |
 | `extractUrl` | `urls` (1–3), `extractDepth?` | Extracts clean Markdown content from target web pages via Tavily Extract (up to 3 URLs per call, 45s timeout). |
 
 ---
