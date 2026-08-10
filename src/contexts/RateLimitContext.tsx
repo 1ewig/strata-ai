@@ -47,6 +47,26 @@ const buildQuotaErrorFromData = (data: RateLimitData | null | undefined): QuotaE
 };
 
 /**
+ * Fetches and normalizes the latest rate-limit snapshot from the API.
+ * @param signal - Optional abort signal.
+ * @returns The parsed RateLimitData snapshot, or null if the request failed.
+ */
+async function fetchRateLimitSnapshot(signal?: AbortSignal): Promise<RateLimitData | null> {
+  try {
+    const res = await fetch('/api/user/rate-limit', { signal });
+    if (!res.ok) return null;
+    const data = await res.json();
+    return {
+      remaining5h: data.remaining5h ?? QUOTA_5H_LIMIT,
+      remainingWeek: data.remainingWeek ?? QUOTA_WEEK_LIMIT,
+      retryAfter: data.retryAfter,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Provides global rate-limit state for the signed-in user.
  * Hydrates from SSR data, fetches fresh quota client-side when unavailable,
  * and exposes update/clear helpers for the chat transport to report headers.
@@ -97,20 +117,10 @@ export function RateLimitProvider({ children, initialData }: RateLimitProviderPr
    * @returns A promise resolving once the fetch completes (or fails silently).
    */
   const checkQuotaStatus = useCallback(async () => {
-    try {
-      const res = await fetch('/api/user/rate-limit');
-      if (res.ok) {
-        const data = await res.json();
-        const next: RateLimitData = {
-          remaining5h: data.remaining5h ?? QUOTA_5H_LIMIT,
-          remainingWeek: data.remainingWeek ?? QUOTA_WEEK_LIMIT,
-          retryAfter: data.retryAfter,
-        };
-        setRateLimitData(next);
-        setQuotaError(buildQuotaErrorFromData(next));
-      }
-    } catch {
-      // ignore
+    const next = await fetchRateLimitSnapshot();
+    if (next) {
+      setRateLimitData(next);
+      setQuotaError(buildQuotaErrorFromData(next));
     }
   }, []);
 
@@ -119,23 +129,19 @@ export function RateLimitProvider({ children, initialData }: RateLimitProviderPr
     if (isSessionPending) return;
     if (!userId || ssrData) return;
 
-    // Guard against state updates if the effect cleans up before the fetch resolves
     let active = true;
-    fetch('/api/user/rate-limit')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!active || !data) return;
-        const next: RateLimitData = {
-          remaining5h: data.remaining5h ?? QUOTA_5H_LIMIT,
-          remainingWeek: data.remainingWeek ?? QUOTA_WEEK_LIMIT,
-          retryAfter: data.retryAfter,
-        };
+    const controller = new AbortController();
+
+    fetchRateLimitSnapshot(controller.signal).then((next) => {
+      if (active && next) {
         setRateLimitData(next);
         setQuotaError(buildQuotaErrorFromData(next));
-      })
-      .catch(() => {});
+      }
+    });
+
     return () => {
       active = false;
+      controller.abort();
     };
   }, [userId, initialDataKey, isSessionPending, ssrData]);
 

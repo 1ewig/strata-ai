@@ -1,4 +1,4 @@
-import { db } from '@/lib/db/db';
+import { persistMessages } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
 import { buildQuotaError } from '@/lib/limits';
 
@@ -95,16 +95,6 @@ export async function handleChatError({
     }
 
     // Persist the corrected message list so the error copy survives a reload.
-    // Timestamps are derived from position so ordering stays deterministic.
-    const base = Date.now();
-    for (let i = 0; i < updatedMessages.length; i++) {
-      const msg = updatedMessages[i];
-      await db.messages.put({
-        ...msg,
-        chatId,
-        ...(userId ? { userId } : {}),
-        timestamp: new Date(base + i).toISOString(),
-      });
-    }
+    await persistMessages(chatId, updatedMessages, userId);
   }
 }

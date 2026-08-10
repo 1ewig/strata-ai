@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useRef, useCallback, useMemo, useState } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
-import { readUIMessageStream, parseJsonEventStream, uiMessageChunkSchema } from 'ai';
 import { useLiveQuery } from 'dexie-react-hooks';
 import {
   db,
@@ -12,6 +11,7 @@ import {
 import { useModelSettings } from './useModelSettings';
 import { useWorkspaceFiles } from './useWorkspaceFiles';
 import { useChatTransport } from './useChatTransport';
+import { useCompaction } from './useCompaction';
 import { handleChatError } from '@/lib/ai/chat-error-handler';
 import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
 import { calculateTokenMetrics, ChatMetadata } from '@/lib/token-usage';
@@ -90,10 +90,6 @@ export function useChatSession(chatId: string) {
     });
   }, [chatId, modelSettings.model, modelSettings.thinkingLevel, userId]);
 
-  // Tracks in-flight context compaction state (manual via /compact)
-  const [isCompacting, setIsCompacting] = useState(false);
-  const isCompactingRef = useRef(false);
-
   // Tracks how many times the assistant has been re-invoked for a single user turn
   const continuationCountRef = useRef<number>(0);
   const sendMessageRef = useRef<((msg: { text: string }) => void) | null>(null);
@@ -109,137 +105,19 @@ export function useChatSession(chatId: string) {
     setQuotaError,
   });
 
-  /**
-   * Executes the manual context compaction stream against /api/agent/compact,
-   * streams the summary (including reasoning and markdown) into the conversation, and reconciles into Dexie.
-   */
-  const triggerCompaction = useCallback(
-    async (messagesToCompact: any[]) => {
-      if (isCompactingRef.current || !chatId || messagesToCompact.length === 0) return;
-
-      isCompactingRef.current = true;
-      setIsCompacting(true);
-
-      const compactionMessageId = `compact-${Date.now()}`;
-      const initialCompactionMsg: any = {
-        id: compactionMessageId,
-        role: 'assistant',
-        content: '',
-        parts: [],
-        metadata: {
-          isCompactedSummary: true,
-          modelId: modelRef.current,
-        },
-      };
-
-      // Append initial compaction message to UI messages list so it renders live
-      chatRef.current?.setMessages([...messagesToCompact, initialCompactionMsg]);
-
-      try {
-        const res = await fetch('/api/agent/compact', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            // History pruning to the latest compaction summary happens server-side.
-            messages: messagesToCompact,
-            files: filesRef.current,
-            model: modelRef.current,
-            thinkingLevel: thinkingLevelRef.current,
-          }),
-        });
-
-        const rem5h = res.headers.get('X-RateLimit-Remaining-5h');
-        const remWeek = res.headers.get('X-RateLimit-Remaining-Week');
-        const retryHeader = res.headers.get('X-RateLimit-Retry-After') || res.headers.get('Retry-After');
-        const retryAfterSec = retryHeader ? parseInt(retryHeader, 10) : undefined;
-
-        if (rem5h !== null && remWeek !== null) {
-          const num5h = parseInt(rem5h, 10);
-          const numWeek = parseInt(remWeek, 10);
-          updateRateLimitData({
-            remaining5h: num5h,
-            remainingWeek: numWeek,
-            retryAfter: retryAfterSec,
-          });
-        }
-
-        if (res.status === 429) {
-          const data = await res.clone().json().catch(() => null);
-          setQuotaError({
-            message: data?.message || `Usage quota reached (10 msgs per 5 hours, 50 msgs per week). Please try again later.`,
-            retryAfter: retryAfterSec || data?.retryAfter,
-          });
-          chatRef.current?.setMessages(messagesToCompact);
-          return;
-        }
-
-        if (!res.ok || !res.body) {
-          const data = await res.clone().json().catch(() => null);
-          const detailMsg = data?.error || data?.message || `HTTP ${res.status}`;
-          throw new Error(`[Compaction Error] ${detailMsg}`);
-        }
-
-        const chunkStream = parseJsonEventStream({
-          stream: res.body,
-          schema: uiMessageChunkSchema,
-        }).pipeThrough(
-          new TransformStream({
-            transform(chunk, controller) {
-              if (chunk.success) {
-                controller.enqueue(chunk.value);
-              }
-            },
-          }),
-        );
-
-        let latestCompactionMsg: any = initialCompactionMsg;
-
-        for await (const uiMessage of readUIMessageStream({ stream: chunkStream })) {
-          latestCompactionMsg = {
-            ...uiMessage,
-            id: compactionMessageId,
-            role: 'assistant',
-            metadata: {
-              ...(uiMessage.metadata || {}),
-              isCompactedSummary: true,
-              modelId: modelRef.current,
-            },
-          };
-
-          chatRef.current?.setMessages([...messagesToCompact, latestCompactionMsg]);
-        }
-
-        const finalCompactionMsg: any = {
-          ...latestCompactionMsg,
-          metadata: {
-            ...(latestCompactionMsg.metadata || {}),
-            isCompactedSummary: true,
-            modelId: modelRef.current,
-          },
-        };
-
-        const allWithCompaction = [...messagesToCompact, finalCompactionMsg];
-        chatRef.current?.setMessages(allWithCompaction);
-
-        await reconcileFinishedStep({
-          chatId,
-          userId,
-          message: finalCompactionMsg,
-          allMessages: allWithCompaction,
-          finishReason: 'stop',
-          continuationCountRef,
-          sendMessageRef,
-        });
-      } catch (err) {
-        console.error('[useChatSession] Compaction failed:', err);
-        chatRef.current?.setMessages(messagesToCompact);
-      } finally {
-        isCompactingRef.current = false;
-        setIsCompacting(false);
-      }
-    },
-    [chatId, userId, updateRateLimitData, setQuotaError],
-  );
+  // Modular context compaction hook
+  const { isCompacting, triggerCompaction } = useCompaction({
+    chatId,
+    userId,
+    filesRef,
+    modelRef,
+    thinkingLevelRef,
+    chatRef,
+    continuationCountRef,
+    sendMessageRef,
+    updateRateLimitData,
+    setQuotaError,
+  });
 
   const chat = useChat({
     id: chatId,
