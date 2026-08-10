@@ -4,7 +4,6 @@ import {
   MAX_FILES_PER_WORKSPACE,
   MAX_MESSAGE_CHARS,
   MAX_WORKSPACE_TOTAL_CHARS,
-  CONTEXT_COMPACTION_THRESHOLD_PERCENT,
 } from "@/lib/limits";
 
 /**
@@ -56,7 +55,9 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget
       : contextWindow && totalTokens != null
       ? Math.max(0, contextWindow - totalTokens).toLocaleString()
       : windowText;
-  const nearLimit = pct >= CONTEXT_COMPACTION_THRESHOLD_PERCENT;
+  // Occupancy threshold that flips the system prompt into "be concise" mode.
+  // Standalone concision heuristic (no longer tied to any compaction trigger).
+  const nearLimit = pct >= 70;
 
   const tokenBudgetSection = [
     "",

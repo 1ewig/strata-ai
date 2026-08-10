@@ -16,9 +16,7 @@ import { handleChatError } from '@/lib/ai/chat-error-handler';
 import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
 import {
   calculateTokenMetrics,
-  ConversationTokenMetrics,
   ChatMetadata,
-  findLatestCompactedMessageIndex,
 } from '@/lib/token-usage';
 import { getModelContextWindow } from '@/lib/models';
 import { buildQuotaError } from '@/lib/limits';
@@ -407,7 +405,6 @@ export function useChatSession(chatId: string) {
     tokenMetrics,
     isContextWindowExhausted,
     contextWindow,
-    streamingContent: null,
     status: chat.status,
     isLoading,
     isCompacting,

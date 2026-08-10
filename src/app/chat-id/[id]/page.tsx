@@ -65,7 +65,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     displayMessages,
     tokenUsage,
     isContextWindowExhausted,
-    streamingContent,
     isLoading,
     isCompacting,
     rateLimitData,
@@ -147,7 +146,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     />
   );
 
-  const isNewChat = displayMessages.length === 0 && streamingContent === null && !isLoading && !quotaError;
+  const isNewChat = displayMessages.length === 0 && !isLoading && !quotaError;
 
   return (
     <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
@@ -198,7 +197,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               <StickToBottom.Content className={`max-w-4xl w-full mx-auto px-4 ${isNewChat ? 'min-h-full flex flex-col justify-center py-6' : 'pb-36'}`}>
                 <ChatPanel
                   messages={displayMessages}
-                  streamingContent={streamingContent}
                   isLoading={isLoading}
                   messagesEndRef={messagesEndRef}
                   onOpenDrawer={handleOpenDrawer}
