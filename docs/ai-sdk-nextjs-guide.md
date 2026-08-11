@@ -132,10 +132,8 @@ GOOGLE_GENERATIVE_AI_API_KEY="..."
 FIREWORKS_API_KEY="..."            # required for Fireworks-hosted models (DeepSeek V4 Flash)
 TAVILY_API_KEY="..."               # optional — enables the webSearch / extractUrl agent tools
 
-# Supabase Postgres (auth + rate limiting)
+# Supabase Postgres pooler (auth + rate limiting)
 DATABASE_URL="postgresql://postgres.ref:password@aws-0-region.pooler.supabase.com:6543/postgres"
-NEXT_PUBLIC_SUPABASE_URL="..."
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="..."
 
 # Better Auth
 BETTER_AUTH_SECRET="..."           # min 32 chars

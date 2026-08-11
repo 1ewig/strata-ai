@@ -170,9 +170,7 @@ FIREWORKS_API_KEY="fw_..."
 # Tavily API Key (Required for web search & extraction)
 TAVILY_API_KEY="tvly-..."
 
-# Supabase Auth & Database (Required)
-NEXT_PUBLIC_SUPABASE_URL="https://your-project.supabase.co"
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="eyJhbGciOi..."
+# Supabase Postgres Database (Required for Better Auth + rate limiting)
 DATABASE_URL="postgresql://postgres.user:password@aws-0-region.pooler.supabase.com:6543/postgres"
 
 # Better Auth Configuration
