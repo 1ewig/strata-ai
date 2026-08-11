@@ -7,6 +7,9 @@ import { COMPACTION_MODEL_ID } from '@/lib/models';
 import { RateLimitData, QuotaError } from '@/contexts/RateLimitContext';
 import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
 import { buildQuotaError } from '@/lib/limits';
+import { getFriendlyErrorMessage } from '@/lib/ai/chat-error-handler';
+import { persistMessages } from '@/lib/db/db';
+import { generateId } from '@/lib/id';
 
 /** Parameters required by the `useCompaction` hook. */
 export interface UseCompactionParams {
@@ -173,7 +176,21 @@ export function useCompaction({
         });
       } catch (err) {
         console.error('[useCompaction] Compaction failed:', err);
-        chatRef.current?.setMessages(messagesToCompact);
+        const friendlyError = getFriendlyErrorMessage(
+          err instanceof Error ? err : new Error(String(err))
+        );
+        const errorContent = `Context compaction failed: ${friendlyError}`;
+        const errorMsg = {
+          id: generateId(),
+          role: 'assistant',
+          content: errorContent,
+          parts: [{ type: 'text', text: errorContent }],
+        };
+        const messagesWithError = [...messagesToCompact, errorMsg];
+        chatRef.current?.setMessages(messagesWithError);
+        await persistMessages(chatId, messagesWithError, userId).catch((pErr) => {
+          console.error('[useCompaction] Failed to persist compaction error:', pErr);
+        });
       } finally {
         isCompactingRef.current = false;
         setIsCompacting(false);
