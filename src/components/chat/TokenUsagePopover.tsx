@@ -6,12 +6,12 @@ import {
   formatContextWindow,
   formatCost,
   ConversationTokenMetrics,
-  CumulativeUsage,
 } from '@/lib/token-usage';
+import { NEAR_LIMIT_PERCENT } from '@/lib/limits';
 
 export interface TokenUsagePopoverProps {
   modelOption: ModelOption;
-  tokenUsage?: ConversationTokenMetrics | CumulativeUsage | null;
+  tokenUsage?: ConversationTokenMetrics | null;
   isOpen: boolean;
   onClose: () => void;
   triggerRef?: React.RefObject<HTMLElement | null>;
@@ -52,24 +52,19 @@ export default function TokenUsagePopover({
 
   const { contextWindow } = modelOption;
 
-  const activeMetrics = tokenUsage && 'active' in tokenUsage ? tokenUsage.active : null;
-  const sessionMetrics = tokenUsage && 'session' in tokenUsage ? tokenUsage.session : null;
-
-  const activeTokens = activeMetrics?.totalTokens ?? tokenUsage?.totalTokens ?? 0;
-  const inputTokens = activeMetrics?.inputTokens ?? tokenUsage?.inputTokens ?? 0;
-  const outputTokens = activeMetrics?.outputTokens ?? tokenUsage?.outputTokens ?? 0;
-  const totalApiUsage = sessionMetrics?.totalApiTokens ?? activeTokens;
-
-  const totalCost = tokenUsage && 'totalCost' in tokenUsage ? tokenUsage.totalCost : 0;
-  const modelBreakdowns =
-    tokenUsage && 'modelBreakdowns' in tokenUsage ? tokenUsage.modelBreakdowns : [];
+  const activeTokens = tokenUsage?.active.totalTokens ?? 0;
+  const inputTokens = tokenUsage?.active.inputTokens ?? 0;
+  const outputTokens = tokenUsage?.active.outputTokens ?? 0;
+  const totalApiUsage = tokenUsage?.session.totalApiTokens ?? activeTokens;
+  const totalCost = tokenUsage?.totalCost ?? 0;
+  const modelBreakdowns = tokenUsage?.modelBreakdowns ?? [];
 
   const pct =
     contextWindow > 0
       ? Math.min(100, Math.round((activeTokens / contextWindow) * 100))
       : 0;
 
-  const isNearLimit = pct >= 80;
+  const isNearLimit = pct >= NEAR_LIMIT_PERCENT;
 
   return (
     <>

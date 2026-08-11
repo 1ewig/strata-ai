@@ -11,10 +11,12 @@ import {
 import { useModelSettings } from './useModelSettings';
 import { useWorkspaceFiles } from './useWorkspaceFiles';
 import { useChatTransport } from './useChatTransport';
+import { useCompaction } from './useCompaction';
 import { handleChatError } from '@/lib/ai/chat-error-handler';
 import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
-import { calculateTokenMetrics, ConversationTokenMetrics, ChatMetadata } from '@/lib/token-usage';
+import { calculateTokenMetrics, ChatMetadata } from '@/lib/token-usage';
 import { getModelContextWindow } from '@/lib/models';
+import { buildQuotaError } from '@/lib/limits';
 import { useRateLimit } from '@/contexts/RateLimitContext';
 import { useSession } from '@/lib/auth-client';
 
@@ -45,7 +47,6 @@ export function useChatSession(chatId: string) {
     updateRateLimitData,
     setQuotaError,
     clearQuotaError,
-    checkQuotaStatus,
   } = useRateLimit();
 
   const dexieMessages = useLiveQuery(
@@ -104,6 +105,18 @@ export function useChatSession(chatId: string) {
     setQuotaError,
   });
 
+  // Modular context compaction hook
+  const { isCompacting, triggerCompaction } = useCompaction({
+    chatId,
+    userId,
+    filesRef,
+    chatRef,
+    continuationCountRef,
+    sendMessageRef,
+    updateRateLimitData,
+    setQuotaError,
+  });
+
   const chat = useChat({
     id: chatId,
     transport: transport as any,
@@ -133,7 +146,7 @@ export function useChatSession(chatId: string) {
       [chatId, userId, setQuotaError],
     ),
     onFinish: useCallback(
-      ({
+      async ({
         message,
         messages: allMessages,
         finishReason,
@@ -142,11 +155,20 @@ export function useChatSession(chatId: string) {
         messages: unknown[];
         finishReason?: string;
       }) => {
-        return reconcileFinishedStep({
+        // Ensure allMessages includes the latest finished message's metadata
+        const lastFinishedMsg = message as any;
+        const fullMessages = (allMessages as any[]).map((m) =>
+          m.id === lastFinishedMsg?.id ? { ...m, ...lastFinishedMsg } : m
+        );
+        if (lastFinishedMsg && !fullMessages.some((m) => m.id === lastFinishedMsg.id)) {
+          fullMessages.push(lastFinishedMsg);
+        }
+
+        await reconcileFinishedStep({
           chatId,
           userId,
-          message,
-          allMessages,
+          message: lastFinishedMsg,
+          allMessages: fullMessages,
           finishReason,
           continuationCountRef,
           sendMessageRef,
@@ -209,26 +231,22 @@ export function useChatSession(chatId: string) {
     (text: string) => {
       continuationCountRef.current = 0;
       const trimmed = text.trim();
-      const canSend = chat.status === 'ready' || chat.status === 'error' || chat.status !== 'streaming';
+      const canSend = (chat.status === 'ready' || chat.status === 'error' || chat.status !== 'streaming') && !isCompacting;
       if (trimmed && canSend) {
         if (chat.status !== 'ready' && chat.stop) {
           chat.stop();
         }
         if (rateLimitData && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0)) {
-          setQuotaError({
-            message: rateLimitData.remaining5h <= 0
-              ? 'Your 5-hour quota is exhausted (10/10 messages used).'
-              : 'Your weekly quota is exhausted (50/50 messages used).',
-            retryAfter: rateLimitData.retryAfter,
-          });
+          const err = buildQuotaError(rateLimitData.remaining5h, rateLimitData.remainingWeek, rateLimitData.retryAfter);
+          if (err) { setQuotaError(err); }
           return;
         }
         if (isContextWindowExhausted) {
           setQuotaError({
             message:
               contextWindow > 0
-                ? `Context window reached (${contextWindow.toLocaleString()} tokens). Start a new chat to continue.`
-                : 'Context window reached. Start a new chat to continue.',
+                ? `Context window reached (${contextWindow.toLocaleString()} tokens). Compact history or start a new chat to continue.`
+                : 'Context window reached. Compact history or start a new chat to continue.',
           });
           return;
         }
@@ -240,7 +258,7 @@ export function useChatSession(chatId: string) {
         chat.sendMessage({ text: trimmed });
       }
     },
-    [chat, chatId, currentConvTitle, rateLimitData, setQuotaError, isContextWindowExhausted, contextWindow],
+    [chat, chatId, currentConvTitle, rateLimitData, setQuotaError, isContextWindowExhausted, contextWindow, isCompacting],
   );
 
   const handleStop = useCallback(() => {
@@ -249,7 +267,14 @@ export function useChatSession(chatId: string) {
     }
   }, [chat]);
 
-  const isLoading = (chat.status === 'streaming' || chat.status === 'submitted') && !quotaError;
+  const isLoading = ((chat.status === 'streaming' || chat.status === 'submitted') && !quotaError) || isCompacting;
+
+  const handleTriggerCompaction = useCallback(() => {
+    if (chat.messages.length > 0 && !isCompacting && !isLoading) {
+      setQuotaError(null);
+      triggerCompaction(chat.messages);
+    }
+  }, [chat.messages, isCompacting, isLoading, setQuotaError, triggerCompaction]);
 
   return {
     model: modelSettings.model,
@@ -263,14 +288,14 @@ export function useChatSession(chatId: string) {
     tokenMetrics,
     isContextWindowExhausted,
     contextWindow,
-    streamingContent: null,
     status: chat.status,
     isLoading,
+    isCompacting,
     rateLimitData,
     quotaError,
     clearQuotaError,
-    checkQuotaStatus,
     handleSendMessage,
+    handleTriggerCompaction,
     handleStop,
     handleSelectFile: workspace.handleSelectFile,
     handleCreateFile: workspace.handleCreateFile,

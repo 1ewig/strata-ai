@@ -107,8 +107,10 @@ export function createWebSearchTool() {
       searchDepth: z
         .enum(["basic", "advanced"])
         .optional()
-        .default("advanced")
-        .describe("Search depth: 'basic' for quick results, 'advanced' for deeper analysis."),
+        .default("basic")
+        .describe(
+          "Search depth: 'basic' for fast lookups (1 credit); 'advanced' for comprehensive multi-source research (2 credits).",
+        ),
       topic: z
         .enum(["general", "news", "finance"])
         .optional()
@@ -164,7 +166,7 @@ export function createWebSearchTool() {
     }),
     execute: async ({
       query,
-      searchDepth = "advanced",
+      searchDepth = "basic",
       topic = "general",
       maxResults = 6,
       includeRawContent = false,

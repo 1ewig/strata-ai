@@ -34,16 +34,6 @@ export const fileSummarySchema = z.object({
   updatedAt: z.string().optional(),
 });
 
-// Full-file shape returned by write/edit tools so the client can persist the result.
-export const workspaceFileSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  content: z.string(),
-  language: z.string().optional(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
-});
-
 /**
  * Case-insensitive comparison of two filenames.
  */

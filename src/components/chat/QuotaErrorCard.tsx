@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { AlertCircle, Clock, X } from 'lucide-react';
+import { QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT } from '@/lib/limits';
 
 /**
  * Props for the QuotaErrorCard component.
@@ -85,7 +86,7 @@ export function QuotaErrorCard({ error, onDismiss }: QuotaErrorCardProps) {
             </p>
 
             <div className="pt-1 text-caption text-text-muted flex items-center gap-3 flex-wrap">
-              <span>Standard limits: <strong className="text-text-secondary">10 msgs / 5h</strong> &amp; <strong className="text-text-secondary">50 msgs / week</strong></span>
+              <span>Standard limits: <strong className="text-text-secondary">{QUOTA_5H_LIMIT} msgs / 5h</strong> &amp; <strong className="text-text-secondary">{QUOTA_WEEK_LIMIT} msgs / week</strong></span>
             </div>
           </div>
         </div>

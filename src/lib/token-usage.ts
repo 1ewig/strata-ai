@@ -11,6 +11,8 @@ export interface ChatMetadata {
   /** Aggregate multi-step API execution tokens across all tool iterations in this turn. */
   stepTotalUsage?: LanguageModelUsage;
   modelId?: string;
+  /** True when this message is a context compaction summary (created via the /compact slash command). */
+  isCompactedSummary?: boolean;
 }
 
 /** Active context window usage for the current conversation state. */
@@ -63,10 +65,6 @@ export interface ConversationTokenMetrics {
   modelsUsed: string[];
   /** Detailed token and dollar cost breakdown grouped by model. */
   modelBreakdowns: ModelUsageStats[];
-  /** Backward-compatibility aliases mapping to active context. */
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
 }
 
 /**
@@ -97,13 +95,6 @@ export function formatCost(costInUSD: number): string {
   return `$${costInUSD.toFixed(3)}`;
 }
 
-/** Legacy cumulative usage type maintained for backward compatibility. */
-export interface CumulativeUsage {
-  inputTokens: number;
-  outputTokens: number;
-  totalTokens: number;
-}
-
 /**
  * Calculates accurate token metrics for a conversation adhering to the
  * Claude Code / OpenCode / Codex active context window paradigm, and groups
@@ -120,6 +111,7 @@ export function calculateTokenMetrics(
   if (!messages || messages.length === 0) return null;
 
   let latestUsage: LanguageModelUsage | null = null;
+  let isLatestTurnCompacted = false;
   let totalOutputTokens = 0;
   let totalApiTokens = 0;
   let totalCost = 0;
@@ -140,6 +132,7 @@ export function calculateTokenMetrics(
     if (!usage) continue;
 
     latestUsage = usage;
+    isLatestTurnCompacted = m.metadata?.isCompactedSummary === true;
     turnCount += 1;
 
     const input = usage.inputTokens ?? 0;
@@ -179,9 +172,21 @@ export function calculateTokenMetrics(
 
   if (!latestUsage) return null;
 
-  const activeInput = latestUsage.inputTokens ?? 0;
-  const activeOutput = latestUsage.outputTokens ?? 0;
-  const activeTotal = latestUsage.totalTokens ?? activeInput + activeOutput;
+  let activeInput = latestUsage.inputTokens ?? 0;
+  let activeOutput = latestUsage.outputTokens ?? 0;
+
+  // When the latest assistant message is a context compaction summary, active context
+  // resets to the baseline system prompt footprint plus the real summary output tokens,
+  // accurately reflecting the trimmed prompt working memory for subsequent turns.
+  if (isLatestTurnCompacted) {
+    const estimatedSystemBaseline = 1500;
+    activeInput = estimatedSystemBaseline;
+    activeOutput = latestUsage.outputTokens ?? 0;
+  }
+
+  const activeTotal = isLatestTurnCompacted
+    ? activeInput + activeOutput
+    : latestUsage.totalTokens ?? activeInput + activeOutput;
 
   if (activeTotal <= 0) return null;
 
@@ -223,25 +228,7 @@ export function calculateTokenMetrics(
     totalCost,
     modelsUsed,
     modelBreakdowns,
-    inputTokens: activeInput,
-    outputTokens: activeOutput,
-    totalTokens: activeTotal,
   };
-}
-
-/**
- * Backward-compatible helper that delegates to calculateTokenMetrics and returns
- * active context window usage.
- *
- * @param messages - The conversation's UI messages, each typed with ChatMetadata.
- * @param contextWindow - Optional context window for calculations.
- * @returns ConversationTokenMetrics (representing active context), or null before any real provider usage exists.
- */
-export function computeCumulativeUsage(
-  messages: Array<{ role?: string; metadata?: ChatMetadata }> | undefined,
-  contextWindow: number = 131072,
-): ConversationTokenMetrics | null {
-  return calculateTokenMetrics(messages, contextWindow);
 }
 
 /**
@@ -266,4 +253,4 @@ export function formatContextWindow(contextWindow: number): string {
   return contextWindow >= 1000000
     ? `${(contextWindow / 1000000).toFixed(1)}M`
     : `${Math.round(contextWindow / 1000)}k`;
-}
+}

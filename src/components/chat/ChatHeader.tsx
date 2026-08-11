@@ -4,11 +4,11 @@ import React, { useState, useRef } from 'react';
 import { Folder, Menu, Plus } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MODELS } from '@/lib/models';
+import { NEAR_LIMIT_PERCENT } from '@/lib/limits';
 import {
   formatContextWindow,
   formatTokens,
   ConversationTokenMetrics,
-  CumulativeUsage,
 } from '@/lib/token-usage';
 import TokenUsagePopover from './TokenUsagePopover';
 
@@ -18,7 +18,7 @@ interface ChatHeaderProps {
   files: WorkspaceFile[];
   activeFileId: string | null;
   model?: string;
-  tokenUsage?: ConversationTokenMetrics | CumulativeUsage | null;
+  tokenUsage?: ConversationTokenMetrics | null;
   onOpenFile?: (fileId: string) => void;
   onOpenDrawer: () => void;
   onOpenSidebar?: () => void;
@@ -49,15 +49,14 @@ export default React.memo(function ChatHeader({
   const { contextWindow } = modelOption;
 
   // Resolve active context window tokens
-  const activeMetrics = tokenUsage && 'active' in tokenUsage ? tokenUsage.active : null;
-  const activeTokens = activeMetrics?.totalTokens ?? tokenUsage?.totalTokens ?? 0;
+  const activeTokens = tokenUsage?.active.totalTokens ?? 0;
 
   const pct =
     contextWindow > 0
       ? Math.min(100, Math.round((activeTokens / contextWindow) * 100))
       : 0;
 
-  const isNearLimit = pct >= 80;
+  const isNearLimit = pct >= NEAR_LIMIT_PERCENT;
 
   const togglePopover = () => {
     setIsPopoverOpen((prev) => !prev);

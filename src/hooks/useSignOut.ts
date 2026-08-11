@@ -17,6 +17,7 @@ export function useSignOut() {
   const handleSignOut = useCallback(async () => {
     setIsPending(true);
     await signOut();
+    router.push('/auth/signin');
     router.refresh();
   }, [router]);
 

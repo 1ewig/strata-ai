@@ -65,13 +65,13 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     displayMessages,
     tokenUsage,
     isContextWindowExhausted,
-    streamingContent,
     isLoading,
+    isCompacting,
     rateLimitData,
     quotaError,
     clearQuotaError,
-    checkQuotaStatus,
     handleSendMessage,
+    handleTriggerCompaction,
     handleStop,
     handleSelectFile,
     handleCreateFile,
@@ -131,9 +131,12 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
   const chatInputNode = (
     <ChatInput
+      chatId={chatId}
       onSendMessage={handleSendMessage}
+      onTriggerCompaction={handleTriggerCompaction}
       onStop={handleStop}
       isLoading={isLoading}
+      isCompacting={isCompacting}
       model={model}
       thinkingLevel={thinkingLevel}
       onModelSelect={handleModelSelect}
@@ -143,7 +146,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     />
   );
 
-  const isNewChat = displayMessages.length === 0 && streamingContent === null && !isLoading && !quotaError;
+  const isNewChat = displayMessages.length === 0 && !isLoading && !quotaError;
 
   return (
     <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
@@ -194,7 +197,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               <StickToBottom.Content className={`max-w-4xl w-full mx-auto px-4 ${isNewChat ? 'min-h-full flex flex-col justify-center py-6' : 'pb-36'}`}>
                 <ChatPanel
                   messages={displayMessages}
-                  streamingContent={streamingContent}
                   isLoading={isLoading}
                   messagesEndRef={messagesEndRef}
                   onOpenDrawer={handleOpenDrawer}

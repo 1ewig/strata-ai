@@ -2,7 +2,9 @@
   "name": "Strata AI",
   "description": "An AI-powered agentic workspace studio built with Next.js 16, Vercel AI SDK 7, and Dexie IndexedDB persistence.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ],
   "supportedModels": [
     {
       "id": "gemini-3.5-flash-lite",

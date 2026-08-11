@@ -3,6 +3,7 @@
 import React from 'react';
 import { Globe, FileText, Compass } from 'lucide-react';
 import ChatBubble from '@/components/chat/ChatBubble';
+import CompactionDivider from '@/components/chat/CompactionDivider';
 import { QuotaErrorCard } from '@/components/chat/QuotaErrorCard';
 import { StrataIcon } from '@/components/ui/strata-icon';
 
@@ -38,7 +39,6 @@ export const WELCOME_MESSAGES = [
 /** Props for the ChatPanel message list orchestrator. */
 interface ChatPanelProps {
   messages: any[];
-  streamingContent: string | null;
   isLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   onOpenDrawer?: () => void;
@@ -57,8 +57,6 @@ interface ChatPanelProps {
  * bubbles, a quota error card, a typing indicator, and the scroll anchor.
  *
  * @param messages - Conversation messages rendered as ChatBubble rows.
- * @param streamingContent - In-flight assistant text; suppresses the empty state
- *   while a response is being generated.
  * @param isLoading - Shows the typing indicator while the assistant responds.
  * @param messagesEndRef - Scroll anchor appended after the last message.
  * @param onOpenDrawer - Passed through to bubbles for tool card drawer actions.
@@ -70,7 +68,6 @@ interface ChatPanelProps {
  */
 export default React.memo(function ChatPanel({
   messages,
-  streamingContent,
   isLoading,
   messagesEndRef,
   onOpenDrawer,
@@ -148,7 +145,7 @@ export default React.memo(function ChatPanel({
   return (
     <div className="pt-4 space-y-4">
       {/* Fallback empty state if isNewChat flag is not explicitly passed */}
-      {messages.length === 0 && streamingContent === null && !isLoading && !quotaError && (
+      {messages.length === 0 && !isLoading && !quotaError && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary p-0.5 flex items-center justify-center shadow-glow-primary">
             <div className="w-full h-full rounded-2xl bg-surface-raised flex items-center justify-center">
@@ -159,16 +156,21 @@ export default React.memo(function ChatPanel({
         </div>
       )}
 
-      {/* Only the final assistant message gets streaming effects while loading. */}
+      {/* Messages rendering with compaction dividers */}
       {messages.map((message, idx) => {
         const isLastAssistant = isLoading && message.role === 'assistant' && idx === messages.length - 1;
+        const isCompacted = message.metadata?.isCompactedSummary === true;
+
         return (
-          <ChatBubble
-            key={message.id}
-            message={message}
-            isStreaming={isLastAssistant}
-            onOpenDrawer={onOpenDrawer}
-          />
+          <React.Fragment key={message.id}>
+            {isCompacted && <CompactionDivider label="Compaction started" />}
+            <ChatBubble
+              message={message}
+              isStreaming={isLastAssistant}
+              onOpenDrawer={onOpenDrawer}
+            />
+            {isCompacted && !isLastAssistant && <CompactionDivider label="Compaction completed" />}
+          </React.Fragment>
         );
       })}
 

@@ -4,7 +4,39 @@ import {
   MAX_FILES_PER_WORKSPACE,
   MAX_MESSAGE_CHARS,
   MAX_WORKSPACE_TOTAL_CHARS,
+  NEAR_LIMIT_PERCENT,
 } from "@/lib/limits";
+
+/**
+ * Returns only files that carry actual content worth surfacing to the model.
+ */
+function getActiveFiles(filesInput?: WorkspaceFile[]): WorkspaceFile[] {
+  return (filesInput ?? []).filter((f) => f.content?.trim());
+}
+
+/**
+ * Formats the metadata-only workspace file listing injected into system prompts.
+ */
+function buildWorkspaceFileListing(activeFiles: WorkspaceFile[]): string {
+  return activeFiles
+    .map(
+      (f) =>
+        `- ${f.name} (${f.language || "markdown"}, ${f.content.length.toLocaleString()}/${MAX_FILE_CHARS.toLocaleString()} chars, id: ${f.id})`,
+    )
+    .join("\n");
+}
+
+/**
+ * Formats the current date, day of week, and year for real-time temporal awareness.
+ */
+function formatCurrentDate(): string {
+  return new Date().toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 /**
  * Token-budget context shared with the model so it can size replies and flag
@@ -29,15 +61,10 @@ export interface TokenBudgetContext {
  */
 export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget?: TokenBudgetContext): string {
   // Only files with actual content are worth surfacing to the model.
-  const activeFiles = (filesInput ?? []).filter((f) => f.content?.trim());
+  const activeFiles = getActiveFiles(filesInput);
   const hasFiles = activeFiles.length > 0;
 
-  const formattedFilesList = activeFiles
-    .map(
-      (f) =>
-        `- ${f.name} (${f.language || "markdown"}, ${f.content.length.toLocaleString()}/${MAX_FILE_CHARS.toLocaleString()} chars, id: ${f.id})`,
-    )
-    .join("\n");
+  const formattedFilesList = buildWorkspaceFileListing(activeFiles);
 
   // Token budget awareness: active context occupancy vs context window, with headroom sizing hints.
   const { contextWindow, totalTokens, remainingTokens, percentUsed } = tokenBudget ?? {};
@@ -55,7 +82,9 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget
       : contextWindow && totalTokens != null
       ? Math.max(0, contextWindow - totalTokens).toLocaleString()
       : windowText;
-  const nearLimit = pct >= 80;
+  // Occupancy threshold that flips the system prompt into "be concise" mode.
+  // Shared with the UI warning state via NEAR_LIMIT_PERCENT so both agree.
+  const nearLimit = pct >= NEAR_LIMIT_PERCENT;
 
   const tokenBudgetSection = [
     "",
@@ -63,17 +92,12 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget
     `- Active conversation context occupancy: ${usageText} / ${windowText} tokens (${pct}% used).`,
     `- Available context headroom: ${remainingText} tokens.`,
     nearLimit
-      ? "- You are near or above 80% of the active context window: be concise, avoid repeating content already in files, and if the user needs far more room, proactively suggest starting a new chat to continue."
+      ? `- You are utilizing a significant portion of the active context window: be concise, avoid repeating content already in files, and note that the user can use /compact to condense conversation history if needed.`
       : "- Keep replies reasonably sized to stay well within the active context window.",
   ].join("\n");
 
   // Format current date, day of week, and year for real-time temporal awareness.
-  const currentDate = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const currentDate = formatCurrentDate();
 
   return `You are Strata AI — an elite autonomous AI workspace studio architect, technical document engineer, and a genuinely helpful assistant. Your mission is to create, analyze, edit, organize, and maintain dynamic multi-file workspaces (code, notes, specifications, and documentation) with surgical precision — while communicating clearly, honestly, and with the user's actual goal in mind.
 
@@ -111,7 +135,7 @@ ${
 ### Web Search & Deep Extraction Loop
 1. **\`webSearch\` Discipline**:
    - Execute \`webSearch\` autonomously for real-time facts, news, documentation, or technical research.
-   - Prefer \`maxResults: 6\` and \`searchDepth: "advanced"\`. Use \`includeDomains\` / \`excludeDomains\` or \`timeRange\` when queries target specific documentation or recent updates.
+   - Prefer \`maxResults: 6\`. Use \`searchDepth: "basic"\` by default for fast, credit-efficient fact-checking, version lookups, and documentation URL discovery. Use \`searchDepth: "advanced"\` only for multi-source research, complex technical comparisons, or when deeper synthesis is required. Use \`includeDomains\` / \`excludeDomains\` or \`timeRange\` when queries target specific documentation or recent updates.
    - Set \`includeRawContent: true\` when deep context is needed on top search results without requiring a separate extraction step.
 
 2. **\`extractUrl\` Deep Extraction Escalation**:
@@ -166,4 +190,74 @@ Your chat replies are rendered with full GitHub-Flavored Markdown (GFM) with cus
    - Feature lists and properties -> Bold Lead-in Bullet Points
    - Key caveats and takeaways -> Styled Callout Blockquotes
    - Prose -> Short, punchy paragraphs with clean spacing.`;
+}
+
+/**
+ * Builds the system instruction for the context compaction endpoint.
+ * Directs Gemini 3.1 Flash Lite (High Effort) to synthesize an authoritative,
+ * goal-oriented, high-density distillation of the conversation history and workspace state.
+ *
+ * @param filesInput - Workspace files to reference (metadata only).
+ * @returns The complete system instruction string for context compaction.
+ */
+export function buildCompactionInstruction(filesInput?: WorkspaceFile[]): string {
+  const activeFiles = getActiveFiles(filesInput);
+  const hasFiles = activeFiles.length > 0;
+
+  const formattedFilesList = buildWorkspaceFileListing(activeFiles);
+  const currentDate = formatCurrentDate();
+
+  return `You are a context compaction specialist for Strata AI. Your only job is to produce an authoritative, high-fidelity, and structured distillation of the conversation history and workspace state so the assistant can continue effectively with a much smaller context window.
+
+Current Date: ${currentDate}
+Workspace Files Status: ${hasFiles ? "Populated" : "Empty"}
+${
+  hasFiles
+    ? `Active Workspace Files (Metadata Snapshot):\n${formattedFilesList}`
+    : "No workspace files exist currently."
+}
+
+### Goals (in priority order)
+1. Preserve every decision, constraint, user requirement, goal, and open question that still matters.
+2. Capture the current state of the workspace files and any critical tool execution results (including web research findings).
+3. Discard pure chit-chat, failed attempts that were later corrected, and intermediate reasoning that is no longer relevant.
+4. Make the summary completely self-contained — a new agent instance reading ONLY this summary must be able to pick up exactly where we left off without asking the user to repeat anything.
+
+### Required Output Format
+Respond with ONLY the following Markdown structure. Do not add any conversational preamble or closing remarks.
+
+# Context Compaction Summary
+
+## Current Goal
+[One or two sentences stating the active objective]
+
+## Key Decisions & Constraints
+- [Bullet list of irreversible or important technical decisions, architectural choices, user styling/design rules, and hard constraints]
+
+## Progress So Far
+- [What has been successfully completed and verified]
+- [What is currently in progress]
+- [What is blocked or waiting]
+
+## Open Questions / TODOs
+- [Unresolved questions, pending user decisions, or remaining tasks]
+
+## Important Facts & Artifacts
+- [Critical facts, symbols, functions, routes, IDs, URLs, error messages, or technical parameters that must not be lost]
+
+## Workspace State
+[Concise breakdown of active workspace files, their exact names, purpose, and key exports/sections]
+
+## Recent Trajectory (last meaningful turns)
+[Very brief chronological summary of the last 3–6 significant exchanges explaining why we are in the current state]
+
+## Continuation Notes
+[Any special instructions the next agent turn should follow, e.g. "continue editing X", "wait for user confirmation on Y", "the previous approach failed because Z"]
+
+### Rules
+- Be dense and factual. Prefer precision over polish.
+- Use backticks for all file paths, functions, variables, and identifiers.
+- Never invent information that is not present in the history or files.
+- If the conversation is short or already focused, keep the summary proportionally concise.
+- Do not include meta-commentary about the compaction process itself.`;
 }

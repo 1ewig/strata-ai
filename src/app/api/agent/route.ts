@@ -1,23 +1,11 @@
-import { z } from "zod";
-import { WorkspaceFile } from "@/lib/schemas";
-import { MAX_MESSAGE_CHARS } from "@/lib/limits";
+import { agentRequestBodySchema } from "@/lib/schemas";
+import { MAX_MESSAGE_CHARS, buildRateLimitErrorMessage } from "@/lib/limits";
 import { createMutableWorkspace } from "@/lib/ai/workspace";
 import { runAgentResponse } from "@/lib/ai/agent-runner";
+import { sliceMessagesAfterCompaction } from "@/lib/ai/message-extractor";
 
 import { auth } from "@/lib/auth";
 import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
-
-/**
- * Schema for the agent request body: conversation messages plus optional
- * workspace files and model/step configuration.
- */
-const bodySchema = z.object({
-  messages: z.array(z.any()),
-  files: z.array(z.any()).optional(),
-  model: z.string().optional(),
-  thinkingLevel: z.string().optional(),
-  maxSteps: z.number().optional(),
-});
 
 /**
  * POST /api/agent - streams an agent reply using the AI SDK UI message
@@ -48,7 +36,7 @@ export async function POST(req: Request) {
     return new Response(
       JSON.stringify({
         error: "Rate limit exceeded",
-        message: `Max 10 messages per 5 hours, 50 per week. Try again in ${Math.ceil(rateLimit.retryAfter! / 60)} min.`,
+        message: buildRateLimitErrorMessage(rateLimit.retryAfter),
         retryAfter: rateLimit.retryAfter,
       }),
       {
@@ -65,7 +53,7 @@ export async function POST(req: Request) {
   }
 
   // Validate the body shape before use.
-  const parsed = bodySchema.safeParse(await req.json());
+  const parsed = agentRequestBodySchema.safeParse(await req.json());
 
   // Return zod validation failures as a 400 with flattened details.
   if (!parsed.success) {
@@ -75,7 +63,11 @@ export async function POST(req: Request) {
     );
   }
 
-  const { messages, model, thinkingLevel, maxSteps } = parsed.data;
+  const { model, thinkingLevel, maxSteps } = parsed.data;
+
+  // Prune history before the latest compaction summary so the model receives
+  // [Compacted Summary, ...newMessages] without context blowup.
+  const messages = sliceMessagesAfterCompaction(parsed.data.messages);
 
   // Validate latest user message character length.
   const lastUserMsg = Array.isArray(messages)
@@ -95,7 +87,7 @@ export async function POST(req: Request) {
 
   // Delegate model streaming, tool wiring, and SSE wrapping to the agent runner.
   return runAgentResponse({
-    workspace: createMutableWorkspace((parsed.data.files as WorkspaceFile[]) || []),
+    workspace: createMutableWorkspace(parsed.data.files || []),
     messages,
     modelId: model,
     thinkingLevel,

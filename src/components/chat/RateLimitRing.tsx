@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
+import { QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT } from '@/lib/limits';
 
 /**
  * Props for the RateLimitRing component.
@@ -74,7 +75,7 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
             stroke="currentColor"
             strokeWidth="2.2"
             strokeDasharray={43.98}
-            strokeDashoffset={43.98 * (1 - Math.min(1, Math.max(0, rateLimitData.remaining5h / 10)))}
+            strokeDashoffset={43.98 * (1 - Math.min(1, Math.max(0, rateLimitData.remaining5h / QUOTA_5H_LIMIT)))}
             strokeLinecap="round"
             className={`transition-all duration-500 ${
               rateLimitData.remaining5h > 3
@@ -108,13 +109,13 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
           <div className="flex items-center justify-between">
             <span>5-hour window:</span>
             <span className={`font-semibold ${rateLimitData.remaining5h === 0 ? 'text-danger' : 'text-primary'}`}>
-              {rateLimitData.remaining5h} of 10 left
+              {rateLimitData.remaining5h} of {QUOTA_5H_LIMIT} left
             </span>
           </div>
           <div className="flex items-center justify-between">
             <span>7-day window:</span>
             <span className={`font-semibold ${rateLimitData.remainingWeek === 0 ? 'text-danger' : 'text-primary'}`}>
-              {rateLimitData.remainingWeek} of 50 left
+              {rateLimitData.remainingWeek} of {QUOTA_WEEK_LIMIT} left
             </span>
           </div>
           {rateLimitData.retryAfter && (

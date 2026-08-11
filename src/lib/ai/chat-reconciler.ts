@@ -1,6 +1,7 @@
 import {
   db,
   getWorkspaceFiles,
+  persistMessages,
   updateConversationFiles,
 } from '@/lib/db/db';
 import {
@@ -47,56 +48,39 @@ export async function reconcileFinishedStep({
   continuationCountRef,
   sendMessageRef,
 }: ReconcileStepParams) {
-  // Prepare batched messages payload. Each message gets a strictly increasing
-  // timestamp derived from its position in `allMessages`, so `sortBy('timestamp')`
-  // always reproduces the true conversation order (shared timestamps would tie
-  // and fall back to random UUID ordering).
-  const base = Date.now();
-  const dbMessages = (allMessages as any[]).map((msg, idx) => ({
-    ...msg,
-    chatId,
-    ...(userId ? { userId } : {}),
-    timestamp: new Date(base + idx).toISOString(),
-  }));
+  // Persist all messages with position-derived timestamps
+  await persistMessages(chatId, allMessages, userId);
 
-  // Perform message batch writes and workspace file reconciliation atomically in a single transaction
-  await db.transaction('rw', [db.messages, db.conversations], async () => {
-    if (dbMessages.length > 0) {
-      await db.messages.bulkPut(dbMessages);
-    }
-    await db.conversations.update(chatId, { updatedAt: new Date().toISOString() });
+  // Process workspace file updates/deletions ONLY from the current assistant message
+  const currentMsg = message as GenericUIMessage;
+  const deletions = extractDeletedFilesFromMessage(currentMsg);
+  const updatedFiles = extractFilesFromMessage(currentMsg);
 
-    // Process workspace file updates/deletions ONLY from the current assistant message
-    const currentMsg = message as GenericUIMessage;
-    const deletions = extractDeletedFilesFromMessage(currentMsg);
-    const updatedFiles = extractFilesFromMessage(currentMsg);
+  if (deletions.length > 0 || (updatedFiles && updatedFiles.length > 0)) {
+    const conv = await db.conversations.get(chatId);
+    let currentFiles = getWorkspaceFiles(conv);
 
-    if (deletions.length > 0 || (updatedFiles && updatedFiles.length > 0)) {
-      const conv = await db.conversations.get(chatId);
-      let currentFiles = getWorkspaceFiles(conv);
-
-      // Apply deletions
-      if (deletions.length > 0) {
-        for (const del of deletions) {
-          const identifier = del.fileId || del.name;
-          if (identifier) {
-            currentFiles = removeFileFromWorkspace(currentFiles, identifier);
-          }
+    // Apply deletions
+    if (deletions.length > 0) {
+      for (const del of deletions) {
+        const identifier = del.fileId || del.name;
+        if (identifier) {
+          currentFiles = removeFileFromWorkspace(currentFiles, identifier);
         }
       }
-
-      // Apply creations or edits: replace by id/name, or append as a brand-new file.
-      if (updatedFiles && updatedFiles.length > 0) {
-        for (const newFile of updatedFiles) {
-          currentFiles = upsertFileIntoWorkspace(currentFiles, newFile);
-        }
-      }
-
-      // Keep the first file as the drawer's active selection, if any remain.
-      const activeId = currentFiles.length > 0 ? currentFiles[0].id : undefined;
-      await updateConversationFiles(chatId, currentFiles, activeId);
     }
-  });
+
+    // Apply creations or edits: replace by id/name, or append as a brand-new file.
+    if (updatedFiles && updatedFiles.length > 0) {
+      for (const newFile of updatedFiles) {
+        currentFiles = upsertFileIntoWorkspace(currentFiles, newFile);
+      }
+    }
+
+    // Keep the first file as the drawer's active selection, if any remain.
+    const activeId = currentFiles.length > 0 ? currentFiles[0].id : undefined;
+    await updateConversationFiles(chatId, currentFiles, activeId);
+  }
 
   // Auto-continuation loop if step limit reached
   const currentCount = continuationCountRef.current ?? 0;

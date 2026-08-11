@@ -164,6 +164,12 @@ export const MODEL_THINKING_LEVELS: Record<string, ModelThinkingConfig> = {
   'accounts/fireworks/models/deepseek-v4-flash-0731': { levels: ['low', 'high'], defaultLevel: 'high' },
 };
 
+/** Dedicated high-speed model configured for context compaction runs. */
+export const COMPACTION_MODEL_ID = 'gemini-3.1-flash-lite';
+
+/** Dedicated high reasoning effort level configured for context compaction runs. */
+export const COMPACTION_THINKING_LEVEL: ThinkingLevelId = 'high';
+
 // localStorage keys for persisting the user's model and thinking-level choices
 const STORAGE_KEY = 'selectedModel';
 const THINKING_LEVEL_KEY = 'selectedThinkingLevel';

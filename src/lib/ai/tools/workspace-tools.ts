@@ -11,7 +11,6 @@ import {
   WorkspaceToolsContext,
   fileMetadataSchema,
   fileSummarySchema,
-  workspaceFileSchema,
   findWorkspaceFile,
   isSameFilename,
 } from "./types";

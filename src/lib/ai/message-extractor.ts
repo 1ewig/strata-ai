@@ -98,3 +98,43 @@ export function extractDeletedFilesFromMessage(
 
   return deletions;
 }
+
+/**
+ * Structural slice of a message that just exposes compaction-summary metadata.
+ */
+type CompactionAwareMessage = { metadata?: { isCompactedSummary?: boolean } };
+
+/**
+ * Finds the index of the latest compaction summary message in a messages array.
+ * @param messages - Array of messages to search.
+ * @returns The index of the latest compaction summary message, or -1 if none exists.
+ */
+export function findLatestCompactedMessageIndex(
+  messages: CompactionAwareMessage[] | undefined,
+): number {
+  if (!messages || messages.length === 0) return -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]?.metadata?.isCompactedSummary === true) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Trims a conversation to begin at the latest compaction summary, so the model
+ * never re-reads history that predates the last summary. This is the single
+ * source of truth for history pruning shared by both the agent and compaction
+ * endpoints (the client transport no longer mutates the outgoing payload).
+ * @param messages - Array of messages to slice.
+ * @returns A copy trimmed after the latest summary, or the original array when none exists.
+ */
+export function sliceMessagesAfterCompaction<T>(
+  messages: T[] | undefined,
+): T[] {
+  if (!messages || messages.length === 0) return messages ?? [];
+  const latestIdx = findLatestCompactedMessageIndex(
+    messages as CompactionAwareMessage[],
+  );
+  return latestIdx >= 0 ? messages.slice(latestIdx) : messages;
+}

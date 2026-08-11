@@ -8,10 +8,15 @@ import {
   createUIMessageStream,
   LanguageModelUsage,
 } from "ai";
-import { buildSystemInstruction, createWorkspaceTools } from "@/lib/ai";
+import {
+  buildSystemInstruction,
+  buildCompactionInstruction,
+  createWorkspaceTools,
+} from "@/lib/ai";
 import { resolveAgentModel, getModelProvider, DEFAULT_AGENT_MODEL } from "@/lib/ai/providers";
 import { WorkspaceToolsContext } from "@/lib/ai/tools/types";
-import { getModelContextWindow } from "@/lib/models";
+import { WorkspaceFile } from "@/lib/schemas";
+import { getModelContextWindow, COMPACTION_MODEL_ID, COMPACTION_THINKING_LEVEL } from "@/lib/models";
 import { calculateTokenMetrics, ChatMetadata } from "@/lib/token-usage";
 
 /**
@@ -188,22 +193,14 @@ export async function runAgentResponse({
   remaining5h,
   remainingWeek,
 }: RunAgentResponseParams): Promise<Response> {
-  // Resolve the requested model to its provider-specific config (Google or Fireworks).
-  const resolvedModel = resolveAgentModel(modelId || DEFAULT_AGENT_MODEL, thinkingLevel);
-
-  // Prune provider metadata belonging to other providers before the message
-  // converters run, so stale Gemini thought signatures (or any other
-  // cross-provider leftovers) never leak into a Fireworks/DeepSeek payload.
-  const sanitizedMessages = sanitizeMessagesForProvider(
-    messages,
-    getModelProvider(modelId || DEFAULT_AGENT_MODEL),
-  );
-
   // Token budget: active model's context window + active context occupancy from the
   // latest assistant message (metadata.usage round-trips through the request body).
   const contextWindow = getModelContextWindow(modelId || DEFAULT_AGENT_MODEL);
   const tokenMetrics = calculateTokenMetrics(
-    sanitizedMessages as Array<{ role?: string; metadata?: ChatMetadata }>,
+    sanitizeMessagesForProvider(messages, getModelProvider(modelId || DEFAULT_AGENT_MODEL)) as Array<{
+      role?: string;
+      metadata?: ChatMetadata;
+    }>,
     contextWindow,
   );
   const tokenBudget = {
@@ -213,14 +210,99 @@ export async function runAgentResponse({
     percentUsed: tokenMetrics?.active.percentUsed,
   };
 
-  // Wrap streamText with createUIMessageStream so tools can emit live data-workspace events.
+  return createUIStreamResponder({
+    prefix: "[agent]",
+    messages,
+    modelId,
+    thinkingLevel,
+    signal,
+    remaining5h,
+    remainingWeek,
+    initialSystem: buildSystemInstruction(workspace.getCurrentFiles()),
+    buildTools: (writer) => createWorkspaceTools({ ...workspace, writer }),
+    stopWhen: isStepCount(maxSteps),
+    prepareStep: async ({ stepNumber }) => {
+      console.log(
+        `[agent] Preparing step ${stepNumber}. Active workspace files: ${workspace.getCurrentFiles().length}`
+      );
+      return {
+        system: buildSystemInstruction(workspace.getCurrentFiles(), tokenBudget),
+      };
+    },
+  });
+}
+
+/**
+ * Configuration for `createUIStreamResponder`: the deltas between the agent and
+ * context-compaction runs layered onto the shared streaming wiring.
+ * @property prefix - Lifecycle log prefix ("[agent]" or "[compaction]").
+ * @property messages - Conversation messages to feed the model.
+ * @property modelId - Optional catalog model id; defaults to the lite Gemini model.
+ * @property thinkingLevel - Optional thinking effort requested by the client.
+ * @property signal - Optional abort signal tied to the incoming request.
+ * @property remaining5h / remainingWeek - Quota echoed as response headers.
+ * @property initialSystem - System prompt emitted with the initial step.
+ * @property buildTools - Optional factory producing tools bound to the live writer.
+ * @property prepareStep - Optional system re-injection hook between agent steps.
+ * @property stopWhen - Optional agent tool-loop step cap.
+ * @property maxOutputTokens - Optional output cap (compaction).
+ * @property appendUserMessage - Optional user turn appended after converted history.
+ * @property extraMetadata - Extra metadata merged onto the finished assistant message.
+ */
+interface UIStreamResponderConfig {
+  prefix: string;
+  messages: Parameters<typeof convertToModelMessages>[0];
+  modelId?: string;
+  thinkingLevel?: string;
+  signal?: AbortSignal;
+  remaining5h?: number;
+  remainingWeek?: number;
+  initialSystem: string;
+  buildTools?: (
+    writer: NonNullable<WorkspaceToolsContext["writer"]>,
+  ) => Parameters<typeof streamText>[0]["tools"];
+  prepareStep?: Parameters<typeof streamText>[0]["prepareStep"];
+  stopWhen?: Parameters<typeof streamText>[0]["stopWhen"];
+  maxOutputTokens?: number;
+  appendUserMessage?: string;
+  extraMetadata?: Record<string, unknown>;
+}
+
+/**
+ * Builds and returns the SSE UI-message streaming response for a model run,
+ * collapsing the shared `streamText` configuration (model resolution, provider
+ * metadata sanitization, reasoning/providerOptions wiring, word-paced
+ * `smoothStream` + tool-input coalescing, lifecycle logging) and the
+ * `createUIMessageStream` → `toUIMessageStream` + usage `messageMetadata` +
+ * quota-header SSE wrapping used by both the agent and compaction paths.
+ *
+ * @param config - The resolved deltas for this run.
+ * @returns The SSE UI-message streaming `Response`.
+ */
+async function createUIStreamResponder(config: UIStreamResponderConfig): Promise<Response> {
+  const { modelId, thinkingLevel } = config;
+
+  // Resolve the requested model to its provider-specific config (Google or Fireworks).
+  const resolvedModel = resolveAgentModel(modelId || DEFAULT_AGENT_MODEL, thinkingLevel);
+
+  // Prune provider metadata belonging to other providers before the message
+  // converters run, so stale Gemini thought signatures (or any other
+  // cross-provider leftovers) never leak into a Fireworks/DeepSeek payload.
+  const sanitizedMessages = sanitizeMessagesForProvider(
+    config.messages,
+    getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+  );
+
+  // Convert once up front (optional trailing user turn appended for compaction).
+  const modelMessages = config.appendUserMessage
+    ? [
+        ...(await convertToModelMessages(sanitizedMessages)),
+        { role: "user" as const, content: config.appendUserMessage },
+      ]
+    : await convertToModelMessages(sanitizedMessages);
+
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {
-      const workspaceWithWriter: WorkspaceToolsContext = {
-        ...workspace,
-        writer,
-      };
-
       let lastStepUsage: LanguageModelUsage | undefined;
 
       const result = streamText({
@@ -229,10 +311,11 @@ export async function runAgentResponse({
           ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
           : {}),
         ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
-        system: buildSystemInstruction(workspaceWithWriter.getCurrentFiles()),
-        messages: await convertToModelMessages(sanitizedMessages),
-        tools: createWorkspaceTools(workspaceWithWriter),
-        abortSignal: signal,
+        system: config.initialSystem,
+        messages: modelMessages,
+        ...(config.buildTools ? { tools: config.buildTools(writer) } : {}),
+        abortSignal: config.signal,
+        ...(config.maxOutputTokens !== undefined ? { maxOutputTokens: config.maxOutputTokens } : {}),
         experimental_transform: [
           smoothStream({
             delayInMs: 25,
@@ -240,35 +323,28 @@ export async function runAgentResponse({
           }),
           coalesceToolInputDeltas() as any,
         ],
-        prepareStep: async ({ stepNumber }) => {
-          console.log(
-            `[agent] Preparing step ${stepNumber}. Active workspace files: ${workspaceWithWriter.getCurrentFiles().length}`
-          );
-          return {
-            system: buildSystemInstruction(workspaceWithWriter.getCurrentFiles(), tokenBudget),
-          };
-        },
+        ...(config.prepareStep ? { prepareStep: config.prepareStep } : {}),
+        ...(config.stopWhen ? { stopWhen: config.stopWhen } : {}),
         onStart() {
-          console.log("[agent] Generation stream started.");
+          console.log(`${config.prefix} Generation stream started.`);
         },
         onStepEnd({ stepNumber, toolCalls, usage }) {
           if (usage) {
             lastStepUsage = usage;
           }
           console.log(
-            `[agent] Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`
+            `${config.prefix} Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`
           );
         },
         onEnd({ finishReason, usage }) {
           console.log(
-            `[agent] Stream finished (${finishReason}). Total token usage:`,
+            `${config.prefix} Stream finished (${finishReason}). Total token usage:`,
             usage
           );
         },
         onError({ error }) {
-          console.error("[agent] Stream error:", error);
+          console.error(`${config.prefix} Stream error:`, error);
         },
-        stopWhen: isStepCount(maxSteps),
       });
 
       writer.merge(
@@ -279,11 +355,12 @@ export async function runAgentResponse({
             // Following Claude Code / OpenCode / Codex standard, we record the final step's
             // usage as the active conversation context snapshot (avoiding multi-step N-pass inflation),
             // while preserving stepTotalUsage for cumulative session analytics.
-            if (part.type === 'finish') {
+            if (part.type === "finish") {
               return {
+                ...(config.extraMetadata ?? {}),
                 usage: lastStepUsage || part.totalUsage,
                 stepTotalUsage: part.totalUsage,
-                modelId: modelId || "gemini-3.5-flash-lite",
+                modelId: modelId || DEFAULT_AGENT_MODEL,
               };
             }
             return undefined;
@@ -297,8 +374,61 @@ export async function runAgentResponse({
   return createUIMessageStreamResponse({
     stream,
     headers: {
-      "X-RateLimit-Remaining-5h": String(remaining5h),
-      "X-RateLimit-Remaining-Week": String(remainingWeek),
+      ...(config.remaining5h !== undefined
+        ? { "X-RateLimit-Remaining-5h": String(config.remaining5h) }
+        : {}),
+      ...(config.remainingWeek !== undefined
+        ? { "X-RateLimit-Remaining-Week": String(config.remainingWeek) }
+        : {}),
     },
   });
 }
+
+/**
+ * Server-side compaction run configuration.
+ * @property files - The workspace files to reference in the compaction prompt.
+ * @property messages - The conversation messages to summarize.
+ * @property modelId - Optional catalog model id; defaults to the lite Gemini model.
+ * @property thinkingLevel - Optional thinking effort requested by the client.
+ * @property signal - Optional abort signal tied to the incoming request.
+ */
+export interface RunCompactionResponseParams {
+  files?: WorkspaceFile[];
+  messages: Parameters<typeof convertToModelMessages>[0];
+  modelId?: string;
+  thinkingLevel?: string;
+  signal?: AbortSignal;
+  remaining5h?: number;
+  remainingWeek?: number;
+}
+
+/**
+ * Builds and returns the streaming UI-message response for a context compaction run.
+ * Always utilizes the dedicated fast Gemini 3.1 Flash Lite model configured with
+ * high reasoning effort for lossless, high-density summary synthesis.
+ *
+ * @param params - The resolved messages, files, abort signal, and quota headers.
+ * @returns The SSE UI-message streaming `Response`.
+ */
+export async function runCompactionResponse({
+  files,
+  messages,
+  signal,
+  remaining5h,
+  remainingWeek,
+}: RunCompactionResponseParams): Promise<Response> {
+  return createUIStreamResponder({
+    prefix: "[compaction]",
+    messages,
+    modelId: COMPACTION_MODEL_ID,
+    thinkingLevel: COMPACTION_THINKING_LEVEL,
+    signal,
+    remaining5h,
+    remainingWeek,
+    initialSystem: buildCompactionInstruction(files),
+    maxOutputTokens: 3500,
+    appendUserMessage:
+      "Please generate the comprehensive context compaction summary for the conversation and workspace state above now, following the required structured format.",
+    extraMetadata: { isCompactedSummary: true },
+  });
+}

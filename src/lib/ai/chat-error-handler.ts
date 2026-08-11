@@ -1,5 +1,6 @@
-import { db } from '@/lib/db/db';
+import { persistMessages } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
+import { buildQuotaError } from '@/lib/limits';
 
 /**
  * Maps raw error messages to user-friendly copy based on detected patterns.
@@ -53,9 +54,12 @@ export async function handleChatError({
   // Quota hits short-circuit: show the quota card instead of an error message.
   const isQuota = errMsg.includes('429') || errMsg.toLowerCase().includes('rate limit');
 
+  // Canonical exhausted-quota copy (no remaining values are known on this path).
+  const quotaMessage = buildQuotaError(0, 0)?.message;
+
   if (isQuota) {
     setQuotaError((prev: any) => prev || {
-      message: 'Usage quota reached (10 msgs / 5h, 50 msgs / week). Please wait before trying again.',
+      message: quotaMessage || 'Usage quota reached. Please wait before trying again.',
     });
     return;
   }
@@ -91,16 +95,6 @@ export async function handleChatError({
     }
 
     // Persist the corrected message list so the error copy survives a reload.
-    // Timestamps are derived from position so ordering stays deterministic.
-    const base = Date.now();
-    for (let i = 0; i < updatedMessages.length; i++) {
-      const msg = updatedMessages[i];
-      await db.messages.put({
-        ...msg,
-        chatId,
-        ...(userId ? { userId } : {}),
-        timestamp: new Date(base + i).toISOString(),
-      });
-    }
+    await persistMessages(chatId, updatedMessages, userId);
   }
 }
