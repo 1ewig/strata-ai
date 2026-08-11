@@ -6,6 +6,7 @@ import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './SlashCommandMe
 
 /** Props for the ChatInput composer. */
 interface ChatInputProps {
+  chatId?: string;
   onSendMessage: (text: string) => void;
   onTriggerCompaction?: () => void;
   onStop?: () => void;
@@ -23,8 +24,8 @@ interface ChatInputProps {
   isContextWindowExhausted?: boolean;
 }
 
-/** Rotating placeholder prompts for the chat input. */
-const ROTATING_PLACEHOLDERS = [
+/** Available placeholder prompts for the chat input composer. */
+export const PLACEHOLDER_PROMPTS = [
   "How can Strata help?",
   "What are you working on?",
   "Research, write, or build...",
@@ -33,10 +34,27 @@ const ROTATING_PLACEHOLDERS = [
 ];
 
 /**
+ * Selects a random placeholder prompt index, avoiding picking the same prompt
+ * consecutively when multiple options are available.
+ *
+ * @param excludeIndex - Optional index to avoid selecting
+ * @returns A randomized index within PLACEHOLDER_PROMPTS
+ */
+function getRandomPlaceholderIndex(excludeIndex?: number): number {
+  if (PLACEHOLDER_PROMPTS.length <= 1) return 0;
+  let nextIndex: number;
+  do {
+    nextIndex = Math.floor(Math.random() * PLACEHOLDER_PROMPTS.length);
+  } while (excludeIndex !== undefined && nextIndex === excludeIndex);
+  return nextIndex;
+}
+
+/**
  * Renders the message composer: auto-growing textarea, slash command popup,
  * model/thinking-level selector, and send button with floating island aesthetics.
  */
 export default React.memo(function ChatInput({
+  chatId,
   onSendMessage,
   onTriggerCompaction,
   onStop,
@@ -51,16 +69,17 @@ export default React.memo(function ChatInput({
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [inputValue, setInputValue] = useState('');
-  const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [placeholderIndex, setPlaceholderIndex] = useState(() => getRandomPlaceholderIndex());
+  const prevChatIdRef = useRef(chatId);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
 
-  // Rotate placeholders every 3.5s when the input is empty
+  // Update placeholder when switching to a different or fresh chat conversation.
   useEffect(() => {
-    const interval = setInterval(() => {
-      setPlaceholderIndex((prev) => (prev + 1) % ROTATING_PLACEHOLDERS.length);
-    }, 3500);
-    return () => clearInterval(interval);
-  }, []);
+    if (prevChatIdRef.current !== chatId) {
+      prevChatIdRef.current = chatId;
+      setPlaceholderIndex((prev) => getRandomPlaceholderIndex(prev));
+    }
+  }, [chatId]);
 
   // Coerce the optional quota payload to null so all downstream checks can be null-based.
   const rateLimitData = rateLimitDataProp ?? null;
@@ -237,7 +256,7 @@ export default React.memo(function ChatInput({
             rows={1}
             disabled={isLoading}
             maxLength={MAX_MESSAGE_CHARS}
-            placeholder={ROTATING_PLACEHOLDERS[placeholderIndex]}
+            placeholder={PLACEHOLDER_PROMPTS[placeholderIndex]}
             value={inputValue}
             onChange={handleInput}
             onKeyDown={handleKeyDown}

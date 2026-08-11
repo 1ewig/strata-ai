@@ -131,6 +131,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
   const chatInputNode = (
     <ChatInput
+      chatId={chatId}
       onSendMessage={handleSendMessage}
       onTriggerCompaction={handleTriggerCompaction}
       onStop={handleStop}
