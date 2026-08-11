@@ -117,7 +117,7 @@ export default React.memo(function ChatPanel({
                 key={chip.label}
                 type="button"
                 onClick={() => handleChipClick(chip.prompt)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-raised/90 dark:bg-surface-elevated/90 hover:bg-surface-hover dark:hover:bg-surface-hover border border-edge-raised text-caption font-semibold text-text-secondary hover:text-text-bright transition-all shadow-sm hover:scale-[1.02] cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-raised/90 dark:bg-surface-elevated/90 hover:bg-surface-hover dark:hover:bg-surface-hover border border-edge-raised text-caption font-semibold text-text-secondary hover:text-text-bright transition-all shadow-button hover:scale-[1.02] cursor-pointer"
               >
                 <Icon className="w-3.5 h-3.5 text-primary" />
                 <span>{chip.label}</span>
@@ -131,7 +131,7 @@ export default React.memo(function ChatPanel({
 
         {/* Official Engines Strip */}
         <div className="pt-2 flex flex-col items-center gap-2 text-micro text-text-muted font-medium">
-          <span className="uppercase tracking-widest text-[10px] text-text-muted">Supported Engines</span>
+          <span className="uppercase tracking-widest text-micro text-text-muted">Supported Engines</span>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="px-2.5 py-1 rounded-lg bg-surface-raised/80 dark:bg-surface-elevated/70 border border-edge-raised text-text-secondary font-semibold text-micro">Google Gemini 3.5</span>
             <span className="px-2.5 py-1 rounded-lg bg-surface-raised/80 dark:bg-surface-elevated/70 border border-edge-raised text-text-secondary font-semibold text-micro">DeepSeek V4 Flash</span>

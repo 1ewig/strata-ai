@@ -235,7 +235,7 @@ export function createMarkdownComponents(
         );
       }
       return (
-        <div className={`my-2.5 rounded-xl bg-surface-base border ${T.codeBlockBorder} overflow-hidden font-mono text-micro shadow-sm ${T.codeBlockExtra}`}>
+        <div className={`my-2.5 rounded-xl bg-surface-base border ${T.codeBlockBorder} overflow-hidden font-mono text-micro shadow-card ${T.codeBlockExtra}`}>
           <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-micro text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
             <span className="text-text-muted">Code Snippet</span>
             {onCopy && (

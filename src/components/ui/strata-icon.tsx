@@ -19,8 +19,8 @@ export function StrataIcon({ className = 'w-5 h-5', ...props }: StrataIconProps)
     >
       <defs>
         <linearGradient id="strata-gradient" x1="2" y1="4" x2="22" y2="20" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#FF5520" />
-          <stop offset="1" stopColor="#FFAA1D" />
+          <stop stopColor="var(--color-primary)" />
+          <stop offset="1" stopColor="var(--color-secondary)" />
         </linearGradient>
       </defs>
       <circle cx="12" cy="12" r="9" fill="url(#strata-gradient)" />

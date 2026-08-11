@@ -95,7 +95,7 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
       <div
         className={`absolute bottom-full right-0 mb-2 ${
           isOpen ? 'block' : 'hidden group-hover:block'
-        } w-56 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-2.5 text-caption text-text-primary z-50 animate-in fade-in zoom-in-95`}
+        } w-56 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-card-lg p-2.5 text-caption text-text-primary z-50 animate-in fade-in zoom-in-95`}
       >
         <div className="font-semibold text-text-bright mb-1.5 flex items-center justify-between">
           <span>Remaining Messages</span>

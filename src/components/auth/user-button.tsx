@@ -85,7 +85,7 @@ export default function UserButton({ session, isSigningOut, onSignOut }: UserBut
       <div ref={menuContainerRef} className="relative w-full">
         {/* Dropdown Menu */}
         {menuOpen && (
-          <div className="absolute bottom-full left-0 right-0 mb-2 p-1.5 bg-surface-overlay border border-edge-raised rounded-xl shadow-xl space-y-1 animate-fade-in z-50">
+          <div className="absolute bottom-full left-0 right-0 mb-2 p-1.5 bg-surface-overlay border border-edge-raised rounded-xl shadow-card-lg space-y-1 animate-fade-in z-50">
             <div className="px-2.5 py-1.5 border-b border-edge-default">
               <p className="text-label font-semibold text-text-bright truncate">{displayName}</p>
               <p className="text-micro text-text-muted truncate">{session.user.email}</p>

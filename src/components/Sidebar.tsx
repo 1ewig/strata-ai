@@ -140,7 +140,7 @@ export default React.memo(function Sidebar({
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface-raised border-r border-edge-raised flex flex-col h-dvh shrink-0 select-none shadow-2xl transition-transform duration-300 md:static md:translate-x-0 md:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface-raised border-r border-edge-raised flex flex-col h-dvh shrink-0 select-none shadow-card-lg transition-transform duration-300 md:static md:translate-x-0 md:shadow-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -151,7 +151,7 @@ export default React.memo(function Sidebar({
             <StrataIcon className="w-4 h-4 text-surface" />
           </div>
           <h1 className="text-label font-display font-bold tracking-tight text-text-bright">Strata AI</h1>
-          <span className="text-[8px] font-semibold px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised text-text-muted">WORKSPACE</span>
+          <span className="text-micro font-semibold px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised text-text-muted">WORKSPACE</span>
         </Link>
         <button
           onClick={onClose}
@@ -287,7 +287,7 @@ export default React.memo(function Sidebar({
                   {activeMenuId === conv.id && (
                     <div
                       ref={menuRef}
-                      className="absolute right-0 mt-1 w-36 bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl p-1 text-caption z-50 animate-in fade-in zoom-in-95"
+                      className="absolute right-0 mt-1 w-36 bg-surface-elevated border border-edge-hover rounded-xl shadow-card-lg p-1 text-caption z-50 animate-in fade-in zoom-in-95"
                     >
                       <button
                         type="button"

@@ -78,7 +78,7 @@ export default function TokenUsagePopover({
       {/* Popover Card */}
       <div
         ref={popoverRef}
-        className="absolute top-14 left-3 sm:left-6 z-50 w-72 bg-surface-raised border border-edge-raised rounded-xl p-3.5 shadow-lg animate-in fade-in zoom-in-95 duration-150 text-text-primary text-xs font-sans max-h-[85vh] overflow-y-auto space-y-3"
+        className="absolute top-14 left-3 sm:left-6 z-50 w-72 bg-surface-raised border border-edge-raised rounded-xl p-3.5 shadow-card-lg animate-in fade-in zoom-in-95 duration-150 text-text-primary text-caption font-sans max-h-[85vh] overflow-y-auto space-y-3"
       >
         {/* Header */}
         <div className="flex items-center justify-between pb-2 border-b border-edge-default">
@@ -88,7 +88,7 @@ export default function TokenUsagePopover({
 
         {/* Visual Context Usage Bar */}
         <div className="space-y-1">
-          <div className="flex items-center justify-between text-[11px] text-text-muted">
+          <div className="flex items-center justify-between text-micro text-text-muted">
             <span>Context Limit</span>
             <span className={isNearLimit ? 'text-warning font-semibold' : ''}>
               {pct}% ({formatContextWindow(contextWindow)})
@@ -104,7 +104,7 @@ export default function TokenUsagePopover({
         </div>
 
         {/* Key Metrics List */}
-        <div className="space-y-1.5 font-mono text-[11px]">
+        <div className="space-y-1.5 font-mono text-micro">
           <div className="flex justify-between">
             <span className="text-text-muted font-sans">Input / Output</span>
             <span>
@@ -122,12 +122,12 @@ export default function TokenUsagePopover({
         {/* Cost Breakdown */}
         {modelBreakdowns.length > 0 && (
           <div className="pt-2 border-t border-edge-default space-y-1.5">
-            <span className="text-[10px] font-semibold uppercase text-text-muted tracking-wider block">
+            <span className="text-micro font-semibold uppercase text-text-muted tracking-wider block">
               Cost Breakdown
             </span>
             <div className="space-y-1">
               {modelBreakdowns.map((m) => (
-                <div key={m.modelId} className="flex items-center justify-between text-[11px]">
+                <div key={m.modelId} className="flex items-center justify-between text-micro">
                   <span className="text-text-muted truncate max-w-[160px]" title={m.modelLabel}>
                     {m.modelLabel}
                   </span>

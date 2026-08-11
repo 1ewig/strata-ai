@@ -21,7 +21,7 @@ function CompactionDivider({ label }: CompactionDividerProps) {
       <div className="absolute inset-0 flex items-center" aria-hidden="true">
         <div className="w-full border-t border-edge-raised" />
       </div>
-      <div className="relative px-3.5 py-1 rounded-full bg-surface-elevated/95 dark:bg-surface-elevated/90 border border-edge-raised text-micro font-semibold uppercase tracking-wider text-text-muted dark:text-text-secondary shadow-sm backdrop-blur-md">
+      <div className="relative px-3.5 py-1 rounded-full bg-surface-elevated/95 dark:bg-surface-elevated/90 border border-edge-raised text-micro font-semibold uppercase tracking-wider text-text-muted dark:text-text-secondary shadow-button backdrop-blur-md">
         <span>{label}</span>
       </div>
     </div>

@@ -101,7 +101,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           hidden sm:flex relative w-8 h-8 rounded-xl items-center justify-center text-label font-semibold shrink-0 mt-0.5
           transition-all duration-500
           ${isUser
-            ? 'bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-sm'
+            ? 'bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-button'
             : `bg-gradient-to-tr from-primary to-secondary text-surface
                  ${isStreaming ? 'shadow-glow-primary scale-[1.03]' : 'shadow-card'}`
           }
@@ -175,7 +175,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed
                   transition-all duration-300 fade-in
                   bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs
-                  shadow-md backdrop-blur-sm w-fit max-w-full
+                  shadow-card backdrop-blur-sm w-fit max-w-full
                   ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''}
                 `}
               >

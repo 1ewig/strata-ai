@@ -149,7 +149,7 @@ export default React.memo(function WorkspaceDrawer({
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-2xl bg-surface-raised border-l border-edge-raised shadow-2xl h-full flex flex-col z-10"
+              className="relative w-full max-w-2xl bg-surface-raised border-l border-edge-raised shadow-card-lg h-full flex flex-col z-10"
             >
               {/* Top Bar / Navigation */}
               <div className="h-14 px-3 sm:px-6 border-b border-edge-raised flex items-center justify-between bg-surface-base/40 shrink-0 gap-4">
@@ -174,10 +174,10 @@ export default React.memo(function WorkspaceDrawer({
                     )}
 
                     {isDropdownOpen && files.length > 0 && (
-                      <div className="absolute mt-1.5 left-0 w-64 max-w-[calc(100vw-3rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-2xl overflow-hidden text-caption z-50 animate-in fade-in zoom-in-95 duration-100">
+                      <div className="absolute mt-1.5 left-0 w-64 max-w-[calc(100vw-3rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-card-lg overflow-hidden text-caption z-50 animate-in fade-in zoom-in-95 duration-100">
                         <div className="px-3 py-2 border-b border-edge-raised font-semibold text-text-muted text-micro uppercase tracking-wider flex items-center justify-between">
                           <span>Workspace Files</span>
-                          <span className="px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised font-mono text-[10px] text-text-secondary font-semibold">
+                          <span className="px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised font-mono text-micro text-text-secondary font-semibold">
                             {files.length}/{MAX_FILES_PER_WORKSPACE} files
                           </span>
                         </div>
@@ -422,7 +422,7 @@ export default React.memo(function WorkspaceDrawer({
                     ) : (
                       <button
                         onClick={handleStartEditing}
-                        className="flex items-center gap-1.5 text-label font-semibold text-text-bright bg-surface-elevated hover:bg-surface-hover border border-edge-raised hover:border-edge-hover px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer shadow-sm"
+                        className="flex items-center gap-1.5 text-label font-semibold text-text-bright bg-surface-elevated hover:bg-surface-hover border border-edge-raised hover:border-edge-hover px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer shadow-button"
                       >
                         <Edit3 className="w-3.5 h-3.5 text-primary" />
                         <span>Edit File</span>
