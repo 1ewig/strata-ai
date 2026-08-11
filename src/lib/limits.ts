@@ -8,12 +8,10 @@ export const MAX_WORKSPACE_TOTAL_CHARS = 50000;
 export const MAX_CONVERSATIONS_PER_USER = 5;
 /** Maximum number of files allowed per workspace. */
 export const MAX_FILES_PER_WORKSPACE = 3;
-
 /** Maximum messages allowed in the 5-hour sliding window. */
 export const QUOTA_5H_LIMIT = 10;
 /** Maximum messages allowed in the 7-day sliding window. */
 export const QUOTA_WEEK_LIMIT = 50;
-
 /** Context-window occupancy percentage that flips the UI and system prompt into "near limit" warning mode. */
 export const NEAR_LIMIT_PERCENT = 80;
 

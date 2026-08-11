@@ -16,7 +16,7 @@ import {
 import { resolveAgentModel, getModelProvider, DEFAULT_AGENT_MODEL } from "@/lib/ai/providers";
 import { WorkspaceToolsContext } from "@/lib/ai/tools/types";
 import { WorkspaceFile } from "@/lib/schemas";
-import { getModelContextWindow } from "@/lib/models";
+import { getModelContextWindow, COMPACTION_MODEL_ID, COMPACTION_THINKING_LEVEL } from "@/lib/models";
 import { calculateTokenMetrics, ChatMetadata } from "@/lib/token-usage";
 
 /**
@@ -404,15 +404,15 @@ export interface RunCompactionResponseParams {
 
 /**
  * Builds and returns the streaming UI-message response for a context compaction run.
+ * Always utilizes the dedicated fast Gemini 3.1 Flash Lite model configured with
+ * high reasoning effort for lossless, high-density summary synthesis.
  *
- * @param params - The resolved model, messages, files, and abort signal.
+ * @param params - The resolved messages, files, abort signal, and quota headers.
  * @returns The SSE UI-message streaming `Response`.
  */
 export async function runCompactionResponse({
   files,
   messages,
-  modelId,
-  thinkingLevel,
   signal,
   remaining5h,
   remainingWeek,
@@ -420,13 +420,13 @@ export async function runCompactionResponse({
   return createUIStreamResponder({
     prefix: "[compaction]",
     messages,
-    modelId,
-    thinkingLevel,
+    modelId: COMPACTION_MODEL_ID,
+    thinkingLevel: COMPACTION_THINKING_LEVEL,
     signal,
     remaining5h,
     remainingWeek,
     initialSystem: buildCompactionInstruction(files),
-    maxOutputTokens: 2500,
+    maxOutputTokens: 3500,
     appendUserMessage:
       "Please generate the comprehensive context compaction summary for the conversation and workspace state above now, following the required structured format.",
     extraMetadata: { isCompactedSummary: true },

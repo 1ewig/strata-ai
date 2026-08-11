@@ -110,8 +110,6 @@ export function useChatSession(chatId: string) {
     chatId,
     userId,
     filesRef,
-    modelRef,
-    thinkingLevelRef,
     chatRef,
     continuationCountRef,
     sendMessageRef,

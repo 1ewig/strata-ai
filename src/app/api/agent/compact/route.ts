@@ -61,12 +61,10 @@ export async function POST(req: Request) {
   // Prune pre-compacted dialogue: if earlier compaction exists, slice from it to avoid re-summarizing old history.
   const effectiveMessages = sliceMessagesAfterCompaction(messages);
 
-  // Delegate compaction streaming to the agent runner.
+  // Delegate compaction streaming to the agent runner (uses dedicated Gemini 3.1 Flash Lite with high reasoning effort).
   return runCompactionResponse({
     files: files || [],
     messages: effectiveMessages,
-    modelId: model,
-    thinkingLevel,
     signal: req.signal,
     remaining5h: rateLimit.remaining5h,
     remainingWeek: rateLimit.remainingWeek,

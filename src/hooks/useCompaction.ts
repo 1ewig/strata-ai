@@ -3,6 +3,7 @@
 import { useState, useRef, useCallback } from 'react';
 import { readUIMessageStream, parseJsonEventStream, uiMessageChunkSchema } from 'ai';
 import { WorkspaceFile } from '@/lib/schemas';
+import { COMPACTION_MODEL_ID } from '@/lib/models';
 import { RateLimitData, QuotaError } from '@/contexts/RateLimitContext';
 import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
 import { buildQuotaError } from '@/lib/limits';
@@ -12,8 +13,6 @@ export interface UseCompactionParams {
   chatId: string;
   userId?: string;
   filesRef: React.RefObject<WorkspaceFile[]>;
-  modelRef: React.RefObject<string>;
-  thinkingLevelRef: React.RefObject<string | undefined>;
   chatRef: React.RefObject<any>;
   continuationCountRef: React.RefObject<number>;
   sendMessageRef: React.RefObject<((msg: { text: string }) => void) | null>;
@@ -31,7 +30,7 @@ export interface UseCompactionReturn {
  * Stamps context-compaction metadata onto a message so the rest of the application
  * (and future prompt slicing) recognizes it as a compaction distillation anchor.
  */
-function withCompactionMetadata(msg: any, modelId?: string) {
+function withCompactionMetadata(msg: any, modelId: string = COMPACTION_MODEL_ID) {
   return {
     ...msg,
     metadata: {
@@ -50,8 +49,6 @@ export function useCompaction({
   chatId,
   userId,
   filesRef,
-  modelRef,
-  thinkingLevelRef,
   chatRef,
   continuationCountRef,
   sendMessageRef,
@@ -72,7 +69,6 @@ export function useCompaction({
       isCompactingRef.current = true;
       setIsCompacting(true);
 
-      const activeModel = modelRef.current;
       const compactionMessageId = `compact-${Date.now()}`;
       const initialCompactionMsg = withCompactionMetadata(
         {
@@ -81,7 +77,7 @@ export function useCompaction({
           content: '',
           parts: [],
         },
-        activeModel,
+        COMPACTION_MODEL_ID,
       );
 
       // Append initial compaction message to UI messages list so it renders live
@@ -95,8 +91,7 @@ export function useCompaction({
             // History pruning to the latest compaction summary happens server-side.
             messages: messagesToCompact,
             files: filesRef.current,
-            model: activeModel,
-            thinkingLevel: thinkingLevelRef.current,
+            model: COMPACTION_MODEL_ID,
           }),
         });
 
@@ -157,13 +152,13 @@ export function useCompaction({
               id: compactionMessageId,
               role: 'assistant',
             },
-            activeModel,
+            COMPACTION_MODEL_ID,
           );
 
           chatRef.current?.setMessages([...messagesToCompact, latestCompactionMsg]);
         }
 
-        const finalCompactionMsg = withCompactionMetadata(latestCompactionMsg, activeModel);
+        const finalCompactionMsg = withCompactionMetadata(latestCompactionMsg, COMPACTION_MODEL_ID);
         const allWithCompaction = [...messagesToCompact, finalCompactionMsg];
         chatRef.current?.setMessages(allWithCompaction);
 
@@ -188,8 +183,6 @@ export function useCompaction({
       chatId,
       userId,
       filesRef,
-      modelRef,
-      thinkingLevelRef,
       chatRef,
       continuationCountRef,
       sendMessageRef,
