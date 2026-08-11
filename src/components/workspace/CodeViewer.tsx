@@ -13,8 +13,8 @@ interface CodeViewerProps {
 }
 
 /**
- * High-performance, syntax-highlighted code viewer with line numbers
- * and Milo theme token styling. Flows naturally within the workspace canvas.
+ * High-performance, syntax-highlighted code viewer with perfectly aligned
+ * line numbers, subtle row hover highlighting, and Milo theme token styling.
  */
 export default React.memo(function CodeViewer({
   code,
@@ -28,31 +28,27 @@ export default React.memo(function CodeViewer({
   );
 
   return (
-    <div className={`overflow-x-auto flex font-mono text-label leading-relaxed select-text ${className}`}>
-      {/* Line Numbers Gutter */}
-      <div
-        aria-hidden="true"
-        className="select-none text-right pr-4 mr-4 border-r border-edge-raised text-text-faint font-mono text-micro min-w-[2.5rem] flex flex-col shrink-0"
-      >
-        {lines.map((_, index) => (
-          <span key={index} className="leading-relaxed">
-            {index + 1}
-          </span>
-        ))}
-      </div>
-
-      {/* Highlighted Code Lines */}
-      <pre className="flex-1 overflow-x-auto m-0 p-0 text-text-primary">
-        <code>
+    <div className={`overflow-x-auto w-full font-mono text-label leading-relaxed select-text ${className}`}>
+      <table className="w-full border-collapse">
+        <tbody>
           {lines.map((lineHtml, index) => (
-            <div
-              key={index}
-              className="leading-relaxed whitespace-pre"
-              dangerouslySetInnerHTML={{ __html: lineHtml || '&nbsp;' }}
-            />
+            <tr key={index} className="leading-relaxed hover:bg-surface-hover/30 transition-colors">
+              {/* Line Number Gutter */}
+              <td
+                aria-hidden="true"
+                className="select-none text-right pr-4 pl-0 py-0 text-text-faint font-mono text-label w-[1%] whitespace-nowrap border-r border-edge-raised align-top"
+              >
+                {index + 1}
+              </td>
+
+              {/* Highlighted Code Line */}
+              <td className="pl-4 pr-2 py-0 text-text-primary whitespace-pre align-top font-mono text-label">
+                <span dangerouslySetInnerHTML={{ __html: lineHtml || '&nbsp;' }} />
+              </td>
+            </tr>
           ))}
-        </code>
-      </pre>
+        </tbody>
+      </table>
     </div>
   );
 });

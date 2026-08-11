@@ -105,10 +105,9 @@ export default React.memo(function WorkspaceFileSelector({
                     <span className="truncate">{f.name}</span>
                   </div>
                   <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                    <span className="text-micro font-mono text-text-muted px-1.5 py-0.2 rounded bg-surface-base border border-edge-raised">
+                    <span className="text-micro font-mono text-text-muted px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised">
                       {meta.label}
                     </span>
-                    {isActive && <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />}
                   </div>
                 </button>
               );
