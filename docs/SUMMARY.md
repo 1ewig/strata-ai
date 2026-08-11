@@ -153,7 +153,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── globals.css           # Tailwind import, Milo @theme tokens (light + dark), keyframes (blink/fadeIn/shimmer/caret)
     │   │   ├── not-found.tsx         # Branded 404 page
     │   │   ├── auth/
-    │   │   │   ├── page.tsx          # Server redirect → /auth/signin
+    │   │   │   ├── page.tsx          # Server redirect → /auth/signin (preserves callbackUrl searchParam)
     │   │   │   ├── signin/page.tsx   # Client: session-guarded sign-in form (Suspense-wrapped for useSearchParams)
     │   │   │   └── signup/page.tsx   # Client: session-guarded sign-up form
     │   │   ├── chat-id/[id]/page.tsx # Client: thin chat shell — wires useChatSession/useConversations/useSignOut/useTheme to Sidebar/Header/Panel/Input/Drawer
@@ -193,11 +193,11 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── useChatTransport.ts   # Custom DefaultChatTransport creation, rate-limit header parsing & error throwing (pure network/header layer; no payload mutation)
     │   │   ├── useCompaction.ts      # Context-compaction streaming: POST /api/agent/compact, SSE parse, rate-limit sync, reconcileFinishedStep, isCompactedSummary stamping
     │   │   ├── useConversations.ts   # Conversation list + create/delete/rename/pin with navigation (Dexie v5 live query, pinned-first sorting, cap enforcement)
-    │   │   ├── useLatestConversationRedirect.ts # Landing-page redirect to latest user conversation or a fresh chat
+    │   │   ├── useLatestConversationRedirect.ts # Landing-page redirect to latest user conversation or a fresh chat (with error fallback)
     │   │   ├── useSignIn.ts          # Sign-in form state: validation, auth call, error/success feedback, redirect
     │   │   ├── useSignUp.ts          # Sign-up form state: validation, auth call, error/success feedback, redirect
     │   │   ├── useAuthForm.ts        # Shared email/password form state machine (loading/error/success + redirect) used by useSignIn/useSignUp
-    │   │   ├── useSignOut.ts         # Sign-out action: auth call + router refresh, pending state
+    │   │   ├── useSignOut.ts         # Sign-out action: auth call + router navigation & refresh
     │   │   ├── useTheme.ts           # Light/dark theme state: .dark class toggle, localStorage + cross-tab sync
     │   │   ├── useWorkspaceFiles.ts  # Workspace file CRUD against Dexie conversation.files + activeFileId
     │   │   ├── useModelSettings.ts   # Model + thinking level state; per-conversation override + localStorage preference
