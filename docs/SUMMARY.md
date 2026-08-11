@@ -16,6 +16,7 @@
   - Live streaming UX — word-paced tokens, reasoning/thought accordion, tool-execution cards, animated streaming caret.
   - Per-conversation model + thinking-level selection with localStorage memory and conversation-level override.
   - Full conversation history persisted locally in IndexedDB with a sidebar conversation switcher.
+  - Context compaction: a `/compact` slash command that streams a dense, structured summary of the conversation + workspace state into a new `metadata.isCompactedSummary` message via a dedicated `POST /api/agent/compact` route (auth-gated, rate-limited, consumes 1 quota message), resets the active context-window meter, and drives server-side history pruning so later turns never re-read pre-summary history.
   - Quota-aware usage: server-enforced message caps surfaced as a live "X left" ring and countdown error cards.
   - Light + dark theme toggle (dark mode ships despite AGENTS.md describing a light-only app — see Appendix).
 - **Operational / non-functional posture:**
@@ -74,14 +75,23 @@
 3. Request passes through `src/proxy.ts` (Next.js 16 proxy, the middleware replacement): session-cookie check + security headers.
 4. `app/api/agent/route.ts` (Route Handler) verifies the session server-side with `auth.api.getSession`, then calls `checkAndIncrementRateLimit(userId)`.
 5. Body is parsed with Zod (`messages`, `files`, `model`, `thinkingLevel`, `maxSteps`).
-6. Stream assembly is delegated to `runAgentResponse` (`lib/ai/agent-runner.ts`): it resolves the provider model (Google or Fireworks via `lib/ai/providers.ts`), builds a 6-section `buildSystemInstruction(files)` prompt, `convertToModelMessages(messages)`, and `createWorkspaceTools(...)` bound to a per-request `createMutableWorkspace` (`lib/ai/workspace.ts`) whose closures mutate an in-memory `files` array.
+6. Stream assembly is delegated to `runAgentResponse` (`lib/ai/agent-runner.ts`): it resolves the provider model (Google or Fireworks via `lib/ai/providers.ts`), builds the 8-section `buildSystemInstruction(files)` prompt, `convertToModelMessages(messages)`, and `createWorkspaceTools(...)` bound to a per-request `createMutableWorkspace` (`lib/ai/workspace.ts`) whose closures mutate an in-memory `files` array.
 7. The response is returned as an SSE UI-message stream (`createUIMessageStreamResponse` + `toUIMessageStream`), carrying `X-RateLimit-Remaining-5h` / `X-RateLimit-Remaining-Week` headers.
 8. `useChat` updates `chat.messages` + `chat.status` reactively; the UI renders streaming text, reasoning accordion, and tool cards.
 9. `onFinish` (handled by `chat-reconciler.ts`) persists every message as a native AI SDK `UIMessage` into Dexie, extracts file create/edit/delete results from tool parts, merges them into the conversation's `files` array, and persists. Auto-continuation fires if `finishReason === 'step-limit'` (up to 2 more passes).
 
+A separate **context compaction flow** reuses most of the same pipeline against a second endpoint:
+
+1. User types `/compact` (or picks it in the new slash-command menu); `ChatInput.executeCommand` clears the composer and calls `handleTriggerCompaction`.
+2. `useChatSession` guards (non-empty messages, not currently compacting/loading) then delegates to `useCompaction.triggerCompaction`, which appends a placeholder assistant message stamped `metadata.isCompactedSummary = true` and `fetch`es `POST /api/agent/compact` with the full message list, workspace, model, and thinking level.
+3. `/api/agent/compact` verifies the session via `auth.api.getSession`, **consumes 1 quota message** through `checkAndIncrementRateLimit`, validates the body against the shared `agentRequestBodySchema`, slices history server-side with `sliceMessagesAfterCompaction`, and delegates to `runCompactionResponse`.
+4. `runCompactionResponse` streams a UI-message response from the shared `createUIStreamResponder`, injecting `buildCompactionInstruction(files)` as the system prompt, an appended "generate the comprehensive context compaction summary…" user turn, `maxOutputTokens: 2500`, and finish metadata `{ isCompactedSummary: true }`.
+5. `useCompaction` parses the SSE stream with `parseJsonEventStream` + `readUIMessageStream`, streams the summary into the conversation live, syncs `X-RateLimit-*` headers, stamps the final message `isCompactedSummary`, and calls `reconcileFinishedStep` to persist it to Dexie.
+6. `ChatPanel` renders `CompactionDivider` pills ("Compaction started" / "Compaction completed") around compacted messages, and `calculateTokenMetrics` resets the active context meter to a baseline (~1.5k system tokens + real summary output) so the context-window guard stays truthful after trimming.
+
 ### 3.2 Server vs. Client boundary strategy
 
-- **The boundary sits at the route handlers / API surface.** There are essentially no shared Server Components: `app/layout.tsx` is async (SSR rate-limit hydration), `app/auth/page.tsx` is a server redirect, `app/not-found.tsx` is static, and the three route handlers are server code.
+- **The boundary sits at the route handlers / API surface.** There are essentially no shared Server Components: `app/layout.tsx` is async (SSR rate-limit hydration), `app/auth/page.tsx` is a server redirect, `app/not-found.tsx` is static, and the four route handlers are server code.
 - Every interactive page (`/`, `/auth/signin`, `/auth/signup`, `/chat-id/[id]`) is `'use client'`. `chat-id/[id]/page.tsx` is intentionally a **thin shell** (~200 lines): it reads `use(params)` for the id, calls the feature hooks (`useChatSession`, `useConversations`, `useSignOut`, `useTheme`), and threads the results to child components as props. Components themselves are purely presentational — no database queries, session fetching, or auth calls inside them.
 - **Why this shape:** the entire product is a client-side, local-first interaction (IndexedDB, streaming chat, drawer editing). SSR is used only where it pays off: auth redirects, metadata, and hydrating the rate-limit quota without a client fetch waterfall.
 - Rule of thumb: server code never imports Dexie; client code never imports the `pg` Pool. The shared seam is `lib/schemas.ts` (Zod types) used on both sides.
@@ -95,7 +105,7 @@
 ### 3.3a Next.js 16 features in use (explicit map)
 
 - **`proxy.ts` (middleware replacement):** Next 16 `proxy` export with a `config.matcher` (`/`, `/chat-id/:path*`, `/api/agent`) doing the pre-render session guard + security headers — not a `middleware.ts` file.
-- **Route Handlers are the only server surface:** `/api/agent`, `/api/auth/[...all]`, `/api/user/rate-limit` are the sole server components besides the async `layout.tsx`, a redirect page, and the static 404.
+- **Route Handlers are the only server surface:** `/api/agent`, `/api/agent/compact`, `/api/auth/[...all]`, `/api/user/rate-limit` are the sole server components besides the async `layout.tsx`, a redirect page, and the static 404.
 - **Dynamic routes only:** no `generateStaticParams`/`dynamicParams`; `chat-id/[id]` uses async `params` unwrapped with `use(params)` (Next 16 convention).
 - **Streaming:** SSE UI-message responses (`createUIMessageStreamResponse`) for the agent endpoint; no Suspense-based HTML streaming is used.
 - **Rendering posture:** RSC only where it pays off (layout hydration, redirects, metadata, 404); every interactive page is `'use client'`.
@@ -104,7 +114,7 @@
 ### 3.4 Authentication & authorization flow
 
 - **Auth provider:** Better Auth 1.6 (server instance in `lib/auth.ts` with a `pg` Pool and `search_path=better_auth,public`; React client in `lib/auth-client.ts`). Email/password only, no email verification, no OAuth providers.
-- **Proxy (pre-render guard):** `src/proxy.ts` matches `/`, `/chat-id/:path*`, `/api/agent`. Public routes (`/auth`, `/api/auth`) and static assets bypass. Without a session cookie it redirects to `/auth?callbackUrl=...` for pages or returns 401 JSON for APIs. It also stamps security headers.
+- **Proxy (pre-render guard):** `src/proxy.ts` matches `/`, `/chat-id/:path*`, `/api/agent`, `/api/agent/:path*` (the wildcard covers `/api/agent/compact`). Public routes (`/auth`, `/api/auth`) and static assets bypass. Without a session cookie it redirects to `/auth?callbackUrl=...` for pages or returns 401 JSON for APIs. It also stamps security headers.
 - **Route-handler guard:** `/api/agent` and `/api/user/rate-limit` re-verify via `auth.api.getSession({ headers })` server-side (proxy check is cookie-presence only, not full verification).
 - **Client guards:** pages use `useSession()` from the auth client; unauthenticated visitors are `router.replace`'d to `/auth?callbackUrl=...`.
 - **RBAC:** none — all authenticated users are equal. Access control is binary (signed-in / signed-out).
@@ -118,6 +128,8 @@
 | **API-route `mutableFiles[]`** | In-memory array mutated by tool closures during one request | Single source of truth for tool reads/writes within a stream; synced back via tool-result parts | Tool `execute()` callbacks (`onUpdateFile`/`onDeleteFile`) |
 
 The API route is intentionally **stateless**: it reconstructs workspace state from the request body on every call and never persists anything itself. Whatever tool results mutate during the stream are reflected in the SSE tool parts, and the client's `onFinish` is the single reconciliation point that merges them back into Dexie.
+
+The `/api/agent/compact` route is equally stateless. Both `/api/agent` and `/api/agent/compact` prune history **server-side** with the shared `sliceMessagesAfterCompaction` (in `lib/ai/message-extractor.ts`), trimming the message list to begin at the latest `isCompactedSummary` anchor so the model never re-reads pre-summary history. The client `DefaultChatTransport` is therefore a pure network/header layer and does not mutate the outgoing payload.
 
 ### 3.6 Streaming, reasoning & rendering pipeline
 
@@ -146,7 +158,8 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   │   └── signup/page.tsx   # Client: session-guarded sign-up form
     │   │   ├── chat-id/[id]/page.tsx # Client: thin chat shell — wires useChatSession/useConversations/useSignOut/useTheme to Sidebar/Header/Panel/Input/Drawer
     │   │   └── api/
-    │   │       ├── agent/route.ts    # POST /api/agent — streaming agent endpoint (auth + rate limit + streamText + SSE)
+    │   │       ├── agent/route.ts    # POST /api/agent — streaming agent endpoint (auth + rate limit + streamText + SSE + server-side compaction slicing)
+    │   │       ├── agent/compact/route.ts # POST /api/agent/compact — streaming context-compaction endpoint (auth + rate limit + runCompactionResponse)
     │   │       ├── auth/[...all]/route.ts  # Better Auth Next.js catch-all (GET/POST from toNextJsHandler)
     │   │       └── user/rate-limit/route.ts # GET quota status (auth-verified)
     │   ├── components/
@@ -154,11 +167,14 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── theme-toggle.tsx      # Pure presentational dark-mode toggle (isDark/onToggle props; logic in useTheme hook)
     │   │   ├── auth/                 # auth-shell (card layout), loading-screen, sign-in-form, sign-up-form, user-button (profile + sign-out)
     │   │   ├── chat/
-    │   │   │   ├── ChatPanel.tsx     # Message list, empty state, typing dots, QuotaErrorCard slot
-    │   │   │   ├── ChatBubble.tsx    # Per-message renderer: user bubble / markdown + ThoughtAccordion + ToolCallCard segments, grouped via WorkGroupCard
+    │   │   │   ├── ChatPanel.tsx     # Message list, empty state, typing dots, QuotaErrorCard slot, CompactionDivider anchors, suggestion chips
+    │   │   │   ├── ChatBubble.tsx    # Per-message renderer: user bubble / markdown + ThoughtAccordion + ToolCallCard, segments via flattenMessageSegments grouped via WorkGroupCard
     │   │   │   ├── SmoothStreamText.tsx # Renders live streaming Markdown with an active streaming caret
     │   │   │   ├── WorkGroupCard.tsx # Single auto-collapsing group of all pre-answer output (intermediate text + reasoning + tool calls)
-    │   │   │   ├── ChatInput.tsx     # Shell for textarea input, auto-resizing, submit handling & composition
+    │   │   │   ├── ChatInput.tsx     # Shell for textarea input, slash-command handling, compaction state, model selector, submit & composition
+    │   │   │   ├── SlashCommandMenu.tsx # Floating "/" command popover + SLASH_COMMANDS registry (currently `/compact`)
+    │   │   │   ├── CompactionDivider.tsx # Horizontal rule + centered pill marking where history was compacted
+    │   │   │   ├── create-markdown-components.tsx # Shared ReactMarkdown component-map factory (assistant + user variants)
     │   │   │   ├── ModelSelectorMenu.tsx # Model dropdown trigger, featured models, effort flyout & overflow submenus
     │   │   │   ├── RateLimitRing.tsx # Quota progress SVG ring & hover popover tooltip (rendered in sidebar footer)
     │   │   │   ├── ChatHeader.tsx    # Mobile hamburger, title, active context-window meter, mobile "New chat" plus button, workspace Files dropdown
@@ -173,12 +189,14 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │       └── ConfirmDialog.tsx # Portaled modal for destructive confirmations (sign-out, delete file, delete chat)
     │   ├── contexts/RateLimitContext.tsx # Global quota provider: SSR hydration, render-phase rehydration, fetch fallback, setQuotaError
     │   ├── hooks/
-    │   │   ├── useChatSession.ts     # Orchestration core: delegates to transport, error handler, reconciler, and sub-hooks
-    │   │   ├── useChatTransport.ts   # Custom DefaultChatTransport creation, rate-limit header parsing & error throwing
+    │   │   ├── useChatSession.ts     # Orchestration core: delegates to transport, error handler, reconciler, compaction, and sub-hooks
+    │   │   ├── useChatTransport.ts   # Custom DefaultChatTransport creation, rate-limit header parsing & error throwing (pure network/header layer; no payload mutation)
+    │   │   ├── useCompaction.ts      # Context-compaction streaming: POST /api/agent/compact, SSE parse, rate-limit sync, reconcileFinishedStep, isCompactedSummary stamping
     │   │   ├── useConversations.ts   # Conversation list + create/delete/rename/pin with navigation (Dexie v5 live query, pinned-first sorting, cap enforcement)
     │   │   ├── useLatestConversationRedirect.ts # Landing-page redirect to latest user conversation or a fresh chat
     │   │   ├── useSignIn.ts          # Sign-in form state: validation, auth call, error/success feedback, redirect
     │   │   ├── useSignUp.ts          # Sign-up form state: validation, auth call, error/success feedback, redirect
+    │   │   ├── useAuthForm.ts        # Shared email/password form state machine (loading/error/success + redirect) used by useSignIn/useSignUp
     │   │   ├── useSignOut.ts         # Sign-out action: auth call + router refresh, pending state
     │   │   ├── useTheme.ts           # Light/dark theme state: .dark class toggle, localStorage + cross-tab sync
     │   │   ├── useWorkspaceFiles.ts  # Workspace file CRUD against Dexie conversation.files + activeFileId
@@ -190,8 +208,8 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── rate-limit.ts         # DB sliding-window limiter (message_log): checkAndIncrement + getRateLimitStatus
     │   │   ├── models.ts             # Model registry, descriptions, thinking-level config, localStorage helpers
     │   │   ├── schemas.ts            # Zod: WorkspaceFile
-    │   │   ├── limits.ts             # Centralized app limits (message/file/workspace/conversation caps) + formatting helpers
-    │   │   ├── token-usage.ts        # Active context window metrics (calculateTokenMetrics) + session usage folding, per-model $ cost breakdown (calculateTokenCost/formatCost), compact token formatters
+    │   │   ├── limits.ts             # Centralized app limits (message/file/workspace/conversation caps) + quota constants (QUOTA_5H_LIMIT/QUOTA_WEEK_LIMIT/NEAR_LIMIT_PERCENT) + buildQuotaError/buildRateLimitErrorMessage + formatting helpers
+    │   │   ├── token-usage.ts        # Active context window metrics (calculateTokenMetrics, compaction-aware reset) + session usage folding, per-model $ cost breakdown (calculateTokenCost/formatCost), compact token formatters
     │   │   ├── id.ts                 # crypto.randomUUID with fallback
     │   │   ├── edit-engine.ts        # StringEditEngine: 3-tier surgical string matching
     │   │   ├── db/db.ts              # Dexie ChatDatabase (v5), Conversation/DBMessage types, CRUD helpers
@@ -199,15 +217,16 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │       ├── index.ts          # Re-exports prompts + tools
     │   │       ├── prompts.ts        # buildSystemInstruction(files) — 8-section advanced system prompt + Context & Token Budget section
     │   │       ├── providers.ts      # SERVER-ONLY model→provider resolver (google/fireworks streamText config)
-    │   │       ├── agent-runner.ts   # SERVER-ONLY runAgentResponse: streamText assembly, transforms, lifecycle, SSE + quota headers
+    │   │       ├── agent-runner.ts   # SERVER-ONLY runAgentResponse + runCompactionResponse via shared createUIStreamResponder: streamText assembly, provider metadata sanitization, transforms, lifecycle, SSE + quota headers
     │   │       ├── workspace.ts      # Shared upsertFileIntoWorkspace/removeFileFromWorkspace + createMutableWorkspace
     │   │       ├── tools.ts          # Barrel: re-exports tool factories + createWorkspaceTools (8 tools)
     │   │       ├── tools/            # Tool factory submodules (split by domain)
     │   │       │   ├── types.ts          # WorkspaceToolsContext, Zod file schemas, findWorkspaceFile/isSameFilename
     │   │       │   ├── workspace-tools.ts # 6 workspace factories: list/read/write/edit/rename/delete
     │   │       │   └── tavily-tools.ts    # webSearch + extractUrl factories, callTavilyApi helper
-    │   │       ├── message-extractor.ts # extractFilesFromMessage / extractDeletedFilesFromMessage from UI message parts
-    │   │       ├── chat-error-handler.ts # Error text mapping to friendly assistant error bubbles + Dexie sync
+    │   │       ├── message-extractor.ts # extractFilesFromMessage / extractDeletedFilesFromMessage + findLatestCompactedMessageIndex / sliceMessagesAfterCompaction (server-side history pruning)
+    │   │       ├── message-segments.ts # flattenMessageSegments: raw UI message parts → render-ready segments (streaming ungrouped, finished grouped into work-group)
+    │   │       ├── chat-error-handler.ts # Error text mapping to friendly assistant error bubbles + Dexie sync (persistMessages)
     │   │       └── chat-reconciler.ts    # onFinish step message persistence, file delta extraction & auto-continuation loop
     │   └── utils/                    # EMPTY directory (reserved)
     ├── scripts/
@@ -255,7 +274,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 | `gemma-4-26b-a4b-it` | Gemma 4 | none (provider default) | — |
 | `accounts/fireworks/models/deepseek-v4-flash-0731` | DeepSeek (Fireworks) | low / high | high |
 
-- **Context-window caps:** every catalog entry is capped at `contextWindow: 131072` (128k tokens) with a `maxOutput: 65536` (64k) output allowance. `getModelContextWindow(modelId)` in `lib/models.ts` resolves a model's window (falling back to the first catalog entry). The server attaches provider-reported usage to finished assistant messages via AI SDK 7's `messageMetadata` (final-step `usage` as the active snapshot, `stepTotalUsage` for session/cost accounting, `modelId` for attribution), the client tracks active context window occupancy (`calculateTokenMetrics` in `lib/token-usage.ts`, following the Claude Code / OpenCode / Codex standard), and `handleSendMessage` refuses further sends once active context tokens cross `contextWindow` ("Context window reached. Start a new chat to continue."). The ChatHeader surfaces this as a live "Context window: active tokens / context window" meter (`formatTokens`/`formatContextWindow`) whose popover (`TokenUsagePopover.tsx`) breaks down prompt input, generation output, headroom, total estimated $ cost, and per-model cost.
+- **Context-window caps:** every catalog entry is capped at `contextWindow: 131072` (128k tokens) with a `maxOutput: 65536` (64k) output allowance. `getModelContextWindow(modelId)` in `lib/models.ts` resolves a model's window (falling back to the first catalog entry). The server attaches provider-reported usage to finished assistant messages via AI SDK 7's `messageMetadata` (final-step `usage` as the active snapshot, `stepTotalUsage` for session/cost accounting, `modelId` for attribution), the client tracks active context window occupancy (`calculateTokenMetrics` in `lib/token-usage.ts`, following the Claude Code / OpenCode / Codex standard), and `handleSendMessage` refuses further sends once active context tokens cross `contextWindow` ("Context window reached. Start a new chat to continue."). The ChatHeader surfaces this as a live "Context window: active tokens / context window" meter (`formatTokens`/`formatContextWindow`) whose popover (`TokenUsagePopover.tsx`) breaks down prompt input, generation output, headroom, total estimated $ cost, and per-model cost. `calculateTokenMetrics` is **compaction-aware**: when the latest assistant turn is a context-compaction summary (`metadata.isCompactedSummary === true`), the active context snapshot is reset to a baseline (~1,500-token system-prompt footprint) plus the summary's real output tokens, so the meter and the context-window guard reflect the trimmed history rather than the pre-compaction footprint.
 
 - **Per-model pricing:** every catalog entry carries an optional `pricing` block (USD per 1M tokens: `inputPerMillion` / `outputPerMillion` / optional `cachedInputPerMillion`), mirrored in `metadata.json`'s `supportedModels`. `getModelPricing(modelId)` in `lib/models.ts` resolves it, falling back to Gemini 3.5 Flash Lite rates; `calculateTokenCost(modelId, in, out)` in `lib/token-usage.ts` turns per-turn usage into dollars (computed from `stepTotalUsage`, since multi-step tool turns burn API tokens across passes).
 
@@ -286,10 +305,11 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 | `/auth/signup` | Client page | Public | Account creation | AuthShell, SignUpForm, LoadingScreen |
 | `/chat-id/[id]` | Client page (dynamic, `use(params)`) | Signed-in (proxy + client guard) | The main chat workspace | Sidebar, ChatHeader, ChatPanel, ChatInput, WorkspaceDrawer |
 | `/api/auth/[...all]` | Route Handler | Public (Better Auth) | Full Better Auth HTTP surface (sign-in/out/session) | — |
-| `/api/agent` | Route Handler (POST) | Signed-in (proxy + `getSession`) | Streaming Gemini agent with tools + rate limit | — |
+| `/api/agent` | Route Handler (POST) | Signed-in (proxy + `getSession`) | Streaming Gemini/Fireworks agent with tools + rate limit; server-side compaction history slicing | — |
+| `/api/agent/compact` | Route Handler (POST) | Signed-in (proxy + `getSession`) | Streaming context-compaction summary (rate limited, consumes 1 quota message) | — |
 | `/api/user/rate-limit` | Route Handler (GET) | Signed-in (`getSession`) | Current quota status JSON | — |
 | `not-found` | Static page | Public | Branded 404 | — |
-| proxy matcher | Edge/proxy | — | Pre-render guard for `/`, `/chat-id/:path*`, `/api/agent` | — |
+| proxy matcher | Edge/proxy | — | Pre-render guard for `/`, `/chat-id/:path*`, `/api/agent`, `/api/agent/:path*` | — |
 
 **Dynamic param handling:** Next.js 16 async `params` — `chat-id/[id]/page.tsx` unwraps with `use(params)`. No `generateStaticParams` / `dynamicParams` — routes are fully dynamic by default.
 
@@ -319,11 +339,24 @@ The two web tools (`lib/ai/tools/tavily-tools.ts`, shared `callTavilyApi` helper
 
 ### 7.2 Agent endpoint configuration (`/api/agent`)
 
-- **Validation:** `bodySchema` (Zod): `messages` (any[]), `files?`, `model?`, `thinkingLevel?`, `maxSteps?`; `maxSteps` clamped to 1–30.
+- **Validation:** shared `agentRequestBodySchema` (in `lib/schemas.ts`, used by both `/api/agent` and `/api/agent/compact`): `messages` (any[]), `files?`, `model?`, `thinkingLevel?`, `maxSteps?`; `maxSteps` clamped to 1–30 on the agent route. Before delegating, the agent route prunes history server-side with `sliceMessagesAfterCompaction` and rejects the latest user message when it exceeds `MAX_MESSAGE_CHARS` (HTTP 400).
+- **Cross-provider metadata sanitization:** `createUIStreamResponder` runs `sanitizeMessagesForProvider(messages, provider)` before converting, pruning `providerMetadata` / `callProviderMetadata` / `resultProviderMetadata` that belong to a provider other than the active one. This prevents a stale Gemini thought signature from being re-emitted into a Fireworks/DeepSeek payload (which would otherwise fail with "Extra inputs are not permitted").
 - **Error handling:** 401 (no session), 429 (quota — with `Retry-After` + `X-RateLimit-*` headers and a human message), 400 (Zod failure, flattened details). Stream errors only `console.error` (no rethrow).
-- **`streamText` config** (all owned by `runAgentResponse` in `lib/ai/agent-runner.ts`; the route only delegates): model + reasoning + `providerOptions` are resolved per-provider by `lib/ai/providers.ts` (`resolveAgentModel`); system prompt rebuilt on every `prepareStep` (so the model always sees current file state and active context headroom); `experimental_transform: [smoothStream({ delayInMs: 25, chunking: "word" }), coalesceToolInputDeltas()]` (buffers `tool-input-delta` chunks server-side, turning O(N * length) client partial JSON re-parses into O(length) single parse); `stopWhen: isStepCount(maxSteps)`; Google models pass `reasoning` mapped from thinkingLevel (Gemma models pass provider-default) + `providerOptions.google.thinkingConfig.includeThoughts: true` (feeds ThoughtAccordion); Fireworks models pass `reasoning` mapped to `reasoning_effort` (low/high) + `providerOptions.fireworks` `thinking: { type: "enabled" }` and `reasoningHistory: "interleaved"` (keeps reasoning across tool calls); lifecycle `onStart`/`onStepEnd`/`onEnd`/`onError` logging. `onStepEnd` captures the **final step's usage snapshot** (`lastStepUsage`) attached via `toUIMessageStream({ messageMetadata })` as `metadata.usage` to prevent multi-step tool loops from artificially inflating conversation context through $O(N)$ re-prompt summation, while preserving `metadata.stepTotalUsage` for cumulative session analytics.
+- **`streamText` config** (all owned by the shared `createUIStreamResponder` in `lib/ai/agent-runner.ts`, used by both `runAgentResponse` and `runCompactionResponse`; the route only delegates): model + reasoning + `providerOptions` are resolved per-provider by `lib/ai/providers.ts` (`resolveAgentModel`); system prompt rebuilt on every `prepareStep` (so the model always sees current file state and active context headroom); `experimental_transform: [smoothStream({ delayInMs: 25, chunking: "word" }), coalesceToolInputDeltas()]` (buffers `tool-input-delta` chunks server-side, turning O(N * length) client partial JSON re-parses into O(length) single parse); `stopWhen: isStepCount(maxSteps)`; Google models pass `reasoning` mapped from thinkingLevel (Gemma models pass provider-default) + `providerOptions.google.thinkingConfig.includeThoughts: true` (feeds ThoughtAccordion); Fireworks models pass `reasoning` mapped to `reasoning_effort` (low/high) + `providerOptions.fireworks` `thinking: { type: "enabled" }` and `reasoningHistory: "interleaved"` (keeps reasoning across tool calls); lifecycle `onStart`/`onStepEnd`/`onEnd`/`onError` logging. `onStepEnd` captures the **final step's usage snapshot** (`lastStepUsage`) attached via `toUIMessageStream({ messageMetadata })` as `metadata.usage` to prevent multi-step tool loops from artificially inflating conversation context through $O(N)$ re-prompt summation, while preserving `metadata.stepTotalUsage` for cumulative session analytics. The `messageMetadata` callback also folds in `config.extraMetadata` (for compaction, `{ isCompactedSummary: true }`).
 - **Auto-continuation:** client-side, in `useChatSession` — `finishReason === 'step-limit'` triggers up to 2 follow-up "please continue" sends (max ~75 effective steps), reset on manual send.
 - **Rate limiting:** `checkAndIncrementRateLimit(userId)` runs before streaming; success response headers carry remaining quota; 429 branch zeroes the 5h header.
+
+### 7.2a Context Compaction Endpoint (`/api/agent/compact`)
+
+A dedicated streaming endpoint that synthesizes a high-density, structured summary of the conversation + workspace state, stored as a new assistant message stamped `metadata.isCompactedSummary = true`.
+
+- **Route** (`src/app/api/agent/compact/route.ts`): session check → `checkAndIncrementRateLimit(userId)` (compaction **consumes 1 quota message**) → zod `agentRequestBodySchema` → `sliceMessagesAfterCompaction(messages)` → delegate to `runCompactionResponse`. JSON 401/400/429 errors; success is a UI-message SSE stream with `X-RateLimit-*` headers (429 zeroes the 5h header).
+- **Stream config** (`runCompactionResponse` → shared `createUIStreamResponder`): `initialSystem: buildCompactionInstruction(files)`, an appended user turn ("Please generate the comprehensive context compaction summary…"), `maxOutputTokens: 2500`, no tools/`stopWhen`, and `extraMetadata: { isCompactedSummary: true }` stamped on the finish part's `metadata`.
+- **Prompt** (`buildCompactionInstruction` in `lib/ai/prompts.ts`): instructs the model to act as the "Context Compaction Engine", retaining lossless technical context (requirements, decisions, exact symbols/files), capturing workspace/progress state, and emitting a self-contained structured GFM summary using fixed sections (`### Key Objectives & User Requirements`, `### Architecture & Technical Decisions`, `### Workspace Files & Current State`, `### Completed Work & Key Solutions`, `### Next Steps & Pending Context`). Like the agent prompt, it receives **metadata-only** file listings.
+- **History pruning** (`sliceMessagesAfterCompaction` in `lib/ai/message-extractor.ts`): trimmed to begin at the latest `isCompactedSummary` anchor so neither agent nor compaction re-summarizes pre-summary history. Applied **server-side** in both routes; the client transport stays a pure network/header layer.
+- **Client flow**: `useCompaction.triggerCompaction` appends a placeholder stamped message, `fetch`es `/api/agent/compact`, parses the SSE stream via `parseJsonEventStream` + `readUIMessageStream` (AI SDK), streams the summary live, syncs rate-limit headers, stamps the final message, and calls `reconcileFinishedStep` to persist. `ChatPanel` renders `CompactionDivider` pills ("Compaction started"/"Compaction completed"). `handleSendMessage` is blocked during compaction (`isCompacting`), and `ChatInput` shows a "Compacting conversation context…" state.
+- **Trigger**: the `/compact` slash command (`components/chat/SlashCommandMenu.tsx` `SLASH_COMMANDS` registry) or typing `/compact` into the composer; `useChatSession.handleTriggerCompaction` guards on non-empty messages + not already compacting/loading.
+- **Token accounting**: `calculateTokenMetrics` treats a compacted-summary turn as resetting the active context to a ~1,500-token system baseline + real summary output (see §5.4), keeping the context-window guard truthful.
 
 ### 7.3 Third-party / external integrations
 
@@ -363,13 +396,13 @@ This is the single reconciliation point that turns a streamed assistant message 
 - **React Context (server-crossed):** `RateLimitContext` (`src/contexts/RateLimitContext.tsx`) is the single app-wide provider. `RootLayout` (async server component) reads the session headers via `auth.api.getSession` and passes `initialData` to the provider, eliminating a client fetch waterfall. A render-phase `if` block (not an effect) re-hydrates `rateLimitData`/`quotaError` when the signed-in user or SSR payload changes and clears state on sign-out.
 - **IndexedDB as reactive source of truth:** `useLiveQuery` (dexie-react-hooks) drives the conversation list (via `useConversations`, consumed by the Sidebar), per-chat messages, and conversation document (files, model, title). UI updates are pushed by Dexie change events.
 - **localStorage preferences:** `selectedModel` and `selectedThinkingLevel` (via `lib/models.ts` helpers) and `strata-theme` (via `useTheme`). Per-conversation `model`/`thinkingLevel` stored on the conversation record takes priority on load.
-- **Per-chat UI state:** `useWorkspaceFiles` (files, activeFileId, drawer open flag) and `useModelSettings` live inside `useChatSession`; the page shell holds `isSidebarOpen`, the conversation list, sign-out, and theme state from its feature hooks and threads everything to presentational children.
+- **Per-chat UI state:** `useWorkspaceFiles` (files, activeFileId, drawer open flag), `useModelSettings`, and `useCompaction` (`isCompacting`, `triggerCompaction`) live inside `useChatSession`, which also exposes `handleTriggerCompaction`; the page shell holds `isSidebarOpen`, the conversation list, sign-out, and theme state from its feature hooks and threads everything to presentational children.
 - **Refs as the streaming transport bridge:** `modelRef`/`thinkingLevelRef`/`filesRef` are kept in sync via effects so the `DefaultChatTransport` body closure always reads current values without re-creating the transport.
 
 ### 8.2 Forms & validation
 
-- Plain controlled React forms with inline `useState` (no RHF/form lib): `sign-in-form.tsx`, `sign-up-form.tsx` render fields and local UI state while validation, auth calls, and redirects live in the `useSignIn`/`useSignUp` hooks; `WorkspaceDrawer` inline create/edit forms.
-- Server-side: Zod for the `/api/agent` body and every tool input/output schema.
+- Plain controlled React forms with inline `useState` (no RHF/form lib): `sign-in-form.tsx`, `sign-up-form.tsx` render fields and local UI state while validation, auth calls, and redirects live in the shared `useAuthForm` hook (`useSignIn`/`useSignUp`); `WorkspaceDrawer` inline create/edit forms.
+- Server-side: Zod for the shared `agentRequestBodySchema` used by `/api/agent` + `/api/agent/compact`, and for every tool input/output schema.
 
 ### 8.3 Error handling & telemetry
 
@@ -404,15 +437,16 @@ This is the single reconciliation point that turns a streamed assistant message 
 7. **Never import Dexie/db into server code and never import the `pg` Pool into client components.** The shared seam is `lib/schemas.ts`.
 8. **No manual auto-scroll effects.** `<StickToBottom>` in `chat-id/[id]/page.tsx` owns scrolling; do not add `useEffect` + `scrollIntoView` loops.
 9. **Auth flow is fixed:** Better Auth server in `lib/auth.ts`, client in `lib/auth-client.ts`, catch-all route in `api/auth/[...all]`, pre-render guards in `proxy.ts`, double-verified in route handlers via `auth.api.getSession`.
-10. **Rate-limit rules:** quotas are 10 msgs / 5h and 50 msgs / week (constants `MAX_5H`, `MAX_WEEK` in `lib/rate-limit.ts`). Increment logic lives only server-side; the UI mirrors via SSR hydration + response headers + `/api/user/rate-limit`.
+10. **Rate-limit rules:** quotas are 10 msgs / 5h and 50 msgs / week. Server-side sliding-window constants are `MAX_5H` / `MAX_WEEK` in `lib/rate-limit.ts`; the client mirrors the same numbers as `QUOTA_5H_LIMIT` / `QUOTA_WEEK_LIMIT` (plus `NEAR_LIMIT_PERCENT`) in `lib/limits.ts`, with canonical copy via `buildQuotaError` / `buildRateLimitErrorMessage`. Increment logic lives only server-side; the UI mirrors via SSR hydration + response headers + `/api/user/rate-limit`. `/api/agent/compact` also runs the limiter and consumes 1 quota message.
 11. **Adding a model:** extend `MODELS` + `MODEL_DESCRIPTIONS` in `lib/models.ts` (declare `provider: 'google' | 'fireworks'` for non-Google models) and add a `MODEL_THINKING_LEVELS` entry if it supports reasoning. Gemma open models have no thinking levels. Provider-specific `streamText` wiring (reasoning mapping, `providerOptions`) goes in `lib/ai/providers.ts` — never in the route or client code.
 12. **Dexie schema upgrades:** bump the version in `lib/db/db.ts` constructor and add a `stores()` definition; keep messages as native `UIMessage` shape (`DBMessage`).
 13. **System prompt discipline:** inject metadata-only file listings into the prompt (name/language/charCount/id); never dump full file content — the model must call `readFile`.
 14. **No emojis in code/files.** (README/docs may differ; code must not.)
 15. **Never reintroduce removed/migrated patterns** (e.g., the `already-authenticated` component, custom `ChatMessage`/`Resume` shapes, or the legacy `resumes` request field). The message model is native AI SDK `UIMessage`; the file model is the workspace `files` array.
 16. **Keep `/api/agent` stateless.** Do not persist workspace state server-side; workspace lives in the request body + Dexie. A future server-side persistence migration would change this rule by design — until then it holds.
-17. **Respect the proxy matcher.** Adding a protected page means adding it to `config.matcher` in `src/proxy.ts`; do not widen bypass lists (`/auth`, `/api/auth`) without explicit approval.
+17. **Respect the proxy matcher.** Adding a protected page means adding it to `config.matcher` in `src/proxy.ts`; do not widen bypass lists (`/auth`, `/api/auth`) without explicit approval. Nested under an existing protected path, use a wildcard segment — e.g. `/api/agent` and `/api/agent/:path*` (covers `/api/agent/compact`).
 18. **SSR hydration is the norm for signed-in data.** Follow the `RootLayout` → provider `initialData` pattern for any new per-user server state instead of client-only fetches.
+19. **Compaction history pruning is server-side.** Both `/api/agent` and `/api/agent/compact` slice the message list after the latest `metadata.isCompactedSummary` anchor via `sliceMessagesAfterCompaction` (`lib/ai/message-extractor.ts`). The client transport never mutates the outgoing payload. Compaction summaries are assistant messages stamped `metadata.isCompactedSummary = true` (produced by `useCompaction.triggerCompaction` + `runCompactionResponse`), rendered with `CompactionDivider`, and reset the active context meter in `calculateTokenMetrics`.
 
 ## 10. Feature Development Workflow (Recipes for AI Agents)
 
@@ -431,7 +465,7 @@ For **Dexie (client DB):**
 1. Define the row interface in `lib/db/db.ts` and bump the Dexie version, adding a new `Table` field + `stores()` index string.
 2. Add typed CRUD helper functions (mirror `createConversation`/`saveMessage`).
 3. Query it reactively with `useLiveQuery` in a hook under `src/hooks/`, surface the hook's API from `useChatSession` (or a new dedicated hook) and wire it into the page shell / child components.
-4. If the model must reach the agent, serialize it into the `DefaultChatTransport` body closure and add it to the `/api/agent` `bodySchema`.
+4. If the model must reach the agent, serialize it into the `DefaultChatTransport` body closure and add it to the shared `agentRequestBodySchema` in `lib/schemas.ts` (used by both `/api/agent` and `/api/agent/compact`).
 
 For **PostgreSQL (server DB, e.g. the planned migration):**
 1. Add the migration to `scripts/` following `better-auth-schema.sql` style; run via `bun run db:migrate`.
@@ -456,7 +490,7 @@ For **PostgreSQL (server DB, e.g. the planned migration):**
 
 ### 10.5 Adjust rate limiting
 
-- Edit constants (`MAX_5H`, `MAX_WEEK`, window intervals) in `lib/rate-limit.ts`. Client-facing copy references the numbers in `ChatInput.tsx`, `QuotaErrorCard.tsx`, `RateLimitContext.tsx`, and `useChatSession.ts` fallback messages — keep them in sync.
+- Server-side: edit constants (`MAX_5H`, `MAX_WEEK`, window intervals) in `lib/rate-limit.ts`. Client-side: the same numbers are mirrored once in `lib/limits.ts` (`QUOTA_5H_LIMIT` / `QUOTA_WEEK_LIMIT` / `NEAR_LIMIT_PERCENT`) and flow to the UI through `buildQuotaError` / `buildRateLimitErrorMessage` — update the server constants and the `limits.ts` mirror together. Consumers (`QuotaErrorCard`, `RateLimitRing`, `RateLimitContext`, `useChatTransport`, `useCompaction`) import the constants rather than hardcoding copy.
 
 ## Appendix: Known Discrepancies & Dead Code
 

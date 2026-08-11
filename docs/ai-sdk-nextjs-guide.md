@@ -46,6 +46,7 @@
   - [4.9 Provider-accurate token accounting, cost tracking, & the context-window guard](#49-provider-accurate-token-accounting-cost-tracking--the-context-window-guard)
   - [4.10 SSR rate-limit hydration](#410-ssr-rate-limit-hydration)
   - [4.11 The three persistence touchpoints](#411-the-three-persistence-touchpoints)
+  - [4.12 Context compaction: distill, prune, and reset the window](#412-context-compaction-distill-prune-and-reset-the-window)
 - [Part 5 — Performance Optimization Techniques](#part-5-performance-optimization-techniques)
   - [5.1 The streaming re-render audit](#51-the-streaming-re-render-audit)
   - [5.2 The key insight: only the in-flight message is re-created](#52-the-key-insight-only-the-in-flight-message-is-re-created)
@@ -91,7 +92,7 @@ Everything maps to the real Strata AI codebase in this repository. Those file ci
 └──────┼─────────────────────────────────────────────────────────────────────────────────────────────┘
        ▼
 ┌────────────────────────── Edge / proxy (Next.js 16 proxy.ts) ─────────────────────────────────────┐
-│  config.matcher = ['/', '/chat-id/:path*', '/api/agent']                                           │
+│  config.matcher = ['/', '/chat-id/:path*', '/api/agent', '/api/agent/:path*']                     │
 │  session-cookie presence check + security headers                                                  │
 └──────┼─────────────────────────────────────────────────────────────────────────────────────────────┘
        ▼
@@ -202,7 +203,7 @@ Note the proxy specifically: Next 16 has replaced `middleware.ts` with **`proxy.
 ```ts
 // src/proxy.ts
 export const config = {
-  matcher: ["/", "/chat-id/:path*", "/api/agent"],
+  matcher: ["/", "/chat-id/:path*", "/api/agent", "/api/agent/:path*"],  // :path* covers /api/agent/compact
 };
 ```
 
@@ -379,7 +380,7 @@ A finished send flow (see `handleSendMessage` in `useChatSession.ts`):
 - On a user's first message, **auto-title** the conversation: `trimmed.slice(0, 40) + '...'` when longer than 40 chars.
 - Send: `chat.sendMessage({ text: trimmed })`; `status` flips `ready → submitted → streaming`.
 
-Add a **character cap** (`MAX_MESSAGE_CHARS = 2000` from `src/lib/limits.ts`) mirrored on the server with a Zod/HTTP 400 — never trust the client-side `maxLength` alone. `src/lib/limits.ts` centralizes every free-tier limit (message length 2,000; per-file 10,000; workspace 50,000; conversations 5; files-per-workspace 3) and shared validation helpers (`isMessageOverLimit`, `isFileOverLimit`, `isWorkspaceTotalOverLimit`).
+Add a **character cap** (`MAX_MESSAGE_CHARS = 2000` from `src/lib/limits.ts`) mirrored on the server with a Zod/HTTP 400 — never trust the client-side `maxLength` alone. `src/lib/limits.ts` centralizes every free-tier limit (message length 2,000; per-file 10,000; workspace 50,000; conversations 5; files-per-workspace 3), the quota constants (`QUOTA_5H_LIMIT` / `QUOTA_WEEK_LIMIT` / `NEAR_LIMIT_PERCENT`), and the canonical quota-error copy (`buildQuotaError` / `buildRateLimitErrorMessage`). Limits are enforced at the call sites (textarea `maxLength`, `WorkspaceDrawer` clamping, tool schema validation) rather than through a shared "over-limit" helper.
 
 ---
 
@@ -785,6 +786,8 @@ const result = streamText({
 
 Why spread conditionally? Because **providers reject unknown options** aggressively (Gemma accepts no thinking config). The resolver is the one place that knows per-provider; the route and the UI stay provider-agnostic.
 
+**Cross-provider metadata is also sanitized server-side.** When a conversation switches providers (e.g. Gemini thoughts followed by a DeepSeek turn), the persisted `providerMetadata` / `callProviderMetadata` / `resultProviderMetadata` from the *other* provider would be re-emitted into the next payload — and Fireworks rejects unknown extra inputs ("Extra inputs are not permitted"). `sanitizeMessagesForProvider(messages, provider)` in `src/lib/ai/agent-runner.ts` strips any provider metadata that doesn't belong to the active provider before `convertToModelMessages`. The runner calls it for both the agent and compaction paths.
+
 ### 4.3 Reasoning mapped per provider
 
 The same app concept ("thinking level") maps differently per provider:
@@ -988,6 +991,8 @@ The header (`src/components/chat/ChatHeader.tsx`) shows a compact, live **active
 
 When active occupancy reaches the window — `isContextWindowExhausted` checks `tokenMetrics.active.totalTokens >= contextWindow` in `useChatSession` — `handleSendMessage` refuses further sends with "Context window reached. Start a new chat to continue." — a **context-window guard** that keeps every run within budget by refusing sends, not by silently truncating.
 
+**Context compaction resets the meter.** `metadata.isCompactedSummary` (from context compaction, §4.12) marks the summary message that history was trimmed around. `calculateTokenMetrics` detects a compacted-summary latest turn and resets the active context snapshot to a ~1,500-token system-prompt baseline plus the summary's real output tokens — so the guard and header meter reflect the *trimmed* history instead of the pre-compaction footprint.
+
 The same `tokenBudget` object feeds the system prompt (§3.7), so the model sizes replies against real current headroom.
 
 ### 4.10 SSR rate-limit hydration
@@ -1020,6 +1025,26 @@ The `GET /api/user/rate-limit` route re-verifies the session with `auth.api.getS
 | **API-route `mutableFiles[]`** | In-memory array mutated by tool closures during one request | Single source of truth for tool reads/writes within a stream; synced back via tool-result parts | Tool `execute()` callbacks (`onUpdateFile` / `onDeleteFile`) |
 
 The API route is intentionally **stateless**: it reconstructs workspace state from each request body and never persists anything itself. Whatever tool results mutate during the stream are reflected in the SSE tool parts and the live `data-workspace` events; the client's `onFinish` is the one reconciliation point that merges them into Dexie.
+
+### 4.12 Context compaction: distill, prune, and reset the window
+
+Long agentic conversations eventually crowd the context window. Instead of evicting message history client-side (the naive fix, which breaks continuation because the model forgot *what it already did*), Strata AI compacts it into a dense summary stored *as a normal assistant message*. Context compaction is a **distill → prune → reset** pipeline:
+
+1. **Distill.** The model reads the full history + workspace state and writes a self-contained structured summary (fixed GFM sections: objectives, decisions, workspace state, completed work, next steps).
+2. **Prune.** Everything *before* that summary is sliced out of the message list **server-side** on every subsequent request, so neither the agent nor a future compaction ever re-reads pre-summary history.
+3. **Reset.** The summary message is stamped `metadata.isCompactedSummary = true`, which tells the active-context meter (§4.9) to reset to a ~1,500-token system-prompt baseline + the summary's real output — keeping the context-window guard truthful about the *trimmed* history.
+
+The pieces:
+
+**Endpoint.** `POST /api/agent/compact` (`src/app/api/agent/compact/route.ts`) is the same thin shell as `POST /api/agent` — session → `checkAndIncrementRateLimit` (**compaction consumes 1 quota message**) → zod `agentRequestBodySchema` → `sliceMessagesAfterCompaction(messages)` → delegating. JSON 401/400/429 errors; success is the usual UI-message SSE stream with `X-RateLimit-*` headers.
+
+**Stream config.** `runCompactionResponse` (in `src/lib/ai/agent-runner.ts`) shares the identical `createUIStreamResponder` used by the agent route, but with `initialSystem: buildCompactionInstruction(files)` instead of the agent prompt, an appended user turn ("Please generate the comprehensive context compaction summary…"), `maxOutputTokens: 2500`, and **no tools / no `stopWhen`**. The finish part is stamped via `extraMetadata: { isCompactedSummary: true }`, so the persisted message is recognizable downstream.
+
+**Server-side pruning.** `sliceMessagesAfterCompaction` (`src/lib/ai/message-extractor.ts`) trims the message list to begin at the latest `isCompactedSummary` anchor `findLatestCompactedMessageIndex`. Both `/api/agent` and `/api/agent/compact` apply it before streaming; the client transport (§1.2) stays a pure network/header layer and never mutates the payload — pruning is server-authoritative so it cannot drift out of sync with the UI.
+
+**Client flow.** `useCompaction.triggerCompaction` (surfaced from `useChatSession.handleTriggerCompaction`) appends a placeholder assistant message, `fetch`es `/api/agent/compact`, parses the SSE stream with `parseJsonEventStream` + `readUIMessageStream`, streams the summary live, syncs the `X-RateLimit-*` headers, then persists through the same `reconcileFinishedStep` path as §4.5. The `/compact` trigger comes from the `SlashCommandMenu` registry or by typing `/compact` into the composer; `ChatInput` disables send while `isCompacting`, and `ChatPanel` renders `CompactionDivider` pills ("Compaction started" / "Compaction completed") around the summary message.
+
+This is the anti-pattern to the production mistake of truncating history: trusting that the model "remembers" is exactly what fails. Compaction makes the trimming a *first-class artifact the model consults*, so long-running agent sessions stay coherent past a single context window.
 
 ---
 
@@ -1194,7 +1219,7 @@ Registered in `experimental_transform` **after** `smoothStream`, it turns $O(N \
 - [ ] Zod-validate the body; `maxSteps` clamped to 1–30; message length enforced server-side.
 - [ ] `abortSignal: req.signal` wired; `stopWhen: isStepCount(maxSteps)` bounds the loop.
 - [ ] `prepareStep` re-injects the system prompt with live file state + token budget.
-- [ ] Provider wiring confined to `resolveModelProvider`; the route stays provider-agnostic.
+- [ ] Provider wiring confined to `resolveAgentModel`; the route stays provider-agnostic.
 - [ ] Tool errors returned in results (`{ error }`), not thrown (except hard resource rules).
 - [ ] File tools stream live `data-workspace` events via the injected `writer`.
 
@@ -1235,23 +1260,30 @@ Every item shipped and was later fixed. Learn from the receipts:
 
 | Concern | File |
 |---------|------|
-| Chat session orchestration (transport + chat + reconciler wiring) | `src/hooks/useChatSession.ts` |
+| Chat session orchestration (transport + chat + reconciler + compaction wiring) | `src/hooks/useChatSession.ts` |
 | Custom transport + quota header parsing | `src/hooks/useChatTransport.ts` |
-| Agent stream assembly (`runAgentResponse`: model, tools, transforms, step cap, SSE + quota headers) | `src/lib/ai/agent-runner.ts` |
+| Context compaction streaming (`triggerCompaction`, SSE parse, header sync, `isCompactedSummary` stamping) | `src/hooks/useCompaction.ts` |
+| Agent + compaction stream assembly (`runAgentResponse` / `runCompactionResponse` via shared `createUIStreamResponder`: model, tools, transforms, step cap, SSE + quota headers, metadata sanitization) | `src/lib/ai/agent-runner.ts` |
 | Streaming agent route (thin auth/quota/validation shell) | `src/app/api/agent/route.ts` |
+| Streaming context-compaction route (thin shell; consumes 1 quota message) | `src/app/api/agent/compact/route.ts` |
 | Mutable workspace factory + file-merge helpers | `src/lib/ai/workspace.ts` |
 | Provider resolver (the only provider seam) | `src/lib/ai/providers.ts` |
 | Model catalog + thinking levels + caps + pricing + localStorage helpers | `src/lib/models.ts` |
-| Token accounting (`calculateTokenMetrics`: active context + session + per-model cost, formatters) | `src/lib/token-usage.ts` |
-| App limits (`MAX_*`) + formatting helpers | `src/lib/limits.ts` |
+| Token accounting (`calculateTokenMetrics`: active context + session + per-model cost, compaction-aware reset, formatters) | `src/lib/token-usage.ts` |
+| App limits (`MAX_*`) + quota constants (`QUOTA_*`, `NEAR_LIMIT_PERCENT`) + quota-error copy + formatting helpers | `src/lib/limits.ts` |
 | Tool factories + barrel | `src/lib/ai/tools/` + `src/lib/ai/tools.ts` |
-| System prompt builder (metadata, constraints, GFM rules, token budget) | `src/lib/ai/prompts.ts` |
+| System prompt builders (agent `buildSystemInstruction` + compaction `buildCompactionInstruction`) | `src/lib/ai/prompts.ts` |
 | Surgical edit engine (`StringEditEngine`) | `src/lib/edit-engine.ts` |
-| Dexie schema + CRUD | `src/lib/db/db.ts` |
-| `onFinish` reconciliation | `src/lib/ai/chat-reconciler.ts` |
-| Tool-result file extraction | `src/lib/ai/message-extractor.ts` |
+| Dexie schema + CRUD (`persistMessages` batched transaction) | `src/lib/db/db.ts` |
+| `onFinish` reconciliation + auto-continuation | `src/lib/ai/chat-reconciler.ts` |
+| Tool-result file extraction + compaction history slicing (`sliceMessagesAfterCompaction`) | `src/lib/ai/message-extractor.ts` |
+| Message-part → render-segment flattening (streaming ungrouped / finished work-group) | `src/lib/ai/message-segments.ts` |
 | Friendly error mapping | `src/lib/ai/chat-error-handler.ts` |
 | Memoized chat surfaces (ChatBubble, SmoothStreamText, ChatInput, ToolCallCard, WorkGroupCard, resolver) | `src/components/chat/*` |
+| Shared Markdown component maps (assistant + user) | `src/components/chat/create-markdown-components.tsx` |
+| `/compact` slash-command popover + registry | `src/components/chat/SlashCommandMenu.tsx` |
+| Compaction divider pills | `src/components/chat/CompactionDivider.tsx` |
+| Shared auth form state machine (`useSignIn` / `useSignUp`) | `src/hooks/useAuthForm.ts` |
 | Token usage popover (context meter, cost breakdown, outside-tap dismissal) | `src/components/chat/TokenUsagePopover.tsx` |
 | Global quota context (SSR hydration + header sync) | `src/contexts/RateLimitContext.tsx` |
 | Route guard + security headers (`proxy`) | `src/proxy.ts` |
