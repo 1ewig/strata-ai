@@ -1,14 +1,21 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, FileText, Copy, Edit3, Check, Plus, Trash2, Code, ChevronDown } from 'lucide-react';
+import { X, Trash2, Eye, Code } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { WorkspaceFile } from '@/lib/schemas';
-import { MAX_FILE_CHARS, MAX_FILES_PER_WORKSPACE, formatCharCount } from '@/lib/limits';
+import { MAX_FILE_CHARS } from '@/lib/limits';
+import { detectLanguage, isMarkdownFile } from '@/lib/languages';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { createMarkdownComponents } from '@/components/chat/create-markdown-components';
+import { useCopyClipboard } from '@/hooks/useCopyClipboard';
+import CodeViewer from './CodeViewer';
+import WorkspaceFileSelector from './WorkspaceFileSelector';
+import WorkspaceEditor from './WorkspaceEditor';
+import WorkspaceEmptyState from './WorkspaceEmptyState';
+import WorkspaceDrawerFooter from './WorkspaceDrawerFooter';
 
 /** Props for the WorkspaceDrawer component. */
 interface WorkspaceDrawerProps {
@@ -24,19 +31,9 @@ interface WorkspaceDrawerProps {
 }
 
 /**
- * Slide-in drawer panel for viewing and editing workspace files. Supports
- * file switching, renaming/editing content, markdown rendering, copying,
- * and creating or deleting files.
- *
- * @param props - Component props.
- * @param isOpen - Whether the drawer is visible; when false nothing renders.
- * @param onClose - Callback invoked when the drawer should close.
- * @param files - Workspace files to display and manage.
- * @param activeFileId - Id of the currently selected file.
- * @param onSelectFile - Callback when the active file changes.
- * @param onUpdateFile - Callback persisting an edited file.
- * @param onCreateFile - Callback creating a new file.
- * @param onDeleteFile - Callback deleting a file.
+ * Slide-in drawer panel for viewing and editing workspace files.
+ * Orchestrates file switching, markdown preview vs syntax-highlighted code viewing,
+ * and inline file creation/editing.
  */
 export default React.memo(function WorkspaceDrawer({
   isOpen,
@@ -48,43 +45,22 @@ export default React.memo(function WorkspaceDrawer({
   onCreateFile,
   onDeleteFile,
 }: WorkspaceDrawerProps) {
-  // Fall back to the first file so the drawer never shows without content.
-  const activeFile = files.find(f => f.id === activeFileId) || files[0] || null;
+  const activeFile = files.find((f) => f.id === activeFileId) || files[0] || null;
 
-  // Editor state: file name/content being edited, copy feedback, and the
-  // inline new-file form visibility.
   const [isEditing, setIsEditing] = useState(false);
   const [fileName, setFileName] = useState(activeFile?.name || '');
   const [contentValue, setContentValue] = useState(activeFile?.content || '');
-  const [copied, setCopied] = useState(false);
-  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newFileName, setNewFileName] = useState('');
   const [fileToDelete, setFileToDelete] = useState<WorkspaceFile | null>(null);
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [markdownViewMode, setMarkdownViewMode] = useState<'preview' | 'source'>('preview');
 
-  const handleCopyCodeSnippet = (codeText: string, id: string) => {
-    navigator.clipboard.writeText(codeText);
-    setCopiedCodeId(id);
-    setTimeout(() => setCopiedCodeId(null), 2000);
-  };
+  const { copied, copiedId, copy } = useCopyClipboard();
 
-  const canvasMarkdownComponents = React.useMemo(
-    () => createMarkdownComponents('canvas', copiedCodeId, handleCopyCodeSnippet),
-    [copiedCodeId],
+  const canvasMarkdownComponents = useMemo(
+    () => createMarkdownComponents('canvas', copiedId, (code, id) => copy(code, id)),
+    [copiedId, copy]
   );
-
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
 
   const handleStartEditing = () => {
     setFileName(activeFile?.name || '');
@@ -92,47 +68,38 @@ export default React.memo(function WorkspaceDrawer({
     setIsEditing(true);
   };
 
-  // Hard cap on content length; warn once the edit passes 90% of it.
   const isFileOverLimit = isEditing && contentValue.length > MAX_FILE_CHARS;
   const isFileWarning = isEditing && contentValue.length > MAX_FILE_CHARS * 0.9 && !isFileOverLimit;
 
   const handleSaveEdit = () => {
     if (!activeFile || isFileOverLimit) return;
+    const finalName = fileName.trim() || activeFile.name;
     onUpdateFile({
       ...activeFile,
-      // Fall back to the previous name if the input was trimmed to empty.
-      name: fileName.trim() || activeFile.name,
+      name: finalName,
+      language: detectLanguage(finalName),
       content: contentValue,
       updatedAt: new Date().toISOString(),
     });
     setIsEditing(false);
   };
 
-  const handleCopy = () => {
-    if (!activeFile?.content) return;
-    navigator.clipboard.writeText(activeFile.content);
-    setCopied(true);
-    // Revert the "Copied" feedback after a brief confirmation.
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const handleCreateNewFileSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newFileName.trim()) return;
-    onCreateFile(newFileName.trim(), '');
+    const trimmed = newFileName.trim();
+    if (!trimmed) return;
+    onCreateFile(trimmed, '');
     setNewFileName('');
     setIsCreatingNew(false);
   };
 
-  // Markdown files render as styled typography; everything else as plain text.
-  const isMarkdown = activeFile?.name.endsWith('.md') || activeFile?.language === 'markdown';
+  const isMarkdown = isMarkdownFile(activeFile?.name, activeFile?.language);
 
   return (
     <>
       <AnimatePresence>
         {isOpen && (
           <div key="workspace-drawer-container" className="fixed inset-0 h-dvh z-50 overflow-hidden flex justify-end">
-            {/* Backdrop */}
             <motion.div
               key="workspace-drawer-backdrop"
               initial={{ opacity: 0 }}
@@ -142,105 +109,55 @@ export default React.memo(function WorkspaceDrawer({
               className="absolute inset-0 bg-scrim backdrop-blur-sm"
             />
 
-            {/* Drawer Panel */}
             <motion.div
               key="workspace-drawer-panel"
               initial={{ x: '100%' }}
               animate={{ x: 0 }}
               exit={{ x: '100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-2xl bg-surface-raised border-l border-edge-raised shadow-card-lg h-full flex flex-col z-10"
+              className="relative w-full max-w-3xl bg-surface-raised border-l border-edge-raised shadow-card-lg h-full flex flex-col z-10"
             >
-              {/* Top Bar / Navigation */}
+              {/* Top Navigation Bar */}
               <div className="h-14 px-3 sm:px-6 border-b border-edge-raised flex items-center justify-between bg-surface-base/40 shrink-0 gap-4">
-                {/* File Switcher Dropdown & Add Button */}
-                <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className="relative" ref={dropdownRef}>
-                    {files.length > 0 ? (
+                <WorkspaceFileSelector
+                  files={files}
+                  activeFile={activeFile}
+                  onSelectFile={onSelectFile}
+                  onCreateNewClick={() => setIsCreatingNew(true)}
+                />
+
+                <div className="flex items-center gap-2 shrink-0">
+                  {activeFile && isMarkdown && !isEditing && activeFile.content && (
+                    <div className="flex items-center bg-surface-base border border-edge-raised rounded-lg p-0.5 text-caption">
                       <button
                         type="button"
-                        onClick={() => setIsDropdownOpen(prev => !prev)}
-                        className="flex items-center gap-1.5 bg-transparent border-0 px-0.5 py-1 text-label font-semibold text-text-bright hover:opacity-80 transition-opacity cursor-pointer max-w-[200px] sm:max-w-[280px]"
+                        onClick={() => setMarkdownViewMode('preview')}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-caption font-medium transition-all cursor-pointer ${
+                          markdownViewMode === 'preview'
+                            ? 'bg-surface-raised text-primary shadow-sm font-semibold'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                        title="Rendered Markdown Preview"
                       >
-                        <FileText className="w-4 h-4 text-primary shrink-0" />
-                        <span className="truncate flex-1 text-left">{activeFile?.name || 'Select File'}</span>
-                        <ChevronDown className={`w-3.5 h-3.5 text-text-muted shrink-0 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180 text-text-primary' : ''}`} />
+                        <Eye className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Preview</span>
                       </button>
-                    ) : (
-                      <div className="flex items-center gap-1.5 text-label font-semibold text-text-muted px-2 py-1">
-                        <FileText className="w-4 h-4 text-text-faint" />
-                        <span>No Files</span>
-                      </div>
-                    )}
+                      <button
+                        type="button"
+                        onClick={() => setMarkdownViewMode('source')}
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-caption font-medium transition-all cursor-pointer ${
+                          markdownViewMode === 'source'
+                            ? 'bg-surface-raised text-primary shadow-sm font-semibold'
+                            : 'text-text-muted hover:text-text-primary'
+                        }`}
+                        title="Raw Markdown Source Code"
+                      >
+                        <Code className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Source</span>
+                      </button>
+                    </div>
+                  )}
 
-                    {isDropdownOpen && files.length > 0 && (
-                      <div className="absolute mt-1.5 left-0 w-64 max-w-[calc(100vw-3rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-card-lg overflow-hidden text-caption z-50 animate-in fade-in zoom-in-95 duration-100">
-                        <div className="px-3 py-2 border-b border-edge-raised font-semibold text-text-muted text-micro uppercase tracking-wider flex items-center justify-between">
-                          <span>Workspace Files</span>
-                          <span className="px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised font-mono text-micro text-text-secondary font-semibold">
-                            {files.length}/{MAX_FILES_PER_WORKSPACE} files
-                          </span>
-                        </div>
-
-                        <div className="py-1 max-h-56 overflow-y-auto">
-                          {files.map((f) => {
-                            const isActive = f.id === activeFile?.id;
-                            return (
-                              <button
-                                key={f.id}
-                                type="button"
-                                onClick={() => {
-                                  onSelectFile(f.id);
-                                  setIsDropdownOpen(false);
-                                }}
-                                className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-surface-hover transition-colors cursor-pointer ${
-                                  isActive ? 'bg-primary-soft text-primary font-semibold' : 'text-text-primary'
-                                }`}
-                              >
-                                <div className="flex items-center gap-2.5 truncate">
-                                  <FileText className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-text-muted'}`} />
-                                  <span className="truncate">{f.name}</span>
-                                </div>
-                                {isActive && (
-                                  <span className="w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {/* Footer Plus Button */}
-                        <div className="p-1 border-t border-edge-raised">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (files.length >= MAX_FILES_PER_WORKSPACE) return;
-                              setIsDropdownOpen(false);
-                              setIsCreatingNew(true);
-                            }}
-                            disabled={files.length >= MAX_FILES_PER_WORKSPACE}
-                            className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-caption font-semibold transition-colors cursor-pointer ${
-                              files.length >= MAX_FILES_PER_WORKSPACE
-                                ? 'opacity-40 cursor-not-allowed text-text-muted'
-                                : 'text-primary hover:bg-primary-soft/60'
-                            }`}
-                            title={
-                              files.length >= MAX_FILES_PER_WORKSPACE
-                                ? `Maximum ${MAX_FILES_PER_WORKSPACE} files per workspace reached.`
-                                : 'Create new file'
-                            }
-                          >
-                            <Plus className="w-3.5 h-3.5 text-primary" />
-                            <span>Create New File</span>
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Top Right: Delete Icon & Close Button */}
-                <div className="flex items-center gap-1.5 shrink-0">
                   {activeFile && (
                     <button
                       onClick={() => setFileToDelete(activeFile)}
@@ -263,173 +180,67 @@ export default React.memo(function WorkspaceDrawer({
                 </div>
               </div>
 
-              {/* New File Inline Form */}
+              {/* Inline Create Form */}
               {isCreatingNew && (
                 <form onSubmit={handleCreateNewFileSubmit} className="p-3 bg-surface-elevated border-b border-edge-raised flex items-center gap-2">
                   <input
                     type="text"
                     value={newFileName}
                     onChange={(e) => setNewFileName(e.target.value)}
-                    placeholder="filename.md or note.txt"
+                    placeholder="e.g. index.html, app.ts, styles.css, document.md"
                     className="flex-1 bg-surface-base border border-edge-raised rounded-lg px-3 py-1.5 text-label text-text-primary focus:outline-none focus:border-primary"
                     autoFocus
                   />
-                  <button
-                    type="submit"
-                    className="text-label font-medium bg-primary hover:bg-primary-hover text-surface px-3 py-1.5 rounded-lg transition-colors"
-                  >
+                  <button type="submit" className="text-label font-medium bg-primary hover:bg-primary-hover text-surface px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
                     Create
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => setIsCreatingNew(false)}
-                    className="text-label text-text-muted hover:text-text-primary px-2 py-1.5"
-                  >
+                  <button type="button" onClick={() => setIsCreatingNew(false)} className="text-label text-text-muted hover:text-text-primary px-2 py-1.5 cursor-pointer">
                     Cancel
                   </button>
                 </form>
               )}
 
-              {/* Drawer Body */}
-              <div className="flex-1 overflow-y-auto p-6">
+              {/* Drawer Content Body */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 {!activeFile ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center">
-                    <FileText className="w-10 h-10 text-text-faint mb-3" />
-                    <h4 className="text-text-secondary font-semibold text-subheading">Workspace Drawer Empty</h4>
-                    <p className="text-body text-text-muted max-w-sm mt-1 mb-4">
-                      Create a file or ask the AI to generate documents for your workspace.
-                    </p>
-                    <button
-                      onClick={() => setIsCreatingNew(true)}
-                      className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-surface text-label font-semibold px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <Plus className="w-4 h-4" /> Create New File
-                    </button>
-                  </div>
+                  <WorkspaceEmptyState type="no-files" onCreateFileClick={() => setIsCreatingNew(true)} />
                 ) : isEditing ? (
-                  <div key={activeFile?.id || 'none'} className="flex flex-col h-full space-y-3">
-                    <input
-                      type="text"
-                      value={fileName}
-                      onChange={(e) => setFileName(e.target.value)}
-                      placeholder="File name (e.g. document.md)"
-                      className="bg-surface-base border border-edge-raised rounded-lg px-3 py-2 text-label font-semibold text-text-bright focus:outline-none focus:border-primary"
-                    />
-                    <textarea
-                      value={contentValue}
-                      onChange={(e) => setContentValue(e.target.value)}
-                      maxLength={MAX_FILE_CHARS}
-                      rows={26}
-                      placeholder="Type your markdown or text content here..."
-                      className="w-full flex-1 min-h-[450px] bg-surface-base border border-edge-raised rounded-xl p-4 text-label text-text-primary font-mono focus:outline-none focus:border-primary/60 leading-relaxed resize-y"
-                    />
-                  </div>
+                  <WorkspaceEditor
+                    fileName={fileName}
+                    contentValue={contentValue}
+                    onFileNameChange={setFileName}
+                    onContentChange={setContentValue}
+                  />
                 ) : !activeFile.content ? (
-                  <div className="h-full flex flex-col items-center justify-center text-center">
-                    <Code className="w-10 h-10 text-text-faint mb-3" />
-                    <h4 className="text-text-secondary font-semibold text-subheading">{activeFile.name} is Empty</h4>
-                    <p className="text-body text-text-muted max-w-sm mt-1 mb-4">
-                      Click Edit to add content or prompt the AI assistant.
-                    </p>
-                    <button
-                      onClick={handleStartEditing}
-                      className="flex items-center gap-1.5 text-label text-primary border border-primary/30 bg-primary-soft hover:bg-primary-soft-strong px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
-                    >
-                      <Edit3 className="w-3.5 h-3.5" /> Edit File
-                    </button>
-                  </div>
-                ) : isMarkdown ? (
+                  <WorkspaceEmptyState type="empty-file" fileName={activeFile.name} onEditFileClick={handleStartEditing} />
+                ) : isMarkdown && markdownViewMode === 'preview' ? (
                   <article className="text-body text-text-primary leading-relaxed selection:bg-secondary/50">
-                    {/* Markdown renders as styled typography; other files as plain text */}
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={canvasMarkdownComponents}
-                    >
+                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={canvasMarkdownComponents}>
                       {activeFile.content}
                     </ReactMarkdown>
                   </article>
                 ) : (
-                  <div className="font-mono text-label text-text-primary whitespace-pre-wrap leading-relaxed">
-                    {activeFile.content}
-                  </div>
+                  <CodeViewer
+                    code={activeFile.content}
+                    filenameOrLanguage={activeFile.name || activeFile.language}
+                  />
                 )}
               </div>
 
-              {/* Footer Bar */}
+              {/* Drawer Footer */}
               {activeFile && (
-                <div className="h-16 px-4 sm:px-6 border-t border-edge-raised flex items-center justify-between bg-surface-base/60 backdrop-blur-md shrink-0 gap-3">
-                  {/* Left Side: Metadata & Character Counter */}
-                  <div className="flex items-center gap-2 min-w-0">
-                    {isEditing ? (
-                      <span
-                        className={`text-caption font-mono px-2 py-0.5 rounded border transition-colors ${
-                          isFileOverLimit
-                            ? 'text-danger bg-danger-soft/30 border-danger/40 font-semibold'
-                            : isFileWarning
-                            ? 'text-warning bg-warning-soft/20 border-warning/30'
-                            : 'text-text-muted bg-surface-elevated border-edge-raised'
-                        }`}
-                      >
-                        {formatCharCount(contentValue.length, MAX_FILE_CHARS)} chars
-                      </span>
-                    ) : (
-                      <span className="text-caption text-text-muted font-medium truncate">
-                        {activeFile.content ? `${activeFile.content.length.toLocaleString()} chars` : 'Empty'}
-                        {activeFile.language ? ` · ${activeFile.language}` : ''}
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Right Side: Action Buttons */}
-                  <div className="flex items-center gap-2 shrink-0">
-                    {activeFile.content && !isEditing && (
-                      <button
-                        onClick={handleCopy}
-                        className="flex items-center gap-1.5 text-label font-medium text-text-muted hover:text-text-primary bg-surface-elevated hover:bg-surface-hover border border-edge-raised px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
-                        title="Copy file content"
-                      >
-                        {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
-                        <span>{copied ? 'Copied' : 'Copy'}</span>
-                      </button>
-                    )}
-
-                    {isEditing ? (
-                      <>
-                        <button
-                          onClick={() => setIsEditing(false)}
-                          className="text-label text-text-muted hover:text-text-primary px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
-                        >
-                          Cancel
-                        </button>
-                        <button
-                          onClick={handleSaveEdit}
-                          disabled={isFileOverLimit}
-                          className={`flex items-center gap-1.5 text-label font-semibold rounded-xl transition-colors shrink-0 ${
-                            isFileOverLimit
-                              ? 'bg-surface-elevated text-text-muted opacity-40 cursor-not-allowed border border-edge-raised'
-                              : 'text-surface bg-primary hover:bg-primary-hover cursor-pointer'
-                          } px-4 py-1.5`}
-                          title={
-                            isFileOverLimit
-                              ? `File content exceeds ${MAX_FILE_CHARS.toLocaleString()} characters`
-                              : 'Save changes'
-                          }
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>Save Changes</span>
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={handleStartEditing}
-                        className="flex items-center gap-1.5 text-label font-semibold text-text-bright bg-surface-elevated hover:bg-surface-hover border border-edge-raised hover:border-edge-hover px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer shadow-button"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 text-primary" />
-                        <span>Edit File</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
+                <WorkspaceDrawerFooter
+                  activeFile={activeFile}
+                  isEditing={isEditing}
+                  contentValue={contentValue}
+                  isFileOverLimit={isFileOverLimit}
+                  isFileWarning={isFileWarning}
+                  copied={copied}
+                  onCopy={() => copy(activeFile.content)}
+                  onStartEditing={handleStartEditing}
+                  onCancelEditing={() => setIsEditing(false)}
+                  onSaveEdit={handleSaveEdit}
+                />
               )}
             </motion.div>
           </div>

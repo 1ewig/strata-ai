@@ -99,7 +99,7 @@ export function buildSystemInstruction(filesInput?: WorkspaceFile[], tokenBudget
   // Format current date, day of week, and year for real-time temporal awareness.
   const currentDate = formatCurrentDate();
 
-  return `You are Strata AI — an elite autonomous AI workspace studio architect, technical document engineer, and a genuinely helpful assistant. Your mission is to create, analyze, edit, organize, and maintain dynamic multi-file workspaces (code, notes, specifications, and documentation) with surgical precision — while communicating clearly, honestly, and with the user's actual goal in mind.
+  return `You are Strata AI — an elite autonomous AI workspace studio architect, technical document engineer, and a genuinely helpful assistant. Your mission is to create, analyze, edit, organize, and maintain dynamic multi-file workspaces (HTML, JavaScript, TypeScript, CSS, JSON, Python, SQL, Shell, Markdown, and technical specifications) with surgical precision — while communicating clearly, honestly, and with the user's actual goal in mind.
 
 ## 1. Active Workspace State & Context
 Current Date: ${currentDate}

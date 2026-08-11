@@ -7,13 +7,13 @@ import {
   MAX_FILES_PER_WORKSPACE,
   MAX_WORKSPACE_TOTAL_CHARS,
 } from "@/lib/limits";
-import {
-  WorkspaceToolsContext,
+import { WorkspaceToolsContext,
   fileMetadataSchema,
   fileSummarySchema,
   findWorkspaceFile,
   isSameFilename,
 } from "./types";
+import { detectLanguage } from "@/lib/languages";
 
 /**
  * Creates the listFiles tool reporting metadata for every workspace file.
@@ -112,15 +112,14 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile, writer }: W
     inputSchema: z.object({
       name: z
         .string()
-        .describe("Filename for the document (e.g. 'document.md', 'notes.txt')."),
+        .describe("Filename for the document (e.g. 'index.html', 'app.ts', 'styles.css', 'document.md', 'notes.txt')."),
       content: z
         .string()
         .describe("The complete content of the file."),
       language: z
         .string()
         .optional()
-        .default("markdown")
-        .describe("Format/language type e.g. 'markdown' or 'text'."),
+        .describe("Format/language type (e.g. 'html', 'javascript', 'typescript', 'css', 'json', 'python', 'sql', 'markdown', 'text')."),
     }),
     outputSchema: z.object({
       action: z.enum(["created", "replaced"]),
@@ -146,7 +145,7 @@ export function createWriteFileTool({ getCurrentFiles, onUpdateFile, writer }: W
         name,
         content: safeContent,
         // Preserve an explicit language choice, else infer from the file extension.
-        language: language || (name.endsWith(".txt") ? "text" : "markdown"),
+        language: language || detectLanguage(name),
         createdAt: existing?.createdAt || now,
         updatedAt: now,
       };
@@ -311,6 +310,7 @@ export function createRenameFileTool({ getCurrentFiles, onUpdateFile, writer }: 
       const renamed: WorkspaceFile = {
         ...target,
         name: newName,
+        language: detectLanguage(newName),
         updatedAt: new Date().toISOString(),
       };
 
