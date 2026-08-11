@@ -20,18 +20,24 @@ export function useLatestConversationRedirect(userId: string | undefined) {
     if (!userId) return;
 
     async function initOrRedirect() {
-      const all = await db.conversations.toArray();
-      // Pick the most recently updated conversation belonging to this user.
-      const userConvs = all
-        .filter((c) => !c.userId || c.userId === userId)
-        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      try {
+        const all = await db.conversations.toArray();
+        // Pick the most recently updated conversation belonging to this user.
+        const userConvs = all
+          .filter((c) => !c.userId || c.userId === userId)
+          .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
-      // Open the latest conversation, otherwise start a fresh chat with a new id.
-      if (userConvs.length > 0) {
-        router.replace(`/chat-id/${userConvs[0].id}`);
-      } else {
-        const newId = generateId();
-        router.replace(`/chat-id/${newId}`);
+        // Open the latest conversation, otherwise start a fresh chat with a new id.
+        if (userConvs.length > 0) {
+          router.replace(`/chat-id/${userConvs[0].id}`);
+        } else {
+          const newId = generateId();
+          router.replace(`/chat-id/${newId}`);
+        }
+      } catch (err) {
+        console.error('[useLatestConversationRedirect] Failed to load latest conversation:', err);
+        const fallbackId = generateId();
+        router.replace(`/chat-id/${fallbackId}`);
       }
     }
     initOrRedirect();

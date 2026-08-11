@@ -54,7 +54,7 @@ export function useAuthForm<T extends any[]>(
         setTimeout(() => {
           router.push(callbackUrl);
           router.refresh();
-        }, 1000);
+        }, 300);
       } catch (err: any) {
         setError(err?.message || 'An unexpected error occurred. Please try again.');
         setIsPending(false);
