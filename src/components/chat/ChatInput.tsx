@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ArrowUp, AlertCircle, Square } from 'lucide-react';
+import { ArrowUp, AlertCircle, Square, Sparkles } from 'lucide-react';
 import { MAX_MESSAGE_CHARS, buildQuotaError } from '@/lib/limits';
 import ModelSelectorMenu from './ModelSelectorMenu';
 import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './SlashCommandMenu';
@@ -228,8 +228,8 @@ export default React.memo(function ChatInput({
 
       <div
         className={`flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${isCompacting
-            ? 'border-primary/40 bg-primary-soft/10'
-            : isBlocked
+          ? 'border-primary/40 bg-primary-soft/10'
+          : isBlocked
             ? 'border-danger/40 bg-danger-soft/20'
             : 'border-edge-raised hover:border-edge-hover focus-within:border-primary/60 focus-within:shadow-glow-primary/20'
           } rounded-2xl md:rounded-3xl p-3 sm:p-4 transition-all shadow-card`}
@@ -241,13 +241,24 @@ export default React.memo(function ChatInput({
             <span>Compacting conversation context... Please wait.</span>
           </div>
         ) : isBlocked ? (
-          <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in">
+          <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in flex-wrap">
             <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
             <span>
               {isContextWindowExhausted
-                ? 'Context window reached. Start a new chat to continue.'
+                ? 'Context window reached.'
                 : blockedQuotaCopy}
             </span>
+            {isContextWindowExhausted && onTriggerCompaction && (
+              <button
+                type="button"
+                onClick={onTriggerCompaction}
+                disabled={isLoading || isCompacting}
+                className="underline hover:no-underline font-semibold cursor-pointer disabled:opacity-50"
+                title="Compact conversation history to reclaim context space"
+              >
+                Compact history
+              </button>
+            )}
           </div>
         ) : (
           <textarea
@@ -291,23 +302,22 @@ export default React.memo(function ChatInput({
                 id="chat-submit-btn"
                 type="submit"
                 disabled={!inputValue.trim() || isBlocked || isCharOverLimit}
-                className={`p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-colors focus:outline-none flex items-center gap-1.5 border ${
-                  !inputValue.trim() || isBlocked || isCharOverLimit
+                className={`p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-colors focus:outline-none flex items-center gap-1.5 border ${!inputValue.trim() || isBlocked || isCharOverLimit
                     ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised'
                     : 'bg-primary hover:bg-primary-hover text-surface border-transparent cursor-pointer'
-                }`}
+                  }`}
                 title={
                   isCompacting
                     ? 'Context compaction in progress'
                     : isContextWindowExhausted
-                    ? 'Context window reached'
-                    : isQuotaExhausted
-                      ? 'Quota limit reached'
-                      : isCharOverLimit
-                        ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
-                        : !inputValue.trim()
-                          ? 'Type a message to send'
-                          : 'Send message'
+                      ? 'Context window reached'
+                      : isQuotaExhausted
+                        ? 'Quota limit reached'
+                        : isCharOverLimit
+                          ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
+                          : !inputValue.trim()
+                            ? 'Type a message to send'
+                            : 'Send message'
                 }
               >
                 <span className="hidden sm:inline text-caption font-bold">Send</span>

@@ -245,8 +245,8 @@ export function useChatSession(chatId: string) {
           setQuotaError({
             message:
               contextWindow > 0
-                ? `Context window reached (${contextWindow.toLocaleString()} tokens). Start a new chat to continue.`
-                : 'Context window reached. Start a new chat to continue.',
+                ? `Context window reached (${contextWindow.toLocaleString()} tokens). Compact history or start a new chat to continue.`
+                : 'Context window reached. Compact history or start a new chat to continue.',
           });
           return;
         }
@@ -271,9 +271,10 @@ export function useChatSession(chatId: string) {
 
   const handleTriggerCompaction = useCallback(() => {
     if (chat.messages.length > 0 && !isCompacting && !isLoading) {
+      setQuotaError(null);
       triggerCompaction(chat.messages);
     }
-  }, [chat.messages, isCompacting, isLoading, triggerCompaction]);
+  }, [chat.messages, isCompacting, isLoading, setQuotaError, triggerCompaction]);
 
   return {
     model: modelSettings.model,
