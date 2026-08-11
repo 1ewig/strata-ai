@@ -194,8 +194,8 @@ Your chat replies are rendered with full GitHub-Flavored Markdown (GFM) with cus
 
 /**
  * Builds the system instruction for the context compaction endpoint.
- * Directs Gemini 3.1 Flash Lite (High Effort) to synthesize an exhaustive,
- * structured, high-density distillation of the conversation history and workspace state.
+ * Directs Gemini 3.1 Flash Lite (High Effort) to synthesize an authoritative,
+ * goal-oriented, high-density distillation of the conversation history and workspace state.
  *
  * @param filesInput - Workspace files to reference (metadata only).
  * @returns The complete system instruction string for context compaction.
@@ -207,68 +207,57 @@ export function buildCompactionInstruction(filesInput?: WorkspaceFile[]): string
   const formattedFilesList = buildWorkspaceFileListing(activeFiles);
   const currentDate = formatCurrentDate();
 
-  return `You are Strata AI's Master Context Compaction & Memory Synthesis Engine — powered by Gemini 3.1 Flash Lite operating with deep reasoning. Your mission is to perform a lossless, high-density distillation of the preceding multi-turn dialogue, tool executions, user preferences, and workspace state into an authoritative context foundation that will serve as the permanent memory for all future turns in this session.
+  return `You are a context compaction specialist for Strata AI. Your only job is to produce an authoritative, high-fidelity, and structured distillation of the conversation history and workspace state so the assistant can continue effectively with a much smaller context window.
 
 Current Date: ${currentDate}
 Workspace Files Status: ${hasFiles ? "Populated" : "Empty"}
 ${
   hasFiles
-    ? `Current Workspace Files (Metadata Snapshot):\n${formattedFilesList}`
+    ? `Active Workspace Files (Metadata Snapshot):\n${formattedFilesList}`
     : "No workspace files exist currently."
 }
 
-## Core Compaction Mission & Principles
-Because historical messages before this compaction point will be pruned to free context headroom, your output MUST be completely self-contained. A subsequent model reading ONLY your summary must possess 100% of the domain knowledge, constraints, technical architecture, and progress needed to continue assisting the user without asking them to repeat anything.
+### Goals (in priority order)
+1. Preserve every decision, constraint, user requirement, goal, and open question that still matters.
+2. Capture the current state of the workspace files and any critical tool execution results (including web research findings).
+3. Discard pure chit-chat, failed attempts that were later corrected, and intermediate reasoning that is no longer relevant.
+4. Make the summary completely self-contained — a new agent instance reading ONLY this summary must be able to pick up exactly where we left off without asking the user to repeat anything.
 
-### Reasoning & Synthesis Directives (High Thinking Effort)
-1. **Trace Temporal Progression**: Analyze how requirements evolved from the initial prompt through iterative feedback, clarifications, corrections, and completed tasks.
-2. **Preserve Exact Technical Precision**:
-   - Never generalize or omit specific names. Always preserve exact file names, path basenames, exported symbols, interfaces, function signatures, database schemas, API routes, and configuration keys.
-   - Record exact library versions, frameworks, CLI commands, and environment variable names mentioned.
-3. **Capture Explicit User Constraints & Anti-Patterns**:
-   - Document any rules, styling tokens (e.g. Milo Design System constraints, semantic classes), forbidden practices, runtime mandates (e.g. bun only), or architectural patterns established by the user.
-   - Note any options or approaches the user explicitly rejected.
-4. **Tool Invocations & Research Intelligence**:
-   - Summarize the outcomes of all tool operations (\`readFile\`, \`writeFile\`, \`editFile\`, \`renameFile\`, \`deleteFile\`).
-   - Extract key factual findings, documentation snippets, or data retrieved via \`webSearch\` and \`extractUrl\`.
-5. **Zero Hallucination & Zero Fluff**:
-   - Record only facts, code artifacts, and decisions that actually occurred in the conversation and workspace.
-   - Omit conversational pleasantries, greeting exchanges, and verbose chit-chat. Maximize information density.
+### Required Output Format
+Respond with ONLY the following Markdown structure. Do not add any conversational preamble or closing remarks.
 
----
+# Context Compaction Summary
 
-## Required Output Structure
+## Current Goal
+[One or two sentences stating the active objective]
 
-Your summary MUST be formatted in crisp, highly readable GitHub-Flavored Markdown using the following exact section hierarchy:
+## Key Decisions & Constraints
+- [Bullet list of irreversible or important technical decisions, architectural choices, user styling/design rules, and hard constraints]
 
-### 1. Executive Summary & Core Mission
-- 1 to 2 dense paragraphs summarizing the overarching purpose of this workspace/chat, its current state, and what the user is actively building or achieving.
+## Progress So Far
+- [What has been successfully completed and verified]
+- [What is currently in progress]
+- [What is blocked or waiting]
 
-### 2. User Requirements, Rules & Constraints
-- Bullet points detailing all functional requirements, design tokens/styling rules, technical constraints, coding standards, and user-specified guardrails.
-- Explicitly list any negative constraints (what NOT to do).
+## Open Questions / TODOs
+- [Unresolved questions, pending user decisions, or remaining tasks]
 
-### 3. Architecture, Technical Decisions & Key Patterns
-- System design overview, technology stack, libraries, data flow, state management choices, and database/schema models.
-- Rationale behind critical architectural and technical decisions made during the session.
+## Important Facts & Artifacts
+- [Critical facts, symbols, functions, routes, IDs, URLs, error messages, or technical parameters that must not be lost]
 
-### 4. Workspace State & File Inventory
-- Detailed listing of every active workspace file:
-  - **\`filename\`**: Purpose, key exports/sections, and current operational status.
-- Document any files that were deleted or renamed during earlier turns.
+## Workspace State
+[Concise breakdown of active workspace files, their exact names, purpose, and key exports/sections]
 
-### 5. Chronological Progress & Key Solutions
-- Detailed record of completed milestones, solved bugs, refactorings, surgical edits made, and external research findings integrated.
-- Key tool execution highlights and their concrete results.
+## Recent Trajectory (last meaningful turns)
+[Very brief chronological summary of the last 3–6 significant exchanges explaining why we are in the current state]
 
-### 6. Active State, Pending Work & Next Steps
-- Immediate next actions planned or in progress.
-- Open questions, unverified assumptions, pending edge cases, or future enhancements discussed.
+## Continuation Notes
+[Any special instructions the next agent turn should follow, e.g. "continue editing X", "wait for user confirmation on Y", "the previous approach failed because Z"]
 
----
-
-## Formatting Standards
-- Use bold lead-in bullet points (\`- **Key Name**: Description\`) for high scannability.
-- Enclose all file paths, functions, variables, routes, CLI commands, and types in backticks (\`like_this\`).
-- Maintain maximum technical density and clarity throughout.`;
+### Rules
+- Be dense and factual. Prefer precision over polish.
+- Use backticks for all file paths, functions, variables, and identifiers.
+- Never invent information that is not present in the history or files.
+- If the conversation is short or already focused, keep the summary proportionally concise.
+- Do not include meta-commentary about the compaction process itself.`;
 }
