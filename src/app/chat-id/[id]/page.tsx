@@ -2,6 +2,7 @@
 
 import React, { use, useRef, useState } from 'react';
 import { StickToBottom } from 'use-stick-to-bottom';
+import { ArrowDown } from 'lucide-react';
 import Sidebar from '@/components/Sidebar';
 import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
 import ChatPanel from '@/components/chat/ChatPanel';
@@ -118,7 +119,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
   // Show a spinner while the session is still being verified.
   if (isSessionPending || !session?.user) {
-
     return (
       <main className="h-dvh bg-surface-base flex items-center justify-center text-text-muted text-label">
         <div className="flex items-center gap-2">
@@ -194,7 +194,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         <StickToBottom className="flex-1 min-h-0" resize="auto" initial="instant">
           {(context) => (
             <>
-              <StickToBottom.Content className={`max-w-4xl w-full mx-auto px-4 ${isNewChat ? 'min-h-full flex flex-col justify-center py-6' : 'pb-36'}`}>
+              <StickToBottom.Content className={`max-w-4xl w-full mx-auto px-4 ${isNewChat ? 'min-h-full flex flex-col justify-center py-6' : 'pb-44'}`}>
                 <ChatPanel
                   messages={displayMessages}
                   isLoading={isLoading}
@@ -208,29 +208,29 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
                 />
               </StickToBottom.Content>
 
-              {/* Floating button appears when scrolled up - clicks snap back to the bottom */}
-              {!context.isAtBottom && !isNewChat && (
-                <div className="absolute bottom-32 left-1/2 -translate-x-1/2 z-40">
-                  <button
-                    onClick={() => context.scrollToBottom()}
-                    className="rounded-full border border-edge-raised bg-surface-overlay/90 px-3.5 py-1.5 text-caption font-medium text-text-muted hover:text-text-primary shadow-card backdrop-blur-md transition-colors cursor-pointer"
-                  >
-                    ↓ Scroll to bottom
-                  </button>
+              {!isNewChat && (
+                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-12 pb-4 px-4 pointer-events-none z-30 animate-slide-up">
+                  <div className="relative max-w-4xl mx-auto pointer-events-auto">
+                    {/* Floating button appears when scrolled up - anchored cleanly above ChatInput */}
+                    {!context.isAtBottom && (
+                      <div className="absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                        <button
+                          type="button"
+                          onClick={() => context.scrollToBottom()}
+                          className="flex items-center gap-1.5 rounded-full border border-edge-raised bg-surface-raised/95 dark:bg-surface-raised/90 px-3.5 py-1.5 text-caption font-semibold text-text-primary hover:text-text-bright shadow-card-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer select-none"
+                        >
+                          <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                          <span>Scroll to bottom</span>
+                        </button>
+                      </div>
+                    )}
+                    {chatInputNode}
+                  </div>
                 </div>
               )}
-
             </>
           )}
         </StickToBottom>
-
-        {!isNewChat && (
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-6 pb-4 px-4 pointer-events-none z-30 animate-slide-up">
-            <div className="max-w-4xl mx-auto pointer-events-auto">
-              {chatInputNode}
-            </div>
-          </div>
-        )}
       </div>
 
       <WorkspaceDrawer

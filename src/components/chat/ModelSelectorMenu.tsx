@@ -18,17 +18,6 @@ interface ModelSelectorMenuProps {
   dropDirection?: 'up' | 'down';
 }
 
-/**
- * Dropdown for picking an AI model and, when the model supports it, its
- * thinking effort level. The main view lists the primary models with drill-down
- * submenus for "More models" and "Effort".
- *
- * @param model - Currently selected model id.
- * @param thinkingLevel - Currently selected thinking effort level.
- * @param onModelSelect - Called with the chosen model id.
- * @param onThinkingLevelChange - Called with the chosen thinking effort level.
- * @param dropDirection - Direction the popover opens ('up' for bottom toolbar, 'down' for header).
- */
 export default function ModelSelectorMenu({
   model,
   thinkingLevel,
@@ -55,22 +44,17 @@ export default function ModelSelectorMenu({
       ? 'main'
       : view;
 
-  // Show the effort chip only when the current model ships a thinking config;
-  // fall back to the raw level string if it has no registered label.
   const effortLabel =
     thinkingLevel && currentModelThinkingConfig
       ? THINKING_LEVEL_LABELS[thinkingLevel as keyof typeof THINKING_LEVEL_LABELS] || thinkingLevel
       : null;
 
-  /**
-   * Closes the popover and resets any drilled-down submenu back to the main view.
-   */
   const closeMenu = useCallback(() => {
     setIsOpen(false);
     setView('main');
   }, []);
 
-  // Handle click outside and ESC key (attached ONLY when menu is open)
+  // Handle click outside & escape key (attached ONLY when menu is open)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -109,8 +93,8 @@ export default function ModelSelectorMenu({
           isSelected ? 'bg-surface-hover/70' : 'hover:bg-surface-hover'
         }`}
       >
-        <div className="flex flex-col gap-0.5 min-w-0 pr-2">
-          <span className="text-label font-semibold text-text-primary group-hover:text-text-bright truncate">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-label font-semibold text-text-primary group-hover:text-text-bright">
             {m.label}
           </span>
           {MODEL_DESCRIPTIONS[m.id] && (
@@ -128,7 +112,7 @@ export default function ModelSelectorMenu({
 
   return (
     <div ref={menuRef} className="relative inline-block text-left">
-      {/* TRIGGER BUTTON */}
+      {/* TRIGGER BUTTON (UNCHANGED) */}
       <button
         type="button"
         aria-expanded={isOpen}
