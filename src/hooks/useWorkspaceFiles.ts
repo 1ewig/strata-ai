@@ -10,6 +10,7 @@ import {
 import { WorkspaceFile } from '@/lib/schemas';
 import { generateId } from '@/lib/id';
 import { MAX_FILE_CHARS, MAX_FILES_PER_WORKSPACE } from '@/lib/limits';
+import { detectLanguage } from '@/lib/languages';
 
 /**
  * Owns the workspace files (markdown/text scratch files) for a chat session.
@@ -44,20 +45,23 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
   }, []);
 
   /**
-   * Creates a new workspace file with default markdown/text naming and persists it.
-   * @param name - The file name; an extension is appended if missing.
+   * Creates a new workspace file with multi-language extension support and persists it.
+   * @param name - The file name; appends .md if no extension is provided.
    * @param content - Optional initial content.
    */
   const handleCreateFile = useCallback(async (name: string, content = '') => {
     if (files.length >= MAX_FILES_PER_WORKSPACE) return;
     const safeContent = content.length > MAX_FILE_CHARS ? content.slice(0, MAX_FILE_CHARS) : content;
     const now = new Date().toISOString();
+    const hasExtension = name.includes('.') || name.toLowerCase() === 'dockerfile';
+    const finalName = hasExtension ? name : `${name}.md`;
+    const detectedLang = detectLanguage(finalName);
+
     const newFile: WorkspaceFile = {
       id: generateId(),
-      // Default to markdown unless the user already specified a supported extension
-      name: name.endsWith('.md') || name.endsWith('.txt') ? name : `${name}.md`,
+      name: finalName,
       content: safeContent,
-      language: name.endsWith('.txt') ? 'text' : 'markdown',
+      language: detectedLang,
       createdAt: now,
       updatedAt: now,
     };

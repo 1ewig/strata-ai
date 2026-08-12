@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Check, Code2 } from 'lucide-react';
+import { highlightCode } from '@/lib/syntax-highlighter';
+import { getLanguageLabel } from '@/lib/languages';
 
 export type MarkdownVariant = 'assistant' | 'user' | 'thought' | 'canvas';
 
@@ -234,10 +236,16 @@ export function createMarkdownComponents(
           </code>
         );
       }
+
+      const match = /language-(\w+)/.exec(className || '');
+      const rawLang = match ? match[1] : '';
+      const displayLabel = rawLang ? getLanguageLabel(rawLang) : 'Code';
+      const highlightedHtml = highlightCode(rawCode, rawLang);
+
       return (
         <div className={`my-2.5 rounded-xl bg-surface-base border ${T.codeBlockBorder} overflow-hidden font-mono text-micro shadow-card ${T.codeBlockExtra}`}>
           <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-micro text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
-            <span className="text-text-muted">Code Snippet</span>
+            <span className="text-text-muted font-mono">{displayLabel}</span>
             {onCopy && (
               <button
                 onClick={() => onCopy(rawCode, snippetId)}
@@ -257,8 +265,11 @@ export function createMarkdownComponents(
               </button>
             )}
           </div>
-          <pre className="p-3 overflow-x-auto text-text-secondary leading-relaxed">
-            <code>{children}</code>
+          <pre className="p-3 overflow-x-auto text-text-primary leading-relaxed">
+            <code
+              className={className}
+              dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+            />
           </pre>
         </div>
       );

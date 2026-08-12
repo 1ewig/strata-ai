@@ -29,9 +29,12 @@
 
 ## Key Capabilities
 
-### 1. Autonomous Agentic Workspace Tools
+### 1. Autonomous Agentic Workspace Tools & Multi-Language Studio
 The agent inspects and modifies the workspace through 8 schema-validated tool factories (`src/lib/ai/tools/`):
-* **Workspace Management:** `listFiles`, `readFile`, `writeFile`, `editFile`, `renameFile`, and `deleteFile`.
+* **Multi-Language Support (24+ Languages):** Full support for HTML, TypeScript, JavaScript, JSX, TSX, CSS, SCSS, JSON, Python, SQL, Shell, YAML, Markdown, Rust, Go, C/C++, Java, Kotlin, PHP, Ruby, Swift, XML, Dockerfile, and plain text with automatic language detection (`detectLanguage`).
+* **PrismJS Syntax Highlighting & Line Numbers:** Code files in the Workspace Drawer render with synchronized line numbers via `CodeViewer`, and chat code fences display styled language badges and instant copy buttons via Milo-themed Prism token styles in `src/app/globals.css`.
+* **Modular Workspace Studio Drawer:** Componentized architecture featuring a file switcher dropdown (`WorkspaceFileSelector`), code viewer (`CodeViewer`), raw text/code editor (`WorkspaceEditor`), empty state canvas (`WorkspaceEmptyState`), and action footer (`WorkspaceDrawerFooter`).
+* **Workspace Management Tools:** `listFiles`, `readFile`, `writeFile`, `editFile`, `renameFile`, and `deleteFile`.
 * **3-Tier Surgical String Edit Engine (`StringEditEngine`):** `editFile` uses a fallback hierarchy (exact match -> whitespace normalization -> 2-point anchor bounded matching) for precise edits without rewriting entire files.
 * **Live Workspace Streaming:** Tools emit custom `data-workspace` Server-Sent Events (SSE) via `createUIMessageStream`. The client `onData` handler updates the Workspace Drawer and IndexedDB in real time as each tool finishes executing, without waiting for the entire LLM response to conclude.
 * **Real-Time Web Intelligence:** `webSearch` (Tavily Search with basic/advanced depth, domain filters, and optional raw content) and `extractUrl` (Tavily Extract clean Markdown parser, up to 3 URLs per call).
@@ -74,9 +77,9 @@ All workspace tool implementations reside in `src/lib/ai/tools/`:
 |------|------------|-------------|
 | `listFiles` | *(none)* | Returns metadata (`id`, `name`, `language`, `charCount`) for all workspace files. |
 | `readFile` | `nameOrId`, `section?` | Reads full content or extracts a specific Markdown section via regex heading match. |
-| `writeFile` | `name`, `content`, `language?` | Creates a new file or completely overwrites an existing file in the workspace. |
+| `writeFile` | `name`, `content`, `language?` | Creates a new file or overwrites an existing file with automatic language detection (`detectLanguage`). |
 | `editFile` | `nameOrId`, `searchString`, `replaceString`, `explanation` | Surgically edits file content using the 3-tier `StringEditEngine`. |
-| `renameFile` | `nameOrId`, `newName` | Renames an existing file with collision validation. |
+| `renameFile` | `nameOrId`, `newName` | Renames an existing file with collision validation and automatic language re-indexing. |
 | `deleteFile` | `nameOrId` | Removes a target file from the workspace. |
 | `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?`, `includeRawContent?`, `includeImages?`, `timeRange?`, `includeDomains?`, `excludeDomains?` | Real-time web search via Tavily API with snippets, raw content, images, and publish dates. |
 | `extractUrl` | `urls` (1–3), `extractDepth?` | Extracts clean Markdown content from up to 3 target web pages simultaneously. |

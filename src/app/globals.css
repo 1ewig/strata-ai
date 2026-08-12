@@ -217,3 +217,90 @@ body::before {
     radial-gradient(ellipse 60% 45% at 85% 90%, rgba(255, 170, 29, 0.09), transparent 60%),
     radial-gradient(ellipse 50% 35% at 10% 85%, rgba(255, 92, 40, 0.06), transparent 60%);
 }
+
+/* Milo Syntax Highlighting (PrismJS token mapping) */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.token.punctuation {
+  color: var(--color-text-secondary);
+}
+
+.token.namespace {
+  opacity: 0.8;
+}
+
+.token.tag,
+.token.tag .token.punctuation {
+  color: var(--color-primary);
+}
+
+.token.attr-name {
+  color: var(--color-info);
+}
+
+.token.attr-value,
+.token.attr-value .token.punctuation,
+.token.string,
+.token.char,
+.token.template-string,
+.token.inserted {
+  color: var(--color-accent-olive);
+}
+
+.token.property,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: var(--color-warning);
+}
+
+.token.selector {
+  color: var(--color-info);
+  font-weight: 600;
+}
+
+.token.operator,
+.token.entity,
+.token.url {
+  color: var(--color-text-secondary);
+}
+
+.token.atrule,
+.token.keyword {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+.token.function,
+.token.class-name,
+.token.builtin {
+  color: var(--color-info);
+  font-weight: 500;
+}
+
+.token.regex,
+.token.variable,
+.token.parameter {
+  color: var(--color-accent-pink-deep);
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
