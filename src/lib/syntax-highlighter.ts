@@ -1,13 +1,9 @@
 import Prism from 'prismjs';
 import { detectLanguage, getPrismGrammarName } from './languages';
 
-// Ensure Prism is globally accessible before registering language components
-if (typeof globalThis !== 'undefined') {
-  (globalThis as any).Prism = Prism;
-}
-if (typeof window !== 'undefined') {
-  (window as any).Prism = Prism;
-}
+// Prism's component modules reference the free `Prism` global to register their
+// grammars; expose our instance so they all mutate the same singleton.
+(globalThis as any).Prism = Prism;
 
 // 1. Base grammars required as dependencies
 import 'prismjs/components/prism-markup';
@@ -41,7 +37,7 @@ import 'prismjs/components/prism-scss';
 /**
  * Escapes HTML characters for safe raw text rendering in fallback mode.
  */
-export function escapeHtml(str: string): string {
+function escapeHtml(str: string): string {
   return str
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

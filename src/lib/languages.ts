@@ -5,7 +5,6 @@
  */
 
 export interface LanguageMeta {
-  id: string;
   label: string;
   extensions: string[];
   prismGrammar: string;
@@ -14,152 +13,127 @@ export interface LanguageMeta {
 
 export const SUPPORTED_LANGUAGES: Record<string, LanguageMeta> = {
   html: {
-    id: 'html',
     label: 'HTML',
     extensions: ['.html', '.htm'],
     prismGrammar: 'markup',
   },
   javascript: {
-    id: 'javascript',
     label: 'JavaScript',
     extensions: ['.js', '.mjs', '.cjs'],
     prismGrammar: 'javascript',
   },
   typescript: {
-    id: 'typescript',
     label: 'TypeScript',
     extensions: ['.ts', '.mts', '.cts'],
     prismGrammar: 'typescript',
   },
   jsx: {
-    id: 'jsx',
     label: 'JSX',
     extensions: ['.jsx'],
     prismGrammar: 'jsx',
   },
   tsx: {
-    id: 'tsx',
     label: 'TSX',
     extensions: ['.tsx'],
     prismGrammar: 'tsx',
   },
   css: {
-    id: 'css',
     label: 'CSS',
     extensions: ['.css'],
     prismGrammar: 'css',
   },
   scss: {
-    id: 'scss',
     label: 'SCSS',
     extensions: ['.scss', '.sass'],
     prismGrammar: 'scss',
   },
   json: {
-    id: 'json',
     label: 'JSON',
     extensions: ['.json', '.jsonc'],
     prismGrammar: 'json',
   },
   python: {
-    id: 'python',
     label: 'Python',
     extensions: ['.py', '.pyw'],
     prismGrammar: 'python',
   },
   sql: {
-    id: 'sql',
     label: 'SQL',
     extensions: ['.sql'],
     prismGrammar: 'sql',
   },
   shell: {
-    id: 'shell',
     label: 'Shell',
     extensions: ['.sh', '.bash', '.zsh'],
     prismGrammar: 'bash',
   },
   yaml: {
-    id: 'yaml',
     label: 'YAML',
     extensions: ['.yaml', '.yml'],
     prismGrammar: 'yaml',
   },
   markdown: {
-    id: 'markdown',
     label: 'Markdown',
     extensions: ['.md', '.markdown', '.mdx'],
     prismGrammar: 'markdown',
     isMarkdown: true,
   },
   rust: {
-    id: 'rust',
     label: 'Rust',
     extensions: ['.rs'],
     prismGrammar: 'rust',
   },
   go: {
-    id: 'go',
     label: 'Go',
     extensions: ['.go'],
     prismGrammar: 'go',
   },
   cpp: {
-    id: 'cpp',
     label: 'C++',
     extensions: ['.cpp', '.cc', '.cxx', '.hpp', '.hxx'],
     prismGrammar: 'cpp',
   },
   c: {
-    id: 'c',
     label: 'C',
     extensions: ['.c', '.h'],
     prismGrammar: 'c',
   },
   java: {
-    id: 'java',
     label: 'Java',
     extensions: ['.java'],
     prismGrammar: 'java',
   },
   kotlin: {
-    id: 'kotlin',
     label: 'Kotlin',
     extensions: ['.kt', '.kts'],
     prismGrammar: 'kotlin',
   },
   php: {
-    id: 'php',
     label: 'PHP',
     extensions: ['.php'],
     prismGrammar: 'php',
   },
   ruby: {
-    id: 'ruby',
     label: 'Ruby',
     extensions: ['.rb'],
     prismGrammar: 'ruby',
   },
   swift: {
-    id: 'swift',
     label: 'Swift',
     extensions: ['.swift'],
     prismGrammar: 'swift',
   },
   xml: {
-    id: 'xml',
     label: 'XML',
     extensions: ['.xml', '.svg'],
     prismGrammar: 'markup',
   },
   dockerfile: {
-    id: 'dockerfile',
     label: 'Dockerfile',
     extensions: ['.dockerfile'],
     prismGrammar: 'docker',
   },
   text: {
-    id: 'text',
     label: 'Plain Text',
     extensions: ['.txt', '.log', '.env'],
     prismGrammar: 'plain',
@@ -219,10 +193,10 @@ export function detectLanguage(filename: string, fallback = 'markdown'): string 
   }
 
   // Find by file extension (e.g. 'app.ts' -> '.ts')
-  for (const lang of Object.values(SUPPORTED_LANGUAGES)) {
+  for (const [langId, lang] of Object.entries(SUPPORTED_LANGUAGES)) {
     for (const ext of lang.extensions) {
       if (lower.endsWith(ext)) {
-        return lang.id;
+        return langId;
       }
     }
   }
@@ -240,7 +214,6 @@ export function getLanguageMeta(langOrFilename: string): LanguageMeta {
   const langId = detectLanguage(langOrFilename, langOrFilename.toLowerCase());
   return (
     SUPPORTED_LANGUAGES[langId] || {
-      id: langId || 'text',
       label: langId ? langId.toUpperCase() : 'Plain Text',
       extensions: ['.txt'],
       prismGrammar: 'plain',
@@ -277,14 +250,9 @@ export function getPrismGrammarName(langOrFilename: string): string {
  */
 export function isMarkdownFile(filename?: string, language?: string): boolean {
   if (!filename && !language) return true;
-  if (language === 'markdown' || language === 'md') return true;
-  if (filename) {
-    const lower = normalizeName(filename);
-    if (lower.endsWith('.md') || lower.endsWith('.markdown') || lower.endsWith('.mdx')) {
-      return true;
-    }
-  }
-  return false;
+  return (
+    language === 'markdown' ||
+    language === 'md' ||
+    detectLanguage(filename || '', 'text') === 'markdown'
+  );
 }
-
-
