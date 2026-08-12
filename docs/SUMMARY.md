@@ -6,13 +6,13 @@
 
 ## 1. Executive Summary & Domain Purpose
 
-- **What it is:** Strata AI is an AI-powered "agentic workspace studio" — a chat-first app where users create, edit, analyze, rename, and organize multi-file workspaces (documents, markdown notes, code snippets) through a conversational interface backed by Google Gemini models.
+- **What it is:** Strata AI is an AI-powered "agentic workspace studio" — a chat-first app where users create, edit, analyze, rename, and organize multi-file workspaces across 24+ programming and markup languages (HTML, TypeScript, JavaScript, CSS, JSON, Python, SQL, Rust, Go, Markdown, and plain text) through a conversational interface backed by Google Gemini and Fireworks models.
 - **Core mechanic:** The assistant executes 8 schema-validated tools (6 workspace tools + `webSearch` & `extractUrl`) in multi-step agentic loops, mutating files live. Content lives in files on a "canvas" (Workspace Drawer); chat is the control surface.
 - **Target audience:** Individual power users (job-seeker document workflows were the original focus) who want a local-first AI document studio without cloud sync complexity.
-- **Business problem solved:** (a) Putting durable, structured content into files instead of disposable chat messages; (b) precise, non-destructive AI edits via a surgical string-edit engine; (c) no-database-setup local persistence via IndexedDB.
+- **Business problem solved:** (a) Putting durable, structured content into files instead of disposable chat messages; (b) precise, non-destructive AI edits via a surgical string-edit engine; (c) no-database-setup local persistence via IndexedDB; (d) rich, line-numbered syntax highlighting and code preview across multi-file projects.
 - **Core feature surface:**
   - Multi-step agentic file operations & web research — the model chains `readFile` → `editFile`/`writeFile` or `webSearch` → `extractUrl` across up to 75 tool steps.
-  - Multi-file workspace canvas — a slide-over drawer to create, rename, edit, delete, and preview files; markdown rendered or edited as raw text.
+  - Multi-file workspace canvas — a slide-over drawer to create, rename, edit, delete, and preview files; markdown rendered or multi-language code syntax-highlighted with synchronized line numbers via `CodeViewer` or edited as raw text.
   - Live streaming UX — word-paced tokens, reasoning/thought accordion, tool-execution cards, animated streaming caret.
   - Per-conversation model + thinking-level selection with localStorage memory and conversation-level override.
   - Full conversation history persisted locally in IndexedDB with a sidebar conversation switcher.
@@ -46,6 +46,7 @@
 | Styling | Tailwind CSS 4.1 (`@tailwindcss/postcss` + autoprefixer) | Utility-first UI on "Milo" design tokens | `@theme` block in `globals.css`; light + dark token sets; semantic text-size tokens (`text-micro` 11px → `text-display` 32px) — raw `text-xs`/`text-sm`/`text-[10px]`/`text-[11px]` are never used in components |
 | Animations | `motion` (Framer Motion 12) | Spring slide-in for Workspace Drawer, AnimatePresence | Transpiled by Next (`transpilePackages`) |
 | Markdown | `react-markdown@10` + `remark-gfm@4` | Chat bubble + drawer markdown rendering | Custom components for headings, fenced code w/ copy, tables, blockquotes |
+| Syntax Highlighting | PrismJS 1.30 (`prismjs` + `@types/prismjs`) | Multi-language syntax highlighting across 24+ languages in chat code blocks & workspace canvas | Milo-themed Prism token styles in `globals.css`; custom singleton registration in `lib/syntax-highlighter.ts` |
 | Validation | `zod@^4.4.3` | API body parsing, tool input/output schemas | `zod` v4 API (no `z.string().min()` legacy pitfalls) |
 | Icons | `lucide-react@^0.553` | Iconography | Custom `StrataIcon` SVG brand mark in `components/ui/` |
 | Auto-scroll | `use-stick-to-bottom@^1.1` | Chat auto-scroll via ResizeObserver/MutationObserver | `<StickToBottom>` wraps ChatPanel; no manual scroll effects |
@@ -134,7 +135,7 @@ The `/api/agent/compact` route is equally stateless. Both `/api/agent` and `/api
 ### 3.6 Streaming, reasoning & rendering pipeline
 
 1. `streamText` output is wrapped with `createUIMessageStream(({ writer }))` → `createUIMessageStreamResponse` → an SSE stream piping both custom `data-workspace` live file events (`writer.write`) and UI message deltas to the client's `onData` handler.
-2. `smoothStream({ delayInMs: 25, chunking: "word" })` paces token delivery so the UI reads as continuous prose, not bursty chunks. `ChatBubble` delegates active text segment rendering to `SmoothStreamText`, which parses live GitHub-Flavored Markdown with an active streaming caret. The `prepareStep` hook re-injects `buildSystemInstruction(mutableFiles)` before each agent step so the model's file-state view is always current.
+2. `smoothStream({ delayInMs: 25, chunking: "word" })` paces token delivery so the UI reads as continuous prose, not bursty chunks. `ChatBubble` delegates active text segment rendering to `SmoothStreamText`, which parses live GitHub-Flavored Markdown with an active streaming caret. Fenced code blocks are styled via `create-markdown-components.tsx` with language badges, copy-to-clipboard, and PrismJS syntax highlighting (`highlightCode`). The `prepareStep` hook re-injects `buildSystemInstruction(mutableFiles)` before each agent step so the model's file-state view is always current.
 3. Reasoning/thinking text (enabled via `thinkingConfig.includeThoughts`) arrives as reasoning parts; `ChatBubble` renders them inside a collapsible `ThoughtAccordion` (`Thinking (Xs)…` live timer / `Thought for Xs`, spinner while in progress). While actively thinking (`isThinking === true`), expanded thinking text renders as plain pre-wrap font-mono to eliminate 60 Hz Markdown AST re-parsing, upgrading to formatted `ReactMarkdown` once thinking completes.
 4. Tool invocations arrive as tool parts; `resolveToolDisplay` normalizes each into `ToolCardProps` and `ToolCallCard` renders a minimal, lightweight UI (unique Lucide icon, tool name, `loading` / `success` / `fail` status badge, and a concise file or search URL summary in the dropdown). **Streaming vs Finished grouping:** While the agent is working (`isStreaming === true`), ChatBubble renders all work items (reasoning accordions, intermediate text narration, and tool call cards) **ungrouped and live in stream order**. Once inference finishes (`isStreaming` flips to false), the memo recomputes and folds all pre-answer output into a **single collapsible `WorkGroupCard`** ("Working (Xs)..." live → "Worked for Xs") that auto-collapses, leaving only the final assistant answer bubble. Intermediate text narration lives inside the expanded group card. `ToolCallCard` uses a custom `areToolCallCardPropsEqual` comparator in `React.memo` that skips intermediate re-renders while multi-KB argument strings (e.g. `writeFile`/`editFile` content) stream in. The other hot streaming components (`ChatBubble`, `WorkspaceDrawer`, `ChatInput`, `Sidebar`) are `React.memo`'d, and the workspace/drawer handlers (`handleSelectFile`/`handleCreateFile`/`handleUpdateFile`/`handleDeleteFile`) plus model handlers are stable `useCallback`s — the unmemoized `WorkspaceDrawer` re-running `ReactMarkdown` on every 15 ms delta was the primary length-scaled freeze hotspot. The AI SDK `useChat` reducer `structuredClone`'s only the in-flight message, so completed bubbles keep reference identity and memoization skips them during streaming.
 5. `useChat` `status` (streaming / submitted / ready) drives `isLoading`, the typing-dots loader, the streaming caret + shimmer overlay, and `<StickToBottom resize="auto">`-based auto-scroll.
@@ -183,7 +184,13 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   │   ├── ThoughtAccordion.tsx  # Collapsible reasoning/thought display
     │   │   │   ├── ToolCallCard.tsx  # Generic accordion tool-card chrome — NEVER needs edits when tools change
     │   │   │   └── tools/resolver.tsx    # extractToolInfo + resolveToolDisplay → ToolCardProps (per-tool UI config + summaries)
-    │   │   ├── workspace/WorkspaceDrawer.tsx # Slide-over: file switcher, create/edit/delete, markdown preview vs raw editor, footer actions
+    │   │   ├── workspace/            # Modular workspace studio drawer
+    │   │   │   ├── WorkspaceDrawer.tsx   # Slide-over shell & drawer animation container
+    │   │   │   ├── WorkspaceFileSelector.tsx # File switcher dropdown: language tags, markdown/code icons, counts & new-file trigger
+    │   │   │   ├── CodeViewer.tsx        # Line-numbered syntax-highlighted code viewer via PrismJS
+    │   │   │   ├── WorkspaceEditor.tsx   # Raw text/code editor textarea
+    │   │   │   ├── WorkspaceEmptyState.tsx # Empty workspace canvas placeholder
+    │   │   │   └── WorkspaceDrawerFooter.tsx # Footer actions: copy-to-clipboard, view/edit toggle, character count stats
     │   │   └── ui/
     │   │       ├── strata-icon.tsx   # Brand SVG logo (currentColor or gradient)
     │   │       └── ConfirmDialog.tsx # Portaled modal for destructive confirmations (sign-out, delete file, delete chat)
@@ -193,13 +200,14 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── useChatTransport.ts   # Custom DefaultChatTransport creation, rate-limit header parsing & error throwing (pure network/header layer; no payload mutation)
     │   │   ├── useCompaction.ts      # Context-compaction streaming: POST /api/agent/compact, SSE parse, rate-limit sync, reconcileFinishedStep, isCompactedSummary stamping
     │   │   ├── useConversations.ts   # Conversation list + create/delete/rename/pin with navigation (Dexie v5 live query, pinned-first sorting, cap enforcement)
+    │   │   ├── useCopyClipboard.ts   # Clipboard copy utility with temporary copied state
     │   │   ├── useLatestConversationRedirect.ts # Landing-page redirect to latest user conversation or a fresh chat (with error fallback)
     │   │   ├── useSignIn.ts          # Sign-in form state: validation, auth call, error/success feedback, redirect
     │   │   ├── useSignUp.ts          # Sign-up form state: validation, auth call, error/success feedback, redirect
     │   │   ├── useAuthForm.ts        # Shared email/password form state machine (loading/error/success + redirect) used by useSignIn/useSignUp
     │   │   ├── useSignOut.ts         # Sign-out action: auth call + router navigation & refresh
     │   │   ├── useTheme.ts           # Light/dark theme state: .dark class toggle, localStorage + cross-tab sync
-    │   │   ├── useWorkspaceFiles.ts  # Workspace file CRUD against Dexie conversation.files + activeFileId
+    │   │   ├── useWorkspaceFiles.ts  # Workspace file CRUD against Dexie conversation.files + activeFileId (with detectLanguage integration)
     │   │   ├── useModelSettings.ts   # Model + thinking level state; per-conversation override + localStorage preference
     │   │   └── use-mobile.ts         # ORPHANED (unused) — 768px media-query hook
     │   ├── lib/
@@ -209,6 +217,8 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── models.ts             # Model registry, descriptions, thinking-level config, localStorage helpers
     │   │   ├── schemas.ts            # Zod: WorkspaceFile
     │   │   ├── limits.ts             # Centralized app limits (message/file/workspace/conversation caps) + quota constants (QUOTA_5H_LIMIT/QUOTA_WEEK_LIMIT/NEAR_LIMIT_PERCENT) + buildQuotaError/buildRateLimitErrorMessage + formatting helpers
+    │   │   ├── languages.ts          # Language registry (24+ languages), extension mapping, aliases, detectLanguage, getLanguageMeta, getLanguageLabel, isMarkdownFile
+    │   │   ├── syntax-highlighter.ts # PrismJS wrapper: highlightCode, highlightCodeLines, safe HTML escaping, singleton registration
     │   │   ├── token-usage.ts        # Active context window metrics (calculateTokenMetrics, compaction-aware reset) + session usage folding, per-model $ cost breakdown (calculateTokenCost/formatCost), compact token formatters
     │   │   ├── id.ts                 # crypto.randomUUID with fallback
     │   │   ├── edit-engine.ts        # StringEditEngine: 3-tier surgical string matching
@@ -246,7 +256,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
   - **Legacy-inclusion rule:** `useConversations` lists records that are *unowned* (`!userId`) alongside the signed-in user's own, so conversations that predate v5 user-scoping are never hidden.
 - **`messages`** table (keyPath `id`; indexes `id, chatId, userId, timestamp`):
   - `DBMessage` extends AI SDK `UIMessage` (native parts array) with `chatId` (indexed FK to conversations), `userId?` (Better Auth user ID) + `timestamp`. Stored as native UI messages — no shape conversion. **`timestamp` is a position-derived ordering key**: `chat-reconciler.ts` stamps each message with a strictly increasing value derived from its index in `allMessages`, so `sortBy('timestamp')` deterministically reproduces conversation order (a single shared timestamp would tie and fall back to random UUID ordering).
-- **`WorkspaceFile`** entity (embedded in conversations.files): `id`, `name`, `content`, `language` (default "markdown"), `createdAt`, `updatedAt`. Note: no per-file indexes; the whole array is read/written as one column.
+- **`WorkspaceFile`** entity (embedded in conversations.files): `id`, `name`, `content`, `language` (auto-detected via `detectLanguage` across 24+ languages, default "markdown"), `createdAt`, `updatedAt`. Note: no per-file indexes; the whole array is read/written as one column.
 - **Schema version history:** v1 (custom ChatMessage) → v2 (+thinkingLevel) → v3 (type updates) → v4 (native UIMessage; +files/activeFileId on conversations) → v5 (+userId indexing on conversations and messages for per-user session isolation). To bump: increment version in `db.ts` constructor and add a `stores()` definition.
 
 ### 5.2 Server-side (Supabase PostgreSQL, `better_auth` schema — auth + abuse control only)
@@ -322,9 +332,9 @@ All tools are `ai.tool()` definitions registered by `createWorkspaceTools(contex
 |------|-------------|--------------|------------------|
 | `listFiles` | `{}` | `{ count, files: [{id,name,language,charCount}] }` | Metadata only — never full content |
 | `readFile` | `nameOrId`, `section?` | `{ exists, name?, section?, content?, error? }` | Full content or heading-section regex extract (H1–H6, case-insensitive) |
-| `writeFile` | `name`, `content`, `language?` | `{ action: "created"\|"replaced", file }` | Full create/replace; auto language (`.txt` → text, else markdown); reuses existing id on replace |
+| `writeFile` | `name`, `content`, `language?` | `{ action: "created"\|"replaced", file }` | Full create/replace; auto language detection via `detectLanguage(name)`; reuses existing id on replace |
 | `editFile` | `nameOrId`, `explanation`, `searchString`, `replaceString` | `{ success, explanation?, strategyUsed?, message?, error?, file? }` | Routes through `StringEditEngine`; readFile-first discipline |
-| `renameFile` | `nameOrId`, `newName` | `{ success, oldName?, newName?, file?, error? }` | Rejects case-insensitive name collisions |
+| `renameFile` | `nameOrId`, `newName` | `{ success, oldName?, newName?, file?, error? }` | Renames file; re-runs `detectLanguage(newName)` to keep language metadata synchronized; rejects case-insensitive name collisions |
 | `deleteFile` | `nameOrId` | `{ deleted, fileId?, name?, error? }` | Matches by id or case-insensitive name |
 
 **Persistence contract (two channels):**
