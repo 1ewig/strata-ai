@@ -155,7 +155,7 @@ export const SUPPORTED_LANGUAGES: Record<string, LanguageMeta> = {
   dockerfile: {
     id: 'dockerfile',
     label: 'Dockerfile',
-    extensions: ['.dockerfile', 'dockerfile'],
+    extensions: ['.dockerfile'],
     prismGrammar: 'docker',
   },
   text: {
@@ -217,9 +217,6 @@ export function detectLanguage(filename: string, fallback = 'markdown'): string 
   if (SUPPORTED_LANGUAGES[lower]) {
     return lower;
   }
-
-  // Exact filename matches (like 'dockerfile')
-  if (lower === 'dockerfile') return 'dockerfile';
 
   // Find by file extension (e.g. 'app.ts' -> '.ts')
   for (const lang of Object.values(SUPPORTED_LANGUAGES)) {
@@ -290,14 +287,4 @@ export function isMarkdownFile(filename?: string, language?: string): boolean {
   return false;
 }
 
-/**
- * Returns the primary extension for a given language ID.
- *
- * @param language - Language ID (e.g. 'html', 'typescript').
- * @returns Extension with dot (e.g. '.html', '.ts').
- */
-export function getLanguageExtension(language: string): string {
-  const langId = detectLanguage(language, language);
-  const meta = SUPPORTED_LANGUAGES[langId];
-  return meta?.extensions[0] || '.txt';
-}
+

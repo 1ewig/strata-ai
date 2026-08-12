@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Check, Code2 } from 'lucide-react';
-import { highlightCode, escapeHtml } from '@/lib/syntax-highlighter';
+import { highlightCode } from '@/lib/syntax-highlighter';
 import { getLanguageLabel } from '@/lib/languages';
 
 export type MarkdownVariant = 'assistant' | 'user' | 'thought' | 'canvas';
@@ -268,7 +268,7 @@ export function createMarkdownComponents(
           <pre className="p-3 overflow-x-auto text-text-primary leading-relaxed">
             <code
               className={className}
-              dangerouslySetInnerHTML={{ __html: highlightedHtml || escapeHtml(rawCode) }}
+              dangerouslySetInnerHTML={{ __html: highlightedHtml }}
             />
           </pre>
         </div>

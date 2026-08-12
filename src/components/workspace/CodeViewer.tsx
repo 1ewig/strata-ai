@@ -8,8 +8,6 @@ interface CodeViewerProps {
   code: string;
   /** File name (e.g. 'index.html', 'app.ts') or language identifier. */
   filenameOrLanguage: string;
-  /** Optional custom class name for the wrapper. */
-  className?: string;
 }
 
 /**
@@ -19,7 +17,6 @@ interface CodeViewerProps {
 export default React.memo(function CodeViewer({
   code,
   filenameOrLanguage,
-  className = '',
 }: CodeViewerProps) {
   // Split code into syntax-highlighted HTML lines
   const lines = useMemo(
@@ -28,7 +25,7 @@ export default React.memo(function CodeViewer({
   );
 
   return (
-    <div className={`overflow-x-auto w-full font-mono text-label leading-relaxed select-text ${className}`}>
+    <div className="overflow-x-auto w-full font-mono text-label leading-relaxed select-text">
       <table className="w-full border-collapse">
         <tbody>
           {lines.map((lineHtml, index) => (

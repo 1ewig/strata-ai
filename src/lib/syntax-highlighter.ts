@@ -61,7 +61,7 @@ export function highlightCode(code: string, langOrFilename: string): string {
   if (!code) return '';
 
   const langId = detectLanguage(langOrFilename, langOrFilename.toLowerCase());
-  const grammarName = getPrismGrammarName(langId) || langId;
+  const grammarName = getPrismGrammarName(langId);
   const grammar =
     Prism.languages[grammarName] ||
     Prism.languages[langId] ||
