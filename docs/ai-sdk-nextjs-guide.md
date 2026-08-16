@@ -121,7 +121,7 @@ bun add next@16 react@19 react-dom@19
 bun add ai @ai-sdk/react @ai-sdk/google
 bun add zod
 bun add -d @types/react @types/react-dom typescript tailwindcss @tailwindcss/postcss
-bun add dexie dexie-react-hooks react-markdown remark-gfm lucide-react motion use-stick-to-bottom @supabase/supabase-js better-auth pg @ai-sdk/fireworks
+bun add dexie dexie-react-hooks react-markdown remark-gfm lucide-react motion use-stick-to-bottom better-auth pg @ai-sdk/fireworks
 ```
 
 Create `.env.local` (never commit keys; `.env.example` is the authoritative reference):
@@ -315,11 +315,13 @@ import {
 } from 'ai';
 
 // inside createUIMessageStream's execute()
+const sanitizedMessages = sanitizeMessagesForProvider(messages, getModelProvider(modelId || DEFAULT_AGENT_MODEL)); // §4.2
+const modelMessages = await convertToModelMessages(sanitizedMessages);   // UI messages -> model messages
 const result = streamText({
   model: resolvedModel.model,
   system: buildSystemInstruction(workspace.getCurrentFiles()),
-  messages: await convertToModelMessages(messages),   // UI messages -> model messages
-  tools, createWorkspaceTools(workspaceWithWriter),
+  messages: modelMessages,
+  tools: createWorkspaceTools({ ...workspace, writer }),
   abortSignal: signal,
   experimental_transform: [smoothStream({ delayInMs: 25, chunking: 'word' }), coalesceToolInputDeltas()],
   stopWhen: isStepCount(maxSteps),
@@ -429,7 +431,7 @@ Use `use-stick-to-bottom` — a `ResizeObserver`/`MutationObserver` component th
 <StickToBottom className="flex-1 min-h-0" resize="auto" initial="instant">
   {(context) => (
     <>
-      <StickToBottom.Content className="max-w-4xl w-full mx-auto px-4 pb-36">
+      <StickToBottom.Content className="max-w-4xl w-full mx-auto px-4 pb-44">
         <ChatPanel ... />
       </StickToBottom.Content>
       {!context.isAtBottom && (
@@ -452,14 +454,14 @@ Open reasoning models emit their *thoughts* as a separate part type. The Strata 
 1. **While reasoning is in progress**, render the thought text inside a collapsible "Thought Process" accordion as **plain pre-wrap text** (`font-mono whitespace-pre-wrap`) with a spinner, and a live clock ("Thinking...") or a fixed "Thought for X s".
 2. **Only once thinking completes**, upgrade that block to styled `ReactMarkdown`.
 
-Why two phases? Because re-parsing a Markdown AST on every 15 ms delta is a top cause of stream jank — quantified in §5.7. `ThoughtAccordion` (`src/components/chat/ThoughtAccordion.tsx`) is fed `isStreaming={isStreaming && isLastSegment}` so the in-flight thought stays cheap.
+Why two phases? Because re-parsing a Markdown AST on every 15 ms delta is a top cause of stream jank — quantified in §5.7. `ThoughtAccordion` (`src/components/chat/ThoughtAccordion.tsx`) is fed `isThinking={isStreaming && isLastSegment}` so the in-flight thought stays cheap.
 
 ### 2.5 Live Markdown via SmoothStreamText
 
 The active (in-flight) text part renders formatted Markdown via `SmoothStreamText`, which simply wraps `ReactMarkdown` and appends a streaming caret; completed parts fall back to plain `ReactMarkdown` with a memoized component map. From `src/components/chat/ChatBubble.tsx`:
 
 ```tsx
-{isActiveStreamingText ? (
+{isStreamingActiveSegment ? (
   <SmoothStreamText text={seg.content} isStreaming={true} components={markdownComponents} />
 ) : (
   <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
@@ -484,7 +486,7 @@ The two-phase decision — grouping is a **final render transform**, never a mid
 // ChatBubble.tsx — segment assembly (trimmed)
 if (isStreaming) return rawSegments;                                  // live, ungrouped
 const workItems = hasFinalText ? rawSegments.slice(0, -1) : rawSegments;
-if (workItems.length > 0) result.push({ type: 'work-group', items: workItems, key: 'work-group' });
+if (workItems.length > 0) result.push({ type: 'work-group', items: workItems, key: 'work-group-single' });
 if (hasFinalText) result.push(lastSegment);
 ```
 
@@ -549,7 +551,7 @@ export interface WorkspaceToolsContext {
 }
 ```
 
-The factory & merge helpers live in `src/lib/ai/workspace.ts` — `createMutableWorkspace(initialFiles)` returns a `WorkspaceToolsContext` backed by one mutated array, reusing `upsertFileIntoWorkspace` / `removeFileFromWorkspace` (also used by session-side persistence in §4.5/§4.6):
+The factory & merge helpers live in `src/lib/ai/workspace.ts` — `createMutableWorkspace(initialFiles)` returns a `WorkspaceToolsContext` backed by one mutated array (its closures inline the same findIndex-by-id-or-name logic as the co-located `upsertFileIntoWorkspace` / `removeFileFromWorkspace` helpers, which the persistence layer in §4.5/§4.6 reuses):
 
 ```ts
 // src/lib/ai/workspace.ts (abridged)
@@ -606,7 +608,7 @@ export function createWorkspaceTools(context: WorkspaceToolsContext) {
 
 The six workspace tools take the context; the two web tools (`webSearch`, `extractUrl`) are stateless by nature. They live split by domain — `workspace-tools.ts` vs `tavily-tools.ts` — sharing a `callTavilyApi` REST helper (no SDK) with `Authorization: Bearer` header auth, per-endpoint fetch timeouts (30 s search, 45 s extract), and mapping of 400/401/429/432/433 responses into readable tool errors (parsing multi-shape error payloads — `detail.error`, `error.message`, a plain `detail`/`message` string).
 
-`webSearch` supports `includeAnswer` (bool or `"basic"`/`"advanced"` — requests an AI-synthesized answer summary in the result's `answer` field), `topic` (`general`/`news`/`finance`) plus `timeRange`/`days` for recency, and `includeDomains`/`excludeDomains` to scope authoritative sources. `extractUrl` supports an optional `query` for intent-based section extraction and reranking of large pages, `chunksPerSource` (1–5) to cap snippets, and `format` (`markdown`/`text`); it auto-normalizes URLs via `normalizeUrl` (prepends `https://`) and returns `success: false` with per-URL errors when every target fails. The full schema table lives in `docs/SUMMARY.md` §7.1.
+`webSearch` supports `searchDepth` (`basic`/`advanced`, default `basic`), `topic` (`general`/`news`/`finance`, default `general`) plus `timeRange`/`days` for recency, `maxResults` (1–10, default 6), and `includeDomains`/`excludeDomains` to scope authoritative sources. `extractUrl` supports an optional `query` for intent-based section extraction and reranking of large pages, `chunksPerSource` (1–5) to cap snippets, and `format` (`markdown`/`text`); it auto-normalizes URLs via `normalizeUrl` (prepends `https://`) and returns `success: false` with per-URL errors when every target fails. The full schema table lives in `docs/SUMMARY.md` §7.1.
 
 ### 3.4 Step limits keep loops finite
 
@@ -676,7 +678,7 @@ Workspace Files Listing (Metadata Only):
 
 The prompt also carries **hard constraints** (max files, max sizes — from `src/lib/limits.ts`) and a **numbered workflow protocol** (inspect → mutate → verify), a strict **GFM output-rule section** (since replies render through `react-markdown` + `remark-gfm`, the model must emit valid GFM: tables, task lists, fenced code with language tags), and an explicit **tone & persona section**. Two sections worth calling out:
 
-- **Context & Token Budget** (new): `buildSystemInstruction(files, tokenBudget)` appends the active context occupancy (`active.totalTokens` / `remainingTokens` / `percentUsed`) and the active model's context window, so the model sizes replies accordingly. When usage is past 80% of the window, it adds a directive to "be concise" and proactively suggest a new chat. The budget is recomputed each `prepareStep` (so it stays current) and initially injected into the first `system` call too.
+- **Context & Token Budget** (new): `buildSystemInstruction(files, tokenBudget)` appends the active context occupancy (`active.totalTokens` / `remainingTokens` / `percentUsed`) and the active model's context window, so the model sizes replies accordingly. When usage is past 80% of the window, it adds a directive to "be concise, avoid repeating content already in files, and note that the user can use `/compact` to condense conversation history if needed". The budget is recomputed each `prepareStep` (so it stays current) and initially injected into the first `system` call too.
 - **Streamed live workspace hint:** the same `writer` used by tools is passed to the tools list so edits stream out live.
 
 ### 3.8 Bonus technique: a surgical edit engine
@@ -735,7 +737,7 @@ Plus, per `src/lib/models.ts`:
   - Gemini 3.1 Flash Lite: minimal / high (default **minimal**).
   - Gemini 3 Flash Preview: minimal / low / medium / high (default **high**).
   - DeepSeek V4 Flash: **low / high** (default **high**) — `max` effort is unrepresentable via the SDK, so levels collapse onto low/high.
-  - **Gemma 4**: *none* — the resolver must omit the reasoning field entirely (see §4.3).
+  - **Gemma 4**: *none* — no entry in `MODEL_THINKING_LEVELS`, so the UI offers no thinking level for these models. Because the Google branch of the resolver never omits the reasoning field, it falls back to the `'provider-default'` sentinel instead (see §4.3).
 - `getInitialModel()` / `saveModelPreference()` / `getStoredThinkingLevel()` — localStorage helpers. `getInitialModel` only trusts a stored id still in the catalog, falling back to `NEXT_PUBLIC_GEMINI_MODEL` then `gemini-3.5-flash-lite`.
 - `getValidThinkingLevelForModel(modelId, level)` — clamps a chosen level to a model's allowed set, else returns the default.
 - `getModelPricing(modelId)` — resolves `ModelPricing` for a model id, falling back to Gemini 3.5 Flash Lite rates for unknown ids. The same pricing block is mirrored in `metadata.json`'s `supportedModels` so the extension manifest and the app catalog never drift.
@@ -744,7 +746,7 @@ The catalog is the single source of truth that drives the model picker UI (`Mode
 
 ### 4.2 The provider resolver: one seam, many providers
 
-**Rule:** provider wiring lives ONLY in `src/lib/ai/providers.ts`, imported solely by the agent path. No `@ai-sdk/google` / `@ai-sdk/fireworks` import may ever reach client code (`resolveAgentModel`, `getModelProvider` are the entire provider surface):
+**Rule:** provider wiring lives ONLY in `src/lib/ai/providers.ts`, imported solely by the agent path. No `@ai-sdk/google` / `@ai-sdk/fireworks` import may ever reach client code (`resolveAgentModel`, `getModelProvider`, `DEFAULT_AGENT_MODEL`, and `DEEPSEEK_V4_FLASH_MODEL` are the entire provider surface):
 
 ```ts
 // src/lib/ai/providers.ts
@@ -784,7 +786,7 @@ const result = streamText({
 });
 ```
 
-Why spread conditionally? Because **providers reject unknown options** aggressively (Gemma accepts no thinking config). The resolver is the one place that knows per-provider; the route and the UI stay provider-agnostic.
+Why spread conditionally? Because **providers reject unknown options** aggressively — the resolver is the single place that knows what each provider accepts, and the route and the UI stay provider-agnostic. The Google branch always sets a reasoning value (the requested level, or the `'provider-default'` sentinel when the model has no thinking levels — e.g. Gemma); only the Fireworks branch can genuinely omit it (when the DeepSeek effort map yields no mapping).
 
 **Cross-provider metadata is also sanitized server-side.** When a conversation switches providers (e.g. Gemini thoughts followed by a DeepSeek turn), the persisted `providerMetadata` / `callProviderMetadata` / `resultProviderMetadata` from the *other* provider would be re-emitted into the next payload — and Fireworks rejects unknown extra inputs ("Extra inputs are not permitted"). `sanitizeMessagesForProvider(messages, provider)` in `src/lib/ai/agent-runner.ts` strips any provider metadata that doesn't belong to the active provider before `convertToModelMessages`. The runner calls it for both the agent and compaction paths.
 
@@ -792,7 +794,7 @@ Why spread conditionally? Because **providers reject unknown options** aggressiv
 
 The same app concept ("thinking level") maps differently per provider:
 
-- **Google Gemini:** `reasoning: thinkingLevel` (e.g. `minimal|low|medium|high`), with `providerOptions.google.thinkingConfig.includeThoughts: true` to stream thoughts into reasoning parts.
+- **Google Gemini:** `reasoning: thinkingLevel` (e.g. `minimal|low|medium|high`, or `'provider-default'` when no level is sent — e.g. Gemma), with `providerOptions.google.thinkingConfig.includeThoughts: true` to stream thoughts into reasoning parts.
 - **Fireworks DeepSeek:** top-level `reasoning` maps to the provider `reasoning_effort` (`low`/`high`, via the `DEEPSEEK_EFFORT` map — `max` is not expressible), plus `providerOptions.fireworks.thinking { type: 'enabled' }` and `reasoningHistory: 'interleaved'` (keeps reasoning between tool calls in agent loops).
 
 The provider's reasoning tokens arrive as native `reasoning` parts and feed the same `ThoughtAccordion` as Google's thoughts (§2.4). The client sends only `{ model, thinkingLevel }`; the mapping is entirely server-side.
@@ -903,7 +905,7 @@ Server-enforced quotas belong on **every response**, not just failures. Strata A
 
 - **Pre-check client-side** (block send when `remaining <= 0`), then let the server be authoritative (a DB-backed sliding-window limiter in `src/lib/rate-limit.ts`, writing to a `better_auth.message_log` table).
 - On **429**, stop the in-flight stream (`chatRef.current?.stop()`) and prune the empty trailing assistant bubble via an effect in `useChatSession`.
-- **Friendly error surface:** `src/lib/ai/chat-error-handler.ts` maps `Failed to fetch`/network/401/400/429 patterns to clean assistant-style copy and replaces the pending bubble — no raw stack, and it persists the corrected message list to Dexie with position-derived timestamps.
+- **Friendly error surface:** `src/lib/ai/chat-error-handler.ts` maps `Failed to fetch`/network/401/400 patterns to clean assistant-style copy and replaces the pending bubble — no raw stack, and it persists the corrected message list to Dexie with position-derived timestamps. A **429 / 'rate limit' error short-circuits instead**: it surfaces the canonical exhausted-quota card via `setQuotaError` and returns immediately — no assistant copy, no bubble replacement, no persistence (the transport already owns quota copy via the `X-RateLimit-*` headers, §4.8).
 
 ### 4.9 Provider-accurate token accounting, cost tracking, & the context-window guard
 
@@ -944,7 +946,7 @@ writer.merge(
 `src/lib/token-usage.ts` folds all of that into three aggregated structures — active context, session totals, and dollar cost grouped by model:
 
 ```ts
-export interface ChatMetadata { usage?: LanguageModelUsage; stepTotalUsage?: LanguageModelUsage; modelId?: string; }
+export interface ChatMetadata { usage?: LanguageModelUsage; stepTotalUsage?: LanguageModelUsage; modelId?: string; isCompactedSummary?: boolean; }
 
 export interface ActiveContextUsage {
   inputTokens: number; outputTokens: number; totalTokens: number;
@@ -965,7 +967,6 @@ export interface ConversationTokenMetrics {
   totalCost: number;                 // summed across turns & models
   modelsUsed: string[];
   modelBreakdowns: ModelUsageStats[];
-  inputTokens: number; outputTokens: number; totalTokens: number;  // aliases → active
 }
 
 export function calculateTokenCost(modelId, inputTokens, outputTokens): number {
@@ -985,7 +986,7 @@ export function calculateTokenMetrics(messages, contextWindow = 131072): Convers
 }
 ```
 
-The `active` block is the live context meter, the `modelBreakdowns` array feeds the cost UI, and the top-level `inputTokens`/`outputTokens`/`totalTokens` aliases keep old callers working.
+The `active` block is the live context meter and the `modelBreakdowns` array feeds the cost UI.
 
 The header (`src/components/chat/ChatHeader.tsx`) shows a compact, live **active-context meter**: `Context window: formatTokens(active.totalTokens) / formatContextWindow(contextWindow)`. Clicking/tapping it opens the separated **`TokenUsagePopover`** (`src/components/chat/TokenUsagePopover.tsx`) — a compact card with a visual context-usage progress bar, input/output split, total session tokens, the total estimated cost (`formatCost(totalCost)`), and a per-model cost breakdown. It dismisses on outside click/tap via a transparent backdrop plus `mousedown`/`touchstart` listeners that ignore the trigger button.
 
@@ -1126,7 +1127,7 @@ The pattern: hooks return stable callbacks → the page passes them straight dow
 
 ### 5.6 Memoize resolved UI with `useMemo`
 
-Derived UI config should be computed once, not per render. The tool resolver (`src/components/chat/tools/resolver.tsx`) turns a raw tool call into `ToolCardProps` (label, icon, accent classes, status, summary); the card computes it **inside its own `useMemo`** keyed on the parts that matter (the `part` reference + `onOpenDrawer`), so the parent list never pays for tool UI resolution:
+Derived UI config should be computed once, not per render. The tool resolver (`src/components/chat/tools/resolver.tsx`) turns a raw tool call into `ToolCardProps` (label, icon, status, summary, plus `badge`, `accentBg`/`accentBorder`/`accentText` classes, `rawArgs`/`rawResult`, and `onOpenDrawer`); the card computes it **inside its own `useMemo`** keyed on the parts that matter (the `part` reference + `onOpenDrawer`), so the parent list never pays for tool UI resolution:
 
 ```ts
 const resolved = React.useMemo(() => {
@@ -1168,7 +1169,7 @@ Tailwind's raw size scale invites fragmentation (`text-[11px]` in dozens of plac
 
 Rules (from `docs/SUMMARY.md` / AGENTS.md): never raw size classes (`text-xs`/`text-sm`/`text-[10px]`), never hardcoded colors/shadows/radius — use the Milo `@theme` tokens (`primary`, `secondary`, `danger`, `surface-*`, `text-*`, `edge-*`, `accent-*`, `shadow-*`). Design tokens are a **performance and maintainability technique**: sweeping visual changes are a two-line diff instead of a 30-file hunt, and they keep components style-sys cohesive.
 
-### 5.9 Server-side tool input delta coalescing (`coalesceToolInputDelta`)
+### 5.9 Server-side tool input delta coalescing (`coalesceToolInputDeltas`)
 
 When a model streams large tool arguments (`writeFile`/`editFile` content) the SDK emits high-frequency `tool-input-delta` SSE chunks. Client-side, the AI SDK message reducer would run partial-JSON parse/fix on **every chunk** — quadratic work for multi-KB code. Strata AI coalesces them **server-side** in `src/lib/ai/agent-runner.ts`:
 
@@ -1280,7 +1281,7 @@ Every item shipped and was later fixed. Learn from the receipts:
 | Message-part → render-segment flattening (streaming ungrouped / finished work-group) | `src/lib/ai/message-segments.ts` |
 | Friendly error mapping | `src/lib/ai/chat-error-handler.ts` |
 | Memoized chat surfaces (ChatBubble, SmoothStreamText, ChatInput, ToolCallCard, WorkGroupCard, resolver) | `src/components/chat/*` |
-| Shared Markdown component maps (assistant + user) | `src/components/chat/create-markdown-components.tsx` |
+| Shared Markdown component maps (assistant / user / thought / canvas variants) | `src/components/chat/create-markdown-components.tsx` |
 | `/compact` slash-command popover + registry | `src/components/chat/SlashCommandMenu.tsx` |
 | Compaction divider pills | `src/components/chat/CompactionDivider.tsx` |
 | Shared auth form state machine (`useSignIn` / `useSignUp`) | `src/hooks/useAuthForm.ts` |
