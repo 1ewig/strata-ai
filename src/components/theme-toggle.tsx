@@ -23,9 +23,13 @@ export default function ThemeToggle({ isDark, onToggle }: ThemeToggleProps) {
       onClick={onToggle}
       aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
       title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-      className="w-full flex items-center justify-center gap-2 bg-surface-overlay hover:bg-surface-elevated text-text-secondary hover:text-text-primary border border-edge-raised px-3 h-9 rounded-lg text-label font-semibold transition-colors cursor-pointer"
+      className="group w-full flex items-center justify-center gap-2 bg-surface-overlay hover:bg-surface-elevated active:scale-95 text-text-secondary hover:text-text-primary border border-edge-raised px-3 h-9 rounded-lg text-label font-semibold shadow-button transition-all duration-150 cursor-pointer"
     >
-      {isDark ? <Sun className="w-3.5 h-3.5 text-secondary" /> : <Moon className="w-3.5 h-3.5 text-text-muted" />}
+      {isDark ? (
+        <Sun className="w-3.5 h-3.5 text-secondary transition-transform duration-200 group-hover:rotate-45" />
+      ) : (
+        <Moon className="w-3.5 h-3.5 text-text-muted transition-transform duration-200 group-hover:-rotate-12" />
+      )}
       <span>{isDark ? 'Light' : 'Dark'}</span>
     </button>
   );

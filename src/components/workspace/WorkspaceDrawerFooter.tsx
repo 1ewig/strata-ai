@@ -70,10 +70,14 @@ export default React.memo(function WorkspaceDrawerFooter({
           <button
             type="button"
             onClick={onCopy}
-            className="flex items-center gap-1.5 text-label font-medium text-text-muted hover:text-text-primary bg-surface-elevated hover:bg-surface-hover border border-edge-raised px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-label font-medium text-text-muted hover:text-text-primary bg-surface-elevated hover:bg-surface-hover border border-edge-raised active:scale-95 px-3 py-1.5 rounded-xl shadow-button transition-all duration-150 cursor-pointer"
             title="Copy file content"
           >
-            {copied ? <Check className="w-3.5 h-3.5 text-primary" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? (
+              <Check className="w-3.5 h-3.5 text-primary animate-in zoom-in-75 duration-100" />
+            ) : (
+              <Copy className="w-3.5 h-3.5" />
+            )}
             <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
         )}
@@ -83,7 +87,7 @@ export default React.memo(function WorkspaceDrawerFooter({
             <button
               type="button"
               onClick={onCancelEditing}
-              className="text-label text-text-muted hover:text-text-primary px-3 py-1.5 rounded-xl transition-colors cursor-pointer"
+              className="text-label text-text-muted hover:text-text-primary active:scale-95 px-3 py-1.5 rounded-xl transition-all duration-150 cursor-pointer"
             >
               Cancel
             </button>
@@ -91,10 +95,10 @@ export default React.memo(function WorkspaceDrawerFooter({
               type="button"
               onClick={onSaveEdit}
               disabled={isFileOverLimit}
-              className={`flex items-center gap-1.5 text-label font-semibold rounded-xl transition-colors shrink-0 ${
+              className={`flex items-center gap-1.5 text-label font-semibold rounded-xl shadow-button transition-all duration-150 shrink-0 ${
                 isFileOverLimit
-                  ? 'bg-surface-elevated text-text-muted opacity-40 cursor-not-allowed border border-edge-raised'
-                  : 'text-surface bg-primary hover:bg-primary-hover cursor-pointer'
+                  ? 'bg-surface-elevated text-text-muted opacity-40 cursor-not-allowed border border-edge-raised shadow-none'
+                  : 'text-surface bg-primary hover:bg-primary-hover active:scale-95 cursor-pointer'
               } px-4 py-1.5`}
               title={
                 isFileOverLimit
@@ -110,7 +114,7 @@ export default React.memo(function WorkspaceDrawerFooter({
           <button
             type="button"
             onClick={onStartEditing}
-            className="flex items-center gap-1.5 text-label font-semibold text-text-bright bg-surface-elevated hover:bg-surface-hover border border-edge-raised hover:border-edge-hover px-3.5 py-1.5 rounded-xl transition-colors cursor-pointer shadow-button"
+            className="flex items-center gap-1.5 text-label font-semibold text-text-bright bg-surface-elevated hover:bg-surface-hover border border-edge-raised hover:border-edge-hover active:scale-95 px-3.5 py-1.5 rounded-xl transition-all duration-150 cursor-pointer shadow-button"
           >
             <Edit3 className="w-3.5 h-3.5 text-primary" />
             <span>Edit File</span>

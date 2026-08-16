@@ -249,12 +249,12 @@ export function createMarkdownComponents(
             {onCopy && (
               <button
                 onClick={() => onCopy(rawCode, snippetId)}
-                className="flex items-center gap-1 text-micro text-text-muted hover:text-primary transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-micro text-text-muted hover:text-primary active:scale-90 hover:scale-105 transition-all duration-150 cursor-pointer"
               >
                 {copiedCodeId === snippetId ? (
                   <>
-                    <Check className="w-3 h-3 text-primary" />
-                    <span className="text-primary">Copied</span>
+                    <Check className="w-3 h-3 text-primary animate-in zoom-in-75 duration-100" />
+                    <span className="text-primary font-medium">Copied</span>
                   </>
                 ) : (
                   <>

@@ -57,7 +57,7 @@ function SlashCommandMenu({
               type="button"
               onMouseEnter={() => onSelectIndex(idx)}
               onClick={() => onExecute(cmd)}
-              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left w-full transition-colors cursor-pointer ${
+              className={`flex items-center gap-2.5 px-3 py-2 rounded-xl text-left w-full transition-all duration-150 active:scale-[0.99] cursor-pointer ${
                 isSelected
                   ? 'bg-primary-soft text-primary'
                   : 'hover:bg-surface-hover text-text-primary'

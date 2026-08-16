@@ -18,7 +18,7 @@
   - Full conversation history persisted locally in IndexedDB with a sidebar conversation switcher.
   - Context compaction: a `/compact` slash command that streams a dense, structured summary of the conversation + workspace state into a new `metadata.isCompactedSummary` message via a dedicated `POST /api/agent/compact` route (auth-gated, rate-limited, consumes 1 quota message), resets the active context-window meter, and drives server-side history pruning so later turns never re-read pre-summary history.
   - Quota-aware usage: server-enforced message caps surfaced as a live "X left" ring and countdown error cards.
-  - Light + dark theme toggle (dark mode ships despite AGENTS.md describing a light-only app — see Appendix).
+  - Light + dark theme toggle (warm studio linen light + warm espresso dark, toggled via `.dark` class and `html[data-theme="dark"]` attribute; see §2 table row and Appendix).
 - **Operational / non-functional posture:**
   - **Security:** Email+password auth (Better Auth), pre-render route guards in the Next.js 16 proxy, session-verified API routes, security headers (nosniff, DENY frames, strict-origin referrer).
   - **Abuse control:** Database-backed sliding-window rate limiting (10 msgs / 5h, 50 msgs / week) enforced at the API route and mirrored into the UI in real time.
@@ -43,8 +43,8 @@
 | Client Database | Dexie 4 + `dexie-react-hooks` | Local-first IndexedDB persistence: conversations, messages, files | Schema v5 (`userId` indexing for per-user session isolation); `useLiveQuery` for reactive lists |
 | Server Database | Supabase PostgreSQL via `pg` Pool | Better Auth identity + rate-limit log | Connection string `DATABASE_URL` (pooler :6543); `search_path=better_auth,public` |
 | Auth | Better Auth 1.6.25 + `nextCookies()` plugin | Email/password sessions, cookies, session cache | Server instance `lib/auth.ts`; client instance `lib/auth-client.ts`; `BETTER_AUTH_SECRET`; no email verification |
-| Styling | Tailwind CSS 4.1 (`@tailwindcss/postcss` + autoprefixer) | Utility-first UI on "Milo" design tokens | `@theme` block in `globals.css`; light + dark token sets; semantic text-size tokens (`text-micro` 11px → `text-display` 32px) — raw `text-xs`/`text-sm`/`text-[10px]`/`text-[11px]` are never used in components |
-| Animations | `motion` (Framer Motion 12) | Spring slide-in for Workspace Drawer, AnimatePresence | Transpiled by Next (`transpilePackages`) |
+| Styling | Tailwind CSS 4.1 (`@tailwindcss/postcss` + autoprefixer) | Utility-first UI on "Milo" design tokens | `@theme` block in `globals.css`; warm studio linen light + warm espresso dark token sets (toggled via `.dark` class **and** `html[data-theme="dark"]` attribute, `color-scheme: dark`); semantic text-size tokens (`text-micro` 11px → `text-display` 32px) — raw `text-xs`/`text-sm`/`text-[10px]`/`text-[11px]` are never used in components |
+| Animations | `motion` (Framer Motion 12) | Spring slide-in for Workspace Drawer, tactile springs for new-chat creation (hero canvas stagger in `ChatPanel`, `NewChatButton` shine sweep, mobile new-chat button), AnimatePresence | Transpiled by Next (`transpilePackages`) |
 | Markdown | `react-markdown@10` + `remark-gfm@4` | Chat bubble + drawer markdown rendering | Custom components for headings, fenced code w/ copy, tables, blockquotes |
 | Syntax Highlighting | PrismJS 1.30 (`prismjs` + `@types/prismjs`) | Multi-language syntax highlighting across 24+ languages in chat code blocks & workspace canvas | Milo-themed Prism token styles in `globals.css`; custom singleton registration in `lib/syntax-highlighter.ts` |
 | Validation | `zod@^4.4.3` | API body parsing, tool input/output schemas | `zod` v4 API (no `z.string().min()` legacy pitfalls) |
@@ -136,8 +136,8 @@ The `/api/agent/compact` route is equally stateless. Both `/api/agent` and `/api
 
 1. `streamText` output is wrapped with `createUIMessageStream(({ writer }))` → `createUIMessageStreamResponse` → an SSE stream piping both custom `data-workspace` live file events (`writer.write`) and UI message deltas to the client's `onData` handler.
 2. `smoothStream({ delayInMs: 25, chunking: "word" })` paces token delivery so the UI reads as continuous prose, not bursty chunks. `ChatBubble` delegates active text segment rendering to `SmoothStreamText`, which parses live GitHub-Flavored Markdown with an active streaming caret. Fenced code blocks are styled via `create-markdown-components.tsx` with language badges, copy-to-clipboard, and PrismJS syntax highlighting (`highlightCode`). The `prepareStep` hook re-injects `buildSystemInstruction(mutableFiles)` before each agent step so the model's file-state view is always current.
-3. Reasoning/thinking text (enabled via `thinkingConfig.includeThoughts`) arrives as reasoning parts; `ChatBubble` renders them inside a collapsible `ThoughtAccordion` (`Thinking (Xs)…` live timer / `Thought for Xs`, spinner while in progress). While actively thinking (`isThinking === true`), expanded thinking text renders as plain pre-wrap font-mono to eliminate 60 Hz Markdown AST re-parsing, upgrading to formatted `ReactMarkdown` once thinking completes.
-4. Tool invocations arrive as tool parts; `resolveToolDisplay` normalizes each into `ToolCardProps` and `ToolCallCard` renders a minimal, lightweight UI (unique Lucide icon, tool name, `loading` / `success` / `fail` status badge, and a concise file or search URL summary in the dropdown). **Streaming vs Finished grouping:** While the agent is working (`isStreaming === true`), ChatBubble renders all work items (reasoning accordions, intermediate text narration, and tool call cards) **ungrouped and live in stream order**. Once inference finishes (`isStreaming` flips to false), the memo recomputes and folds all pre-answer output into a **single collapsible `WorkGroupCard`** ("Working (Xs)..." live → "Worked for Xs") that auto-collapses, leaving only the final assistant answer bubble. Intermediate text narration lives inside the expanded group card. `ToolCallCard` uses a custom `areToolCallCardPropsEqual` comparator in `React.memo` that skips intermediate re-renders while multi-KB argument strings (e.g. `writeFile`/`editFile` content) stream in. The other hot streaming components (`ChatBubble`, `WorkspaceDrawer`, `ChatInput`, `Sidebar`) are `React.memo`'d, and the workspace/drawer handlers (`handleSelectFile`/`handleCreateFile`/`handleUpdateFile`/`handleDeleteFile`) plus model handlers are stable `useCallback`s — the unmemoized `WorkspaceDrawer` re-running `ReactMarkdown` on every 15 ms delta was the primary length-scaled freeze hotspot. The AI SDK `useChat` reducer `structuredClone`'s only the in-flight message, so completed bubbles keep reference identity and memoization skips them during streaming.
+3. Reasoning/thinking text (enabled via `thinkingConfig.includeThoughts`) arrives as reasoning parts; `ChatBubble` renders them inside a collapsible `ThoughtAccordion` (`Thinking (Xs)` live timer / `Thought for Xs`, with a trailing spinner while in progress). While actively thinking (`isThinking === true`), expanded thinking text renders as plain pre-wrap font-mono to eliminate 60 Hz Markdown AST re-parsing, upgrading to formatted `ReactMarkdown` once thinking completes.
+4. Tool invocations arrive as tool parts; `resolveToolDisplay` normalizes each into `ToolCardProps` and `ToolCallCard` renders a minimal, lightweight UI (unique Lucide icon always visible on the left, tool name, a `success` / `fail` status badge — replaced by a trailing spinner while loading — and a concise file or search URL summary in the dropdown). **Streaming vs Finished grouping:** While the agent is working (`isStreaming === true`), ChatBubble renders all work items (reasoning accordions, intermediate text narration, and tool call cards) **ungrouped and live in stream order**. Once inference finishes (`isStreaming` flips to false), the memo recomputes and folds all pre-answer output into a **single collapsible `WorkGroupCard`** ("Working (Xs)" live → "Worked for Xs", each with a trailing spinner while active) that auto-collapses, leaving only the final assistant answer bubble. Intermediate text narration lives inside the expanded group card. `ToolCallCard` uses a custom `areToolCallCardPropsEqual` comparator in `React.memo` that skips intermediate re-renders while multi-KB argument strings (e.g. `writeFile`/`editFile` content) stream in. The other hot streaming components (`ChatBubble`, `WorkspaceDrawer`, `ChatInput`, `Sidebar`) are `React.memo`'d, and the workspace/drawer handlers (`handleSelectFile`/`handleCreateFile`/`handleUpdateFile`/`handleDeleteFile`) plus model handlers are stable `useCallback`s — the unmemoized `WorkspaceDrawer` re-running `ReactMarkdown` on every 15 ms delta was the primary length-scaled freeze hotspot. The AI SDK `useChat` reducer `structuredClone`'s only the in-flight message, so completed bubbles keep reference identity and memoization skips them during streaming.
 5. `useChat` `status` (streaming / submitted / ready) drives `isLoading`, the typing-dots loader, the streaming caret + shimmer overlay, and `<StickToBottom resize="auto">`-based auto-scroll.
 6. `stopWhen: isStepCount(maxSteps)` caps agentic tool loops; on `step-limit` finish the client auto-continues (see §7.4).
 
@@ -151,7 +151,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   ├── app/                      # App Router root
     │   │   ├── layout.tsx            # Root layout: fonts, theme bootstrap script, SSR rate-limit hydration via RateLimitProvider
     │   │   ├── page.tsx              # "/" client redirector: latest Dexie conversation or a new UUID chat
-    │   │   ├── globals.css           # Tailwind import, Milo @theme tokens (light + dark), keyframes (blink/fadeIn/shimmer/caret)
+    │   │   ├── globals.css           # Tailwind import, Milo @theme tokens (warm studio linen light + warm espresso dark), keyframes (blink/fadeIn/shimmer/caret)
     │   │   ├── not-found.tsx         # Branded 404 page
     │   │   ├── auth/
     │   │   │   ├── page.tsx          # Server redirect → /auth/signin (preserves callbackUrl searchParam)
@@ -164,7 +164,14 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │       ├── auth/[...all]/route.ts  # Better Auth Next.js catch-all (GET/POST from toNextJsHandler)
     │   │       └── user/rate-limit/route.ts # GET quota status (auth-verified)
     │   ├── components/
-    │   │   ├── Sidebar.tsx           # Pure presentational sidebar component (receives conversations, active ID, new/delete/rename/pin handlers; 3-dots overflow menu & inline title editing; confirm-to-delete chat dialog)
+    │   │   ├── Sidebar.tsx           # Barrel re-export: `export { default } from './sidebar/Sidebar'`
+    │   │   ├── sidebar/              # Modular sidebar decomposed from the former monolithic Sidebar.tsx
+    │   │   │   ├── Sidebar.tsx       # Composition root: scrim backdrop, rail/drawer aside, ConfirmDialog; owns chatToDelete state
+    │   │   │   ├── SidebarHeader.tsx # Brand header (Strata logo + title) and mobile close button
+    │   │   │   ├── NewChatButton.tsx # "New Conversation" CTA with shine-sweep + motion spring, disabled at MAX_CONVERSATIONS_PER_USER
+    │   │   │   ├── ConversationList.tsx # Scrollable list container: section header, quota hint, empty state, item wiring
+    │   │   │   ├── ConversationItem.tsx # Single conversation row: pin/rename/delete overflow menu, inline rename editor, confirm dialog trigger
+    │   │   │   └── SidebarFooter.tsx # Pinned footer: theme toggle, RateLimitRing, UserButton (profile + sign-out)
     │   │   ├── theme-toggle.tsx      # Pure presentational dark-mode toggle (isDark/onToggle props; logic in useTheme hook)
     │   │   ├── auth/                 # auth-shell (card layout), loading-screen, sign-in-form, sign-up-form, user-button (profile + sign-out)
     │   │   ├── chat/
@@ -206,7 +213,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── useSignUp.ts          # Sign-up form state: validation, auth call, error/success feedback, redirect
     │   │   ├── useAuthForm.ts        # Shared email/password form state machine (loading/error/success + redirect) used by useSignIn/useSignUp
     │   │   ├── useSignOut.ts         # Sign-out action: auth call + router navigation & refresh
-    │   │   ├── useTheme.ts           # Light/dark theme state: .dark class toggle, localStorage + cross-tab sync
+    │   │   ├── useTheme.ts           # Light/dark theme state: `.dark` class + `data-theme="dark"` attribute toggle, localStorage + cross-tab sync
     │   │   ├── useWorkspaceFiles.ts  # Workspace file CRUD against Dexie conversation.files + activeFileId (with detectLanguage integration)
     │   │   ├── useModelSettings.ts   # Model + thinking level state; per-conversation override + localStorage preference
     │   │   └── use-mobile.ts         # ORPHANED (unused) — 768px media-query hook
@@ -301,7 +308,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 | Chat Prompt Length | `MAX_MESSAGE_CHARS = 2000` | `ChatInput.tsx`, `/api/agent` | `maxLength={2000}` on textarea + HTTP 400 validation |
 | File Character Limit | `MAX_FILE_CHARS = 10000` | `WorkspaceDrawer.tsx`, `useWorkspaceFiles.ts`, `tools.ts` | Truncates/clamps file content on creation & update |
 | Total Workspace Limit | `MAX_WORKSPACE_TOTAL_CHARS = 50000` | `tools.ts`, `prompts.ts` | Clamps total workspace characters in agent tools |
-| Max Conversations | `MAX_CONVERSATIONS_PER_USER = 5` | `useConversations.ts` | Cap check blocks `handleNewChat`; `Sidebar.tsx` renders the disabled button & header count from props |
+| Max Conversations | `MAX_CONVERSATIONS_PER_USER = 5` | `useConversations.ts` | Cap check blocks `handleNewChat`; `sidebar/NewChatButton.tsx` renders the disabled button and `sidebar/ConversationList.tsx` the header count from props |
 | Max Files per Workspace | `MAX_FILES_PER_WORKSPACE = 3` | `WorkspaceDrawer.tsx`, `useWorkspaceFiles.ts`, `tools.ts` | Disables creation button + throws agent tool error |
 
 ## 6. Routing & Page Architecture (App Router)

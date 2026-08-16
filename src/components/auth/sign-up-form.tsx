@@ -103,7 +103,7 @@ export function SignUpForm({ onSubmit, error, successMsg, isPending }: SignUpFor
             <button
               type="button"
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-text-muted hover:text-text-secondary transition-colors"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-text-muted hover:text-text-secondary active:scale-90 transition-all duration-150 cursor-pointer"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -113,7 +113,7 @@ export function SignUpForm({ onSubmit, error, successMsg, isPending }: SignUpFor
         <button
           type="submit"
           disabled={isPending}
-          className="w-full mt-2 py-3 px-4 bg-primary hover:bg-primary-hover disabled:opacity-50 text-surface font-semibold rounded-xl flex items-center justify-center gap-2 transition-all shadow-button"
+          className="group w-full mt-2 py-3 px-4 bg-primary hover:bg-primary-hover active:scale-[0.98] disabled:active:scale-100 disabled:opacity-50 text-surface font-semibold rounded-xl flex items-center justify-center gap-2 transition-all duration-150 shadow-button cursor-pointer"
         >
           {isPending ? (
             <>
@@ -123,7 +123,7 @@ export function SignUpForm({ onSubmit, error, successMsg, isPending }: SignUpFor
           ) : (
             <>
               <span>Create Account</span>
-              <ArrowRight className="w-4 h-4" />
+              <ArrowRight className="w-4 h-4 transition-transform duration-150 group-hover:translate-x-1" />
             </>
           )}
         </button>

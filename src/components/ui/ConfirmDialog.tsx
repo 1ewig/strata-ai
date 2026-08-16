@@ -132,7 +132,7 @@ export default function ConfirmDialog({
               <button
                 onClick={onCancel}
                 disabled={isLoading}
-                className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer disabled:opacity-50"
+                className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated active:scale-90 rounded-lg transition-all duration-150 cursor-pointer disabled:opacity-50"
                 aria-label="Close dialog"
               >
                 <X className="w-4 h-4" />
@@ -153,7 +153,7 @@ export default function ConfirmDialog({
                   onCancel();
                 }}
                 disabled={isLoading}
-                className="flex-1 sm:flex-initial sm:w-auto px-4 py-2.5 rounded-xl text-label font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover/60 border border-edge-raised transition-colors cursor-pointer disabled:opacity-50 text-center"
+                className="flex-1 sm:flex-initial sm:w-auto px-4 py-2.5 rounded-xl text-label font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover/60 border border-edge-raised active:scale-95 transition-all duration-150 cursor-pointer disabled:opacity-50 text-center"
               >
                 {cancelLabel}
               </button>
@@ -165,7 +165,7 @@ export default function ConfirmDialog({
                   onConfirm();
                 }}
                 disabled={isLoading}
-                className={`flex-1 sm:flex-initial sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-label font-semibold transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-center ${
+                className={`flex-1 sm:flex-initial sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-label font-semibold shadow-button active:scale-95 transition-all duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-center ${
                   isDanger
                     ? 'bg-danger hover:bg-danger/90 text-surface'
                     : 'bg-primary hover:bg-primary-hover text-surface'

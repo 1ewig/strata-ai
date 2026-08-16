@@ -32,7 +32,7 @@
 ### 1. Autonomous Agentic Workspace Tools & Multi-Language Studio
 The agent inspects and modifies the workspace through 8 schema-validated tool factories (`src/lib/ai/tools/`):
 * **Multi-Language Support (24+ Languages):** Full support for HTML, TypeScript, JavaScript, JSX, TSX, CSS, SCSS, JSON, Python, SQL, Shell, YAML, Markdown, Rust, Go, C/C++, Java, Kotlin, PHP, Ruby, Swift, XML, Dockerfile, and plain text with automatic language detection (`detectLanguage`).
-* **PrismJS Syntax Highlighting & Line Numbers:** Code files in the Workspace Drawer render with synchronized line numbers via `CodeViewer`, and chat code fences display styled language badges and instant copy buttons via Milo-themed Prism token styles in `src/app/globals.css`.
+* **PrismJS Syntax Highlighting & Line Numbers:** Code files in the Workspace Drawer render with synchronized line numbers and native CSS `content-visibility` row containment via `CodeViewer`, and chat code fences display styled language badges and instant copy buttons via Milo-themed Prism token styles in `src/app/globals.css`.
 * **Modular Workspace Studio Drawer:** Componentized architecture featuring a file switcher dropdown (`WorkspaceFileSelector`), code viewer (`CodeViewer`), raw text/code editor (`WorkspaceEditor`), empty state canvas (`WorkspaceEmptyState`), and action footer (`WorkspaceDrawerFooter`).
 * **Workspace Management Tools:** `listFiles`, `readFile`, `writeFile`, `editFile`, `renameFile`, and `deleteFile`.
 * **3-Tier Surgical String Edit Engine (`StringEditEngine`):** `editFile` uses a fallback hierarchy (exact match -> whitespace normalization -> 2-point anchor bounded matching) for precise edits without rewriting entire files.
@@ -56,10 +56,12 @@ The agent inspects and modifies the workspace through 8 schema-validated tool fa
 
 ### 5. Milo EdTech Design System
 * Custom design tokens defined in `@theme` in `src/app/globals.css`:
-  * **Colors:** Electric fiery orange primary (`#FF5520` / `#FF5C28` dark), warm golden amber secondary (`#FFAA1D`), semantic surfaces, and soft fills.
+  * **Themes:** A warm studio linen light theme (tactile cream canvas, deep espresso ink) and a warm espresso dark theme (rich charcoal & sand), toggled via `.dark` class + `data-theme="dark"` attribute with `color-scheme: dark`.
+  * **Colors:** Electric fiery orange primary (`#FF5520` / `#FF5C28` dark), high-contrast amber secondary (`#D98200` light / `#FFAA1D` dark), semantic surfaces, and soft fills.
   * **Typography Scale:** `text-micro` (11px), `text-caption` (12px), `text-label` (14px), `text-body` (16px), `text-subheading` (18px), `text-heading` (20px), `text-title` (24px), `text-display` (32px).
   * **Radius Remap:** `rounded-lg` (12px), `rounded-xl` (20px), `rounded-2xl` (32px).
   * **Elevation:** `shadow-button`, `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`.
+  * **Tactile Spring Micro-Interactions:** Choreographed staggered entrance animations for the new-chat hero canvas (`ChatPanel`), shine-sweeping button hovers (`NewChatButton`), and spring feedback on interactive triggers.
 * Dark and light theme support with fluid CSS transitions and no Tailwind color hardcoding.
 
 ### 6. Authentication & Sliding-Window Quota Enforcement

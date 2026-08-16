@@ -93,6 +93,16 @@ export default React.memo(function WorkspaceDrawer({
     setIsCreatingNew(false);
   };
 
+  const handleSelectFile = (fileId: string) => {
+    setIsEditing(false);
+    onSelectFile(fileId);
+  };
+
+  const handleOpenCreateNew = () => {
+    setIsEditing(false);
+    setIsCreatingNew(true);
+  };
+
   const isMarkdown = isMarkdownFile(activeFile?.name, activeFile?.language);
 
   return (
@@ -122,8 +132,8 @@ export default React.memo(function WorkspaceDrawer({
                 <WorkspaceFileSelector
                   files={files}
                   activeFile={activeFile}
-                  onSelectFile={onSelectFile}
-                  onCreateNewClick={() => setIsCreatingNew(true)}
+                  onSelectFile={handleSelectFile}
+                  onCreateNewClick={handleOpenCreateNew}
                 />
 
                 <div className="flex items-center gap-2 shrink-0">
@@ -132,7 +142,7 @@ export default React.memo(function WorkspaceDrawer({
                       <button
                         type="button"
                         onClick={() => setMarkdownViewMode('preview')}
-                        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-caption font-medium transition-all cursor-pointer ${
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-caption font-medium transition-all duration-150 active:scale-95 cursor-pointer ${
                           markdownViewMode === 'preview'
                             ? 'bg-surface-raised text-primary shadow-sm font-semibold'
                             : 'text-text-muted hover:text-text-primary'
@@ -145,7 +155,7 @@ export default React.memo(function WorkspaceDrawer({
                       <button
                         type="button"
                         onClick={() => setMarkdownViewMode('source')}
-                        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-caption font-medium transition-all cursor-pointer ${
+                        className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-caption font-medium transition-all duration-150 active:scale-95 cursor-pointer ${
                           markdownViewMode === 'source'
                             ? 'bg-surface-raised text-primary shadow-sm font-semibold'
                             : 'text-text-muted hover:text-text-primary'
@@ -161,7 +171,7 @@ export default React.memo(function WorkspaceDrawer({
                   {activeFile && (
                     <button
                       onClick={() => setFileToDelete(activeFile)}
-                      className="p-1.5 text-text-muted hover:text-danger hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-text-muted hover:text-danger hover:bg-danger-soft/30 active:scale-90 rounded-lg transition-all duration-150 cursor-pointer"
                       title="Delete file"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -172,7 +182,7 @@ export default React.memo(function WorkspaceDrawer({
 
                   <button
                     onClick={onClose}
-                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated active:scale-90 rounded-lg transition-all duration-150 cursor-pointer"
                     title="Close drawer"
                   >
                     <X className="w-4.5 h-4.5" />
@@ -191,10 +201,10 @@ export default React.memo(function WorkspaceDrawer({
                     className="flex-1 bg-surface-base border border-edge-raised rounded-lg px-3 py-1.5 text-label text-text-primary focus:outline-none focus:border-primary"
                     autoFocus
                   />
-                  <button type="submit" className="text-label font-medium bg-primary hover:bg-primary-hover text-surface px-3 py-1.5 rounded-lg transition-colors cursor-pointer">
+                  <button type="submit" className="text-label font-semibold bg-primary hover:bg-primary-hover active:scale-95 text-surface px-3.5 py-1.5 rounded-lg transition-all duration-150 shadow-button cursor-pointer">
                     Create
                   </button>
-                  <button type="button" onClick={() => setIsCreatingNew(false)} className="text-label text-text-muted hover:text-text-primary px-2 py-1.5 cursor-pointer">
+                  <button type="button" onClick={() => setIsCreatingNew(false)} className="text-label text-text-muted hover:text-text-primary active:scale-95 px-2.5 py-1.5 rounded-lg transition-all duration-150 cursor-pointer">
                     Cancel
                   </button>
                 </form>
@@ -203,9 +213,10 @@ export default React.memo(function WorkspaceDrawer({
               {/* Drawer Content Body */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 {!activeFile ? (
-                  <WorkspaceEmptyState type="no-files" onCreateFileClick={() => setIsCreatingNew(true)} />
+                  <WorkspaceEmptyState type="no-files" onCreateFileClick={handleOpenCreateNew} />
                 ) : isEditing ? (
                   <WorkspaceEditor
+                    key={activeFile.id}
                     fileName={fileName}
                     contentValue={contentValue}
                     onFileNameChange={setFileName}
@@ -221,6 +232,7 @@ export default React.memo(function WorkspaceDrawer({
                   </article>
                 ) : (
                   <CodeViewer
+                    key={activeFile.id}
                     code={activeFile.content}
                     filenameOrLanguage={activeFile.name || activeFile.language}
                   />

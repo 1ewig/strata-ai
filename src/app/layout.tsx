@@ -58,7 +58,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         {/* Apply the saved theme (or OS preference) before React hydrates to avoid a theme flash */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('strata-theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;document.documentElement.classList.toggle('dark',d)}catch(e){document.documentElement.classList.remove('dark')}})()`,
+            __html: `(function(){try{var t=localStorage.getItem('strata-theme');var d=t?t==='dark':window.matchMedia('(prefers-color-scheme: dark)').matches;if(d){document.documentElement.classList.add('dark');document.documentElement.setAttribute('data-theme','dark');}else{document.documentElement.classList.remove('dark');document.documentElement.removeAttribute('data-theme');}}catch(e){document.documentElement.classList.remove('dark');document.documentElement.removeAttribute('data-theme');}})()`,
           }}
         />
       </head>

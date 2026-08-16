@@ -476,7 +476,7 @@ A multi-step agent produces a *scaffold* before the final answer: reasoning span
 
 1. **While streaming**, `ChatBubble` returns every segment **ungrouped and in place**, so thoughts, tool-calls, and intermediate text stream chronologically with the spinner.
 2. **On finish**, the memo recomputes and folds *all* pre-answer output into a **single collapsible "Worked for Xs" card**. Only the final text segment renders as the answer bubble.
-3. The group header shows a **live elapsed timer** while working (`setInterval` per second), then freezes at the larger of measured vs. estimated duration (`toolCount * 1.5 + reasoningChars / 250`), and **auto-collapses** when the stream ends.
+3. The group header shows a **live elapsed timer** while working (`setInterval` per second; `Working (Xs)` label with a trailing spinner), then freezes at the larger of measured vs. estimated duration (`toolCount * 1.5 + reasoningChars / 250`), and **auto-collapses** when the stream ends.
 
 The two-phase decision — grouping is a **final render transform**, never a mid-stream one — is the load-bearing idea. Re-flattening mid-stream would reorder parts and fight the stream:
 

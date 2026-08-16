@@ -58,7 +58,7 @@ export default function UserButton({ session, isSigningOut, onSignOut }: UserBut
     return (
       <Link
         href="/auth/signin"
-        className="w-full flex items-center justify-center gap-2 bg-surface-overlay hover:bg-surface-elevated text-text-bright border border-edge-raised px-3 py-2 rounded-lg text-label font-semibold transition-all"
+        className="w-full flex items-center justify-center gap-2 bg-surface-overlay hover:bg-surface-elevated active:scale-[0.98] text-text-bright border border-edge-raised px-3 py-2 rounded-lg text-label font-semibold shadow-button transition-all duration-150"
       >
         <LogIn className="w-3.5 h-3.5 text-primary" />
         <span>Sign In / Sign Up</span>
@@ -85,7 +85,7 @@ export default function UserButton({ session, isSigningOut, onSignOut }: UserBut
       <div ref={menuContainerRef} className="relative w-full">
         {/* Dropdown Menu */}
         {menuOpen && (
-          <div className="absolute bottom-full left-0 right-0 mb-2 p-1.5 bg-surface-overlay border border-edge-raised rounded-xl shadow-card-lg space-y-1 animate-fade-in z-50">
+          <div className="absolute bottom-full left-0 right-0 mb-2 p-1.5 bg-surface-overlay border border-edge-raised rounded-xl shadow-card-lg space-y-1 animate-in fade-in zoom-in-95 duration-100 z-50">
             <div className="px-2.5 py-1.5 border-b border-edge-default">
               <p className="text-label font-semibold text-text-bright truncate">{displayName}</p>
               <p className="text-micro text-text-muted truncate">{session.user.email}</p>
@@ -94,7 +94,7 @@ export default function UserButton({ session, isSigningOut, onSignOut }: UserBut
             <button
               onClick={handleSignOutClick}
               disabled={isSigningOut}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-label text-danger hover:bg-danger-soft disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-label text-danger hover:bg-danger-soft active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all duration-150 cursor-pointer"
             >
               {isSigningOut ? (
                 <>
@@ -115,10 +115,10 @@ export default function UserButton({ session, isSigningOut, onSignOut }: UserBut
         <button
           type="button"
           onClick={() => setMenuOpen(!menuOpen)}
-          className="w-full flex items-center justify-between p-2 rounded-lg bg-surface-base hover:bg-surface-hover/50 border border-edge-default transition-colors text-left cursor-pointer"
+          className="group w-full flex items-center justify-between p-2 rounded-lg bg-surface-base hover:bg-surface-hover/50 active:scale-[0.98] border border-edge-default transition-all duration-150 text-left cursor-pointer"
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-full bg-primary-soft border border-primary/40 text-primary font-bold text-label flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-full bg-primary-soft border border-primary/40 text-primary font-bold text-label flex items-center justify-center shrink-0 transition-transform duration-200 group-hover:scale-105">
               {initial}
             </div>
             <div className="min-w-0 flex-1">
@@ -126,7 +126,7 @@ export default function UserButton({ session, isSigningOut, onSignOut }: UserBut
               <p className="text-micro text-text-muted truncate mt-0.5 leading-none">{session.user.email}</p>
             </div>
           </div>
-          <ChevronUp className={`w-3.5 h-3.5 text-text-muted transition-transform shrink-0 ${menuOpen ? "rotate-180" : ""}`} />
+          <ChevronUp className={`w-3.5 h-3.5 text-text-muted transition-transform duration-200 shrink-0 ${menuOpen ? "rotate-180 text-text-primary" : ""}`} />
         </button>
       </div>
 

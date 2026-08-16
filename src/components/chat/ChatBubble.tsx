@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { UIMessage } from 'ai';
-import { User } from 'lucide-react';
+import { User, Loader2 } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
@@ -208,10 +208,11 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
 
         {/* Constant working state visible below streaming parts until inference finishes */}
         {!isUser && isStreaming && (
-          <div className="flex items-center py-1 text-text-muted font-mono text-caption fade-in">
+          <div className="flex items-center gap-1.5 py-1 text-text-muted font-mono text-caption fade-in">
             <span className="font-semibold text-text-secondary">
-              {`Working (${elapsedSeconds}s)...`}
+              {`Working (${elapsedSeconds}s)`}
             </span>
+            <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
           </div>
         )}
       </div>
