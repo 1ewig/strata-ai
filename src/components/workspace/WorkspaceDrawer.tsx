@@ -93,6 +93,16 @@ export default React.memo(function WorkspaceDrawer({
     setIsCreatingNew(false);
   };
 
+  const handleSelectFile = (fileId: string) => {
+    setIsEditing(false);
+    onSelectFile(fileId);
+  };
+
+  const handleOpenCreateNew = () => {
+    setIsEditing(false);
+    setIsCreatingNew(true);
+  };
+
   const isMarkdown = isMarkdownFile(activeFile?.name, activeFile?.language);
 
   return (
@@ -122,8 +132,8 @@ export default React.memo(function WorkspaceDrawer({
                 <WorkspaceFileSelector
                   files={files}
                   activeFile={activeFile}
-                  onSelectFile={onSelectFile}
-                  onCreateNewClick={() => setIsCreatingNew(true)}
+                  onSelectFile={handleSelectFile}
+                  onCreateNewClick={handleOpenCreateNew}
                 />
 
                 <div className="flex items-center gap-2 shrink-0">
@@ -203,9 +213,10 @@ export default React.memo(function WorkspaceDrawer({
               {/* Drawer Content Body */}
               <div className="flex-1 overflow-y-auto p-4 sm:p-6">
                 {!activeFile ? (
-                  <WorkspaceEmptyState type="no-files" onCreateFileClick={() => setIsCreatingNew(true)} />
+                  <WorkspaceEmptyState type="no-files" onCreateFileClick={handleOpenCreateNew} />
                 ) : isEditing ? (
                   <WorkspaceEditor
+                    key={activeFile.id}
                     fileName={fileName}
                     contentValue={contentValue}
                     onFileNameChange={setFileName}
@@ -221,6 +232,7 @@ export default React.memo(function WorkspaceDrawer({
                   </article>
                 ) : (
                   <CodeViewer
+                    key={activeFile.id}
                     code={activeFile.content}
                     filenameOrLanguage={activeFile.name || activeFile.language}
                   />

@@ -29,7 +29,10 @@ export default React.memo(function CodeViewer({
       <table className="w-full border-collapse">
         <tbody>
           {lines.map((lineHtml, index) => (
-            <tr key={index} className="leading-relaxed hover:bg-surface-hover/30 transition-colors">
+            <tr
+              key={index}
+              className="leading-relaxed hover:bg-surface-hover/30 transition-colors [content-visibility:auto] [contain-intrinsic-size:0_26px]"
+            >
               {/* Line Number Gutter */}
               <td
                 aria-hidden="true"

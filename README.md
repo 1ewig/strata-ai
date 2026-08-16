@@ -56,7 +56,8 @@ The agent inspects and modifies the workspace through 8 schema-validated tool fa
 
 ### 5. Milo EdTech Design System
 * Custom design tokens defined in `@theme` in `src/app/globals.css`:
-  * **Colors:** Electric fiery orange primary (`#FF5520` / `#FF5C28` dark), warm golden amber secondary (`#FFAA1D`), semantic surfaces, and soft fills.
+  * **Themes:** A warm studio linen light theme (tactile cream canvas, deep espresso ink) and a warm espresso dark theme (rich charcoal & sand), toggled via `.dark` class + `data-theme="dark"` attribute with `color-scheme: dark`.
+  * **Colors:** Electric fiery orange primary (`#FF5520` / `#FF5C28` dark), high-contrast amber secondary (`#D98200` light / `#FFAA1D` dark), semantic surfaces, and soft fills.
   * **Typography Scale:** `text-micro` (11px), `text-caption` (12px), `text-label` (14px), `text-body` (16px), `text-subheading` (18px), `text-heading` (20px), `text-title` (24px), `text-display` (32px).
   * **Radius Remap:** `rounded-lg` (12px), `rounded-xl` (20px), `rounded-2xl` (32px).
   * **Elevation:** `shadow-button`, `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`.
