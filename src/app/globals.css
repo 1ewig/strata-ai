@@ -1,60 +1,59 @@
 @import "tailwindcss";
 
 @theme {
-  /* Surfaces (light / warm cream canvas) */
-  --color-surface-base: #faf7f2;
-  --color-surface-raised: #ffffff;
-  --color-surface-overlay: #fffdf9;
-  --color-surface-elevated: #f2eee4;
-  --color-surface-hover: #e9e3d5;
+  /* Surfaces (Warm Studio Linen & Tactile Canvas) */
+  --color-surface-base: #f9f6f0;      /* Tactile warm linen paper (glare-free canvas) */
+  --color-surface-raised: #ffffff;    /* Crisp elevated white for sidebar & main cards */
+  --color-surface-overlay: #ffffff;   /* Pure crisp surface for inputs & popovers */
+  --color-surface-elevated: #efe9df;  /* Warm oat stone for menus, badges & chips */
+  --color-surface-hover: #e5ddcf;     /* Distinct warm hover feedback */
   --color-surface: #ffffff;
 
-  /* Text (high-contrast jet charcoal) */
-  --color-text-bright: #121118;
-  --color-text-primary: #2b2836;
-  --color-text-secondary: #555166;
-  --color-text-muted: #7e7992;
-  --color-text-faint: #aba6bf;
+  /* Typography (Deep Warm Espresso Ink with WCAG AAA Contrast) */
+  --color-text-bright: #171310;       /* Deepest espresso ink (high-contrast headings) */
+  --color-text-primary: #2c2621;      /* Rich warm charcoal for body reading */
+  --color-text-secondary: #5e554c;    /* Warm slate-mocha for secondary info & meta */
+  --color-text-muted: #887e72;        /* Warm stone for timestamps & subtitles */
+  --color-text-faint: #b5aba0;        /* Light stone for placeholders & borders */
 
-  /* Edges */
-  --color-edge-default: rgba(18, 17, 24, 0.07);
-  --color-edge-raised: rgba(18, 17, 24, 0.12);
-  --color-edge-hover: rgba(18, 17, 24, 0.22);
+  /* Edges & Borders (Warm-tinted crisp definition) */
+  --color-edge-default: rgba(44, 38, 33, 0.08);  /* Subtle dividers */
+  --color-edge-raised: rgba(44, 38, 33, 0.13);   /* Card & input borders */
+  --color-edge-hover: rgba(44, 38, 33, 0.24);    /* Interactive focus/hover */
 
-  /* Brand (electric fiery orange + amber accents) */
-  --color-primary: #ff5520;
+  /* Brand Accents (Vibrant Electric Orange & Warm Amber) */
+  --color-primary: #ff5520;           /* Signature fiery electric orange */
   --color-primary-hover: #e04312;
-  --color-primary-soft: rgba(255, 85, 32, 0.11);
-  --color-primary-soft-strong: rgba(255, 85, 32, 0.19);
-  --color-secondary: #ffaa1d;
+  --color-primary-soft: rgba(255, 85, 32, 0.10);
+  --color-primary-soft-strong: rgba(255, 85, 32, 0.18);
+  --color-secondary: #d98200;         /* High-contrast amber for light surfaces */
   --color-secondary-light: #ffe5a3;
-  --color-secondary-soft: rgba(255, 170, 29, 0.22);
-  --color-dark: #121118;
-  --color-dark-muted: #555166;
+  --color-secondary-soft: rgba(217, 130, 0, 0.16);
+  --color-dark: #171310;
+  --color-dark-muted: #5e554c;
 
-  /* Pastel accents */
+  /* Pastel & Functional Accents */
   --color-accent-blue: #84bde7;
   --color-accent-blue-soft: rgba(132, 189, 231, 0.2);
   --color-accent-pink: #f1b5e1;
   --color-accent-pink-soft: rgba(241, 181, 225, 0.2);
-  --color-accent-olive: #9cb438;
-  --color-accent-olive-soft: rgba(156, 180, 56, 0.2);
+  --color-accent-olive: #059669;
+  --color-accent-olive-soft: rgba(5, 150, 105, 0.12);
 
-  /* Functional */
-  --color-danger: #e5484d;
-  --color-danger-soft: rgba(229, 72, 77, 0.12);
+  --color-danger: #dc2626;
+  --color-danger-soft: rgba(220, 38, 38, 0.10);
   --color-warning: #b45309;
-  --color-warning-soft: rgba(255, 170, 29, 0.28);
-  --color-info: #2d7db5;
+  --color-warning-soft: rgba(245, 158, 11, 0.18);
+  --color-info: #2563eb;
   --color-accent-pink-deep: #b2499a;
-  --color-scrim: rgba(18, 17, 24, 0.6);
+  --color-scrim: rgba(23, 19, 16, 0.6);
 
-  /* Shadows */
-  --shadow-card: 0 8px 24px rgba(18, 17, 24, 0.05);
-  --shadow-card-lg: 0 12px 32px rgba(18, 17, 24, 0.09);
-  --shadow-button: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-glow-primary: 0 0 24px -4px rgba(255, 85, 32, 0.45);
-  --shadow-glow-secondary: 0 0 20px -5px rgba(255, 170, 29, 0.5);
+  /* Warm Elevation & Shadows */
+  --shadow-card: 0 4px 20px -2px rgba(44, 38, 33, 0.06), 0 1px 3px rgba(44, 38, 33, 0.04);
+  --shadow-card-lg: 0 12px 36px -4px rgba(44, 38, 33, 0.10), 0 2px 6px rgba(44, 38, 33, 0.04);
+  --shadow-button: 0 1px 3px rgba(44, 38, 33, 0.10), 0 1px 2px rgba(44, 38, 33, 0.06);
+  --shadow-glow-primary: 0 0 24px -4px rgba(255, 85, 32, 0.38);
+  --shadow-glow-secondary: 0 0 20px -5px rgba(217, 130, 0, 0.4);
 
   /* Milo shape language: badges/chips 12px, buttons/inputs 20px, cards 32px */
   --radius-lg: 12px;
@@ -81,8 +80,8 @@
 }
 
 :root {
-  --scrollbar-thumb: rgba(18, 17, 24, 0.12);
-  --scrollbar-thumb-hover: rgba(18, 17, 24, 0.22);
+  --scrollbar-thumb: rgba(44, 38, 33, 0.12);
+  --scrollbar-thumb-hover: rgba(44, 38, 33, 0.22);
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
