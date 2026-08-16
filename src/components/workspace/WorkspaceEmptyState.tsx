@@ -32,9 +32,10 @@ export default React.memo(function WorkspaceEmptyState({
           <button
             type="button"
             onClick={onCreateFileClick}
-            className="flex items-center gap-2 bg-primary hover:bg-primary-hover text-surface text-label font-semibold px-3.5 py-2 rounded-lg transition-colors cursor-pointer"
+            className="group flex items-center gap-2 bg-primary hover:bg-primary-hover active:scale-95 text-surface text-label font-semibold px-4 py-2 rounded-xl shadow-button transition-all duration-150 cursor-pointer"
           >
-            <Plus className="w-4 h-4" /> Create New File
+            <Plus className="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
+            <span>Create New File</span>
           </button>
         )}
       </div>
@@ -52,9 +53,10 @@ export default React.memo(function WorkspaceEmptyState({
         <button
           type="button"
           onClick={onEditFileClick}
-          className="flex items-center gap-1.5 text-label text-primary border border-primary/30 bg-primary-soft hover:bg-primary-soft-strong px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+          className="group flex items-center gap-1.5 text-label font-semibold text-primary border border-primary/30 bg-primary-soft hover:bg-primary-soft-strong active:scale-95 px-3.5 py-1.5 rounded-xl shadow-button transition-all duration-150 cursor-pointer"
         >
-          <Edit3 className="w-3.5 h-3.5" /> Edit File
+          <Edit3 className="w-3.5 h-3.5 transition-transform duration-150 group-hover:scale-110" />
+          <span>Edit File</span>
         </button>
       )}
     </div>

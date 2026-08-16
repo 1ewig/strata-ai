@@ -117,9 +117,9 @@ export default React.memo(function ChatPanel({
                 key={chip.label}
                 type="button"
                 onClick={() => handleChipClick(chip.prompt)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-raised/90 dark:bg-surface-elevated/90 hover:bg-surface-hover dark:hover:bg-surface-hover border border-edge-raised text-caption font-semibold text-text-secondary hover:text-text-bright transition-all shadow-button hover:scale-[1.02] cursor-pointer"
+                className="group flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-raised/90 dark:bg-surface-elevated/90 hover:bg-surface-hover dark:hover:bg-surface-hover border border-edge-raised hover:border-primary/30 text-caption font-semibold text-text-secondary hover:text-text-bright active:scale-95 shadow-button hover:scale-[1.02] transition-all duration-150 cursor-pointer"
               >
-                <Icon className="w-3.5 h-3.5 text-primary" />
+                <Icon className="w-3.5 h-3.5 text-primary transition-transform duration-150 group-hover:scale-110" />
                 <span>{chip.label}</span>
               </button>
             );

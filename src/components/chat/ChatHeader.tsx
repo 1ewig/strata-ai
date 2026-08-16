@@ -68,7 +68,7 @@ export default React.memo(function ChatHeader({
         {onOpenSidebar && (
           <button
             onClick={onOpenSidebar}
-            className="md:hidden p-2 -ml-1 text-text-muted hover:text-text-primary hover:bg-surface-hover/60 rounded-lg transition-colors cursor-pointer shrink-0"
+            className="md:hidden p-2 -ml-1 text-text-muted hover:text-text-primary hover:bg-surface-hover/60 active:scale-90 rounded-lg transition-all duration-150 cursor-pointer shrink-0"
             aria-label="Open sidebar"
           >
             <Menu className="w-4 h-4" />
@@ -86,7 +86,7 @@ export default React.memo(function ChatHeader({
             ref={triggerRef}
             type="button"
             onClick={togglePopover}
-            className="flex items-center gap-1.5 px-1.5 py-0.5 -mx-1.5 rounded-lg hover:bg-surface-hover/80 text-left transition-all cursor-pointer group max-w-[220px] sm:max-w-xs"
+            className="flex items-center gap-1.5 px-1.5 py-0.5 -mx-1.5 rounded-lg hover:bg-surface-hover/80 active:scale-[0.98] text-left transition-all duration-150 cursor-pointer group max-w-[220px] sm:max-w-xs"
             title="Click or tap to view token usage and context window details"
             aria-label="View token usage details"
             aria-expanded={isPopoverOpen}
@@ -118,31 +118,31 @@ export default React.memo(function ChatHeader({
         {/* Mobile New Chat Button (Creates a fresh conversation) */}
         <button
           onClick={onNewChat}
-          className="md:hidden flex items-center justify-center p-2 text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 rounded-lg hover:bg-primary-soft-strong transition-all cursor-pointer"
+          className="group md:hidden flex items-center justify-center p-2 text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 rounded-lg hover:bg-primary-soft-strong active:scale-95 shadow-button transition-all duration-150 cursor-pointer"
           title="New chat"
           aria-label="New chat"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
         </button>
 
         {/* Desktop Files Button (Opens Workspace Drawer) */}
         <button
           onClick={onOpenDrawer}
-          className="hidden md:flex items-center gap-1.5 text-label text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary-soft-strong transition-all font-medium cursor-pointer"
+          className="group hidden md:flex items-center gap-1.5 text-label text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary-soft-strong active:scale-95 shadow-button transition-all duration-150 font-medium cursor-pointer"
           title="Open Workspace Files Drawer"
         >
-          <Folder className="w-3.5 h-3.5" />
+          <Folder className="w-3.5 h-3.5 transition-transform duration-150 group-hover:scale-110" />
           Files ({files.length})
         </button>
 
         {/* Mobile Files Icon Button (Opens Workspace Drawer) */}
         <button
           onClick={onOpenDrawer}
-          className="md:hidden flex items-center justify-center p-2 text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 rounded-lg hover:bg-primary-soft-strong transition-all cursor-pointer"
+          className="group md:hidden flex items-center justify-center p-2 text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 rounded-lg hover:bg-primary-soft-strong active:scale-95 shadow-button transition-all duration-150 cursor-pointer"
           title={`Open Workspace Files Drawer (${files.length} files)`}
           aria-label="Open Workspace Files Drawer"
         >
-          <Folder className="w-4 h-4" />
+          <Folder className="w-4 h-4 transition-transform duration-150 group-hover:scale-110" />
         </button>
       </div>
     </header>

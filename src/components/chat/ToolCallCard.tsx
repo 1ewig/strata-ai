@@ -67,24 +67,28 @@ function ToolCallCard({
       <div className="flex items-center justify-between py-1 gap-2">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 text-left min-w-0 flex-1 cursor-pointer group hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 text-left min-w-0 flex-1 cursor-pointer group active:scale-[0.99] transition-all duration-150"
         >
           {/* Icon switches by status: spinner while loading, error icon on failure, unique tool icon otherwise */}
           {isLoading ? (
             <Loader2 className={`w-3.5 h-3.5 ${accentText} animate-spin shrink-0`} />
           ) : isError ? (
-            <XCircle className="w-3.5 h-3.5 text-danger shrink-0" />
+            <XCircle className="w-3.5 h-3.5 text-danger shrink-0 group-hover:scale-110 transition-transform duration-150" />
           ) : Icon ? (
-            <Icon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
+            <Icon className={`w-3.5 h-3.5 ${accentText} shrink-0 group-hover:scale-110 transition-transform duration-150`} />
           ) : ExplicitIcon ? (
-            <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
+            <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0 group-hover:scale-110 transition-transform duration-150`} />
           ) : null}
           <span className="font-medium text-text-secondary group-hover:text-text-primary truncate">{label}</span>
           <span className={`text-micro font-mono shrink-0 px-1.5 py-0.5 rounded-lg capitalize ${statusBadgeStyle}`}>
             {statusText}
           </span>
           <div className="text-text-muted group-hover:text-text-primary transition-colors">
-            {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+            <ChevronDown
+              className={`w-3.5 h-3.5 transition-transform duration-200 ease-out ${
+                isOpen ? 'rotate-180 text-text-primary' : ''
+              }`}
+            />
           </div>
         </button>
       </div>

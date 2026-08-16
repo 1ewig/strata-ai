@@ -253,7 +253,7 @@ export default React.memo(function ChatInput({
                 type="button"
                 onClick={onTriggerCompaction}
                 disabled={isLoading || isCompacting}
-                className="underline hover:no-underline font-semibold cursor-pointer disabled:opacity-50"
+                className="underline hover:no-underline font-semibold cursor-pointer disabled:opacity-50 active:scale-95 transition-transform duration-150"
                 title="Compact conversation history to reclaim context space"
               >
                 Compact history
@@ -291,10 +291,10 @@ export default React.memo(function ChatInput({
                 id="chat-stop-btn"
                 type="button"
                 onClick={onStop}
-                className="p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-colors focus:outline-none bg-danger hover:bg-danger/90 cursor-pointer text-surface border border-transparent animate-in fade-in flex items-center gap-1.5"
+                className="group p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none bg-danger hover:bg-danger/90 active:scale-95 cursor-pointer text-surface border border-transparent animate-in fade-in flex items-center gap-1.5 shadow-button"
                 title="Stop generating"
               >
-                <Square className="w-3.5 h-3.5 fill-surface text-surface" />
+                <Square className="w-3.5 h-3.5 fill-surface text-surface group-hover:scale-90 transition-transform duration-150" />
                 <span className="hidden sm:inline text-caption font-bold">Stop</span>
               </button>
             ) : (
@@ -302,9 +302,9 @@ export default React.memo(function ChatInput({
                 id="chat-submit-btn"
                 type="submit"
                 disabled={!inputValue.trim() || isBlocked || isCharOverLimit}
-                className={`p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-colors focus:outline-none flex items-center gap-1.5 border ${!inputValue.trim() || isBlocked || isCharOverLimit
-                    ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised'
-                    : 'bg-primary hover:bg-primary-hover text-surface border-transparent cursor-pointer'
+                className={`group p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${!inputValue.trim() || isBlocked || isCharOverLimit
+                    ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
+                    : 'bg-primary hover:bg-primary-hover active:scale-95 text-surface border-transparent cursor-pointer'
                   }`}
                 title={
                   isCompacting
@@ -321,7 +321,7 @@ export default React.memo(function ChatInput({
                 }
               >
                 <span className="hidden sm:inline text-caption font-bold">Send</span>
-                <ArrowUp className="w-3.5 h-3.5" />
+                <ArrowUp className="w-3.5 h-3.5 transition-transform duration-150 group-hover:-translate-y-0.5" />
               </button>
             )}
           </div>

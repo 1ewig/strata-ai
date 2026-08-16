@@ -45,7 +45,7 @@ export default React.memo(function WorkspaceFileSelector({
         <button
           type="button"
           onClick={() => setIsDropdownOpen((prev) => !prev)}
-          className="flex items-center gap-2 bg-transparent border-0 px-1 py-1 text-label font-semibold text-text-bright hover:opacity-80 transition-opacity cursor-pointer max-w-[200px] sm:max-w-[280px]"
+          className="flex items-center gap-2 bg-transparent border-0 px-1 py-1 text-label font-semibold text-text-bright hover:opacity-80 active:scale-[0.98] transition-all duration-150 cursor-pointer max-w-[200px] sm:max-w-[280px]"
         >
           {isCurrentMarkdown ? (
             <FileText className="w-4 h-4 text-primary shrink-0" />
@@ -88,7 +88,7 @@ export default React.memo(function WorkspaceFileSelector({
                     onSelectFile(f.id);
                     setIsDropdownOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-surface-hover transition-colors cursor-pointer ${
+                  className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-surface-hover active:scale-[0.99] transition-all duration-150 cursor-pointer ${
                     isActive ? 'bg-primary-soft text-primary font-semibold' : 'text-text-primary'
                   }`}
                 >
@@ -124,10 +124,10 @@ export default React.memo(function WorkspaceFileSelector({
                 onCreateNewClick();
               }}
               disabled={isMaxFilesReached}
-              className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-caption font-semibold transition-colors cursor-pointer ${
+              className={`group w-full flex items-center gap-2 px-3 py-2 rounded-lg text-caption font-semibold transition-all duration-150 cursor-pointer ${
                 isMaxFilesReached
                   ? 'opacity-40 cursor-not-allowed text-text-muted'
-                  : 'text-primary hover:bg-primary-soft/60'
+                  : 'text-primary hover:bg-primary-soft/60 active:scale-[0.98]'
               }`}
               title={
                 isMaxFilesReached
@@ -135,7 +135,7 @@ export default React.memo(function WorkspaceFileSelector({
                   : 'Create new file'
               }
             >
-              <Plus className="w-3.5 h-3.5 text-primary" />
+              <Plus className="w-3.5 h-3.5 text-primary transition-transform duration-200 group-hover:rotate-90" />
               <span>Create New File</span>
             </button>
           </div>

@@ -48,14 +48,14 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
-        className={`w-full flex items-center justify-center gap-2 px-3 h-9 border rounded-lg text-label font-semibold transition-colors cursor-pointer ${
+        className={`w-full flex items-center justify-center gap-2 px-3 h-9 border rounded-lg text-label font-semibold shadow-button active:scale-95 transition-all duration-150 cursor-pointer ${
           isQuotaExhausted
             ? 'border-danger/40 bg-danger-soft/40 text-danger'
             : 'border-edge-raised bg-surface-overlay hover:bg-surface-elevated text-text-secondary hover:text-text-primary'
         }`}
         aria-label="Toggle quota status popover"
       >
-        <svg className="w-3.5 h-3.5 -rotate-90 shrink-0" viewBox="0 0 20 20">
+        <svg className="w-3.5 h-3.5 -rotate-90 shrink-0 transition-transform duration-200 group-hover:scale-110" viewBox="0 0 20 20">
           <circle
             cx="10"
             cy="10"

@@ -146,15 +146,15 @@ export default React.memo(function Sidebar({
       >
       {/* Brand Header */}
       <div className="h-14 px-4 border-b border-edge-hover/50 flex items-center justify-between gap-2.5">
-        <Link href="/" className="flex items-center gap-2.5 hover:opacity-90 transition-opacity">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-glow-primary">
+        <Link href="/" className="group flex items-center gap-2.5 hover:opacity-90 transition-opacity">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-glow-primary group-hover:scale-105 transition-transform duration-200">
             <StrataIcon className="w-4 h-4 text-surface" />
           </div>
           <h1 className="text-label font-display font-bold tracking-tight text-text-bright">Strata AI</h1>
         </Link>
         <button
           onClick={onClose}
-          className="md:hidden p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated rounded-lg transition-colors cursor-pointer"
+          className="md:hidden p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated active:scale-90 rounded-lg transition-all duration-150 cursor-pointer"
           aria-label="Close sidebar"
         >
           <X className="w-4 h-4" />
@@ -166,10 +166,10 @@ export default React.memo(function Sidebar({
         <button
           onClick={handleNewChat}
           disabled={isMaxConversationsReached}
-          className={`w-full flex items-center justify-center gap-2 font-semibold px-3 py-2 rounded-xl text-label transition-colors ${
+          className={`group w-full flex items-center justify-center gap-2 font-semibold px-3 py-2 rounded-xl text-label transition-all duration-150 shadow-button ${
             isMaxConversationsReached
               ? 'bg-surface-elevated text-text-muted opacity-50 cursor-not-allowed border border-edge-raised'
-              : 'bg-primary hover:bg-primary-hover text-surface cursor-pointer'
+              : 'bg-primary hover:bg-primary-hover active:scale-[0.98] text-surface cursor-pointer'
           }`}
           title={
             isMaxConversationsReached
@@ -177,7 +177,7 @@ export default React.memo(function Sidebar({
               : 'Create new conversation'
           }
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
           New Conversation
         </button>
       </div>
@@ -225,7 +225,7 @@ export default React.memo(function Sidebar({
                   <button
                     type="button"
                     onClick={() => handleSaveRename(conv.id)}
-                    className="p-1 text-primary hover:bg-primary-soft rounded transition-colors cursor-pointer"
+                    className="p-1 text-primary hover:bg-primary-soft active:scale-90 rounded transition-all duration-150 cursor-pointer"
                     title="Save title"
                   >
                     <Check className="w-3.5 h-3.5" />
@@ -233,7 +233,7 @@ export default React.memo(function Sidebar({
                   <button
                     type="button"
                     onClick={() => setEditingChatId(null)}
-                    className="p-1 text-text-muted hover:text-text-primary rounded transition-colors cursor-pointer"
+                    className="p-1 text-text-muted hover:text-text-primary active:scale-90 rounded transition-all duration-150 cursor-pointer"
                     title="Cancel"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -245,10 +245,10 @@ export default React.memo(function Sidebar({
             return (
               <div
                 key={conv.id}
-                className={`group relative flex items-center rounded-xl text-label transition-colors ${
+                className={`group relative flex items-center rounded-xl text-label transition-all duration-150 ${
                   isActive
                     ? 'bg-primary-soft text-text-bright font-medium'
-                    : 'text-text-muted hover:bg-surface-hover/50 hover:text-text-primary'
+                    : 'text-text-muted hover:bg-surface-hover/70 hover:text-text-primary active:scale-[0.99]'
                 }`}
               >
                 <Link
@@ -256,7 +256,7 @@ export default React.memo(function Sidebar({
                   onClick={() => onClose?.()}
                   className="flex-1 flex items-center gap-2.5 px-3 py-2.5 truncate"
                 >
-                  <MessageSquare className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-primary' : 'text-text-faint'}`} />
+                  <MessageSquare className={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? 'text-primary' : 'text-text-faint group-hover:text-text-muted'}`} />
                   <span className="truncate flex-1">{conv.title || 'Untitled Chat'}</span>
                   {conv.pinned && (
                     <Pin className="w-3 h-3 text-primary shrink-0 opacity-80" />
@@ -272,7 +272,7 @@ export default React.memo(function Sidebar({
                       e.stopPropagation();
                       setActiveMenuId(prev => prev === conv.id ? null : conv.id);
                     }}
-                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                    className={`p-1.5 rounded-lg transition-all duration-150 active:scale-90 cursor-pointer ${
                       activeMenuId === conv.id
                         ? 'text-text-primary bg-surface-elevated'
                         : 'opacity-100 md:opacity-0 md:group-hover:opacity-100 text-text-muted hover:text-text-primary hover:bg-surface-elevated'
@@ -286,7 +286,7 @@ export default React.memo(function Sidebar({
                   {activeMenuId === conv.id && (
                     <div
                       ref={menuRef}
-                      className="absolute right-0 mt-1 w-36 bg-surface-elevated border border-edge-hover rounded-xl shadow-card-lg p-1 text-caption z-50 animate-in fade-in zoom-in-95"
+                      className="absolute right-0 mt-1 w-36 bg-surface-elevated border border-edge-hover rounded-xl shadow-card-lg p-1 text-caption z-50 animate-in fade-in zoom-in-95 duration-100"
                     >
                       <button
                         type="button"
@@ -296,7 +296,7 @@ export default React.memo(function Sidebar({
                           onTogglePin?.(conv.id);
                           setActiveMenuId(null);
                         }}
-                        className="w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-text-primary hover:bg-surface-hover rounded-lg transition-colors cursor-pointer"
+                        className="w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-text-primary hover:bg-surface-hover active:scale-[0.98] rounded-lg transition-all duration-150 cursor-pointer"
                       >
                         {conv.pinned ? (
                           <>
@@ -318,7 +318,7 @@ export default React.memo(function Sidebar({
                           e.stopPropagation();
                           handleStartRename(conv);
                         }}
-                        className="w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-text-primary hover:bg-surface-hover rounded-lg transition-colors cursor-pointer"
+                        className="w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-text-primary hover:bg-surface-hover active:scale-[0.98] rounded-lg transition-all duration-150 cursor-pointer"
                       >
                         <Edit3 className="w-3.5 h-3.5 text-text-muted" />
                         <span>Rename</span>
@@ -331,7 +331,7 @@ export default React.memo(function Sidebar({
                           e.stopPropagation();
                           handleDelete(e, conv);
                         }}
-                        className="w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-danger hover:bg-danger-soft/40 rounded-lg transition-colors cursor-pointer"
+                        className="w-full text-left px-2.5 py-1.5 flex items-center gap-2 text-danger hover:bg-danger-soft/50 active:scale-[0.98] rounded-lg transition-all duration-150 cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5 text-danger" />
                         <span>Delete</span>

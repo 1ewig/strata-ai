@@ -97,7 +97,7 @@ export function QuotaErrorCard({ error, onDismiss }: QuotaErrorCardProps) {
             <button
               type="button"
               onClick={onDismiss}
-              className="p-1.5 rounded-lg hover:bg-surface-hover/70 text-text-muted hover:text-text-primary transition-colors cursor-pointer"
+              className="p-1.5 rounded-lg hover:bg-surface-hover/70 active:scale-90 text-text-muted hover:text-text-primary transition-all duration-150 cursor-pointer"
               title="Dismiss alert"
             >
               <X className="w-4 h-4" />

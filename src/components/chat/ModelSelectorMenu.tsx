@@ -89,8 +89,8 @@ export default function ModelSelectorMenu({
           onModelSelect(m.id);
           closeMenu();
         }}
-        className={`w-full text-left px-3 py-2 rounded-xl flex items-start justify-between group transition-colors cursor-pointer ${
-          isSelected ? 'bg-surface-hover/70' : 'hover:bg-surface-hover'
+        className={`w-full text-left px-3 py-2 rounded-xl flex items-start justify-between group transition-all duration-150 active:scale-[0.99] cursor-pointer ${
+          isSelected ? 'bg-surface-hover/70 font-medium' : 'hover:bg-surface-hover'
         }`}
       >
         <div className="flex flex-col gap-0.5">
@@ -112,7 +112,7 @@ export default function ModelSelectorMenu({
 
   return (
     <div ref={menuRef} className="relative inline-block text-left">
-      {/* TRIGGER BUTTON (UNCHANGED) */}
+      {/* TRIGGER BUTTON */}
       <button
         type="button"
         aria-expanded={isOpen}
@@ -123,7 +123,7 @@ export default function ModelSelectorMenu({
             setIsOpen(true);
           }
         }}
-        className={`flex items-center gap-1.5 text-label transition-all cursor-pointer shrink-0 select-none ${
+        className={`flex items-center gap-1.5 text-label transition-all duration-150 active:scale-[0.98] cursor-pointer shrink-0 select-none ${
           isOpen
             ? 'text-text-primary'
             : 'text-text-muted hover:text-text-primary'
@@ -157,7 +157,7 @@ export default function ModelSelectorMenu({
               <button
                 type="button"
                 onClick={() => setView('main')}
-                className="flex items-center gap-1 text-caption font-semibold text-text-muted hover:text-text-primary px-2 py-1 rounded-lg hover:bg-surface-hover transition-colors cursor-pointer"
+                className="flex items-center gap-1 text-caption font-semibold text-text-muted hover:text-text-primary active:scale-95 px-2 py-1 rounded-lg hover:bg-surface-hover transition-all duration-150 cursor-pointer"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span>Back</span>
@@ -185,7 +185,7 @@ export default function ModelSelectorMenu({
                   <button
                     type="button"
                     onClick={() => setView('effort')}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-label font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover cursor-pointer transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-label font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover active:scale-[0.98] cursor-pointer transition-all duration-150"
                   >
                     <span>Effort</span>
                     <div className="flex items-center gap-1">
@@ -202,7 +202,7 @@ export default function ModelSelectorMenu({
                   <button
                     type="button"
                     onClick={() => setView('more-models')}
-                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-label font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover cursor-pointer transition-colors"
+                    className="w-full flex items-center justify-between px-3 py-2 rounded-xl text-label font-medium text-text-muted hover:text-text-primary hover:bg-surface-hover active:scale-[0.98] cursor-pointer transition-all duration-150"
                   >
                     <span>More models</span>
                     <ChevronRight className="w-3.5 h-3.5 text-text-muted" />
@@ -227,7 +227,7 @@ export default function ModelSelectorMenu({
                       onThinkingLevelChange(level);
                       closeMenu();
                     }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-label cursor-pointer transition-colors ${
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-label cursor-pointer transition-all duration-150 active:scale-[0.99] ${
                       isSelected
                         ? 'bg-surface-hover/70 font-medium text-text-primary'
                         : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
