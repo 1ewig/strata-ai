@@ -63,35 +63,34 @@ function ToolCallCard({
 
   return (
     <div className="my-1 w-full text-caption relative">
-      {/* Header bar */}
-      <div className="flex items-center justify-between py-1 gap-2">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 text-left min-w-0 flex-1 cursor-pointer group active:scale-[0.99] transition-all duration-150"
-        >
-          {/* Icon switches by status: spinner while loading, error icon on failure, unique tool icon otherwise */}
-          {isLoading ? (
-            <Loader2 className={`w-3.5 h-3.5 ${accentText} animate-spin shrink-0`} />
-          ) : isError ? (
-            <XCircle className="w-3.5 h-3.5 text-danger shrink-0" />
-          ) : Icon ? (
-            <Icon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
-          ) : ExplicitIcon ? (
-            <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
-          ) : null}
-          <span className="font-medium text-text-secondary group-hover:text-text-primary truncate">{label}</span>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left font-mono text-caption cursor-pointer group"
+      >
+        {/* Tool icon stays visible on the left at all times */}
+        {isError ? (
+          <XCircle className="w-3.5 h-3.5 text-danger shrink-0" />
+        ) : Icon ? (
+          <Icon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
+        ) : ExplicitIcon ? (
+          <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
+        ) : null}
+        <span className="font-semibold text-text-secondary group-hover:text-text-primary truncate">{label}</span>
+        {isLoading ? (
+          <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
+        ) : (
           <span className={`text-micro font-mono shrink-0 px-1.5 py-0.5 rounded-lg capitalize ${statusBadgeStyle}`}>
             {statusText}
           </span>
-          <div className="text-text-muted group-hover:text-text-primary transition-colors">
-            <ChevronDown
-              className={`w-3.5 h-3.5 transition-transform duration-200 ease-out ${
-                isOpen ? 'rotate-180 text-text-primary' : ''
-              }`}
-            />
-          </div>
-        </button>
-      </div>
+        )}
+        <div className="flex items-center gap-1 text-text-muted group-hover:text-text-primary transition-colors">
+          <ChevronDown
+            className={`w-3.5 h-3.5 transition-transform duration-200 ease-out ${
+              isOpen ? 'rotate-180 text-text-primary' : ''
+            }`}
+          />
+        </div>
+      </button>
 
       {/* Expanded content showing minimal summary */}
       {isOpen && (

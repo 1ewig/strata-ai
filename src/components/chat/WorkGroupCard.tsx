@@ -81,14 +81,13 @@ function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps)
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left font-mono text-caption cursor-pointer group"
       >
-        {isStreaming ? (
-          <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
-        ) : (
-          <Workflow className="w-3.5 h-3.5 text-text-muted shrink-0" />
-        )}
+        <Workflow className="w-3.5 h-3.5 text-text-muted shrink-0" />
         <span className="font-semibold">
-          {isStreaming ? `Working (${displaySeconds}s)...` : `Worked for ${displaySeconds}s`}
+          {isStreaming ? `Working (${displaySeconds}s)` : `Worked for ${displaySeconds}s`}
         </span>
+        {isStreaming && (
+          <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
+        )}
         <div className="flex items-center gap-1 text-text-muted group-hover:text-text-primary transition-colors">
           <ChevronDown
             className={`w-3.5 h-3.5 transition-transform duration-200 ease-out ${

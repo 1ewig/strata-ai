@@ -63,14 +63,13 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
         onClick={() => setIsOpen(!isOpen)}
         className="flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left font-mono text-caption cursor-pointer group"
       >
-        {isThinking ? (
-          <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
-        ) : (
-          <BrainCircuit className="w-3.5 h-3.5 text-text-muted shrink-0" />
-        )}
+        <BrainCircuit className="w-3.5 h-3.5 text-text-muted shrink-0" />
         <span className="font-semibold">
-          {isThinking ? `Thinking (${displaySeconds}s)...` : `Thought for ${displaySeconds}s`}
+          {isThinking ? `Thinking (${displaySeconds}s)` : `Thought for ${displaySeconds}s`}
         </span>
+        {isThinking && (
+          <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
+        )}
         <div className="flex items-center gap-1 text-text-muted group-hover:text-text-primary transition-colors">
           <ChevronDown
             className={`w-3.5 h-3.5 transition-transform duration-200 ease-out ${
