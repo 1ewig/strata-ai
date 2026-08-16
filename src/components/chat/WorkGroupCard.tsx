@@ -84,7 +84,7 @@ function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps)
         {isStreaming ? (
           <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
         ) : (
-          <Workflow className="w-3.5 h-3.5 text-text-muted group-hover:text-text-primary group-hover:scale-110 transition-transform duration-150 shrink-0" />
+          <Workflow className="w-3.5 h-3.5 text-text-muted shrink-0" />
         )}
         <span className="font-semibold">
           {isStreaming ? `Working (${displaySeconds}s)...` : `Worked for ${displaySeconds}s`}

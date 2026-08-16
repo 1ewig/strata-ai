@@ -73,11 +73,11 @@ function ToolCallCard({
           {isLoading ? (
             <Loader2 className={`w-3.5 h-3.5 ${accentText} animate-spin shrink-0`} />
           ) : isError ? (
-            <XCircle className="w-3.5 h-3.5 text-danger shrink-0 group-hover:scale-110 transition-transform duration-150" />
+            <XCircle className="w-3.5 h-3.5 text-danger shrink-0" />
           ) : Icon ? (
-            <Icon className={`w-3.5 h-3.5 ${accentText} shrink-0 group-hover:scale-110 transition-transform duration-150`} />
+            <Icon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
           ) : ExplicitIcon ? (
-            <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0 group-hover:scale-110 transition-transform duration-150`} />
+            <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
           ) : null}
           <span className="font-medium text-text-secondary group-hover:text-text-primary truncate">{label}</span>
           <span className={`text-micro font-mono shrink-0 px-1.5 py-0.5 rounded-lg capitalize ${statusBadgeStyle}`}>
