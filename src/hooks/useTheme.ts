@@ -39,6 +39,11 @@ export function useTheme() {
   const toggle = useCallback(() => {
     const next = !getSnapshot();
     document.documentElement.classList.toggle('dark', next);
+    if (next) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
     try {
       localStorage.setItem(STORAGE_KEY, next ? 'dark' : 'light');
     } catch {
