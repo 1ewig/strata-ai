@@ -151,7 +151,6 @@ export default React.memo(function Sidebar({
             <StrataIcon className="w-4 h-4 text-surface" />
           </div>
           <h1 className="text-label font-display font-bold tracking-tight text-text-bright">Strata AI</h1>
-          <span className="text-micro font-semibold px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised text-text-muted">WORKSPACE</span>
         </Link>
         <button
           onClick={onClose}
