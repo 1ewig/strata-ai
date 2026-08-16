@@ -88,8 +88,8 @@ export default React.memo(function WorkspaceFileSelector({
                     onSelectFile(f.id);
                     setIsDropdownOpen(false);
                   }}
-                  className={`w-full text-left px-3 py-2 flex items-center justify-between hover:bg-surface-hover active:scale-[0.99] transition-all duration-150 cursor-pointer ${
-                    isActive ? 'bg-primary-soft text-primary font-semibold' : 'text-text-primary'
+                  className={`w-full text-left px-3 py-2 flex items-center justify-between active:scale-[0.99] transition-all duration-150 cursor-pointer ${
+                    isActive ? 'bg-primary-soft text-primary font-semibold' : 'text-text-primary hover:bg-surface-hover'
                   }`}
                 >
                   <div className="flex items-center gap-2.5 truncate min-w-0">

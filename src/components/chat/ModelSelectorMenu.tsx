@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronRight, ChevronLeft, Check } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
 import {
   MODELS,
   MODEL_DESCRIPTIONS,
@@ -78,7 +78,6 @@ export default function ModelSelectorMenu({
     };
   }, [isOpen, closeMenu]);
 
-  // Reusable helper to render model items consistently
   const renderModelItem = (m: (typeof MODELS)[number]) => {
     const isSelected = m.id === model;
     return (
@@ -90,22 +89,29 @@ export default function ModelSelectorMenu({
           closeMenu();
         }}
         className={`w-full text-left px-3 py-2 rounded-xl flex items-start justify-between group transition-all duration-150 active:scale-[0.99] cursor-pointer ${
-          isSelected ? 'bg-surface-hover/70 font-medium' : 'hover:bg-surface-hover'
+          isSelected
+            ? 'bg-primary-soft text-primary font-semibold'
+            : 'text-text-primary hover:bg-surface-hover'
         }`}
       >
         <div className="flex flex-col gap-0.5">
-          <span className="text-label font-semibold text-text-primary group-hover:text-text-bright">
+          <span
+            className={`text-label font-semibold ${
+              isSelected ? 'text-primary' : 'text-text-primary group-hover:text-text-bright'
+            }`}
+          >
             {m.label}
           </span>
           {MODEL_DESCRIPTIONS[m.id] && (
-            <span className="text-caption text-text-muted line-clamp-1">
+            <span
+              className={`text-caption line-clamp-1 ${
+                isSelected ? 'text-primary/75' : 'text-text-muted'
+              }`}
+            >
               {MODEL_DESCRIPTIONS[m.id]}
             </span>
           )}
         </div>
-        {isSelected && (
-          <Check className="w-3.5 h-3.5 text-primary shrink-0 mt-0.5" />
-        )}
       </button>
     );
   };
@@ -229,14 +235,11 @@ export default function ModelSelectorMenu({
                     }}
                     className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-label cursor-pointer transition-all duration-150 active:scale-[0.99] ${
                       isSelected
-                        ? 'bg-surface-hover/70 font-medium text-text-primary'
+                        ? 'bg-primary-soft text-primary font-semibold'
                         : 'text-text-muted hover:text-text-primary hover:bg-surface-hover'
                     }`}
                   >
                     <span className="capitalize">{label}</span>
-                    {isSelected && (
-                      <Check className="w-3.5 h-3.5 text-primary shrink-0" />
-                    )}
                   </button>
                 );
               })}

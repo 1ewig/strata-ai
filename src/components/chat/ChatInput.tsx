@@ -231,7 +231,7 @@ export default React.memo(function ChatInput({
           ? 'border-primary/40 bg-primary-soft/10'
           : isBlocked
             ? 'border-danger/40 bg-danger-soft/20'
-            : 'border-edge-raised hover:border-edge-hover focus-within:border-primary/60 focus-within:shadow-glow-primary/20'
+            : 'border-edge-raised hover:border-primary/60 focus-within:border-primary/60 focus-within:shadow-glow-primary/20'
           } rounded-2xl md:rounded-3xl p-3 sm:p-4 transition-all shadow-card`}
       >
         {/* Row 1: Text Field Input, Compacting Notice, or Blocking Warning */}
