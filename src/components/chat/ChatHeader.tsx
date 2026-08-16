@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Folder, Menu, Plus } from 'lucide-react';
+import { motion } from 'motion/react';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MODELS } from '@/lib/models';
 import { NEAR_LIMIT_PERCENT } from '@/lib/limits';
@@ -116,14 +117,18 @@ export default React.memo(function ChatHeader({
       {/* Right Side Buttons */}
       <div className="flex items-center gap-3">
         {/* Mobile New Chat Button (Creates a fresh conversation) */}
-        <button
+        <motion.button
+          type="button"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.92 }}
+          transition={{ type: 'spring', stiffness: 450, damping: 25 }}
           onClick={onNewChat}
-          className="group md:hidden flex items-center justify-center p-2 text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 rounded-lg hover:bg-primary-soft-strong active:scale-95 shadow-button transition-all duration-150 cursor-pointer"
+          className="group md:hidden flex items-center justify-center p-2 text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 rounded-lg hover:bg-primary-soft-strong shadow-button transition-colors duration-150 cursor-pointer"
           title="New chat"
           aria-label="New chat"
         >
-          <Plus className="w-4 h-4 transition-transform duration-200 group-hover:rotate-90" />
-        </button>
+          <Plus className="w-4 h-4 transition-transform duration-250 group-hover:rotate-90 group-hover:scale-110" />
+        </motion.button>
 
         {/* Desktop Files Button (Opens Workspace Drawer) */}
         <button
