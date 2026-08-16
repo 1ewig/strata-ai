@@ -466,7 +466,7 @@ function buildWebSearchSummary(args: any, result: any, status: 'loading' | 'succ
     );
   }
 
-  const resultsList: Array<{ title?: string; url: string }> = result?.results || [];
+  const resultsList: Array<{ title?: string; url: string; publishedDate?: string }> = result?.results || [];
 
   return (
     <div className="py-1 space-y-1.5 font-mono text-caption">
@@ -474,25 +474,30 @@ function buildWebSearchSummary(args: any, result: any, status: 'loading' | 'succ
         <span className="text-text-muted text-caption">Query:</span>
         <span className="text-text-primary font-medium truncate">&quot;{query}&quot;</span>
       </div>
+
       {resultsList.length > 0 && (
         <div className="space-y-0.5">
           <span className="text-text-muted text-caption block">URLs Found:</span>
           <ul className="space-y-0.5 text-text-secondary text-caption pl-2">
             {resultsList.map((r, i) => (
-              <li key={i} className="truncate">
+              <li key={i} className="truncate flex items-center justify-between gap-2">
                 <a
                   href={r.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="hover:underline text-info truncate block"
                 >
-                  {r.url}
+                  {r.title || r.url}
                 </a>
+                {r.publishedDate && (
+                  <span className="text-micro text-text-faint shrink-0">{r.publishedDate}</span>
+                )}
               </li>
             ))}
           </ul>
         </div>
       )}
+
       {result?.error && (
         <p className="text-caption text-danger truncate">Error: {result.error}</p>
       )}
@@ -501,7 +506,7 @@ function buildWebSearchSummary(args: any, result: any, status: 'loading' | 'succ
 }
 
 /**
- * Summary for extractUrl: target URLs extracted.
+ * Summary for extractUrl: target URLs extracted and partial failures.
  */
 function buildExtractUrlSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
   const urls: string[] = args?.urls || [];
@@ -516,30 +521,48 @@ function buildExtractUrlSummary(args: any, result: any, status: 'loading' | 'suc
   }
 
   const extracted: Array<{ url: string; title?: string }> = result?.extracted || [];
-  const displayUrls = extracted.length > 0 ? extracted.map((e) => e.url) : urls;
+  const failed: Array<{ url: string; error: string }> = result?.failed || [];
 
   return (
-    <div className="py-1 space-y-1 font-mono text-caption">
-      <span className="text-text-muted text-caption block">Extracted URLs:</span>
-      {displayUrls.length > 0 ? (
-        <ul className="space-y-0.5 text-text-secondary text-caption pl-2">
-          {displayUrls.map((url, i) => (
-            <li key={i} className="truncate">
-              <a
-                href={url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline text-info truncate block"
-              >
-                {url}
-              </a>
-            </li>
-          ))}
-        </ul>
-      ) : (
+    <div className="py-1 space-y-1.5 font-mono text-caption">
+      {extracted.length > 0 && (
+        <div className="space-y-0.5">
+          <span className="text-text-muted text-caption block">Extracted URLs:</span>
+          <ul className="space-y-0.5 text-text-secondary text-caption pl-2">
+            {extracted.map((e, i) => (
+              <li key={i} className="truncate">
+                <a
+                  href={e.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:underline text-info truncate block"
+                >
+                  {e.title ? `${e.title} (${e.url})` : e.url}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {failed.length > 0 && (
+        <div className="space-y-0.5">
+          <span className="text-danger text-caption block font-medium">Failed URLs:</span>
+          <ul className="space-y-0.5 text-danger-soft text-caption pl-2">
+            {failed.map((f, i) => (
+              <li key={i} className="truncate text-danger">
+                • {f.url}: {f.error}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {extracted.length === 0 && failed.length === 0 && (
         <p className="text-text-muted italic text-caption">No URLs extracted</p>
       )}
-{result?.error && (
+
+      {result?.error && (
         <p className="text-caption text-danger truncate">Error: {result.error}</p>
       )}
     </div>

@@ -9,13 +9,14 @@ interface TavilyApiResponse<T> {
 
 /**
  * Reads a Tavily error payload and returns a readable message.
- * Tavily returns errors under detail.error / error.message / message.
+ * Tavily returns errors in multiple shapes (detail.error, error.message, detail string, message).
  * @param status - HTTP status code of the failed response.
  * @param bodyText - Raw response body text (already consumed).
  * @returns A readable, status-aware error message.
  */
 function extractTavilyErrorMessage(status: number, bodyText: string): string {
   const friendly: Record<number, string> = {
+    400: "Invalid Tavily request parameters.",
     401: "Tavily API key is invalid or missing.",
     429: "Tavily rate limit exceeded; try again shortly.",
     432: "Tavily plan usage limit reached; upgrade or adjust settings.",
@@ -27,7 +28,10 @@ function extractTavilyErrorMessage(status: number, bodyText: string): string {
   if (bodyText) {
     try {
       const json = JSON.parse(bodyText);
-      const err = json?.detail?.error || json?.error?.message || json?.error || json?.message;
+      const err =
+        (typeof json?.detail === "string" ? json.detail : json?.detail?.error) ||
+        (typeof json?.error === "string" ? json.error : json?.error?.message) ||
+        json?.message;
       if (typeof err === "string" && err) detail = err;
     } catch {
       detail = bodyText;
@@ -37,6 +41,18 @@ function extractTavilyErrorMessage(status: number, bodyText: string): string {
   if (known && detail) return `${known} ${detail}`;
   if (known) return known;
   return `Tavily API error (${status})${detail ? `: ${detail}` : ""}`;
+}
+
+/**
+ * Normalizes user/agent supplied URLs to ensure a valid http/https protocol prefix.
+ * @param rawUrl - Input URL string.
+ * @returns Clean normalized URL with protocol.
+ */
+function normalizeUrl(rawUrl: string): string {
+  const trimmed = rawUrl.trim();
+  if (!trimmed) return "";
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
 }
 
 /**
@@ -99,7 +115,7 @@ async function callTavilyApi<T = any>(
 export function createWebSearchTool() {
   return tool({
     description:
-      "Search the web using Tavily for real-time information, current facts, latest news, documentation, or online references. Returns an AI answer summary and ranked results with content snippets (and optional raw page content).",
+      "Search the web using Tavily for real-time information, current facts, latest news, documentation, or online references. Returns ranked results with title, URL, published date, and content snippets.",
     inputSchema: z.object({
       query: z
         .string()
@@ -123,20 +139,16 @@ export function createWebSearchTool() {
         .optional()
         .default(6)
         .describe("Number of search results to return (1-10)."),
-      includeRawContent: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe("If true, includes full page text for top results (much richer context, higher token usage)."),
-      includeImages: z
-        .boolean()
-        .optional()
-        .default(false)
-        .describe("If true, includes image URLs returned by Tavily."),
       timeRange: z
         .enum(["day", "week", "month", "year"])
         .optional()
         .describe("Restrict search results to content published within this recent window."),
+      days: z
+        .number()
+        .min(1)
+        .max(365)
+        .optional()
+        .describe("Restrict search results to the last N days (e.g. 7 for past week, 30 for past month)."),
       includeDomains: z
         .array(z.string())
         .optional()
@@ -155,13 +167,11 @@ export function createWebSearchTool() {
             title: z.string(),
             url: z.string(),
             content: z.string(),
-            rawContent: z.string().optional(),
             score: z.number().optional(),
             publishedDate: z.string().optional(),
           }),
         )
         .optional(),
-      images: z.array(z.string()).optional(),
       error: z.string().optional(),
     }),
     execute: async ({
@@ -169,9 +179,8 @@ export function createWebSearchTool() {
       searchDepth = "basic",
       topic = "general",
       maxResults = 6,
-      includeRawContent = false,
-      includeImages = false,
       timeRange,
+      days,
       includeDomains,
       excludeDomains,
     }) => {
@@ -180,11 +189,10 @@ export function createWebSearchTool() {
         search_depth: searchDepth,
         topic,
         max_results: Math.min(Math.max(maxResults, 1), 10),
-        include_raw_content: includeRawContent,
-        include_images: includeImages,
       };
 
       if (timeRange) payload.time_range = timeRange;
+      if (days != null) payload.days = days;
       if (includeDomains?.length) payload.include_domains = includeDomains;
       if (excludeDomains?.length) payload.exclude_domains = excludeDomains;
 
@@ -204,21 +212,15 @@ export function createWebSearchTool() {
             title: String(r.title || ""),
             url: String(r.url || ""),
             content: String(r.content || ""),
-            rawContent: r.raw_content ? String(r.raw_content).slice(0, 12000) : undefined,
             score: typeof r.score === "number" ? r.score : undefined,
             publishedDate: r.published_date ? String(r.published_date) : undefined,
           }))
         : [];
 
-      const images = Array.isArray(data.images)
-        ? data.images.map((img: any) => String(typeof img === "string" ? img : img?.url || ""))
-        : undefined;
-
       return {
         success: true,
         query,
         results,
-        images: images && images.length > 0 ? images : undefined,
       };
     },
   });
@@ -231,18 +233,33 @@ export function createWebSearchTool() {
 export function createExtractUrlTool() {
   return tool({
     description:
-      "Extract full, clean Markdown content from specific web page URLs using Tavily Extract API. Call this tool when webSearch snippets are too brief or when complete article/documentation context is required.",
+      "Extract full, clean Markdown content from specific web page URLs using Tavily Extract API. Call this tool when webSearch snippets are too brief or when complete article/documentation context is required. Supports query intent to extract and rerank relevant sections of large pages.",
     inputSchema: z.object({
       urls: z
         .array(z.string())
         .min(1)
         .max(3)
-        .describe("List of target web page URLs to extract full content from (1-3)."),
+        .describe("List of target web page URLs to extract content from (1-3). Protocols are normalized automatically."),
       extractDepth: z
         .enum(["basic", "advanced"])
         .optional()
         .default("advanced")
-        .describe("Extraction depth: 'basic' for fast extraction, 'advanced' for JavaScript-rendered sites."),
+        .describe("Extraction depth: 'basic' for fast standard extraction, 'advanced' for JavaScript-rendered sites and complex tables."),
+      query: z
+        .string()
+        .optional()
+        .describe("Optional search query to filter and rerank relevant sections from large documents instead of extracting the entire page."),
+      chunksPerSource: z
+        .number()
+        .min(1)
+        .max(5)
+        .optional()
+        .describe("When query is provided, limits the maximum number of relevant snippets returned per source URL (1-5)."),
+      format: z
+        .enum(["markdown", "text"])
+        .optional()
+        .default("markdown")
+        .describe("Format of extracted content: 'markdown' (default) or 'text'."),
     }),
     outputSchema: z.object({
       success: z.boolean(),
@@ -263,15 +280,32 @@ export function createExtractUrlTool() {
         .optional(),
       error: z.string().optional(),
     }),
-    execute: async ({ urls, extractDepth = "advanced" }) => {
-      const apiRes = await callTavilyApi<any>(
-        "extract",
-        {
-          urls,
-          extract_depth: extractDepth,
-        },
-        45000,
-      );
+    execute: async ({
+      urls,
+      extractDepth = "advanced",
+      query,
+      chunksPerSource,
+      format = "markdown",
+    }) => {
+      const normalizedUrls = urls.map(normalizeUrl).filter(Boolean);
+      if (normalizedUrls.length === 0) {
+        return {
+          success: false,
+          extracted: [],
+          error: "No valid URLs provided for extraction.",
+        };
+      }
+
+      const payload: Record<string, unknown> = {
+        urls: normalizedUrls,
+        extract_depth: extractDepth,
+        format,
+      };
+
+      if (query) payload.query = query;
+      if (chunksPerSource != null) payload.chunks_per_source = chunksPerSource;
+
+      const apiRes = await callTavilyApi<any>("extract", payload, 45000);
 
       if (!apiRes.success || !apiRes.data) {
         return {
@@ -283,19 +317,36 @@ export function createExtractUrlTool() {
 
       const data = apiRes.data;
       const extracted = Array.isArray(data.results)
-        ? data.results.map((r: any) => ({
-            url: String(r.url || ""),
-            title: r.title ? String(r.title) : undefined,
-            rawContent: String(r.raw_content || r.content || "").slice(0, 18000),
-          }))
+        ? data.results.map((r: any) => {
+            const raw = String(r.raw_content || r.markdown || r.content || r.text || "").trim();
+            const content =
+              raw.length > 0
+                ? raw.slice(0, 18000)
+                : "[No extractable text content found on this page. The site may be blocking scrapers, behind a paywall, or requiring dynamic rendering. Try extractDepth: 'advanced' or search for alternative sources.]";
+            return {
+              url: String(r.url || ""),
+              title: r.title ? String(r.title) : undefined,
+              rawContent: content,
+            };
+          })
         : [];
 
-      const failed = Array.isArray(data.failed_results)
+      const failed: Array<{ url: string; error: string }> = Array.isArray(data.failed_results)
         ? data.failed_results.map((f: any) => ({
             url: String(f.url || ""),
             error: String(f.error || "Failed to extract content"),
           }))
         : [];
+
+      // If all requested URLs failed and none were successfully extracted, return success: false with clear failure details.
+      if (extracted.length === 0 && failed.length > 0) {
+        return {
+          success: false,
+          extracted: [],
+          failed,
+          error: `Extraction failed for all target URLs: ${failed.map((f) => `${f.url} (${f.error})`).join(", ")}`,
+        };
+      }
 
       return {
         success: true,

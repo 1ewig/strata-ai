@@ -83,8 +83,8 @@ All workspace tool implementations reside in `src/lib/ai/tools/`:
 | `editFile` | `nameOrId`, `searchString`, `replaceString`, `explanation` | Surgically edits file content using the 3-tier `StringEditEngine`. |
 | `renameFile` | `nameOrId`, `newName` | Renames an existing file with collision validation and automatic language re-indexing. |
 | `deleteFile` | `nameOrId` | Removes a target file from the workspace. |
-| `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?`, `includeRawContent?`, `includeImages?`, `timeRange?`, `includeDomains?`, `excludeDomains?` | Real-time web search via Tavily API with snippets, raw content, images, and publish dates. |
-| `extractUrl` | `urls` (1–3), `extractDepth?` | Extracts clean Markdown content from up to 3 target web pages simultaneously. |
+| `webSearch` | `query`, `searchDepth?`, `topic?`, `maxResults?`, `timeRange?`, `days?`, `includeDomains?`, `excludeDomains?` | Real-time web search via Tavily API returning ranked results with titles, URLs, published dates, and content snippets. |
+| `extractUrl` | `urls` (1–3), `extractDepth?`, `query?`, `chunksPerSource?`, `format?` | Extracts clean Markdown content from up to 3 target web pages with protocol auto-normalization and intent-based section filtering. |
 
 ---
 

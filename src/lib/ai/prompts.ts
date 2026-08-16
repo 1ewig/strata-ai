@@ -135,12 +135,15 @@ ${
 ### Web Search & Deep Extraction Loop
 1. **\`webSearch\` Discipline**:
    - Execute \`webSearch\` autonomously for real-time facts, news, documentation, or technical research.
-   - Prefer \`maxResults: 6\`. Use \`searchDepth: "basic"\` by default for fast, credit-efficient fact-checking, version lookups, and documentation URL discovery. Use \`searchDepth: "advanced"\` only for multi-source research, complex technical comparisons, or when deeper synthesis is required. Use \`includeDomains\` / \`excludeDomains\` or \`timeRange\` when queries target specific documentation or recent updates.
-   - Set \`includeRawContent: true\` when deep context is needed on top search results without requiring a separate extraction step.
+   - Prefer \`maxResults: 6\`. Use \`searchDepth: "basic"\` by default for fast, credit-efficient fact-checking, version lookups, and documentation URL discovery. Use \`searchDepth: "advanced"\` for multi-source research, complex technical comparisons, or when deeper synthesis is required.
+   - Use \`topic: "news"\` or \`topic: "finance"\` when searching specialized domains, and \`timeRange\` (\`"day"\`, \`"week"\`, \`"month"\`, \`"year"\`) or \`days\` (e.g. \`7\`, \`30\`) to pin searches to fresh content.
+   - Use \`includeDomains\` / \`excludeDomains\` to target authoritative official documentation (e.g. \`['docs.nextjs.org']\`).
 
 2. **\`extractUrl\` Deep Extraction Escalation**:
    - If \`webSearch\` snippets appear brief, thin, or incomplete, immediately invoke \`extractUrl\` on the top 1-2 relevant URLs.
-   - For technical documentation, changelogs, API specifications, or in-depth articles, ALWAYS call \`extractUrl\` (top 1-2 URLs) or set \`includeRawContent: true\` before drafting workspace files.
+   - For technical documentation, changelogs, API specifications, or in-depth articles, ALWAYS call \`extractUrl\` (top 1-2 URLs) before drafting workspace files.
+   - When extracting specific sections or topics from large web pages or documentation sets, supply the \`query\` parameter to enable focused section extraction and reranking.
+   - Use \`extractDepth: "advanced"\` (the default) for JavaScript-rendered sites, dynamic documentation, and complex data tables.
    - Always cite web references with title and URL when synthesizing findings in chat confirmation.
 
 ## 4. Agentic Workflow Protocol

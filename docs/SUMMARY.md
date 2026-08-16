@@ -37,7 +37,7 @@
 | Runtime / Package Manager | bun | Dev server, build, lint, scripts | Never use npm/yarn/npx (AGENTS.md rule) |
 | AI SDK | `ai@^7.0.0` | Unified LLM streaming, tool calling, message streams | `streamText`, `tool()`, `smoothStream`, `isStepCount`, `toUIMessageStream`, `createUIMessageStreamResponse`, `convertToModelMessages` |
 | Google Provider | `@ai-sdk/google@^4.0.0` | Gemini model access | `google(modelId)`; `thinkingConfig.includeThoughts` reasoning; key `GOOGLE_GENERATIVE_AI_API_KEY` |
-| Fireworks Provider | `@ai-sdk/fireworks@^3.0.0` | Fireworks-hosted model access (DeepSeek V4 Flash) | `fireworks(modelId)`; top-level `reasoning` → `reasoning_effort`; native `reasoning_content` parsing; key `FIREWORKS_API_KEY` |
+| Fireworks Provider | `@ai-sdk/fireworks@^3.0.22` | Fireworks-hosted model access (DeepSeek V4 Flash) | `fireworks(modelId)`; top-level `reasoning` → `reasoning_effort`; native `reasoning_content` parsing; key `FIREWORKS_API_KEY` |
 | Web Search | Tavily REST API (direct `fetch`) | Real-time search + page extraction tools (`webSearch`, `extractUrl`) | No SDK — shared `callTavilyApi` helper in `lib/ai/tools/tavily-tools.ts`; key `TAVILY_API_KEY` (optional) |
 | React AI Hooks | `@ai-sdk/react@^2.0.0` | `useChat` + `DefaultChatTransport` on the client | Custom transport wraps `fetch` to capture rate-limit headers |
 | Client Database | Dexie 4 + `dexie-react-hooks` | Local-first IndexedDB persistence: conversations, messages, files | Schema v5 (`userId` indexing for per-user session isolation); `useLiveQuery` for reactive lists |
@@ -93,7 +93,7 @@ A separate **context compaction flow** reuses most of the same pipeline against 
 ### 3.2 Server vs. Client boundary strategy
 
 - **The boundary sits at the route handlers / API surface.** There are essentially no shared Server Components: `app/layout.tsx` is async (SSR rate-limit hydration), `app/auth/page.tsx` is a server redirect, `app/not-found.tsx` is static, and the four route handlers are server code.
-- Every interactive page (`/`, `/auth/signin`, `/auth/signup`, `/chat-id/[id]`) is `'use client'`. `chat-id/[id]/page.tsx` is intentionally a **thin shell** (~200 lines): it reads `use(params)` for the id, calls the feature hooks (`useChatSession`, `useConversations`, `useSignOut`, `useTheme`), and threads the results to child components as props. Components themselves are purely presentational — no database queries, session fetching, or auth calls inside them.
+- Every interactive page (`/`, `/auth/signin`, `/auth/signup`, `/chat-id/[id]`) is `'use client'`. `chat-id/[id]/page.tsx` is intentionally a **thin shell** (~250 lines): it reads `use(params)` for the id, calls the feature hooks (`useChatSession`, `useConversations`, `useSignOut`, `useTheme`), and threads the results to child components as props. Components themselves are purely presentational — no database queries, session fetching, or auth calls inside them.
 - **Why this shape:** the entire product is a client-side, local-first interaction (IndexedDB, streaming chat, drawer editing). SSR is used only where it pays off: auth redirects, metadata, and hydrating the rate-limit quota without a client fetch waterfall.
 - Rule of thumb: server code never imports Dexie; client code never imports the `pg` Pool. The shared seam is `lib/schemas.ts` (Zod types) used on both sides.
 
@@ -105,7 +105,7 @@ A separate **context compaction flow** reuses most of the same pipeline against 
 
 ### 3.3a Next.js 16 features in use (explicit map)
 
-- **`proxy.ts` (middleware replacement):** Next 16 `proxy` export with a `config.matcher` (`/`, `/chat-id/:path*`, `/api/agent`) doing the pre-render session guard + security headers — not a `middleware.ts` file.
+- **`proxy.ts` (middleware replacement):** Next 16 `proxy` export with a `config.matcher` (`/`, `/chat-id/:path*`, `/api/agent`, `/api/agent/:path*`) doing the pre-render session guard + security headers — not a `middleware.ts` file.
 - **Route Handlers are the only server surface:** `/api/agent`, `/api/agent/compact`, `/api/auth/[...all]`, `/api/user/rate-limit` are the sole server components besides the async `layout.tsx`, a redirect page, and the static 404.
 - **Dynamic routes only:** no `generateStaticParams`/`dynamicParams`; `chat-id/[id]` uses async `params` unwrapped with `use(params)` (Next 16 convention).
 - **Streaming:** SSE UI-message responses (`createUIMessageStreamResponse`) for the agent endpoint; no Suspense-based HTML streaming is used.
@@ -153,6 +153,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   ├── page.tsx              # "/" client redirector: latest Dexie conversation or a new UUID chat
     │   │   ├── globals.css           # Tailwind import, Milo @theme tokens (warm studio linen light + warm espresso dark), keyframes (blink/fadeIn/shimmer/caret)
     │   │   ├── not-found.tsx         # Branded 404 page
+    │   │   ├── icon.svg              # File-convention favicon route (/icon.svg) — brand gradient circle (#FF5520→#FFAA1D); wired via layout.tsx metadata.icons
     │   │   ├── auth/
     │   │   │   ├── page.tsx          # Server redirect → /auth/signin (preserves callbackUrl searchParam)
     │   │   │   ├── signin/page.tsx   # Client: session-guarded sign-in form (Suspense-wrapped for useSearchParams)
@@ -185,19 +186,19 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     │   │   │   ├── create-markdown-components.tsx # Shared ReactMarkdown component-map factory (assistant + user variants)
     │   │   │   ├── ModelSelectorMenu.tsx # Model dropdown trigger, featured models, effort flyout & overflow submenus
     │   │   │   ├── RateLimitRing.tsx # Quota progress SVG ring & hover popover tooltip (rendered in sidebar footer)
-    │   │   │   ├── ChatHeader.tsx    # Mobile hamburger, title, active context-window meter, mobile "New chat" plus button, workspace Files dropdown
+    │   │   │   ├── ChatHeader.tsx    # Mobile hamburger, title, active context-window meter, mobile "New chat" plus button, workspace Files button (opens WorkspaceDrawer)
     │   │   │   ├── TokenUsagePopover.tsx # Popover card: active context bar, input/output, session total, total estimated $ cost + per-model breakdown (tap-away dismiss)
     │   │   │   ├── QuotaErrorCard.tsx# Alert with live countdown when quota exhausted
     │   │   │   ├── ThoughtAccordion.tsx  # Collapsible reasoning/thought display
     │   │   │   ├── ToolCallCard.tsx  # Generic accordion tool-card chrome — NEVER needs edits when tools change
     │   │   │   └── tools/resolver.tsx    # extractToolInfo + resolveToolDisplay → ToolCardProps (per-tool UI config + summaries)
     │   │   ├── workspace/            # Modular workspace studio drawer
-    │   │   │   ├── WorkspaceDrawer.tsx   # Slide-over shell & drawer animation container
-    │   │   │   ├── WorkspaceFileSelector.tsx # File switcher dropdown: language tags, markdown/code icons, counts & new-file trigger
-    │   │   │   ├── CodeViewer.tsx        # Line-numbered syntax-highlighted code viewer via PrismJS
-    │   │   │   ├── WorkspaceEditor.tsx   # Raw text/code editor textarea
-    │   │   │   ├── WorkspaceEmptyState.tsx # Empty workspace canvas placeholder
-    │   │   │   └── WorkspaceDrawerFooter.tsx # Footer actions: copy-to-clipboard, view/edit toggle, character count stats
+│   │   │   ├── WorkspaceDrawer.tsx   # Slide-over shell & drawer animation container; Preview/Source view toggle lives in the drawer header
+│   │   │   ├── WorkspaceFileSelector.tsx # File switcher dropdown: language tags, markdown/code icons, counts & new-file trigger
+│   │   │   ├── CodeViewer.tsx        # Line-numbered syntax-highlighted code viewer via PrismJS
+│   │   │   ├── WorkspaceEditor.tsx   # Raw text/code editor textarea
+│   │   │   ├── WorkspaceEmptyState.tsx # Empty workspace canvas placeholder
+│   │   │   └── WorkspaceDrawerFooter.tsx # Footer actions: copy-to-clipboard, edit-mode toggle (save/cancel), character count stats
     │   │   └── ui/
     │   │       ├── strata-icon.tsx   # Brand SVG logo (currentColor or gradient)
     │   │       └── ConfirmDialog.tsx # Portaled modal for destructive confirmations (sign-out, delete file, delete chat)
@@ -252,6 +253,11 @@ Indented ASCII tree (annotations state each node's exact responsibility):
     ├── public/                       # hero.webp, agent-in-action.webp (README screenshots)
     ├── next.config.ts                # standalone output, motion transpile, picsum image remote pattern
     ├── eslint.config.mjs             # eslint-config-next flat config
+    ├── metadata.json                 # Gemini extension manifest: name/description, MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API, supportedModels (mirror of lib/models.ts pricing — see §5.4)
+    ├── docs/                         # Architecture & onboarding docs
+    │   ├── SUMMARY.md                # This file — canonical system-context & architecture guide
+    │   ├── ai-sdk-nextjs-guide.md    # AI SDK 7 + Next.js 16 integration walkthrough
+    │   └── README.md                 # Project README (onboarding + tool reference tables)
     └── package.json / tsconfig.json / postcss.config.mjs / .env.example
 
 ## 5. Domain Models & Data Schema Concepts
@@ -333,7 +339,7 @@ Indented ASCII tree (annotations state each node's exact responsibility):
 
 ### 7.1 Workspace tools (`lib/ai/tools/`) — the only "server actions" in the product
 
-All tools are `ai.tool()` definitions registered by `createWorkspaceTools(context)` (in the `lib/ai/tools.ts` barrel), where `context: WorkspaceToolsContext` = `{ getCurrentFiles, onUpdateFile, onDeleteFile }` (defined in `lib/ai/tools/types.ts`). **No `contextSchema`** — state flows through closures captured at creation. Workspace factories live in `lib/ai/tools/workspace-tools.ts`; the web pair lives in `lib/ai/tools/tavily-tools.ts`. Tools mutate the per-request `mutableFiles` array via callbacks; results flow back to the client as tool-result parts.
+All tools are `ai.tool()` definitions registered by `createWorkspaceTools(context)` (in the `lib/ai/tools.ts` barrel), where `context: WorkspaceToolsContext` = `{ getCurrentFiles, onUpdateFile, onDeleteFile, writer? }` (defined in `lib/ai/tools/types.ts`; the optional `writer` streams live `data-workspace` SSE events and is consumed by the write/edit/rename/delete factories). **No `contextSchema`** — state flows through closures captured at creation. Workspace factories live in `lib/ai/tools/workspace-tools.ts`; the web pair lives in `lib/ai/tools/tavily-tools.ts`. Tools mutate the per-request `mutableFiles` array via callbacks; results flow back to the client as tool-result parts.
 
 | Tool | Input (Zod) | Output (Zod) | Behavior / Notes |
 |------|-------------|--------------|------------------|
@@ -354,8 +360,8 @@ The two web tools (`lib/ai/tools/tavily-tools.ts`, shared `callTavilyApi` helper
 
 | Tool | Input (Zod) | Output (Zod) | Behavior / Notes |
 |------|-------------|--------------|------------------|
-| `webSearch` | `query`, `searchDepth?` (basic\|advanced, default basic), `topic?` (general\|news\|finance), `maxResults?` (1–10, default 6), `includeRawContent?`, `includeImages?`, `timeRange?` (day\|week\|month\|year), `includeDomains?`, `excludeDomains?` | `{ success, query, results? [{title,url,content,rawContent?,score?,publishedDate?}], images?, error? }` | Tavily `/search` via `Authorization: Bearer`; 30s fetch timeout; raw content capped at 12k chars per result |
-| `extractUrl` | `urls` (1–3), `extractDepth?` (default advanced) | `{ success, extracted [{url,title?,rawContent}], failed? [{url,error}], error? }` | Tavily `/extract`; 45s fetch timeout; content capped at 18k chars per URL |
+| `webSearch` | `query`, `searchDepth?` (basic\|advanced, default basic), `topic?` (general\|news\|finance), `maxResults?` (1–10, default 6), `includeAnswer?` (bool\|"basic"\|"advanced"), `timeRange?` (day\|week\|month\|year), `days?` (1–365), `includeDomains?`, `excludeDomains?` | `{ success, query, answer?, results? [{title,url,content,score?,publishedDate?}], error? }` | Tavily `/search` via `Authorization: Bearer`; 30s fetch timeout; `includeAnswer` requests an AI-synthesized answer summary |
+| `extractUrl` | `urls` (1–3), `extractDepth?` (default advanced), `query?`, `chunksPerSource?` (1–5), `format?` (markdown\|text, default markdown) | `{ success, extracted [{url,title?,rawContent}], failed? [{url,error}], error? }` | Tavily `/extract`; 45s fetch timeout; content capped at 18k chars per URL; URLs protocol-normalized via `normalizeUrl`; all-failed → `success: false` with per-URL errors |
 
 ### 7.2 Agent endpoint configuration (`/api/agent`)
 
