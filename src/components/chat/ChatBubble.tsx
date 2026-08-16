@@ -98,23 +98,19 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       {/* Avatar Container: hidden on mobile (< sm) to give messages maximum width */}
       <div
         className={`
-          hidden sm:flex relative w-8 h-8 rounded-xl items-center justify-center text-label font-semibold shrink-0 mt-0.5
-          transition-all duration-500
-          ${isUser
-            ? 'bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-button'
-            : `bg-gradient-to-tr from-primary to-secondary text-surface
-                 ${isStreaming ? 'shadow-glow-primary scale-[1.03]' : 'shadow-card'}`
-          }
+          hidden sm:flex relative w-8 h-8 items-center justify-center shrink-0 mt-0.5
+          transition-all duration-300
+          ${isUser ? 'rounded-xl bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-button' : ''}
         `}
       >
         {isUser ? (
           <User className="w-4 h-4 text-text-secondary" />
         ) : (
-          <StrataIcon className="w-4.5 h-4.5 text-surface" />
+          <StrataIcon className={`w-7 h-7 transition-transform ${isStreaming ? 'scale-105' : ''}`} />
         )}
 
         {!isUser && isStreaming && (
-          <span className="absolute inset-0 rounded-xl ring-2 ring-primary/40 animate-ping opacity-40" />
+          <span className="absolute inset-0 rounded-full ring-2 ring-primary/40 animate-ping opacity-40" />
         )}
       </div>
 

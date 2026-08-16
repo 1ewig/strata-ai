@@ -127,11 +127,9 @@ export default React.memo(function ChatPanel({
           }}
           className="relative group"
         >
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-glow-primary transition-transform duration-300 group-hover:scale-105">
-            <StrataIcon className="w-7 h-7 text-surface" />
-          </div>
-          {/* Subtle ambient decorative ring */}
-          <div className="absolute -inset-1 rounded-2xl bg-gradient-to-tr from-primary/20 to-secondary/20 blur-md -z-10 animate-pulse" />
+          <StrataIcon className="w-14 h-14 transition-transform duration-300 group-hover:scale-105" />
+          {/* Subtle ambient decorative glow */}
+          <div className="absolute -inset-1.5 rounded-full bg-gradient-to-tr from-primary/25 to-secondary/25 blur-md -z-10 animate-pulse" />
         </motion.div>
 
         {/* Hero Greeting */}
@@ -239,11 +237,7 @@ export default React.memo(function ChatPanel({
       {/* Fallback empty state if isNewChat flag is not explicitly passed */}
       {messages.length === 0 && !isLoading && !quotaError && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-primary to-secondary p-0.5 flex items-center justify-center shadow-glow-primary">
-            <div className="w-full h-full rounded-2xl bg-surface-raised flex items-center justify-center">
-              <StrataIcon className="w-6 h-6" />
-            </div>
-          </div>
+          <StrataIcon className="w-12 h-12" />
           <h3 className="text-heading font-semibold text-text-primary font-display">Ready to help with your workspace</h3>
         </div>
       )}
@@ -277,8 +271,8 @@ export default React.memo(function ChatPanel({
       {/* Standalone typing bubble before the first assistant tokens arrive. */}
       {!quotaError && isLoading && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
         <div className="flex items-start gap-3.5 fade-in">
-          <div className="hidden sm:flex w-8 h-8 rounded-xl bg-gradient-to-tr from-primary to-secondary items-center justify-center text-surface shrink-0 mt-0.5 shadow-glow-primary">
-            <StrataIcon className="w-4.5 h-4.5" />
+          <div className="hidden sm:flex shrink-0 mt-0.5">
+            <StrataIcon className="w-7 h-7" />
           </div>
           <div className="px-4 py-3 rounded-2xl rounded-tl-xs bg-surface-overlay/90 border border-edge-raised flex items-center gap-1.5 backdrop-blur-sm">
             <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />

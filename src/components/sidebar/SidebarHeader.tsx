@@ -16,9 +16,7 @@ function SidebarHeader({ onClose }: SidebarHeaderProps) {
   return (
     <div className="h-14 px-4 border-b border-edge-hover/50 flex items-center justify-between gap-2.5 shrink-0">
       <Link href="/" className="group flex items-center gap-2.5 hover:opacity-90 transition-opacity">
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-primary to-secondary flex items-center justify-center shadow-glow-primary group-hover:scale-105 transition-transform duration-200">
-          <StrataIcon className="w-4 h-4 text-surface" />
-        </div>
+        <StrataIcon className="w-6 h-6 shrink-0 group-hover:scale-105 transition-transform duration-200" />
         <h1 className="text-label font-display font-bold tracking-tight text-text-bright">Strata AI</h1>
       </Link>
       <button
