@@ -170,7 +170,7 @@ From Strata AI's `package.json` — the exact versions this guide documents:
 | `ai` | ^7.0.0 | `streamText`, `tool`, `smoothStream`, `isStepCount`, `convertToModelMessages`, UI-message helpers (`createUIMessageStream`, `toUIMessageStream`, `createUIMessageStreamResponse`) |
 | `@ai-sdk/react` | ^2.0.0 | `useChat`, `DefaultChatTransport` |
 | `@ai-sdk/google` | ^4.0.0 | Gemini + Gemma provider |
-| `@ai-sdk/fireworks` | ^3.0.0 | Fireworks-hosted open-weight models (DeepSeek V4 Flash) |
+| `@ai-sdk/fireworks` | ^3.0.22 | Fireworks-hosted open-weight models (DeepSeek V4 Flash) |
 | `zod` | ^4.4.3 | Schema validation for API bodies and every tool input/output |
 | `dexie` / `dexie-react-hooks` | ^4 | IndexedDB for local-first persistence |
 | `better-auth` | ^1.6 | Email/password sessions |
@@ -604,7 +604,9 @@ export function createWorkspaceTools(context: WorkspaceToolsContext) {
 }
 ```
 
-The six workspace tools take the context; the two web tools (`webSearch`, `extractUrl`) are stateless by nature. They live split by domain — `workspace-tools.ts` vs `tavily-tools.ts` — sharing a `callTavilyApi` REST helper (no SDK) with `Authorization: Bearer` header auth, per-endpoint fetch timeouts (30 s search, 45 s extract), and mapping of 401/429/432/433 responses into readable tool errors.
+The six workspace tools take the context; the two web tools (`webSearch`, `extractUrl`) are stateless by nature. They live split by domain — `workspace-tools.ts` vs `tavily-tools.ts` — sharing a `callTavilyApi` REST helper (no SDK) with `Authorization: Bearer` header auth, per-endpoint fetch timeouts (30 s search, 45 s extract), and mapping of 400/401/429/432/433 responses into readable tool errors (parsing multi-shape error payloads — `detail.error`, `error.message`, a plain `detail`/`message` string).
+
+`webSearch` supports `includeAnswer` (bool or `"basic"`/`"advanced"` — requests an AI-synthesized answer summary in the result's `answer` field), `topic` (`general`/`news`/`finance`) plus `timeRange`/`days` for recency, and `includeDomains`/`excludeDomains` to scope authoritative sources. `extractUrl` supports an optional `query` for intent-based section extraction and reranking of large pages, `chunksPerSource` (1–5) to cap snippets, and `format` (`markdown`/`text`); it auto-normalizes URLs via `normalizeUrl` (prepends `https://`) and returns `success: false` with per-URL errors when every target fails. The full schema table lives in `docs/SUMMARY.md` §7.1.
 
 ### 3.4 Step limits keep loops finite
 
@@ -1028,7 +1030,7 @@ The API route is intentionally **stateless**: it reconstructs workspace state fr
 
 Long agentic conversations eventually crowd the context window. Instead of evicting message history client-side (the naive fix, which breaks continuation because the model forgot *what it already did*), Strata AI compacts it into a dense summary stored *as a normal assistant message*. Context compaction is a **distill → prune → reset** pipeline:
 
-1. **Distill.** The model reads the full history + workspace state and writes a self-contained structured summary (fixed GFM sections: objectives, decisions, workspace state, completed work, next steps).
+1. **Distill.** The model reads the full history + workspace state and writes a self-contained structured summary (`## Current Goal`, `## Key Decisions & Constraints`, `## Progress So Far`, `## Open Questions / TODOs`, `## Important Facts & Artifacts`, `## Workspace State`, `## Recent Trajectory`, `## Continuation Notes`).
 2. **Prune.** Everything *before* that summary is sliced out of the message list **server-side** on every subsequent request, so neither the agent nor a future compaction ever re-reads pre-summary history.
 3. **Reset.** The summary message is stamped `metadata.isCompactedSummary = true`, which tells the active-context meter (§4.9) to reset to a ~1,500-token system-prompt baseline + the summary's real output — keeping the context-window guard truthful about the *trimmed* history.
 
@@ -1036,7 +1038,7 @@ The pieces:
 
 **Endpoint.** `POST /api/agent/compact` (`src/app/api/agent/compact/route.ts`) is the same thin shell as `POST /api/agent` — session → `checkAndIncrementRateLimit` (**compaction consumes 1 quota message**) → zod `agentRequestBodySchema` → `sliceMessagesAfterCompaction(messages)` → delegating. JSON 401/400/429 errors; success is the usual UI-message SSE stream with `X-RateLimit-*` headers.
 
-**Stream config.** `runCompactionResponse` (in `src/lib/ai/agent-runner.ts`) shares the identical `createUIStreamResponder` used by the agent route, but with `initialSystem: buildCompactionInstruction(files)` instead of the agent prompt, an appended user turn ("Please generate the comprehensive context compaction summary…"), `maxOutputTokens: 2500`, and **no tools / no `stopWhen`**. The finish part is stamped via `extraMetadata: { isCompactedSummary: true }`, so the persisted message is recognizable downstream.
+**Stream config.** `runCompactionResponse` (in `src/lib/ai/agent-runner.ts`) shares the identical `createUIStreamResponder` used by the agent route, but with `initialSystem: buildCompactionInstruction(files)` instead of the agent prompt, an appended user turn ("Please generate the comprehensive context compaction summary…"), `maxOutputTokens: 3500`, and **no tools / no `stopWhen`**. The finish part is stamped via `extraMetadata: { isCompactedSummary: true }`, so the persisted message is recognizable downstream.
 
 **Server-side pruning.** `sliceMessagesAfterCompaction` (`src/lib/ai/message-extractor.ts`) trims the message list to begin at the latest `isCompactedSummary` anchor `findLatestCompactedMessageIndex`. Both `/api/agent` and `/api/agent/compact` apply it before streaming; the client transport (§1.2) stays a pure network/header layer and never mutates the payload — pruning is server-authoritative so it cannot drift out of sync with the UI.
 
