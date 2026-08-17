@@ -3,13 +3,11 @@
 import React, { useState, useMemo } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { X, Trash2, Eye, Code } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MAX_FILE_CHARS } from '@/lib/limits';
 import { detectLanguage, isMarkdownFile } from '@/lib/languages';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
-import { createMarkdownComponents } from '@/components/chat/create-markdown-components';
+import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { useCopyClipboard } from '@/hooks/useCopyClipboard';
 import CodeViewer from './CodeViewer';
 import WorkspaceFileSelector from './WorkspaceFileSelector';
@@ -56,11 +54,6 @@ export default React.memo(function WorkspaceDrawer({
   const [markdownViewMode, setMarkdownViewMode] = useState<'preview' | 'source'>('preview');
 
   const { copied, copiedId, copy } = useCopyClipboard();
-
-  const canvasMarkdownComponents = useMemo(
-    () => createMarkdownComponents('canvas', copiedId, (code, id) => copy(code, id)),
-    [copiedId, copy]
-  );
 
   const handleStartEditing = () => {
     setFileName(activeFile?.name || '');
@@ -226,9 +219,12 @@ export default React.memo(function WorkspaceDrawer({
                   <WorkspaceEmptyState type="empty-file" fileName={activeFile.name} onEditFileClick={handleStartEditing} />
                 ) : isMarkdown && markdownViewMode === 'preview' ? (
                   <article className="text-body text-text-primary leading-relaxed selection:bg-secondary/50">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={canvasMarkdownComponents}>
-                      {activeFile.content}
-                    </ReactMarkdown>
+                    <MarkdownRenderer
+                      content={activeFile.content}
+                      variant="canvas"
+                      enableSnippetCopy
+                      className="text-body text-text-primary leading-relaxed"
+                    />
                   </article>
                 ) : (
                   <CodeViewer

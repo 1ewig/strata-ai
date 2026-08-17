@@ -44,7 +44,7 @@
 | Styling | Tailwind CSS 4.1 (`@tailwindcss/postcss` + autoprefixer) | Utility-first UI on "Milo" semantic tokens | `@theme` block in `globals.css`; light default + `html[data-theme="dark"]` dark set with `color-scheme: dark`; semantic type scale `text-micro`(11px)→`text-display`(32px); semantic shadows `shadow-button/card/card-lg`; radius remap (rounded-lg 12px, xl 20px, 2xl 32px); raw Tailwind color/size names forbidden |
 | State management | React Context + hooks + Dexie live queries | Global quota state, per-session orchestration | `RateLimitContext` (SSR-hydrated); `useChatSession` orchestrator composing 5 sub-hooks; refs mirror live values into a memoized transport; no Redux/Zustand |
 | Validation | zod 4.4.3 | API body parsing, tool input/output schemas, shared file schema | `agentRequestBodySchema` (messages loose `z.any()` array, files validated); tool schemas declared inline per tool |
-| Markdown | `react-markdown@10` + `remark-gfm@4` | Chat bubbles + drawer rendering | Custom component map (`create-markdown-components.tsx`): h1→`text-title font-display`, h2→`text-heading`, h3→`text-subheading`, p/li→`text-body`, code→`text-micro font-mono`, table/blockquote→`text-caption`; no `prose` plugin |
+| Markdown | `react-markdown@10` + `remark-gfm@4` | Chat bubbles + drawer rendering | Single render hub `MarkdownRenderer` (`components/ui/MarkdownRenderer.tsx`) + custom component map (`create-markdown-components.tsx`): h1→`text-title font-display`, h2→`text-heading`, h3→`text-subheading`, p/li→`text-body`, code→`text-micro font-mono`, table/blockquote→`text-caption`; renderer owns snippet-copy state internally and delegates streaming to `SmoothStreamText`; no `prose` plugin |
 | Syntax highlighting | PrismJS 1.30 | 24+ languages in chat code blocks and workspace canvas | Singleton registration in `lib/syntax-highlighter.ts`; Milo-themed Prism token styles in `globals.css`; `CodeViewer` pairs line numbers with highlighted code |
 | Animations | `motion@^12` (Framer Motion 12) | Drawer springs, hero stagger, tactile micro-interactions | Transpiled via `transpilePackages`; `AnimatePresence` for drawers/menus |
 | Icons | `lucide-react@^0.553` | UI iconography | Custom `StrataIcon` SVG brand mark in `components/ui/` |
@@ -233,14 +233,16 @@ Strata Ai/
     │   │                        WorkGroupCard, SmoothStreamText, SlashCommandMenu,
     │   │                        CompactionDivider, ModelSelectorMenu, MessageActionsMenu,
     │   │                        RateLimitRing, QuotaErrorCard, TokenUsagePopover,
-    │   │                        create-markdown-components.tsx (GFM component map).
+    │   │                        create-markdown-components.tsx (GFM component map),
+    │   │                        SmoothStreamText (streaming markdown leaf — consumed only by
+    │   │                        MarkdownRenderer in ui/).
     │   ├── workspace/         — WorkspaceDrawer, WorkspaceFileSelector, WorkspaceEditor,
     │   │                        CodeViewer (line numbers + Prism), WorkspaceEmptyState,
     │   │                        WorkspaceDrawerFooter.
     │   ├── sidebar/           — Sidebar, SidebarHeader, SidebarFooter, ConversationList,
     │   │                        ConversationItem, NewChatButton.
     │   ├── auth/              — auth-shell, sign-in-form, sign-up-form, loading-screen, user-button.
-    │   ├── ui/                — strata-icon (brand SVG), ConfirmDialog (destructive confirmations).
+    │   ├── ui/                — strata-icon (brand SVG), ConfirmDialog (destructive confirmations), MarkdownRenderer (markdown render hub: variant tokens, streaming delegation, snippet-copy state).
     │   └── theme-toggle.tsx   — Light/dark toggle driving useTheme.
     ├── contexts/
     │   └── RateLimitContext.tsx — Global quota state: SSR hydrate → client fetch fallback →
@@ -373,7 +375,8 @@ Strata Ai/
 | `tools/resolver.tsx` | Tool-name normalization → config/icon/badge/summary builders | `toolConfigs` map + aliases; add new tools here |
 | `ThoughtAccordion` | Collapsible reasoning/thought text | Streams while loading; collapses on finish |
 | `WorkGroupCard` | Collapsed "work performed" block (reasoning + tools + narration) | Rendered from the `work-group` segment |
-| `SmoothStreamText` | Progressive markdown rendering of streaming text | Word-chunk aware; caret animation |
+| `MarkdownRenderer` (`ui/`) | THE single markdown render path for every surface | Props: `content`, `variant` (assistant/user/thought/canvas), `isStreaming`, `className`, `enableSnippetCopy` (canvas-only today); owns snippet-copy state internally via `useCopyClipboard` so copies never re-render parents; delegates streaming to `SmoothStreamText` |
+| `SmoothStreamText` | Progressive markdown rendering of streaming text | Word-chunk aware; caret animation; leaf consumed only by `MarkdownRenderer` |
 | `SlashCommandMenu` | `/` command popup (`SLASH_COMMANDS` incl. `/compact`) | Keyboard-navigable; appends command text |
 | `CompactionDivider` | "Compaction started/completed" separators | Rendered around `isCompactedSummary` messages |
 | `RateLimitRing` | Live "X left" circular quota indicator | Reads `rateLimitData` |
@@ -457,7 +460,7 @@ A user with 3 messages in the last 5 hours and 9 in the last 7 days sends a mess
 - **Timestamps as ordering keys:** message order derives from fabricated `Date.now()+idx` timestamps — sorting by timestamp reproduces conversation order exactly; mutating this scheme risks reordering history.
 - **Segmented message rendering (`flattenMessageSegments`):** during streaming every part renders ungrouped and live; on finish, all pre-answer output (intermediate narration, reasoning, tool cards) folds into one collapsible `work-group` segment, leaving only the final text as the bubble body. The memo recompute on `isStreaming` flip drives the collapse.
 - **Tool display normalization (`tools/resolver.tsx`):** raw tool names are normalized case/dash/underscore-insensitively (`websearch`, `tavily`, `extractpage`, `listf`, `editf` aliases) to canonical configs with per-tool icons, accent colors, badges, and summary builders; unknown tools render a generic card — `ToolCallCard` itself is config-agnostic and must stay untouched.
-- **`smoothStream` word-pacing + `SmoothStreamText`:** the server emits word-chunked deltas (25ms delay) and the client renders markdown progressively with a streaming caret — this pair is the perceived-latency win; changing the delay or chunking affects the whole UX.
+- **`smoothStream` word-pacing + `SmoothStreamText`:** the server emits word-chunked deltas (25ms delay) and the client renders markdown progressively (via `MarkdownRenderer` → `SmoothStreamText`) with a streaming caret — this pair is the perceived-latency win; changing the delay or chunking affects the whole UX.
 - **Known gotchas to not break:** (a) quota is incremented BEFORE zod validation (ordering matters for abuse protection and tests); (b) `sliceMessagesAfterCompaction` must remain server-side only; (c) the trailing empty assistant message after a quota cut-off is dropped by an effect keyed on `quotaError`; (d) `StickToBottom` owns all scroll — manual `scrollIntoView` loops are forbidden; (e) keep the resolver alias list in sync when adding tools; (f) `createMutableWorkspace` closures mutate one in-memory array per request — never share across requests; (g) `persistMessages` must keep the `Date.now()+idx` stamping; (h) Dexie schema changes require a new `version(n)` block, never an edit to an existing one.
 
 ## 9. Global State, Forms & UI Conventions
@@ -493,6 +496,7 @@ Future agents MUST adhere to these directives:
 14. **Package manager is bun only.** Never run npm/yarn/npx commands.
 15. **Never re-print full workspace file contents into chat messages** — the system prompt enforces metadata-only listings and chat/canvas separation; keep tool outputs on `fileSummarySchema` (content excluded).
 16. **`ToolCallCard.tsx` requires zero modifications when adding tools** — register display configs + summary builders in `components/chat/tools/resolver.tsx` instead.
+17. **All Markdown rendering MUST go through `MarkdownRenderer` (`components/ui/MarkdownRenderer.tsx`).** Never add new `ReactMarkdown`/`remark-gfm` import sites in components; the renderer owns snippet-copy state internally (`enableSnippetCopy` — currently canvas-only) and delegates streaming to `SmoothStreamText`; the component map (`create-markdown-components.tsx`) and the streaming leaf stay in `components/chat/`.
 
 ## 11. Feature Development Recipes (AI Agent Playbooks)
 

@@ -1,20 +1,15 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { UIMessage } from 'ai';
 import { User, Loader2 } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
 import WorkGroupCard from './WorkGroupCard';
-import SmoothStreamText from './SmoothStreamText';
 import MessageActionsMenu from './MessageActionsMenu';
-import { createMarkdownComponents } from './create-markdown-components';
+import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { flattenMessageSegments, Segment } from '@/lib/ai/message-segments';
-
-const REMARK_PLUGINS = [remarkGfm];
 
 const InferenceTimer = React.memo(function InferenceTimer() {
   const [seconds, setSeconds] = useState(1);
@@ -88,17 +83,6 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
     [message, isStreaming],
   );
 
-  // Markdown components are now static across code copy operations
-  const assistantMarkdownComponents = React.useMemo(
-    () => createMarkdownComponents('assistant'),
-    [],
-  );
-
-  const userMarkdownComponents = React.useMemo(
-    () => createMarkdownComponents('user'),
-    [],
-  );
-
   return (
     <div
       ref={bubbleContainerRef}
@@ -159,9 +143,11 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   </div>
                 )}
                 <div className="text-body text-surface leading-relaxed relative">
-                  <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={userMarkdownComponents}>
-                    {userContent}
-                  </ReactMarkdown>
+                  <MarkdownRenderer
+                    content={userContent}
+                    variant="user"
+                    className="text-body text-surface leading-relaxed relative"
+                  />
                 </div>
               </div>
             );
@@ -226,17 +212,12 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                 )}
 
                 <div className="text-body text-text-primary leading-relaxed relative">
-                  {isStreamingActiveSegment ? (
-                    <SmoothStreamText
-                      text={textContent}
-                      isStreaming={true}
-                      components={assistantMarkdownComponents}
-                    />
-                  ) : (
-                    <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={assistantMarkdownComponents}>
-                      {textContent}
-                    </ReactMarkdown>
-                  )}
+                  <MarkdownRenderer
+                    content={textContent}
+                    variant="assistant"
+                    isStreaming={isStreamingActiveSegment}
+                    className="text-body text-text-primary leading-relaxed relative"
+                  />
                 </div>
               </div>
             );

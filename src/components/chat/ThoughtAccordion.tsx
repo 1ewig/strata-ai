@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { BrainCircuit, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
-import { createMarkdownComponents } from './create-markdown-components';
+import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 
 /**
  * Props for the ThoughtAccordion component.
@@ -49,11 +47,6 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
 
   const displaySeconds = isThinking ? elapsedSeconds : Math.max(elapsedSeconds, estimatedSeconds);
 
-  const markdownComponents = React.useMemo(
-    () => createMarkdownComponents('thought'),
-    [],
-  );
-
   // Hide the whole accordion when there is no reasoning content to display.
   if (!text || !text.trim()) return null;
 
@@ -85,9 +78,7 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
           {isThinking ? (
             <p className="whitespace-pre-wrap font-mono leading-relaxed text-text-secondary">{text}</p>
           ) : (
-            <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
-              {text}
-            </ReactMarkdown>
+            <MarkdownRenderer content={text} variant="thought" className="text-label text-text-secondary leading-relaxed" />
           )}
         </div>
       )}
