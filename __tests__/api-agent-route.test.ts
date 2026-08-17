@@ -7,9 +7,9 @@ import { MAX_MESSAGE_CHARS } from "@/lib/limits";
  * shell can be exercised without a database, provider keys, or streaming.
  */
 
-const DEFAULT_SESSION = () => null;
-const DEFAULT_QUOTA = () => ({ allowed: true, remaining5h: 10, remainingWeek: 50 });
-const DEFAULT_RESPONSE = () => new Response("streamed", { status: 200 });
+const DEFAULT_SESSION = (): { user: { id: string } } | null => null;
+const DEFAULT_QUOTA = (_userId?: string) => ({ allowed: true, remaining5h: 10, remainingWeek: 50 });
+const DEFAULT_RESPONSE = (_opts?: any) => new Response("streamed", { status: 200 });
 
 const sessionMock = mock(DEFAULT_SESSION);
 const rateLimitMock = mock(DEFAULT_QUOTA);
