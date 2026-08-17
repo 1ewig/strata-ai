@@ -10,6 +10,7 @@ This project uses **bun** as its runtime and package manager. Never use `npm`/`y
 |---------|--------|
 | `bun run dev` | Start Next.js dev server |
 | `bun run lint` | Run ESLint (`eslint .`) |
+| `bun run test` | Run unit & integration test suite (`bun test`) |
 | `bun run build` | Production build (`next build`) |
 | `bun run start` | Start production server |
 | `bun run db:migrate` | Run Better Auth `better_auth` schema PostgreSQL migration |
@@ -40,7 +41,7 @@ The app ships light + dark themes (light default; dark via `theme-toggle.tsx` to
   - `text-heading` (20px) — h2, empty-state titles
   - `text-title` (24px) — h1
   - `text-display` (32px) — auth hero, 404
-- **Markdown hierarchy convention** (mirrors the `ChatBubble` component map): `h1`→`text-title font-display`, `h2`→`text-heading font-display`, `h3`→`text-subheading`, `p`/`li`→`text-body`, `code`→`text-micro font-mono`, `table`/`blockquote`→`text-caption`. Never attach `prose` classes (no typography plugin is installed).
+- **Markdown hierarchy convention** (mirrors the `MarkdownRenderer` component map in `components/ui/`): `h1`→`text-title font-display`, `h2`→`text-heading font-display`, `h3`→`text-subheading`, `p`/`li`→`text-body`, `code`→`text-micro font-mono`, `table`/`blockquote`→`text-caption`. Never attach `prose` classes (no typography plugin is installed). **All markdown rendering goes through `components/ui/MarkdownRenderer.tsx`** (variants `assistant`/`user`/`thought`/`canvas`; `isStreaming` delegates to `SmoothStreamText`; snippet-copy state is internal, `enableSnippetCopy` is canvas-only) — never add new `ReactMarkdown`/`remark-gfm` sites.
 - **Fonts:** `font-display` and `font-sans` (Plus Jakarta Sans). Keep token names (`surface-*`, `text-*`, `edge-*`); add new colors only as `@theme` vars in `globals.css`.
 
 ## Architecture
@@ -62,3 +63,11 @@ Read `docs/SUMMARY.md` (the canonical system-context & architecture guide) befor
 - Write files with clear, helpful code comments.
 - No emojis in code or files.
 - Follow existing patterns and file conventions; check neighboring files before writing new code.
+
+## Testing Conventions
+
+- `bun test` runs with `--isolate` (each file gets a fresh module registry) — this is required because `mock.module` leaks between files otherwise. Keep that flag in the `test`/`test:watch` scripts.
+- Shared fixtures live in `__tests__/helpers.ts` (`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`); import them instead of re-declaring local copies.
+- Import limit constants from `@/lib/limits` in tests — never hardcode magic numbers (e.g. `10000`, `3` files, `12000` chars).
+- Route tests (`api-agent-route.test.ts`, `api-agent-compact-route.test.ts`) mock `@/lib/auth`, `@/lib/rate-limit`, and `@/lib/ai/agent-runner` with `mock.module` before a dynamic `await import()` of the route. Use `mockImplementation` + `mockClear` in `afterEach` (not `mockReset`, which wipes implementations).
+- `rate-limit.test.ts` mocks the `pg` module with a scriptable fake pool/client; keep the SQL-shape dispatch (`BEGIN`/`COUNT(*)`/`ORDER BY`/`INSERT`) in sync with `lib/rate-limit.ts`.

@@ -1,12 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { ChevronDown, ChevronUp, Loader2, Workflow } from 'lucide-react';
 import ThoughtAccordion from './ThoughtAccordion';
 import ToolCallCard from './ToolCallCard';
-import { createMarkdownComponents } from './create-markdown-components';
+import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { Segment } from '@/lib/ai/message-segments';
 
 interface WorkGroupCardProps {
@@ -68,11 +66,6 @@ function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps)
 
   const displaySeconds = isStreaming ? elapsedSeconds : Math.max(elapsedSeconds, estimatedSeconds);
 
-  const textComponents = React.useMemo(
-    () => createMarkdownComponents('thought'),
-    [],
-  );
-
   if (!items || items.length === 0) return null;
 
   return (
@@ -122,9 +115,7 @@ function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps)
             if (item.type === 'text' && item.content) {
               return (
                 <div key={item.key} className="text-body">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={textComponents}>
-                    {item.content}
-                  </ReactMarkdown>
+                  <MarkdownRenderer content={item.content} variant="thought" className="text-body" />
                 </div>
               );
             }

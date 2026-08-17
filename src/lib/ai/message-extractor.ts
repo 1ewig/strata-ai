@@ -1,4 +1,4 @@
-import { isToolUIPart, type UIMessage } from "ai";
+import type { UIMessage } from "ai";
 import type { WorkspaceFile } from "@/lib/schemas";
 
 /**
@@ -27,19 +27,22 @@ type FileResult = {
 // Extracts the FileResult from a tool part, handling both the modern typed shape and legacy invocation shape.
 function getToolOutput(part: unknown): FileResult | undefined {
   if (!part || typeof part !== "object") return undefined;
+  const p = part as any;
 
   // Modern typed tool part
-  if (isToolUIPart(part as any)) {
-    const p = part as any;
-    if (p.state === "output-available" && p.output) {
-      return p.output as FileResult;
-    }
-    return undefined;
+  if (p.state === "output-available" && p.output) {
+    return p.output as FileResult;
   }
 
   // Legacy tool-invocation part
-  const inv = (part as any).toolInvocation ?? part;
-  const res = inv.result ?? inv.output;
+  if (p.toolInvocation) {
+    const inv = p.toolInvocation;
+    const res = inv.result ?? inv.output;
+    return res as FileResult | undefined;
+  }
+
+  // Direct tool part or result object
+  const res = p.result ?? p.output;
   return res as FileResult | undefined;
 }
 
