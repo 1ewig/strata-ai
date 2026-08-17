@@ -16,10 +16,6 @@ import { flattenMessageSegments, Segment } from '@/lib/ai/message-segments';
 
 const REMARK_PLUGINS = [remarkGfm];
 
-/**
- * Isolated timer component to prevent the entire ChatBubble
- * and Markdown tree from re-rendering every second during streaming.
- */
 const InferenceTimer = React.memo(function InferenceTimer() {
   const [seconds, setSeconds] = useState(1);
   const startTimeRef = useRef<number | null>(null);
@@ -51,42 +47,39 @@ interface ChatBubbleProps {
 
 function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
   const isUser = message.role === 'user';
-  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
   const [activeBubbleKey, setActiveBubbleKey] = useState<string | null>(null);
+  const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
   const bubbleContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Close active mobile menu when tapping outside the bubble
+  // Close active menu and mobile active state when clicking/tapping outside
   useEffect(() => {
-    if (!activeBubbleKey) return;
+    if (!activeBubbleKey && !openMenuKey) return;
 
     const handlePointerDownOutside = (e: MouseEvent | TouchEvent) => {
       if (bubbleContainerRef.current && !bubbleContainerRef.current.contains(e.target as Node)) {
         setActiveBubbleKey(null);
+        setOpenMenuKey(null);
       }
     };
 
     document.addEventListener('pointerdown', handlePointerDownOutside);
     return () => document.removeEventListener('pointerdown', handlePointerDownOutside);
-  }, [activeBubbleKey]);
+  }, [activeBubbleKey, openMenuKey]);
 
-  // Clean up copy confirmation state automatically after 2s
-  useEffect(() => {
-    if (!copiedCodeId) return;
-    const timer = setTimeout(() => setCopiedCodeId(null), 2000);
-    return () => clearTimeout(timer);
-  }, [copiedCodeId]);
-
-  const handleCopyCodeSnippet = useCallback((codeText: string, id: string) => {
-    if (navigator?.clipboard?.writeText) {
-      navigator.clipboard.writeText(codeText);
+  // Click handler that only activates tap focus on touch/mobile devices
+  const handleBubbleClick = useCallback((e: React.MouseEvent, key: string) => {
+    // Desktop devices rely exclusively on hover; do not keep sticky focus on click
+    if (typeof window !== 'undefined' && window.matchMedia && !window.matchMedia('(max-width: 640px), (pointer: coarse)').matches) {
+      return;
     }
-    setCopiedCodeId(id);
-  }, []);
 
-  // Avoid toggling actions menu if the user was selecting text
-  const handleBubbleClick = useCallback((key: string) => {
+    const target = e.target as HTMLElement;
+    // Don't toggle menu if user tapped an interactive element inside Markdown
+    if (target.closest('a, button, [role="button"], pre, code')) return;
+
     const selection = window.getSelection();
     if (selection && selection.toString().length > 0) return;
+
     setActiveBubbleKey((prev) => (prev === key ? null : key));
   }, []);
 
@@ -95,29 +88,27 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
     [message, isStreaming],
   );
 
-  const markdownComponents = React.useMemo(
-    () => createMarkdownComponents('assistant', copiedCodeId, handleCopyCodeSnippet),
-    [copiedCodeId, handleCopyCodeSnippet],
+  // Markdown components are now static across code copy operations
+  const assistantMarkdownComponents = React.useMemo(
+    () => createMarkdownComponents('assistant'),
+    [],
   );
 
   const userMarkdownComponents = React.useMemo(
-    () => createMarkdownComponents('user', copiedCodeId, handleCopyCodeSnippet),
-    [copiedCodeId, handleCopyCodeSnippet],
+    () => createMarkdownComponents('user'),
+    [],
   );
 
   return (
     <div
       ref={bubbleContainerRef}
-      className={`group relative flex items-start gap-3.5 ${isUser ? 'flex-row-reverse animate-slide-up' : ''
-        } ${!isUser ? 'fade-in' : ''}`}
+      className={`group relative flex items-start gap-3.5 ${isUser ? 'flex-row-reverse animate-slide-up' : 'fade-in'
+        }`}
     >
-      {/* Avatar Container */}
+      {/* Avatar */}
       <div
-        className={`
-          hidden sm:flex relative w-8 h-8 items-center justify-center shrink-0 mt-0.5
-          transition-all duration-300
-          ${isUser ? 'rounded-xl bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-button' : ''}
-        `}
+        className={`hidden sm:flex relative w-8 h-8 items-center justify-center shrink-0 mt-0.5 transition-all duration-300 ${isUser ? 'rounded-xl bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-button' : ''
+          }`}
       >
         {isUser ? (
           <User className="w-4 h-4 text-text-secondary" />
@@ -130,37 +121,41 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
         )}
       </div>
 
+      {/* Bubble Message Content */}
       <div
-        className={`
-          flex flex-col min-w-0 gap-2
-          ${isUser ? 'items-end w-fit max-w-[90%] sm:max-w-[82%] ms-auto' : 'items-start w-fit max-w-full'}
-        `}
+        className={`flex flex-col min-w-0 gap-2 ${isUser ? 'items-end w-fit max-w-[90%] sm:max-w-[82%] ms-auto' : 'items-start w-fit max-w-full'
+          }`}
       >
         {segments.map((seg, segIdx) => {
           const isLastSegment = segIdx === segments.length - 1;
-          const isMenuOpen = activeBubbleKey === seg.key;
+          const isActionActive = openMenuKey === seg.key || activeBubbleKey === seg.key;
+          const isMenuOpen = openMenuKey === seg.key;
 
           if (seg.type === 'user-text') {
             const userContent = seg.content || '';
             return (
               <div
                 key={seg.key}
-                onClick={() => handleBubbleClick(seg.key)}
-                className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full cursor-pointer sm:cursor-default ${
-                  isMenuOpen
-                    ? 'border-primary-hover shadow-glow-primary/20'
-                    : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/20'
-                }`}
+                onClick={(e) => handleBubbleClick(e, seg.key)}
+                className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full cursor-pointer sm:cursor-default ${isActionActive
+                  ? 'border-primary-hover shadow-glow-primary/20'
+                  : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/20'
+                  }`}
               >
                 {userContent && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className={`sticky top-2 float-right ml-2.5 -mr-1 -mt-0.5 z-10 transition-opacity duration-200 ${isMenuOpen
-                        ? 'opacity-100 pointer-events-auto'
-                        : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto'
+                    className={`sticky top-2 float-right ml-2.5 -mr-1 -mt-0.5 z-10 transition-opacity duration-200 ${isActionActive
+                      ? 'opacity-100 pointer-events-auto'
+                      : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
                       }`}
                   >
-                    <MessageActionsMenu textContent={userContent} isUser={true} />
+                    <MessageActionsMenu
+                      textContent={userContent}
+                      isUser={true}
+                      isOpen={isMenuOpen}
+                      onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
+                    />
                   </div>
                 )}
                 <div className="text-body text-surface leading-relaxed relative">
@@ -201,28 +196,26 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
             return (
               <div
                 key={seg.key}
-                onClick={() => !isStreamingActiveSegment && handleBubbleClick(seg.key)}
-                className={`
-                  group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed
-                  transition-all duration-300 fade-in
-                  bg-surface-overlay/90 border text-text-primary rounded-tl-xs
-                  backdrop-blur-sm w-fit max-w-full cursor-pointer sm:cursor-default
-                  ${isMenuOpen
-                    ? 'border-primary/60 shadow-card-lg'
-                    : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
-                  }
-                  ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''}
-                `}
+                onClick={(e) => !isStreamingActiveSegment && handleBubbleClick(e, seg.key)}
+                className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-overlay/90 border text-text-primary rounded-tl-xs backdrop-blur-sm w-fit max-w-full cursor-pointer sm:cursor-default ${isActionActive
+                  ? 'border-primary/60 shadow-card-lg'
+                  : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
+                  } ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''}`}
               >
                 {!isStreamingActiveSegment && textContent && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className={`sticky top-2 float-right ml-2.5 -mr-1 -mt-0.5 z-10 transition-opacity duration-200 ${isMenuOpen
-                        ? 'opacity-100 pointer-events-auto'
-                        : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto'
+                    className={`sticky top-2 float-right ml-2.5 -mr-1 -mt-0.5 z-10 transition-opacity duration-200 ${isActionActive
+                      ? 'opacity-100 pointer-events-auto'
+                      : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
                       }`}
                   >
-                    <MessageActionsMenu textContent={textContent} isUser={false} />
+                    <MessageActionsMenu
+                      textContent={textContent}
+                      isUser={false}
+                      isOpen={isMenuOpen}
+                      onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
+                    />
                   </div>
                 )}
 
@@ -237,10 +230,10 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                     <SmoothStreamText
                       text={textContent}
                       isStreaming={true}
-                      components={markdownComponents}
+                      components={assistantMarkdownComponents}
                     />
                   ) : (
-                    <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={markdownComponents}>
+                    <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={assistantMarkdownComponents}>
                       {textContent}
                     </ReactMarkdown>
                   )}
@@ -252,7 +245,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           return null;
         })}
 
-        {/* Inference duration timer */}
+        {/* Duration Timer */}
         {!isUser && isStreaming && <InferenceTimer />}
       </div>
     </div>

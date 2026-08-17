@@ -6,33 +6,43 @@ import { MoreHorizontal, Copy, FileText, Check } from 'lucide-react';
 interface MessageActionsMenuProps {
   textContent: string;
   isUser?: boolean;
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
   className?: string;
 }
 
 /**
- * Strips markdown formatting into clean plain text.
+ * Strips markdown formatting and decodes basic HTML entities.
  */
 function stripMarkdown(markdown: string): string {
-  return markdown
-    .replace(/```[\w-]*\n([\s\S]*?)```/g, '$1')
-    .replace(/`([^`]+)`/g, '$1')
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
-    .replace(/^#{1,6}\s+(.+)$/gm, '$1')
-    .replace(/(\*\*|__)(.*?)\1/g, '$2')
-    .replace(/(\*|_)(.*?)\1/g, '$2')
-    .replace(/~~(.*?)~~/g, '$1')
-    .replace(/^\s*>\s+/gm, '')
-    .replace(/^\s*[-*+]\s+/gm, '')
-    .replace(/^\s*\d+\.\s+/gm, '')
-    .replace(/^[-*_]{3,}\s*$/gm, '')
-    .replace(/<\/?[^>]+(>|$)/g, '')
+  let text = markdown
+    .replace(/```[\w-]*\n([\s\S]*?)```/g, '$1') // Code blocks
+    .replace(/`([^`]+)`/g, '$1')                // Inline code
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')    // Images
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')    // Links
+    .replace(/^#{1,6}\s+(.+)$/gm, '$1')          // Headers
+    .replace(/(\*\*|__)(.*?)\1/g, '$2')          // Bold
+    .replace(/(\*|_)(.*?)\1/g, '$2')             // Italic
+    .replace(/~~(.*?)~~/g, '$1')                 // Strikethrough
+    .replace(/^\s*>\s+/gm, '')                   // Blockquotes
+    .replace(/^\s*[-*+]\s+/gm, '')               // Unordered list items
+    .replace(/^\s*\d+\.\s+/gm, '')               // Ordered list items
+    .replace(/^[-*_]{3,}\s*$/gm, '')             // Horizontal rules
+    .replace(/<\/?[^>]+(>|$)/g, '')              // HTML tags
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+
+  // Basic HTML entity decoding in client browser environment
+  if (typeof document !== 'undefined') {
+    const doc = new DOMParser().parseFromString(text, 'text/html');
+    text = doc.body.textContent || text;
+  }
+
+  return text;
 }
 
 /**
- * Safe clipboard writer with legacy fallback for non-HTTPS / LAN mobile testing.
+ * Robust clipboard utility with legacy execCommand fallback.
  */
 async function copyToClipboard(text: string): Promise<boolean> {
   if (navigator?.clipboard?.writeText) {
@@ -40,16 +50,17 @@ async function copyToClipboard(text: string): Promise<boolean> {
       await navigator.clipboard.writeText(text);
       return true;
     } catch {
-      // Fallback below
+      // Proceed to fallback if permission denied or non-active document
     }
   }
 
   try {
     const textArea = document.createElement('textarea');
     textArea.value = text;
-    textArea.style.position = 'fixed';
-    textArea.style.opacity = '0';
-    textArea.style.pointerEvents = 'none';
+    textArea.setAttribute('readonly', '');
+    textArea.style.position = 'absolute';
+    textArea.style.left = '-9999px';
+    textArea.style.top = `${window.scrollY || document.documentElement.scrollTop}px`;
     document.body.appendChild(textArea);
     textArea.focus();
     textArea.select();
@@ -64,14 +75,32 @@ async function copyToClipboard(text: string): Promise<boolean> {
 export default function MessageActionsMenu({
   textContent,
   isUser = false,
+  isOpen: controlledIsOpen,
+  onOpenChange,
   className = '',
 }: MessageActionsMenuProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isControlled = controlledIsOpen !== undefined;
+  const isOpen = isControlled ? controlledIsOpen : internalIsOpen;
+
+  const setIsOpen = useCallback(
+    (nextState: boolean | ((prev: boolean) => boolean)) => {
+      const nextVal = typeof nextState === 'function' ? nextState(isOpen) : nextState;
+      if (onOpenChange) {
+        onOpenChange(nextVal);
+      }
+      if (!isControlled) {
+        setInternalIsOpen(nextVal);
+      }
+    },
+    [isOpen, isControlled, onOpenChange],
+  );
+
   const [copiedType, setCopiedType] = useState<'markdown' | 'text' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const resetTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Close the menu on clicks/taps outside or Escape key
+  // Close menu on clicks/taps outside or on Escape
   useEffect(() => {
     if (!isOpen) return;
 
@@ -93,9 +122,8 @@ export default function MessageActionsMenu({
       document.removeEventListener('pointerdown', handlePointerDownOutside);
       document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, setIsOpen]);
 
-  // Clean up feedback timers on unmount
   useEffect(() => {
     return () => {
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
@@ -125,7 +153,7 @@ export default function MessageActionsMenu({
 
   return (
     <div ref={menuRef} className={`relative inline-block ${className}`}>
-      {/* 3-dots Trigger Button */}
+      {/* Menu Trigger Button */}
       <button
         type="button"
         aria-label="Message options"
@@ -134,33 +162,24 @@ export default function MessageActionsMenu({
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        className={`
-          flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-150
-          shadow-button backdrop-blur-sm cursor-pointer select-none active:scale-95
-          ${isUser
+        className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-150 shadow-button backdrop-blur-sm cursor-pointer select-none active:scale-95 ${isUser
             ? isOpen
               ? 'bg-surface/35 text-surface border-surface/50'
               : 'bg-surface/20 hover:bg-surface/30 text-surface border border-surface/30'
             : isOpen
               ? 'bg-surface-hover text-text-primary border-edge-hover'
               : 'bg-surface-elevated/90 hover:bg-surface-hover text-text-muted hover:text-text-primary border border-edge-raised'
-          }
-          ${isOpen ? 'opacity-100' : 'opacity-90 hover:opacity-100'}
-        `}
+          } ${isOpen ? 'opacity-100' : 'opacity-90 hover:opacity-100'}`}
       >
         <MoreHorizontal className="w-4 h-4" />
       </button>
 
-      {/* Overflow Menu Dropdown */}
+      {/* Dropdown Menu */}
       {isOpen && (
         <div
           role="menu"
           aria-orientation="vertical"
-          className={`
-            absolute right-0 top-full mt-1.5 z-30 min-w-[170px] max-w-[calc(100vw-32px)] p-1 rounded-xl
-            bg-surface-elevated/95 backdrop-blur-md border border-edge-raised shadow-card-lg
-            flex flex-col gap-0.5 animate-fade-in
-          `}
+          className="absolute right-0 top-full mt-1.5 z-30 min-w-[170px] max-w-[calc(100vw-32px)] p-1 rounded-xl bg-surface-elevated/95 backdrop-blur-md border border-edge-raised shadow-card-lg flex flex-col gap-0.5 animate-fade-in"
         >
           {/* Copy as Markdown */}
           <button
@@ -170,14 +189,10 @@ export default function MessageActionsMenu({
               e.stopPropagation();
               handleCopyMarkdown();
             }}
-            className={`
-              w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg
-              text-caption font-medium transition-colors text-left cursor-pointer
-              ${copiedType === 'markdown'
+            className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-caption font-medium transition-colors text-left cursor-pointer ${copiedType === 'markdown'
                 ? 'bg-accent-olive-soft text-accent-olive'
                 : 'text-text-primary hover:bg-surface-hover hover:text-text-bright'
-              }
-            `}
+              }`}
           >
             <div className="flex items-center gap-2">
               {copiedType === 'markdown' ? (
@@ -197,14 +212,10 @@ export default function MessageActionsMenu({
               e.stopPropagation();
               handleCopyPlainText();
             }}
-            className={`
-              w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg
-              text-caption font-medium transition-colors text-left cursor-pointer
-              ${copiedType === 'text'
+            className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-caption font-medium transition-colors text-left cursor-pointer ${copiedType === 'text'
                 ? 'bg-accent-olive-soft text-accent-olive'
                 : 'text-text-primary hover:bg-surface-hover hover:text-text-bright'
-              }
-            `}
+              }`}
           >
             <div className="flex items-center gap-2">
               {copiedType === 'text' ? (
