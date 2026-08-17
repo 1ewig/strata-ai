@@ -95,10 +95,6 @@ File changes stream in while the model is still working: workspace tools emit cu
 
 A slide-over panel next to the chat gives you a file switcher with language tags, a line-numbered, syntax-highlighted code viewer (PrismJS), a raw text editor for manual edits, an empty-state canvas, and a footer with copy-to-clipboard, edit-mode toggle, and character counts. Files can be previewed as Markdown or edited as raw text.
 
-### 4. Streaming UX
-
-Tokens arrive word-paced (`smoothStream`, 25 ms) so replies read like continuous prose. While the model works, the UI streams its reasoning inside a collapsible "Thinking" accordion and shows compact tool-execution cards for each call. Once a turn finishes, all pre-answer output folds into a single collapsible "Worked for Xs" group, leaving just the final answer bubble.
-
 ### 4. Context compaction (`/compact`)
 
 A dedicated endpoint distills the conversation and workspace state into a structured summary stored as an assistant message. Compaction always runs on `gemini-3.1-flash-lite` with high reasoning effort and a 3,500-token output cap, regardless of the active chat model. The summary follows a fixed section outline (Current Goal, Key Decisions & Constraints, Progress So Far, Open Questions / TODOs, Important Facts & Artifacts, Workspace State, Recent Trajectory, Continuation Notes). History before the latest summary is pruned server-side, and the active context-window meter resets to a small baseline plus the summary's real output.
@@ -146,7 +142,7 @@ A custom design system defined in `@theme` in `src/app/globals.css`: a warm stud
 | Validation | Zod 4 | API body parsing and every tool input/output schema |
 | Icons | lucide-react | Iconography |
 | Auto-scroll | `use-stick-to-bottom` | Chat scroll behavior (no manual scroll effects) |
-| Testing | none | No test framework configured |
+| Testing | `bun test` (15 suites in `__tests__/`) | Unit + route-integration tests | `bun run test` / `bun run test:watch` (`--isolate` flag); shared fixtures in `__tests__/helpers.ts`; constants imported from `@/lib/limits` |
 
 ---
 
@@ -251,6 +247,8 @@ All scripts run through Bun.
 | `bun run build` | `next build` | Create a production build with type checking |
 | `bun run start` | `node .next/standalone/server.js` | Serve the standalone production build |
 | `bun run lint` | `eslint .` | Run ESLint across the codebase |
+| `bun run test` | `bun test --isolate` | Run the unit & integration test suite (15 suites in `__tests__/`) |
+| `bun run test:watch` | `bun test --isolate --watch` | Re-run tests on file changes |
 | `bun run clean` | `next clean` | Clear the `.next` cache and build artifacts |
 | `bun run db:migrate` | `bun run scripts/migrate-better-auth-schema.ts` | Run the PostgreSQL schema migration |
 | `bun run db:test` | `bun run scripts/test-db.ts` | Test the database connection and table integrity |

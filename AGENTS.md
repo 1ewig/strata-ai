@@ -41,7 +41,7 @@ The app ships light + dark themes (light default; dark via `theme-toggle.tsx` to
   - `text-heading` (20px) — h2, empty-state titles
   - `text-title` (24px) — h1
   - `text-display` (32px) — auth hero, 404
-- **Markdown hierarchy convention** (mirrors the `ChatBubble` component map): `h1`→`text-title font-display`, `h2`→`text-heading font-display`, `h3`→`text-subheading`, `p`/`li`→`text-body`, `code`→`text-micro font-mono`, `table`/`blockquote`→`text-caption`. Never attach `prose` classes (no typography plugin is installed).
+- **Markdown hierarchy convention** (mirrors the `MarkdownRenderer` component map in `components/ui/`): `h1`→`text-title font-display`, `h2`→`text-heading font-display`, `h3`→`text-subheading`, `p`/`li`→`text-body`, `code`→`text-micro font-mono`, `table`/`blockquote`→`text-caption`. Never attach `prose` classes (no typography plugin is installed). **All markdown rendering goes through `components/ui/MarkdownRenderer.tsx`** (variants `assistant`/`user`/`thought`/`canvas`; `isStreaming` delegates to `SmoothStreamText`; snippet-copy state is internal, `enableSnippetCopy` is canvas-only) — never add new `ReactMarkdown`/`remark-gfm` sites.
 - **Fonts:** `font-display` and `font-sans` (Plus Jakarta Sans). Keep token names (`surface-*`, `text-*`, `edge-*`); add new colors only as `@theme` vars in `globals.css`.
 
 ## Architecture
