@@ -153,4 +153,88 @@ describe("calculateTokenMetrics", () => {
     ];
     expect(calculateTokenMetrics(messages)).toBeNull();
   });
+
+  it("groups breakdowns and labels by model across multiple models", () => {
+    const messages: TestMessage[] = [
+      {
+        role: "assistant",
+        metadata: { usage: { inputTokens: 1000, outputTokens: 200, totalTokens: 1200 }, modelId: "gemini-3.5-flash-lite" },
+      },
+      {
+        role: "assistant",
+        metadata: { usage: { inputTokens: 500, outputTokens: 100, totalTokens: 600 }, modelId: "gemini-3-flash-preview" },
+      },
+    ];
+    const metrics = calculateTokenMetrics(messages);
+
+    expect(metrics!.modelsUsed).toEqual(["Gemini 3.5 Flash Lite", "Gemini 3 Flash Preview"]);
+    expect(metrics!.modelBreakdowns).toHaveLength(2);
+    expect(metrics!.modelBreakdowns[0].modelId).toBe("gemini-3.5-flash-lite");
+    expect(metrics!.modelBreakdowns[0].modelLabel).toBe("Gemini 3.5 Flash Lite");
+    expect(metrics!.modelBreakdowns[1].turnCount).toBe(1);
+  });
+
+  it("clamps percentUsed and remainingTokens when usage exceeds the window", () => {
+    const messages: TestMessage[] = [
+      {
+        role: "assistant",
+        metadata: { usage: { inputTokens: 150000, outputTokens: 50000, totalTokens: 200000 } },
+      },
+    ];
+    const metrics = calculateTokenMetrics(messages, 131072);
+
+    expect(metrics!.active.percentUsed).toBe(100);
+    expect(metrics!.active.remainingTokens).toBe(0);
+  });
+
+  it("falls back to input + output when totalTokens is missing", () => {
+    const messages: TestMessage[] = [
+      { role: "assistant", metadata: { usage: { inputTokens: 300, outputTokens: 700 } } },
+    ];
+    const metrics = calculateTokenMetrics(messages);
+
+    expect(metrics!.active.totalTokens).toBe(1000);
+  });
+
+  it("treats partial stepTotalUsage fields as the cost basis", () => {
+    const messages: TestMessage[] = [
+      {
+        role: "assistant",
+        metadata: {
+          usage: { inputTokens: 500, outputTokens: 100, totalTokens: 600 },
+          stepTotalUsage: { inputTokens: 2000 },
+          modelId: "gemini-3.5-flash-lite",
+        },
+      },
+    ];
+    const metrics = calculateTokenMetrics(messages);
+
+    expect(metrics!.modelBreakdowns[0].inputTokens).toBe(2000);
+    expect(metrics!.modelBreakdowns[0].outputTokens).toBe(100);
+    expect(metrics!.modelBreakdowns[0].cost).toBeCloseTo(
+      calculateTokenCost("gemini-3.5-flash-lite", 2000, 100),
+    );
+  });
+
+  it("accounts the compacted turn in session totals when it carries stepTotalUsage", () => {
+    const messages: TestMessage[] = [
+      { role: "assistant", metadata: { usage: USAGE, modelId: "gemini-3.5-flash-lite" } },
+      {
+        role: "assistant",
+        metadata: {
+          usage: { inputTokens: 90000, outputTokens: 800, totalTokens: 90800 },
+          stepTotalUsage: { inputTokens: 120000, outputTokens: 1500, totalTokens: 121500 },
+          isCompactedSummary: true,
+          modelId: "gemini-3.1-flash-lite",
+        },
+      },
+    ];
+    const metrics = calculateTokenMetrics(messages);
+
+    expect(metrics!.session.totalApiTokens).toBe(1200 + 121500);
+    expect(metrics!.session.totalOutputTokens).toBe(200 + 800);
+    expect(metrics!.modelBreakdowns[1].apiTokens).toBe(121500);
+    expect(metrics!.modelBreakdowns[1].outputTokens).toBe(1500);
+    expect(metrics!.modelBreakdowns[1].modelLabel).toBe("Gemini 3.1 Flash Lite");
+  });
 });

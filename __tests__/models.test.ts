@@ -8,6 +8,30 @@ import {
   getValidThinkingLevelForModel,
 } from "@/lib/models";
 
+// Minimal localStorage stand-in so getInitialModel / getStoredThinkingLevel can
+// exercise their browser branches under the Node test runner.
+function mockBrowserStorage(entries: Record<string, string> = {}) {
+  const store = new Map(Object.entries(entries));
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: {},
+  });
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    value: {
+      getItem: (key: string) => store.get(key) ?? null,
+      setItem: (key: string, value: string) => void store.set(key, value),
+      removeItem: (key: string) => void store.delete(key),
+    },
+  });
+}
+
+function restoreBrowserGlobals() {
+  // TS libs type window/localStorage as non-optional; delete is legal at runtime.
+  delete (globalThis as Record<string, unknown>).window;
+  delete (globalThis as Record<string, unknown>).localStorage;
+}
+
 describe("getModelPricing", () => {
   it("returns the catalog pricing for a known model", () => {
     const pricing = getModelPricing("gemini-3.5-flash-lite");
@@ -48,6 +72,24 @@ describe("getStoredThinkingLevel", () => {
     expect(getStoredThinkingLevel("gemini-3-flash-preview")).toBe("high");
     expect(getStoredThinkingLevel("gemma-4-31b-it")).toBe("");
   });
+
+  it("prefers a stored thinking level when localStorage is available", () => {
+    mockBrowserStorage({ selectedThinkingLevel: "medium" });
+    try {
+      expect(getStoredThinkingLevel("gemini-3-flash-preview")).toBe("medium");
+    } finally {
+      restoreBrowserGlobals();
+    }
+  });
+
+  it("falls back to the model default when the stored level is absent", () => {
+    mockBrowserStorage({});
+    try {
+      expect(getStoredThinkingLevel("gemini-3.1-flash-lite")).toBe("minimal");
+    } finally {
+      restoreBrowserGlobals();
+    }
+  });
 });
 
 describe("getInitialModel", () => {
@@ -59,6 +101,7 @@ describe("getInitialModel", () => {
     } else {
       delete process.env.NEXT_PUBLIC_GEMINI_MODEL;
     }
+    restoreBrowserGlobals();
   });
 
   it("defaults to the first lite model when no env override is set", () => {
@@ -67,6 +110,18 @@ describe("getInitialModel", () => {
   });
 
   it("prefers the NEXT_PUBLIC_GEMINI_MODEL env var when set", () => {
+    process.env.NEXT_PUBLIC_GEMINI_MODEL = "gemini-3-flash-preview";
+    expect(getInitialModel()).toBe("gemini-3-flash-preview");
+  });
+
+  it("prefers a stored valid model id over the env var", () => {
+    mockBrowserStorage({ selectedModel: "gemma-4-31b-it" });
+    process.env.NEXT_PUBLIC_GEMINI_MODEL = "gemini-3-flash-preview";
+    expect(getInitialModel()).toBe("gemma-4-31b-it");
+  });
+
+  it("ignores a stored model id that is not in the catalog", () => {
+    mockBrowserStorage({ selectedModel: "not-a-real-model" });
     process.env.NEXT_PUBLIC_GEMINI_MODEL = "gemini-3-flash-preview";
     expect(getInitialModel()).toBe("gemini-3-flash-preview");
   });

@@ -7,8 +7,8 @@
     "build": "next build",
     "start": "node .next/standalone/server.js",
     "lint": "eslint .",
-    "test": "bun test",
-    "test:watch": "bun test --watch",
+    "test": "bun test --isolate",
+    "test:watch": "bun test --isolate --watch",
     "clean": "next clean",
     "db:migrate": "bun run scripts/migrate-better-auth-schema.ts",
     "db:test": "bun run scripts/test-db.ts"

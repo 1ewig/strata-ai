@@ -53,10 +53,42 @@ describe("agentRequestBodySchema", () => {
         messages: [],
         files: [{ id: "f1" }],
       }),
-    ).toThrow();
+    ).toThrow(/name/);
+  });
+
+  it("rejects files whose fields are not strings", () => {
+    expect(() =>
+      agentRequestBodySchema.parse({
+        messages: [],
+        files: [{ ...validFile, content: 42 }],
+      }),
+    ).toThrow(/content/);
+    expect(() =>
+      agentRequestBodySchema.parse({
+        messages: [],
+        files: [{ ...validFile, id: null }],
+      }),
+    ).toThrow(/id/);
   });
 
   it("requires the messages array", () => {
-    expect(() => agentRequestBodySchema.parse({})).toThrow();
+    expect(() => agentRequestBodySchema.parse({})).toThrow(/messages/);
+  });
+
+  it("rejects a non-array messages field", () => {
+    expect(() => agentRequestBodySchema.parse({ messages: "hi" })).toThrow(/messages/);
+  });
+
+  it("rejects a non-number maxSteps", () => {
+    expect(() =>
+      agentRequestBodySchema.parse({ messages: [], maxSteps: "lots" }),
+    ).toThrow(/maxSteps/);
+  });
+
+  it("keeps message contents intentionally loose for AI SDK parts", () => {
+    const parsed = agentRequestBodySchema.parse({
+      messages: [{ role: 42, content: { nested: true }, parts: "anything" }],
+    });
+    expect(parsed.messages).toHaveLength(1);
   });
 });

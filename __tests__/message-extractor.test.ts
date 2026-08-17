@@ -1,22 +1,11 @@
 import { describe, it, expect } from "bun:test";
-import type { WorkspaceFile } from "@/lib/schemas";
 import {
   extractFilesFromMessage,
   extractDeletedFilesFromMessage,
   findLatestCompactedMessageIndex,
   sliceMessagesAfterCompaction,
 } from "@/lib/ai/message-extractor";
-
-function makeFile(id: string, name: string, content = ""): WorkspaceFile {
-  return {
-    id,
-    name,
-    content,
-    language: "markdown",
-    createdAt: "2024-01-01T00:00:00.000Z",
-    updatedAt: "2024-01-01T00:00:00.000Z",
-  };
-}
+import { makeFile } from "./helpers";
 
 function legacyToolResult(result: unknown, toolCallId = "call-1") {
   return {
@@ -77,6 +66,51 @@ describe("extractFilesFromMessage", () => {
     };
     expect(extractFilesFromMessage(msg)).toEqual([file]);
   });
+
+  it("extracts from a legacy tool-invocation that only exposes output", () => {
+    const file = makeFile("f1", "a.md", "content");
+    const msg = {
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-invocation",
+          toolInvocation: { toolCallId: "call-1", toolName: "writeFile", state: "result", output: { file } },
+        },
+      ],
+    };
+    expect(extractFilesFromMessage(msg)).toEqual([file]);
+  });
+
+  it("extracts from a direct tool part carrying a result field", () => {
+    const file = makeFile("f1", "a.md", "content");
+    const msg = { role: "assistant", parts: [{ type: "tool", toolCallId: "call-1", result: { file } }] };
+    expect(extractFilesFromMessage(msg)).toEqual([file]);
+  });
+
+  it("extracts from a direct tool part carrying an output field", () => {
+    const file = makeFile("f1", "a.md", "content");
+    const msg = { role: "assistant", parts: [{ type: "tool", toolCallId: "call-1", output: { file } }] };
+    expect(extractFilesFromMessage(msg)).toEqual([file]);
+  });
+
+  it("deduplicates across legacy and modern part shapes", () => {
+    const file = makeFile("f1", "a.md", "v1");
+    const msg = {
+      role: "assistant",
+      parts: [
+        legacyToolResult({ file }, "call-1"),
+        modernToolResult({ file: { ...file, content: "v2" } }),
+      ],
+    };
+    expect(extractFilesFromMessage(msg)).toEqual([file]);
+  });
+
+  it("skips files without an id instead of deduplicating them", () => {
+    const noId = makeFile("f1", "a.md", "content");
+    delete (noId as { id?: string }).id;
+    const msg = { role: "assistant", parts: [modernToolResult({ file: noId })] };
+    expect(extractFilesFromMessage(msg)).toEqual([]);
+  });
 });
 
 describe("extractDeletedFilesFromMessage", () => {
@@ -97,6 +131,22 @@ describe("extractDeletedFilesFromMessage", () => {
       ],
     };
     expect(extractDeletedFilesFromMessage(msg)).toEqual([]);
+  });
+
+  it("collects deletions from the modern typed tool part shape", () => {
+    const msg = {
+      role: "assistant",
+      parts: [
+        {
+          type: "tool",
+          toolCallId: "call-1",
+          toolName: "deleteFile",
+          state: "output-available",
+          output: { deleted: true, fileId: "f1", name: "a.md" },
+        },
+      ],
+    };
+    expect(extractDeletedFilesFromMessage(msg)).toEqual([{ fileId: "f1", name: "a.md" }]);
   });
 });
 

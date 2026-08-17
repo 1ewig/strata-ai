@@ -52,8 +52,19 @@ export async function POST(req: Request) {
     );
   }
 
-  // Validate the body shape before use.
-  const parsed = agentRequestBodySchema.safeParse(await req.json());
+  // Validate the body shape before use. Malformed JSON is a client error, not
+  // a server fault, so surface it as a 400 rather than an unhandled 500.
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(
+      JSON.stringify({ error: "Invalid request", details: { json: ["Request body is not valid JSON."] } }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  const parsed = agentRequestBodySchema.safeParse(body);
 
   // Return zod validation failures as a 400 with flattened details.
   if (!parsed.success) {

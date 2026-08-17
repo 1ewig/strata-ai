@@ -91,4 +91,64 @@ describe("flattenMessageSegments", () => {
     });
     expect(segments).toEqual([{ type: "text", content: "", key: "text-initial" }]);
   });
+
+  it("detects dynamic-tool and tool-prefixed part types", () => {
+    const message = {
+      role: "assistant",
+      parts: [
+        { type: "dynamic-tool", toolInvocation: { toolCallId: "call-dynamic" } },
+        { type: "tool-marker", toolCallId: "call-prefixed" },
+      ],
+    };
+    const segments = flattenMessageSegments(message, true);
+    expect(segments.map((s) => s.type)).toEqual(["tool", "tool"]);
+    expect(segments.map((s) => s.key)).toEqual(["call-dynamic", "call-prefixed"]);
+  });
+
+  it("detects reasoning carried in the reasoning/reasoningText properties", () => {
+    const message = {
+      role: "assistant",
+      parts: [{ type: "custom", reasoning: "deep thought" }],
+    };
+    const segments = flattenMessageSegments(message, true);
+    expect(segments).toEqual([{ type: "reasoning", content: "deep thought", key: "reasoning-0" }]);
+  });
+
+  it("detects a bare toolInvocation object without a part type", () => {
+    const message = {
+      role: "assistant",
+      parts: [{ toolInvocation: { toolCallId: "call-bare" } }],
+    };
+    const segments = flattenMessageSegments(message, true);
+    expect(segments.map((s) => s.type)).toEqual(["tool"]);
+    expect(segments[0].key).toBe("call-bare");
+  });
+
+  it("flushes interleaved text around tool parts in order", () => {
+    const message = {
+      role: "assistant",
+      parts: [
+        { type: "text", text: "First " },
+        { type: "tool-invocation", toolInvocation: { toolCallId: "call-1" } },
+        { type: "text", text: "Second" },
+      ],
+    };
+    const segments = flattenMessageSegments(message, true);
+    expect(segments.map((s) => s.type)).toEqual(["text", "tool", "text"]);
+    expect(segments[0].content).toBe("First ");
+    expect(segments[2].content).toBe("Second");
+    expect(segments[2].key).toBe("text-final");
+  });
+
+  it("filters non-text parts out of user bubbles", () => {
+    const segments = flattenMessageSegments({
+      role: "user",
+      parts: [
+        { type: "text", text: "Hello " },
+        { type: "custom", value: 42 },
+        { type: "text", text: "world" },
+      ],
+    });
+    expect(segments).toEqual([{ type: "user-text", content: "Hello world", key: "user-text" }]);
+  });
 });

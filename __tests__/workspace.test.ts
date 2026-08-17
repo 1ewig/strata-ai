@@ -1,5 +1,4 @@
 import { describe, it, expect } from "bun:test";
-import type { WorkspaceFile } from "@/lib/schemas";
 import {
   isSameFilename,
   findWorkspaceFile,
@@ -7,17 +6,7 @@ import {
   removeFileFromWorkspace,
   createMutableWorkspace,
 } from "@/lib/ai/workspace";
-
-function makeFile(id: string, name: string, content = "", language = "markdown"): WorkspaceFile {
-  return {
-    id,
-    name,
-    content,
-    language,
-    createdAt: "2024-01-01T00:00:00.000Z",
-    updatedAt: "2024-01-01T00:00:00.000Z",
-  };
-}
+import { makeFile } from "./helpers";
 
 describe("isSameFilename", () => {
   it("compares names case-insensitively", () => {
