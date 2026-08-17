@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { UIMessage } from 'ai';
@@ -10,92 +10,108 @@ import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
 import WorkGroupCard from './WorkGroupCard';
 import SmoothStreamText from './SmoothStreamText';
+import MessageActionsMenu from './MessageActionsMenu';
 import { createMarkdownComponents } from './create-markdown-components';
 import { flattenMessageSegments, Segment } from '@/lib/ai/message-segments';
 
-/** Props for the ChatBubble message component. */
+const REMARK_PLUGINS = [remarkGfm];
+
+/**
+ * Isolated timer component to prevent the entire ChatBubble
+ * and Markdown tree from re-rendering every second during streaming.
+ */
+const InferenceTimer = React.memo(function InferenceTimer() {
+  const [seconds, setSeconds] = useState(1);
+  const startTimeRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    startTimeRef.current = Date.now();
+    const interval = setInterval(() => {
+      if (startTimeRef.current) {
+        setSeconds(Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000)));
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div className="flex items-center gap-1.5 py-1 text-text-muted font-mono text-caption fade-in">
+      <span className="font-semibold text-text-secondary">{`Working (${seconds}s)`}</span>
+      <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
+    </div>
+  );
+});
+
 interface ChatBubbleProps {
   message: UIMessage | { id: string; role: string; content?: string; parts?: any[] };
   isStreaming?: boolean;
   onOpenDrawer?: () => void;
 }
 
-/**
- * Renders a single chat message as a bubble row: avatar, optional streaming
- * states, markdown body, thinking accordions, and tool call cards.
- *
- * @param message - The message to render; user text is pulled from `parts`,
- *   assistant content is split into text/reasoning/tool segments.
- * @param isStreaming - True for the in-flight assistant message; drives glow,
- *   shimmer, caret, and thinking animations.
- * @param onOpenDrawer - Opens the workspace file drawer from tool call cards.
- */
 function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null);
-  const startTimeRef = useRef<number | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(1);
+  const [activeBubbleKey, setActiveBubbleKey] = useState<string | null>(null);
+  const bubbleContainerRef = useRef<HTMLDivElement | null>(null);
 
-  // Live timer tracking the in-flight inference duration
+  // Close active mobile menu when tapping outside the bubble
   useEffect(() => {
-    if (!isStreaming) {
-      startTimeRef.current = null;
-      return;
-    }
+    if (!activeBubbleKey) return;
 
-    if (!startTimeRef.current) {
-      startTimeRef.current = Date.now();
-    }
-
-    const interval = setInterval(() => {
-      if (startTimeRef.current) {
-        const seconds = Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000));
-        setElapsedSeconds(seconds);
+    const handlePointerDownOutside = (e: MouseEvent | TouchEvent) => {
+      if (bubbleContainerRef.current && !bubbleContainerRef.current.contains(e.target as Node)) {
+        setActiveBubbleKey(null);
       }
-    }, 1000);
+    };
 
-    return () => clearInterval(interval);
-  }, [isStreaming]);
+    document.addEventListener('pointerdown', handlePointerDownOutside);
+    return () => document.removeEventListener('pointerdown', handlePointerDownOutside);
+  }, [activeBubbleKey]);
 
-  /**
-   * Copies a code snippet to the clipboard and flashes a temporary "Copied"
-   * confirmation on the matching snippet button.
-   *
-   * @param codeText - The raw code to copy.
-   * @param id - The snippet id used to highlight the button that was clicked.
-   */
-  const handleCopyCodeSnippet = (codeText: string, id: string) => {
-    navigator.clipboard.writeText(codeText);
+  // Clean up copy confirmation state automatically after 2s
+  useEffect(() => {
+    if (!copiedCodeId) return;
+    const timer = setTimeout(() => setCopiedCodeId(null), 2000);
+    return () => clearTimeout(timer);
+  }, [copiedCodeId]);
+
+  const handleCopyCodeSnippet = useCallback((codeText: string, id: string) => {
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard.writeText(codeText);
+    }
     setCopiedCodeId(id);
-    setTimeout(() => setCopiedCodeId(null), 2000);
-  };
+  }, []);
 
-  // Flatten the raw message into render-ready segments (user text, markdown
-  // text, reasoning, tool invocations, grouped work items) so each part can be
-  // rendered by its own sub-component below.
+  // Avoid toggling actions menu if the user was selecting text
+  const handleBubbleClick = useCallback((key: string) => {
+    const selection = window.getSelection();
+    if (selection && selection.toString().length > 0) return;
+    setActiveBubbleKey((prev) => (prev === key ? null : key));
+  }, []);
+
   const segments: Segment[] = React.useMemo(
     () => flattenMessageSegments(message, isStreaming),
     [message, isStreaming],
   );
 
-  // Memoize custom markdown components so ReactMarkdown does not tear down DOM nodes on every token render.
   const markdownComponents = React.useMemo(
     () => createMarkdownComponents('assistant', copiedCodeId, handleCopyCodeSnippet),
-    [copiedCodeId],
+    [copiedCodeId, handleCopyCodeSnippet],
   );
 
-  // Memoize user-specific markdown components styled for the solid primary background.
   const userMarkdownComponents = React.useMemo(
     () => createMarkdownComponents('user', copiedCodeId, handleCopyCodeSnippet),
-    [copiedCodeId],
+    [copiedCodeId, handleCopyCodeSnippet],
   );
 
   return (
     <div
+      ref={bubbleContainerRef}
       className={`group relative flex items-start gap-3.5 ${isUser ? 'flex-row-reverse animate-slide-up' : ''
         } ${!isUser ? 'fade-in' : ''}`}
     >
-      {/* Avatar Container: hidden on mobile (< sm) to give messages maximum width */}
+      {/* Avatar Container */}
       <div
         className={`
           hidden sm:flex relative w-8 h-8 items-center justify-center shrink-0 mt-0.5
@@ -122,16 +138,34 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
       >
         {segments.map((seg, segIdx) => {
           const isLastSegment = segIdx === segments.length - 1;
+          const isMenuOpen = activeBubbleKey === seg.key;
 
           if (seg.type === 'user-text') {
+            const userContent = seg.content || '';
             return (
               <div
                 key={seg.key}
-                className="relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all bg-primary text-surface border border-primary rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full"
+                onClick={() => handleBubbleClick(seg.key)}
+                className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full cursor-pointer sm:cursor-default ${
+                  isMenuOpen
+                    ? 'border-primary-hover shadow-glow-primary/20'
+                    : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/20'
+                }`}
               >
+                {userContent && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className={`sticky top-2 float-right ml-2.5 -mr-1 -mt-0.5 z-10 transition-opacity duration-200 ${isMenuOpen
+                        ? 'opacity-100 pointer-events-auto'
+                        : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto'
+                      }`}
+                  >
+                    <MessageActionsMenu textContent={userContent} isUser={true} />
+                  </div>
+                )}
                 <div className="text-body text-surface leading-relaxed relative">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]} components={userMarkdownComponents}>
-                    {seg.content || ''}
+                  <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={userMarkdownComponents}>
+                    {userContent}
                   </ReactMarkdown>
                 </div>
               </div>
@@ -167,15 +201,31 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
             return (
               <div
                 key={seg.key}
+                onClick={() => !isStreamingActiveSegment && handleBubbleClick(seg.key)}
                 className={`
-                  relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed
+                  group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed
                   transition-all duration-300 fade-in
-                  bg-surface-overlay/90 border border-edge-raised text-text-primary rounded-tl-xs
-                  shadow-card backdrop-blur-sm w-fit max-w-full
+                  bg-surface-overlay/90 border text-text-primary rounded-tl-xs
+                  backdrop-blur-sm w-fit max-w-full cursor-pointer sm:cursor-default
+                  ${isMenuOpen
+                    ? 'border-primary/60 shadow-card-lg'
+                    : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
+                  }
                   ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''}
                 `}
               >
-                {/* Streaming glow: shimmer sweep across the newest text bubble */}
+                {!isStreamingActiveSegment && textContent && (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className={`sticky top-2 float-right ml-2.5 -mr-1 -mt-0.5 z-10 transition-opacity duration-200 ${isMenuOpen
+                        ? 'opacity-100 pointer-events-auto'
+                        : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto'
+                      }`}
+                  >
+                    <MessageActionsMenu textContent={textContent} isUser={false} />
+                  </div>
+                )}
+
                 {isStreamingActiveSegment && (
                   <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
                     <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-primary/8 to-transparent" />
@@ -190,7 +240,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                       components={markdownComponents}
                     />
                   ) : (
-                    <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
+                    <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={markdownComponents}>
                       {textContent}
                     </ReactMarkdown>
                   )}
@@ -202,15 +252,8 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           return null;
         })}
 
-        {/* Constant working state visible below streaming parts until inference finishes */}
-        {!isUser && isStreaming && (
-          <div className="flex items-center gap-1.5 py-1 text-text-muted font-mono text-caption fade-in">
-            <span className="font-semibold text-text-secondary">
-              {`Working (${elapsedSeconds}s)`}
-            </span>
-            <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
-          </div>
-        )}
+        {/* Inference duration timer */}
+        {!isUser && isStreaming && <InferenceTimer />}
       </div>
     </div>
   );
