@@ -10,6 +10,7 @@ This project uses **bun** as its runtime and package manager. Never use `npm`/`y
 |---------|--------|
 | `bun run dev` | Start Next.js dev server |
 | `bun run lint` | Run ESLint (`eslint .`) |
+| `bun run test` | Run unit & integration test suite (`bun test`) |
 | `bun run build` | Production build (`next build`) |
 | `bun run start` | Start production server |
 | `bun run db:migrate` | Run Better Auth `better_auth` schema PostgreSQL migration |

@@ -29,13 +29,13 @@ export class StringEditEngine {
     }
 
     const exactResult = this.applyExactMatch(source, searchString, replaceString);
-    if (exactResult.success) return exactResult;
+    if (exactResult.success || exactResult.error) return exactResult;
 
     const normalizedResult = this.applyNormalizedMatch(source, searchString, replaceString);
-    if (normalizedResult.success) return normalizedResult;
+    if (normalizedResult.success || normalizedResult.error) return normalizedResult;
 
     const anchorResult = this.applyAnchorMatch(source, searchString, replaceString);
-    if (anchorResult.success) return anchorResult;
+    if (anchorResult.success || anchorResult.error) return anchorResult;
 
     return {
       success: false,
