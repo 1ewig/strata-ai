@@ -3,8 +3,8 @@
 import React, { useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import SmoothStreamText from '@/components/chat/SmoothStreamText';
-import { createMarkdownComponents, MarkdownVariant } from '@/components/chat/create-markdown-components';
+import SmoothStreamText from './SmoothStreamText';
+import { createMarkdownComponents, MarkdownVariant } from './createMarkdownComponents';
 import { useCopyClipboard } from '@/hooks/useCopyClipboard';
 
 const REMARK_PLUGINS = [remarkGfm];

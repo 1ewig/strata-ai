@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
-import { X, Trash2, Eye, Code } from 'lucide-react';
+import { Eye, Code } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
-import { MAX_FILE_CHARS } from '@/lib/limits';
+import { MAX_FILE_CHARS, formatCharCount } from '@/lib/limits';
 import { detectLanguage, isMarkdownFile } from '@/lib/languages';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
@@ -14,6 +14,7 @@ import WorkspaceFileSelector from './WorkspaceFileSelector';
 import WorkspaceEditor from './WorkspaceEditor';
 import WorkspaceEmptyState from './WorkspaceEmptyState';
 import WorkspaceDrawerFooter from './WorkspaceDrawerFooter';
+import WorkspaceOverflowMenu from './WorkspaceOverflowMenu';
 
 /** Props for the WorkspaceDrawer component. */
 interface WorkspaceDrawerProps {
@@ -53,7 +54,7 @@ export default React.memo(function WorkspaceDrawer({
   const [fileToDelete, setFileToDelete] = useState<WorkspaceFile | null>(null);
   const [markdownViewMode, setMarkdownViewMode] = useState<'preview' | 'source'>('preview');
 
-  const { copied, copiedId, copy } = useCopyClipboard();
+  const { copied, copy } = useCopyClipboard();
 
   const handleStartEditing = () => {
     setFileName(activeFile?.name || '');
@@ -130,6 +131,20 @@ export default React.memo(function WorkspaceDrawer({
                 />
 
                 <div className="flex items-center gap-2 shrink-0">
+                  {isEditing && (
+                    <span
+                      className={`text-caption font-mono px-2.5 py-1 rounded-lg border transition-colors shadow-button ${
+                        isFileOverLimit
+                          ? 'text-danger bg-danger-soft/30 border-danger/40 font-semibold'
+                          : isFileWarning
+                          ? 'text-warning bg-warning-soft/20 border-warning/30 font-medium'
+                          : 'text-text-muted bg-surface-base border-edge-raised font-medium'
+                      }`}
+                    >
+                      {formatCharCount(contentValue.length, MAX_FILE_CHARS)} chars
+                    </span>
+                  )}
+
                   {activeFile && isMarkdown && !isEditing && activeFile.content && (
                     <div className="flex items-center bg-surface-base border border-edge-raised rounded-lg p-0.5 text-caption">
                       <button
@@ -161,25 +176,16 @@ export default React.memo(function WorkspaceDrawer({
                     </div>
                   )}
 
-                  {activeFile && (
-                    <button
-                      onClick={() => setFileToDelete(activeFile)}
-                      className="p-1.5 text-text-muted hover:text-danger hover:bg-danger-soft/30 active:scale-90 rounded-lg transition-all duration-150 cursor-pointer"
-                      title="Delete file"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                  {activeFile && !isEditing && (
+                    <WorkspaceOverflowMenu
+                      activeFile={activeFile}
+                      isEditing={isEditing}
+                      copied={copied}
+                      onCopy={() => copy(activeFile.content)}
+                      onStartEditing={handleStartEditing}
+                      onDeleteClick={() => setFileToDelete(activeFile)}
+                    />
                   )}
-
-                  <div className="w-px h-4 bg-edge-raised" />
-
-                  <button
-                    onClick={onClose}
-                    className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-elevated active:scale-90 rounded-lg transition-all duration-150 cursor-pointer"
-                    title="Close drawer"
-                  >
-                    <X className="w-4.5 h-4.5" />
-                  </button>
                 </div>
               </div>
 
@@ -236,20 +242,14 @@ export default React.memo(function WorkspaceDrawer({
               </div>
 
               {/* Drawer Footer */}
-              {activeFile && (
-                <WorkspaceDrawerFooter
-                  activeFile={activeFile}
-                  isEditing={isEditing}
-                  contentValue={contentValue}
-                  isFileOverLimit={isFileOverLimit}
-                  isFileWarning={isFileWarning}
-                  copied={copied}
-                  onCopy={() => copy(activeFile.content)}
-                  onStartEditing={handleStartEditing}
-                  onCancelEditing={() => setIsEditing(false)}
-                  onSaveEdit={handleSaveEdit}
-                />
-              )}
+              <WorkspaceDrawerFooter
+                activeFile={activeFile}
+                isEditing={isEditing}
+                isFileOverLimit={isFileOverLimit}
+                onClose={onClose}
+                onCancelEditing={() => setIsEditing(false)}
+                onSaveEdit={handleSaveEdit}
+              />
             </motion.div>
           </div>
         )}

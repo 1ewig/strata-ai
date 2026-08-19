@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Folder, Menu, Plus } from 'lucide-react';
+import { Menu, Plus, Folder } from 'lucide-react';
 import { motion } from 'motion/react';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MODELS } from '@/lib/models';
@@ -12,32 +12,40 @@ import {
   ConversationTokenMetrics,
 } from '@/lib/token-usage';
 import TokenUsagePopover from './TokenUsagePopover';
+import ModelSelectorMenu from './composer/ModelSelectorMenu';
 
 /** Props for the ChatHeader component. */
 interface ChatHeaderProps {
   title?: string;
-  files: WorkspaceFile[];
-  activeFileId: string | null;
+  files?: WorkspaceFile[];
+  activeFileId?: string | null;
   model?: string;
+  thinkingLevel?: string;
   tokenUsage?: ConversationTokenMetrics | null;
   onOpenFile?: (fileId: string) => void;
-  onOpenDrawer: () => void;
+  onOpenDrawer?: () => void;
   onOpenSidebar?: () => void;
   onNewChat: () => void;
+  onModelSelect?: (modelId: string) => void;
+  onThinkingLevelChange?: (level: string) => void;
 }
 
 /**
  * Sticky chat header with conversation title, active context window indicator badge
- * with separated hover/tap details popover, mobile sidebar toggle, and workspace files drawer button.
+ * with separated hover/tap details popover, model selector, desktop workspace files button,
+ * mobile sidebar toggle, and mobile new chat button.
  */
 export default React.memo(function ChatHeader({
   title,
   files,
   model,
+  thinkingLevel,
   tokenUsage,
   onOpenDrawer,
   onOpenSidebar,
   onNewChat,
+  onModelSelect,
+  onThinkingLevelChange,
 }: ChatHeaderProps) {
   // Context window popover state (desktop click/hover & mobile tap)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -115,7 +123,7 @@ export default React.memo(function ChatHeader({
       />
 
       {/* Right Side Buttons */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
         {/* Mobile New Chat Button (Creates a fresh conversation) */}
         <motion.button
           type="button"
@@ -123,32 +131,42 @@ export default React.memo(function ChatHeader({
           whileTap={{ scale: 0.92 }}
           transition={{ type: 'spring', stiffness: 450, damping: 25 }}
           onClick={onNewChat}
-          className="group md:hidden flex items-center justify-center p-2 text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 rounded-lg hover:bg-primary-soft-strong shadow-button transition-colors duration-150 cursor-pointer"
+          className="group md:hidden flex items-center justify-center p-2 rounded-xl border border-edge-raised hover:border-edge-hover bg-surface-raised/80 hover:bg-surface-hover text-text-primary shadow-button transition-all duration-150 cursor-pointer shrink-0 select-none"
           title="New chat"
           aria-label="New chat"
         >
-          <Plus className="w-4 h-4 transition-transform duration-250 group-hover:rotate-90 group-hover:scale-110" />
+          <Plus className="w-4 h-4 text-text-muted group-hover:text-text-primary transition-transform duration-200 group-hover:rotate-90" />
         </motion.button>
 
-        {/* Desktop Files Button (Opens Workspace Drawer) */}
-        <button
-          onClick={onOpenDrawer}
-          className="group hidden md:flex items-center gap-1.5 text-label text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary-soft-strong active:scale-95 shadow-button transition-all duration-150 font-medium cursor-pointer"
-          title="Open Workspace Files Drawer"
-        >
-          <Folder className="w-3.5 h-3.5 transition-transform duration-150 group-hover:scale-110" />
-          Files ({files.length})
-        </button>
+        {model && onModelSelect && onThinkingLevelChange && (
+          <ModelSelectorMenu
+            model={model}
+            thinkingLevel={thinkingLevel || ''}
+            onModelSelect={onModelSelect}
+            onThinkingLevelChange={onThinkingLevelChange}
+            dropDirection="down"
+          />
+        )}
 
-        {/* Mobile Files Icon Button (Opens Workspace Drawer) */}
-        <button
-          onClick={onOpenDrawer}
-          className="group md:hidden flex items-center justify-center p-2 text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 rounded-lg hover:bg-primary-soft-strong active:scale-95 shadow-button transition-all duration-150 cursor-pointer"
-          title={`Open Workspace Files Drawer (${files.length} files)`}
-          aria-label="Open Workspace Files Drawer"
-        >
-          <Folder className="w-4 h-4 transition-transform duration-150 group-hover:scale-110" />
-        </button>
+        {/* Desktop Files Drawer Button */}
+        {onOpenDrawer && (
+          <button
+            id="header-files-btn"
+            type="button"
+            onClick={onOpenDrawer}
+            className="hidden sm:flex items-center gap-1.5 p-2 sm:px-3 sm:py-1.5 rounded-xl border border-edge-raised hover:border-edge-hover bg-surface-raised/80 hover:bg-surface-hover text-text-primary shadow-button transition-all duration-150 active:scale-[0.98] cursor-pointer shrink-0 select-none group"
+            title={`Open Workspace Files Drawer (${files?.length ?? 0} ${files?.length === 1 ? 'file' : 'files'})`}
+            aria-label="Open Workspace Files Drawer"
+          >
+            <Folder className="w-4 h-4 text-text-muted group-hover:text-primary transition-transform duration-150 group-hover:scale-105" />
+            <span className="text-caption sm:text-label font-semibold text-text-primary">Files</span>
+            {(files?.length ?? 0) > 0 && (
+              <span className="text-micro px-1.5 py-0.5 rounded-md bg-surface-base border border-edge-default text-primary font-medium shrink-0">
+                {files?.length}
+              </span>
+            )}
+          </button>
+        )}
       </div>
     </header>
   );

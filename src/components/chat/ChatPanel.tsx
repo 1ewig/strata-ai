@@ -3,9 +3,8 @@
 import React from 'react';
 import { Globe, FileText, Compass } from 'lucide-react';
 import { motion } from 'motion/react';
-import ChatBubble from '@/components/chat/ChatBubble';
-import CompactionDivider from '@/components/chat/CompactionDivider';
-import { QuotaErrorCard } from '@/components/chat/QuotaErrorCard';
+import ChatBubble from '@/components/chat/message/ChatBubble';
+import CompactionDivider from '@/components/chat/message/CompactionDivider';
 import { StrataIcon } from '@/components/ui/strata-icon';
 
 /** Quick-action suggestion chips for the Dribbble-style hero empty state. */
@@ -43,11 +42,6 @@ interface ChatPanelProps {
   isLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   onOpenDrawer?: () => void;
-  quotaError?: {
-    message: string;
-    retryAfter?: number;
-  } | null;
-  onDismissQuotaError?: () => void;
   chatId?: string;
   isNewChat?: boolean;
   chatInputNode?: React.ReactNode;
@@ -55,14 +49,12 @@ interface ChatPanelProps {
 
 /**
  * Orchestrates the chat message area: an empty-state hero, the message
- * bubbles, a quota error card, a typing indicator, and the scroll anchor.
+ * bubbles, a typing indicator, and the scroll anchor.
  *
  * @param messages - Conversation messages rendered as ChatBubble rows.
  * @param isLoading - Shows the typing indicator while the assistant responds.
  * @param messagesEndRef - Scroll anchor appended after the last message.
  * @param onOpenDrawer - Passed through to bubbles for tool card drawer actions.
- * @param quotaError - Quota exhaustion banner shown above the composer.
- * @param onDismissQuotaError - Dismisses the quota error card when called.
  * @param chatId - Active conversation ID used to pick a stable welcome greeting.
  * @param isNewChat - True when no messages exist, centering the composer in the hero.
  * @param chatInputNode - The ChatInput node rendered in the centered hero.
@@ -72,8 +64,6 @@ export default React.memo(function ChatPanel({
   isLoading,
   messagesEndRef,
   onOpenDrawer,
-  quotaError,
-  onDismissQuotaError,
   chatId,
   isNewChat,
   chatInputNode,
@@ -235,7 +225,7 @@ export default React.memo(function ChatPanel({
   return (
     <div className="pt-4 space-y-4">
       {/* Fallback empty state if isNewChat flag is not explicitly passed */}
-      {messages.length === 0 && !isLoading && !quotaError && (
+      {messages.length === 0 && !isLoading && (
         <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
           <StrataIcon className="w-12 h-12" />
           <h3 className="text-heading font-semibold text-text-primary font-display">Ready to help with your workspace</h3>
@@ -260,16 +250,8 @@ export default React.memo(function ChatPanel({
         );
       })}
 
-      {quotaError && (
-        <QuotaErrorCard
-          key={`${quotaError.retryAfter ?? 0}-${quotaError.message}`}
-          error={quotaError}
-          onDismiss={onDismissQuotaError}
-        />
-      )}
-
       {/* Standalone typing bubble before the first assistant tokens arrive. */}
-      {!quotaError && isLoading && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
+      {isLoading && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
         <div className="flex items-start gap-3.5 fade-in">
           <div className="hidden sm:flex shrink-0 mt-0.5">
             <StrataIcon className="w-7 h-7" />

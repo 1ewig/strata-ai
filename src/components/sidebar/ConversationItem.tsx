@@ -130,11 +130,10 @@ function ConversationItem({
   return (
     <div
       style={{ zIndex: isMenuOpen ? 50 : 1 }}
-      className={`group relative flex items-center rounded-xl text-label transition-all duration-150 ${
-        isActive
+      className={`group relative flex items-center rounded-xl text-label transition-all duration-150 ${isActive
           ? 'bg-primary-soft text-text-bright font-medium'
           : 'text-text-muted hover:bg-surface-hover/70 hover:text-text-primary'
-      }`}
+        }`}
     >
       <Link
         href={`/chat-id/${conv.id}`}
@@ -142,9 +141,8 @@ function ConversationItem({
         className="flex-1 min-w-0 flex items-center gap-2.5 px-3 py-2.5"
       >
         <MessageSquare
-          className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-            isActive ? 'text-primary' : 'text-text-faint group-hover:text-text-muted'
-          }`}
+          className={`w-3.5 h-3.5 shrink-0 transition-colors ${isActive ? 'text-primary' : 'text-text-faint group-hover:text-text-muted'
+            }`}
         />
         <span className="truncate flex-1">{conv.title || 'Untitled Chat'}</span>
         {conv.pinned && (
@@ -159,21 +157,21 @@ function ConversationItem({
       >
         <button
           type="button"
+          aria-label="Chat options"
+          aria-expanded={isMenuOpen}
+          aria-haspopup="true"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             onToggleMenu(conv.id);
           }}
-          className={`p-1.5 rounded-lg transition-all duration-150 active:scale-90 cursor-pointer ${
-            isMenuOpen
-              ? 'text-text-primary bg-surface-elevated opacity-100'
-              : 'opacity-100 md:opacity-0 md:group-hover:opacity-100 text-text-muted hover:text-text-primary hover:bg-surface-elevated'
-          }`}
+          className={`p-1.5 text-text-muted hover:text-text-primary active:scale-95 rounded-lg border transition-all duration-150 cursor-pointer ${isMenuOpen
+              ? 'bg-surface-elevated text-text-primary border-edge-hover shadow-button opacity-100'
+              : 'hover:bg-surface-elevated border-transparent hover:border-edge-raised opacity-100 md:opacity-0 md:group-hover:opacity-100'
+            }`}
           title="Chat options"
-          aria-expanded={isMenuOpen}
-          aria-haspopup="true"
         >
-          <MoreVertical className="w-3.5 h-3.5" />
+          <MoreVertical className="w-4 h-4" />
         </button>
 
         {/* Overflow Dropdown Popover */}
@@ -182,9 +180,8 @@ function ConversationItem({
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
             style={{ zIndex: 100 }}
-            className={`absolute right-0 ${
-              isNearBottom ? 'bottom-full mb-1.5 origin-bottom-right' : 'top-full mt-1.5 origin-top-right'
-            } w-36 bg-surface-elevated border border-edge-hover rounded-xl shadow-card-lg p-1 text-caption animate-in fade-in zoom-in-95 duration-100`}
+            className={`absolute right-0 ${isNearBottom ? 'bottom-full mb-1.5 origin-bottom-right' : 'top-full mt-1.5 origin-top-right'
+              } w-36 bg-surface-elevated border border-edge-hover rounded-xl shadow-card-lg p-1 text-caption animate-in fade-in zoom-in-95 duration-100`}
           >
             <button
               type="button"

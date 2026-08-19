@@ -4,6 +4,7 @@ import {
   MODEL_THINKING_LEVELS,
   getInitialModel,
   getModelPricing,
+  getModelSupportsVision,
   getStoredThinkingLevel,
   getValidThinkingLevelForModel,
 } from "@/lib/models";
@@ -127,10 +128,34 @@ describe("getInitialModel", () => {
   });
 });
 
+describe("getModelSupportsVision", () => {
+  it("flags Google-hosted models as vision-capable", () => {
+    expect(getModelSupportsVision("gemini-3.5-flash-lite")).toBe(true);
+    expect(getModelSupportsVision("gemini-3.1-flash-lite")).toBe(true);
+    expect(getModelSupportsVision("gemini-3-flash-preview")).toBe(true);
+    expect(getModelSupportsVision("gemma-4-31b-it")).toBe(true);
+    expect(getModelSupportsVision("gemma-4-26b-a4b-it")).toBe(true);
+  });
+
+  it("flags the Fireworks DeepSeek model as text-only", () => {
+    expect(getModelSupportsVision("accounts/fireworks/models/deepseek-v4-flash-0731")).toBe(false);
+  });
+
+  it("defaults unknown model ids to vision-capable", () => {
+    expect(getModelSupportsVision("not-in-catalog")).toBe(true);
+  });
+});
+
 describe("model catalog invariants", () => {
   it("declares a provider for every model", () => {
     for (const m of MODELS) {
       expect(["google", "fireworks"]).toContain(m.provider ?? "google");
+    }
+  });
+
+  it("declares vision support explicitly for every model", () => {
+    for (const m of MODELS) {
+      expect(typeof m.supportsVision).toBe("boolean");
     }
   });
 

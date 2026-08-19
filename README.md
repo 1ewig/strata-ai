@@ -85,33 +85,37 @@ The assistant runs multi-step agentic loops and can invoke 8 schema-validated to
 - **Surgical edits:** `editFile` routes through a 3-tier string-edit engine (exact → whitespace-normalized → 2-point anchor-bounded matching) so the agent makes precise changes without rewriting whole files.
 - **Multi-language support:** 24+ languages with automatic language detection from the filename (HTML, TypeScript, JavaScript, JSX, TSX, CSS, SCSS, JSON, Python, SQL, Shell, YAML, Markdown, Rust, Go, C/C++, Java, Kotlin, PHP, Ruby, Swift, XML, Dockerfile, plain text).
 
-### 2. Streaming UX and live workspace updates
+### 2. Image attachments with vision input
+
+Attach up to 4 images (JPEG, PNG, WebP, or GIF) to any message on a vision-capable model. Images are validated and compressed entirely in the browser — a canvas pipeline downscales the longest edge to 1,280 px and steps quality down until the image fits a compact budget — so nothing heavy ever reaches the API. Gemini models accept attachments; DeepSeek V4 Flash is text-only, so the attach button is hidden and any image history is gracefully stripped on replay. The server mirrors the client gates (count, MIME whitelist, and size) with a 400 backstop, and attached images render as a thumbnail row in the chat bubble.
+
+### 3. Streaming UX and live workspace updates
 
 Tokens arrive word-paced (`smoothStream`, 25 ms) so replies read like continuous prose. While the model works, the UI streams its reasoning inside a collapsible "Thinking" accordion and shows compact tool-execution cards for each call; once a turn finishes, all pre-answer output folds into a single collapsible "Worked for Xs" group, leaving just the final answer bubble.
 
 File changes stream in while the model is still working: workspace tools emit custom `data-workspace` Server-Sent Events (SSE) over the AI SDK UI-message stream, and the client updates the Workspace Drawer and IndexedDB in real time as each tool finishes, without waiting for the whole response to conclude.
 
-### 3. Workspace Studio Drawer
+### 4. Workspace Studio Drawer
 
-A slide-over panel next to the chat gives you a file switcher with language tags, a line-numbered, syntax-highlighted code viewer (PrismJS), a raw text editor for manual edits, an empty-state canvas, and a footer with copy-to-clipboard, edit-mode toggle, and character counts. Files can be previewed as Markdown or edited as raw text.
+A slide-over panel next to the chat gives you a file switcher with language tags, a line-numbered, syntax-highlighted code viewer (PrismJS), a raw text editor with a live header character counter, an empty-state canvas, and a footer with copy-to-clipboard, edit-mode toggle, and file metadata. Files can be previewed as Markdown or edited as raw text.
 
-### 4. Context compaction (`/compact`)
+### 5. Context compaction (`/compact`)
 
 A dedicated endpoint distills the conversation and workspace state into a structured summary stored as an assistant message. Compaction always runs on `gemini-3.1-flash-lite` with high reasoning effort and a 3,500-token output cap, regardless of the active chat model. The summary follows a fixed section outline (Current Goal, Key Decisions & Constraints, Progress So Far, Open Questions / TODOs, Important Facts & Artifacts, Workspace State, Recent Trajectory, Continuation Notes). History before the latest summary is pruned server-side, and the active context-window meter resets to a small baseline plus the summary's real output.
 
-### 5. Context-window accounting and guard
+### 6. Context-window accounting and guard
 
 The server attaches provider-reported token usage to finished messages. The chat header shows a live "active tokens / context window" meter (all models use a 128k window) with a popover breaking down input tokens, output tokens, headroom, estimated USD cost, and per-model expense. When active tokens cross the model's context window, further sends are blocked and the composer offers an inline "Compact history" action.
 
-### 6. Local-first persistence
+### 7. Local-first persistence
 
 Chat histories, workspace files, and metadata persist client-side via Dexie (IndexedDB, schema v5) with per-user isolation. Conversations survive reloads and network drops, and workspace file state never needs a server round trip.
 
-### 7. Authentication and message quotas
+### 8. Authentication and message quotas
 
 Better Auth 1.6 on Supabase PostgreSQL handles email/password sessions, with a Next.js proxy guarding signed-in routes. A sliding-window quota (10 messages per 5 hours, 50 per 7 days) is enforced server-side per user and surfaced in the UI as a live "X left" ring and countdown error cards; the root layout hydrates the initial quota server-side to avoid a client fetch waterfall.
 
-### 8. Milo design system
+### 9. Milo design system
 
 A custom design system defined in `@theme` in `src/app/globals.css`: a warm studio-linen light theme and a warm espresso dark theme, toggled via the `.dark` class and `html[data-theme="dark"]` attribute. All colors, shadows, radii, and type sizes use semantic tokens (fiery-orange primary, amber secondary, `text-micro` through `text-display`), with spring-based micro-interactions via `motion`.
 
@@ -178,6 +182,7 @@ Highlights worth knowing:
 - **Live content via SSE, reconciliation on finish.** File content persists mid-stream through `data-workspace` events; on `onFinish`, `lib/ai/message-extractor.ts` reconciles deletions and metadata-only summaries into the conversation's file list.
 - **Cross-provider sanitization.** Provider metadata from a previous provider (e.g. a stored Gemini thought signature) is pruned before history is replayed into a Fireworks request.
 - **Server-side history pruning.** Both endpoints slice the message list to start at the latest compaction summary, so the model never re-reads pre-summary history.
+- **Multimodal with graceful fallback.** Vision-capable Gemini models consume image attachments (validated + compressed client-side); text-only DeepSeek hides the attach button, and the agent runner strips image parts from replayed history so conversations survive provider switches.
 
 For a deep dive, read [docs/SUMMARY.md](docs/SUMMARY.md), the canonical system-context and architecture guide.
 
@@ -204,19 +209,20 @@ All tool implementations live in `src/lib/ai/tools/`.
 
 All models share a 128k-token context window (131,072 tokens) and 64k maximum output (65,536 tokens).
 
-| Model ID | Label | Provider | Thinking Levels | Default Level |
-|----------|-------|----------|-----------------|---------------|
-| `gemini-3.5-flash-lite` | Gemini 3.5 Flash Lite | Google | minimal, low, medium, high | low |
-| `gemini-3.1-flash-lite` | Gemini 3.1 Flash Lite | Google | minimal, high | minimal |
-| `gemini-3-flash-preview` | Gemini 3 Flash | Google | minimal, low, medium, high | high |
-| `gemma-4-31b-it` | Gemma 4 31B | Google | none | — |
-| `gemma-4-26b-a4b-it` | Gemma 4 26B | Google | none | — |
-| `accounts/fireworks/models/deepseek-v4-flash-0731` | DeepSeek V4 Flash | Fireworks | low, high | high |
+| Model ID | Label | Provider | Vision | Thinking Levels | Default Level |
+|----------|-------|----------|--------|-----------------|---------------|
+| `gemini-3.5-flash-lite` | Gemini 3.5 Flash Lite | Google | Yes | minimal, low, medium, high | low |
+| `gemini-3.1-flash-lite` | Gemini 3.1 Flash Lite | Google | Yes | minimal, high | minimal |
+| `gemini-3-flash-preview` | Gemini 3 Flash | Google | Yes | minimal, low, medium, high | high |
+| `gemma-4-31b-it` | Gemma 4 31B | Google | Yes | none | — |
+| `gemma-4-26b-a4b-it` | Gemma 4 26B | Google | Yes | none | — |
+| `accounts/fireworks/models/deepseek-v4-flash-0731` | DeepSeek V4 Flash | Fireworks | No | low, high | high |
 
 Notes:
 
 - Context compaction is hardwired to `gemini-3.1-flash-lite` with `high` thinking effort.
 - DeepSeek V4 Flash's reasoning maps to Fireworks' `reasoning_effort` (the model also supports a `max` effort, but the AI SDK's top-level reasoning option cannot express it, so the app exposes only low/high).
+- Vision-capable models accept image attachments (up to 4 per message); DeepSeek is text-only, so the composer hides the attach button and image parts are stripped from replayed history on that provider.
 - Model and thinking-level preferences persist in `localStorage`; a conversation's own `model`/`thinkingLevel` values take priority when set.
 
 ---
@@ -228,6 +234,10 @@ Centralized in `src/lib/limits.ts`:
 | Constraint | Limit |
 |------------|-------|
 | Message character limit | 2,000 per user turn |
+| Images per message | 4 (JPEG, PNG, WebP, GIF) |
+| Image input size | 5 MB per image (rejected at pick time) |
+| Image output size | 1.5 MB per image (client-compressed) |
+| Image dimension | 1,280 px long edge (client-compressed) |
 | Per-file character limit | 10,000 per workspace document |
 | Total workspace character limit | 50,000 across all files |
 | Max files per workspace | 3 active documents |

@@ -2,7 +2,7 @@
 
 import React, { useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, Loader2, XCircle, type LucideIcon } from 'lucide-react';
-import { resolveToolDisplay, type ToolCardProps } from './tools/resolver';
+import { resolveToolDisplay, type ToolCardProps } from '../tools/resolver';
 
 /**
  * Card rendering a single AI tool invocation: status icon and badge in the header, plus a
@@ -94,7 +94,7 @@ function ToolCallCard({
 
       {/* Expanded content showing minimal summary */}
       {isOpen && (
-        <div className="pl-5 pt-0.5 pb-1 text-caption text-text-secondary">
+        <div className="pl-5 pt-0.5 pb-1 text-caption text-text-secondary select-text cursor-text">
           {summary}
         </div>
       )}

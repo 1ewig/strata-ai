@@ -151,4 +151,60 @@ describe("flattenMessageSegments", () => {
     });
     expect(segments).toEqual([{ type: "user-text", content: "Hello world", key: "user-text" }]);
   });
+
+  it("collects image file parts into a user-images segment before the text", () => {
+    const segments = flattenMessageSegments({
+      role: "user",
+      parts: [
+        { type: "file", mediaType: "image/png", filename: "shot.png", url: "data:image/png;base64,x" },
+        { type: "text", text: "What is in this screenshot?" },
+        { type: "file", mediaType: "image/jpeg", filename: "diagram.jpg", url: "data:image/jpeg;base64,y" },
+      ],
+    });
+    expect(segments).toHaveLength(2);
+    expect(segments[0]).toEqual({
+      type: "user-images",
+      key: "user-images",
+      images: [
+        { url: "data:image/png;base64,x", filename: "shot.png", mediaType: "image/png" },
+        { url: "data:image/jpeg;base64,y", filename: "diagram.jpg", mediaType: "image/jpeg" },
+      ],
+    });
+    expect(segments[1]).toEqual({ type: "user-text", content: "What is in this screenshot?", key: "user-text" });
+  });
+
+  it("renders an image-only user message as a single user-images segment", () => {
+    const segments = flattenMessageSegments({
+      role: "user",
+      parts: [
+        { type: "file", mediaType: "image/webp", filename: "pic.webp", url: "data:image/webp;base64,z" },
+      ],
+    });
+    expect(segments).toEqual([
+      {
+        type: "user-images",
+        key: "user-images",
+        images: [{ url: "data:image/webp;base64,z", filename: "pic.webp", mediaType: "image/webp" }],
+      },
+    ]);
+  });
+
+  it("ignores non-image file parts in user messages", () => {
+    const segments = flattenMessageSegments({
+      role: "user",
+      parts: [
+        { type: "file", mediaType: "application/pdf", filename: "doc.pdf", url: "data:application/pdf;base64,z" },
+        { type: "text", text: "hi" },
+      ],
+    });
+    expect(segments).toEqual([{ type: "user-text", content: "hi", key: "user-text" }]);
+  });
+
+  it("uses a filename fallback for image parts without one", () => {
+    const segments = flattenMessageSegments({
+      role: "user",
+      parts: [{ type: "file", mediaType: "image/gif", url: "data:image/gif;base64,g" }],
+    });
+    expect(segments[0].images?.[0].filename).toBe("Attached image");
+  });
 });

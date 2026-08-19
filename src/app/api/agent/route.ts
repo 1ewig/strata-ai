@@ -1,5 +1,6 @@
 import { agentRequestBodySchema } from "@/lib/schemas";
-import { MAX_MESSAGE_CHARS, buildRateLimitErrorMessage } from "@/lib/limits";
+import { MAX_MESSAGE_CHARS, MAX_IMAGES_PER_MESSAGE, buildRateLimitErrorMessage } from "@/lib/limits";
+import { countImageParts, findImagePartViolations } from "@/lib/image-utils";
 import { createMutableWorkspace } from "@/lib/ai/workspace";
 import { runAgentResponse } from "@/lib/ai/agent-runner";
 import { sliceMessagesAfterCompaction } from "@/lib/ai/message-extractor";
@@ -91,6 +92,31 @@ export async function POST(req: Request) {
       }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     );
+  }
+
+  // Validate image attachments on the latest user message: per-message count,
+  // MIME whitelist, and data-URL size gate (client compresses before sending,
+  // this is the server-side backstop).
+  const lastUserParts = (lastUserMsg as { parts?: unknown[] } | null)?.parts;
+  if (lastUserMsg && Array.isArray(lastUserParts)) {
+    const imageCount = countImageParts(lastUserParts);
+    if (imageCount > MAX_IMAGES_PER_MESSAGE) {
+      return new Response(
+        JSON.stringify({
+          error: `Message exceeds maximum of ${MAX_IMAGES_PER_MESSAGE} images per message.`,
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    const violations = findImagePartViolations(lastUserParts);
+    if (violations.length > 0) {
+      return new Response(
+        JSON.stringify({
+          error: violations.map((v) => v.reason).join(" "),
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
   }
 
   // Clamp the requested step limit to the 1-30 range, defaulting to 25.

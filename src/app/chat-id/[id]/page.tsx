@@ -42,11 +42,31 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const { isDark, toggle: toggleTheme } = useTheme();
   // Anchor div passed to ChatPanel for the message list scroll position.
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const composerContainerRef = useRef<HTMLDivElement>(null);
+  const [composerHeight, setComposerHeight] = useState(176);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem('strata_sidebar_open') === 'true';
     }
     return false;
+  });
+
+  // Dynamically sync bottom padding of the chat content with floating composer height changes
+  React.useEffect(() => {
+    const el = composerContainerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const height = entry.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight;
+        if (height > 0) {
+          setComposerHeight(Math.ceil(height));
+        }
+      }
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
   });
 
   // Redirect unauthenticated visitors to auth, preserving the return URL.
@@ -69,8 +89,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     isLoading,
     isCompacting,
     rateLimitData,
-    quotaError,
-    clearQuotaError,
     handleSendMessage,
     handleTriggerCompaction,
     handleStop,
@@ -138,15 +156,14 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
       isLoading={isLoading}
       isCompacting={isCompacting}
       model={model}
-      thinkingLevel={thinkingLevel}
-      onModelSelect={handleModelSelect}
-      onThinkingLevelChange={handleThinkingLevelChange}
       rateLimitData={rateLimitData}
       isContextWindowExhausted={isContextWindowExhausted}
+      filesCount={files.length}
+      onOpenDrawer={handleOpenDrawer}
     />
   );
 
-  const isNewChat = displayMessages.length === 0 && !isLoading && !quotaError;
+  const isNewChat = displayMessages.length === 0 && !isLoading;
 
   return (
     <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
@@ -182,11 +199,14 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               files={files}
               activeFileId={activeFileId}
               model={model}
+              thinkingLevel={thinkingLevel}
               tokenUsage={tokenUsage}
               onOpenFile={handleOpenFile}
               onOpenDrawer={handleOpenDrawer}
               onOpenSidebar={handleOpenSidebar}
               onNewChat={handleNewChat}
+              onModelSelect={handleModelSelect}
+              onThinkingLevelChange={handleThinkingLevelChange}
             />
           );
         })()}
@@ -194,14 +214,15 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
         <StickToBottom className="flex-1 min-h-0" resize="auto" initial="instant">
           {(context) => (
             <>
-              <StickToBottom.Content className={`max-w-4xl w-full mx-auto px-4 ${isNewChat ? 'min-h-full flex flex-col justify-center py-6' : 'pb-44'}`}>
+              <StickToBottom.Content
+                className={`max-w-4xl w-full mx-auto px-4 ${isNewChat ? 'min-h-full flex flex-col justify-center py-6' : ''}`}
+                style={!isNewChat ? { paddingBottom: `${composerHeight}px` } : undefined}
+              >
                 <ChatPanel
                   messages={displayMessages}
                   isLoading={isLoading}
                   messagesEndRef={messagesEndRef}
                   onOpenDrawer={handleOpenDrawer}
-                  quotaError={quotaError}
-                  onDismissQuotaError={clearQuotaError}
                   chatId={chatId}
                   isNewChat={isNewChat}
                   chatInputNode={chatInputNode}
@@ -209,7 +230,10 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               </StickToBottom.Content>
 
               {!isNewChat && (
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-12 pb-4 px-4 pointer-events-none z-30 animate-slide-up">
+                <div
+                  ref={composerContainerRef}
+                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-12 pb-4 px-4 pointer-events-none z-30 animate-slide-up"
+                >
                   <div className="relative max-w-4xl mx-auto pointer-events-auto">
                     {/* Floating button appears when scrolled up - anchored cleanly above ChatInput */}
                     {!context.isAtBottom && (

@@ -1,27 +1,35 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ArrowUp, AlertCircle, Square, Sparkles } from 'lucide-react';
-import { MAX_MESSAGE_CHARS, buildQuotaError } from '@/lib/limits';
-import ModelSelectorMenu from './ModelSelectorMenu';
-import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './SlashCommandMenu';
+import { MAX_MESSAGE_CHARS, MAX_IMAGES_PER_MESSAGE, buildQuotaError } from '@/lib/limits';
+import { getModelSupportsVision } from '@/lib/models';
+import {
+  processImageFile,
+  validateImageFile,
+  type ProcessedImage,
+} from '@/lib/image-utils';
+import AttachmentPreviews from './composer/AttachmentPreviews';
+import ComposerStatusRow from './composer/ComposerStatusRow';
+import ComposerToolbar from './composer/ComposerToolbar';
+import DropZoneOverlay from './composer/DropZoneOverlay';
+import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './composer/SlashCommandMenu';
+import { useComposerFileDrop } from './composer/useComposerFileDrop';
 
 /** Props for the ChatInput composer. */
 interface ChatInputProps {
   chatId?: string;
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, images?: ProcessedImage[]) => void;
   onTriggerCompaction?: () => void;
   onStop?: () => void;
   isLoading: boolean;
   isCompacting?: boolean;
   model: string;
-  thinkingLevel: string;
-  onModelSelect: (modelId: string) => void;
-  onThinkingLevelChange: (level: string) => void;
   rateLimitData?: {
     remaining5h: number;
     remainingWeek: number;
     retryAfter?: number;
   } | null;
   isContextWindowExhausted?: boolean;
+  filesCount?: number;
+  onOpenDrawer?: () => void;
 }
 
 /** Available placeholder prompts for the chat input composer. */
@@ -50,8 +58,10 @@ function getRandomPlaceholderIndex(excludeIndex?: number): number {
 }
 
 /**
- * Renders the message composer: auto-growing textarea, slash command popup,
- * model/thinking-level selector, and send button with floating island aesthetics.
+ * Renders the message composer orchestrator: owns all input state and handlers,
+ * and composes the slash command popup, status row (compacting/blocked/textarea),
+ * pending image attachment previews, and the bottom toolbar (attach, files
+ * drawer, send/stop) with floating island aesthetics.
  */
 export default React.memo(function ChatInput({
   chatId,
@@ -61,14 +71,16 @@ export default React.memo(function ChatInput({
   isLoading,
   isCompacting = false,
   model,
-  thinkingLevel,
-  onModelSelect,
-  onThinkingLevelChange,
   rateLimitData: rateLimitDataProp,
   isContextWindowExhausted = false,
+  filesCount = 0,
+  onOpenDrawer,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
+  const [attachedImages, setAttachedImages] = useState<ProcessedImage[]>([]);
+  const [attachError, setAttachError] = useState<string | null>(null);
   const [placeholderIndex, setPlaceholderIndex] = useState(() => getRandomPlaceholderIndex());
   const prevChatIdRef = useRef(chatId);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
@@ -87,6 +99,12 @@ export default React.memo(function ChatInput({
   const isQuotaExhausted = rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
   // Sending is also blocked once cumulative usage crosses the model's context window or during compaction.
   const isBlocked = isQuotaExhausted || isContextWindowExhausted || isCompacting;
+
+  // The active model must be vision-capable for image attachments.
+  const supportsVision = getModelSupportsVision(model);
+  const isImageCapReached = attachedImages.length >= MAX_IMAGES_PER_MESSAGE;
+  const isAttachDisabled =
+    !supportsVision || isLoading || isBlocked || isImageCapReached || isCompacting;
 
   // Canonical quota-exhausted copy (from buildQuotaError) with a retry hint.
   const blockedQuotaCopy = React.useMemo(() => {
@@ -117,6 +135,75 @@ export default React.memo(function ChatInput({
   /** Keeps the input state in sync with the textarea value. */
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
+  };
+
+  /** Appends newly validated and processed image attachments up to the message cap. */
+  const handleImagesAttached = (newImages: ProcessedImage[]) => {
+    setAttachedImages((prev) => [...prev, ...newImages].slice(0, MAX_IMAGES_PER_MESSAGE));
+  };
+
+  // Drag-and-drop & clipboard paste hook for seamless image attachment
+  const { isDraggingOver, dragHandlers } = useComposerFileDrop({
+    supportsVision,
+    isAttachDisabled,
+    attachedCount: attachedImages.length,
+    maxImages: MAX_IMAGES_PER_MESSAGE,
+    onImagesAttached: handleImagesAttached,
+    onError: setAttachError,
+  });
+
+  /**
+   * Validates and compresses selected image files, appending them to the
+   * pending-attachment queue up to the per-message cap. Invalid or oversized
+   * files surface an inline error without disturbing existing attachments.
+   */
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length === 0) return;
+
+    setAttachError(null);
+    const availableSlots = MAX_IMAGES_PER_MESSAGE - attachedImages.length;
+    if (availableSlots <= 0) {
+      setAttachError(`Maximum of ${MAX_IMAGES_PER_MESSAGE} images per message reached.`);
+      return;
+    }
+
+    const filesToProcess = files.slice(0, availableSlots);
+    if (files.length > availableSlots) {
+      setAttachError(
+        `Only ${availableSlots} image${availableSlots === 1 ? '' : 's'} could be attached (limit: ${MAX_IMAGES_PER_MESSAGE}).`
+      );
+    }
+
+    const next: ProcessedImage[] = [];
+    for (const file of filesToProcess) {
+      const validationError = validateImageFile(file);
+      if (validationError) {
+        setAttachError(validationError);
+        continue;
+      }
+      try {
+        next.push(await processImageFile(file));
+      } catch {
+        setAttachError(`Could not process "${file.name}".`);
+      }
+    }
+    if (next.length > 0) {
+      handleImagesAttached(next);
+    }
+  };
+
+  /** Removes a pending attachment by index. */
+  const handleRemoveImage = (index: number) => {
+    setAttachedImages((prev) => prev.filter((_, i) => i !== index));
+    setAttachError(null);
+  };
+
+  /** Opens the hidden file picker when the attach button is enabled. */
+  const handleAttachClick = () => {
+    if (isAttachDisabled || !fileInputRef.current) return;
+    fileInputRef.current.click();
   };
 
   // Listen for suggestion chip clicks from the empty state
@@ -159,6 +246,7 @@ export default React.memo(function ChatInput({
   /**
    * Validates the trimmed input against the loading/quota/limit guards,
    * submits the message or command, and clears the composer on success.
+   * Image-only messages are allowed (text may be empty when images are attached).
    */
   const handleSend = () => {
     const text = inputValue.trim();
@@ -168,9 +256,12 @@ export default React.memo(function ChatInput({
       return;
     }
 
-    if (text && !isLoading && !isBlocked && !isCharOverLimit) {
-      onSendMessage(text);
+    const hasImages = attachedImages.length > 0;
+    if ((text || hasImages) && !isLoading && !isBlocked && !isCharOverLimit) {
+      onSendMessage(text, hasImages ? attachedImages : undefined);
       setInputValue('');
+      setAttachedImages([]);
+      setAttachError(null);
     }
   };
 
@@ -205,6 +296,8 @@ export default React.memo(function ChatInput({
     }
   };
 
+  const hasContent = inputValue.trim().length > 0 || attachedImages.length > 0;
+
   return (
     <form
       onSubmit={(e) => {
@@ -227,105 +320,83 @@ export default React.memo(function ChatInput({
       />
 
       <div
-        className={`flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${isCompacting
+        {...dragHandlers}
+        className={`relative flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${isCompacting
           ? 'border-primary/40 bg-primary-soft/10'
           : isBlocked
             ? 'border-danger/40 bg-danger-soft/20'
-            : 'border-edge-raised hover:border-primary/60 focus-within:border-primary/60 focus-within:shadow-glow-primary/20'
+            : isDraggingOver
+              ? 'border-primary shadow-glow-primary/30 ring-2 ring-primary/20'
+              : 'border-edge-raised hover:border-primary/60 focus-within:border-primary/60 focus-within:shadow-glow-primary/20'
           } rounded-2xl md:rounded-3xl p-3 sm:p-4 transition-all shadow-card`}
       >
-        {/* Row 1: Text Field Input, Compacting Notice, or Blocking Warning */}
-        {isCompacting ? (
-          <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-primary text-label font-medium animate-in fade-in">
-            <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
-            <span>Compacting conversation context... Please wait.</span>
-          </div>
-        ) : isBlocked ? (
-          <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in flex-wrap">
-            <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
-            <span>
-              {isContextWindowExhausted
-                ? 'Context window reached.'
-                : blockedQuotaCopy}
-            </span>
-            {isContextWindowExhausted && onTriggerCompaction && (
-              <button
-                type="button"
-                onClick={onTriggerCompaction}
-                disabled={isLoading || isCompacting}
-                className="underline hover:no-underline font-semibold cursor-pointer disabled:opacity-50 active:scale-95 transition-transform duration-150"
-                title="Compact conversation history to reclaim context space"
-              >
-                Compact history
-              </button>
-            )}
-          </div>
-        ) : (
-          <textarea
-            ref={textareaRef}
-            id="chat-input-field"
-            rows={1}
-            disabled={isLoading}
-            maxLength={MAX_MESSAGE_CHARS}
-            placeholder={PLACEHOLDER_PROMPTS[placeholderIndex]}
-            value={inputValue}
-            onChange={handleInput}
-            onKeyDown={handleKeyDown}
-            className="w-full bg-transparent text-text-primary placeholder-text-muted border-none text-label sm:text-body focus:outline-none resize-none min-h-[28px] max-h-48 py-1 focus:ring-0 disabled:opacity-50"
+        {/* Floating Drop Zone Overlay: illuminated on dragover */}
+        <DropZoneOverlay
+          isVisible={isDraggingOver}
+          isAttachDisabled={isAttachDisabled}
+          disabledReason={
+            !supportsVision
+              ? 'Selected model does not support images'
+              : isImageCapReached
+                ? `Maximum of ${MAX_IMAGES_PER_MESSAGE} images reached`
+                : 'Image attachment unavailable'
+          }
+        />
+        {/* Hidden file picker: multi-image selection, surfaced via the attach button */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          multiple
+          hidden
+          onChange={handleFilesSelected}
+        />
+
+        {/* Pending image attachments: removable thumbnails awaiting send */}
+        {(attachedImages.length > 0 || attachError) && (
+          <AttachmentPreviews
+            images={attachedImages}
+            error={attachError}
+            onRemove={handleRemoveImage}
           />
         )}
 
-        {/* Row 2: Bottom Toolbar */}
-        <div className="flex items-center justify-end pt-1 gap-2">
-          {/* Right Side: Model Dropdown, Send / Stop Button */}
-          <div className="flex items-center gap-2 shrink-0 ml-auto">
-            <ModelSelectorMenu
-              model={model}
-              thinkingLevel={thinkingLevel}
-              onModelSelect={onModelSelect}
-              onThinkingLevelChange={onThinkingLevelChange}
-            />
+        {/* Row 1: Text Field Input, Compacting Notice, or Blocking Warning */}
+        <ComposerStatusRow
+          isCompacting={isCompacting}
+          isBlocked={isBlocked}
+          isContextWindowExhausted={isContextWindowExhausted}
+          blockedQuotaCopy={blockedQuotaCopy}
+          onTriggerCompaction={onTriggerCompaction}
+          isLoading={isLoading}
+          value={inputValue}
+          placeholder={PLACEHOLDER_PROMPTS[placeholderIndex]}
+          charLimit={MAX_MESSAGE_CHARS}
+          onChange={handleInput}
+          onKeyDown={handleKeyDown}
+          textareaRef={textareaRef}
+        />
 
-            {isLoading && !isCompacting ? (
-              <button
-                id="chat-stop-btn"
-                type="button"
-                onClick={onStop}
-                className="group p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none bg-danger hover:bg-danger/90 active:scale-95 cursor-pointer text-surface border border-transparent animate-in fade-in flex items-center gap-1.5 shadow-button"
-                title="Stop generating"
-              >
-                <Square className="w-3.5 h-3.5 fill-surface text-surface group-hover:scale-90 transition-transform duration-150" />
-                <span className="hidden sm:inline text-caption font-bold">Stop</span>
-              </button>
-            ) : (
-              <button
-                id="chat-submit-btn"
-                type="submit"
-                disabled={!inputValue.trim() || isBlocked || isCharOverLimit}
-                className={`group p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${!inputValue.trim() || isBlocked || isCharOverLimit
-                    ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
-                    : 'bg-primary hover:bg-primary-hover active:scale-95 text-surface border-transparent cursor-pointer'
-                  }`}
-                title={
-                  isCompacting
-                    ? 'Context compaction in progress'
-                    : isContextWindowExhausted
-                      ? 'Context window reached'
-                      : isQuotaExhausted
-                        ? 'Quota limit reached'
-                        : isCharOverLimit
-                          ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
-                          : !inputValue.trim()
-                            ? 'Type a message to send'
-                            : 'Send message'
-                }
-              >
-                <span className="hidden sm:inline text-caption font-bold">Send</span>
-                <ArrowUp className="w-3.5 h-3.5 transition-transform duration-150 group-hover:-translate-y-0.5" />
-              </button>
-            )}
-          </div>
-        </div>
+        {/* Row 2: Bottom Toolbar */}
+        <ComposerToolbar
+          isAttachDisabled={isAttachDisabled}
+          supportsVision={supportsVision}
+          isImageCapReached={isImageCapReached}
+          attachedCount={attachedImages.length}
+          maxImages={MAX_IMAGES_PER_MESSAGE}
+          onAttachClick={handleAttachClick}
+          filesCount={filesCount}
+          onOpenDrawer={onOpenDrawer}
+          isLoading={isLoading}
+          isCompacting={isCompacting}
+          onStop={onStop}
+          hasContent={hasContent}
+          isBlocked={isBlocked}
+          isCharOverLimit={isCharOverLimit}
+          isQuotaExhausted={isQuotaExhausted}
+          isContextWindowExhausted={isContextWindowExhausted}
+          charLimit={MAX_MESSAGE_CHARS}
+        />
       </div>
     </form>
   );

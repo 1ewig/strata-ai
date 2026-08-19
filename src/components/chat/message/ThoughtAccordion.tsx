@@ -73,12 +73,12 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
       </button>
 
       {isOpen && (
-        <div className="mt-1 pl-5 py-1.5 text-label text-text-secondary leading-relaxed max-h-60 overflow-y-auto font-mono">
+        <div className="mt-1 pl-5 py-1.5 text-label text-text-secondary leading-relaxed max-h-60 overflow-y-auto font-mono select-text cursor-text">
           {/* While actively thinking, render plain pre-wrap whitespace to avoid per-token Markdown AST parsing freeze */}
           {isThinking ? (
-            <p className="whitespace-pre-wrap font-mono leading-relaxed text-text-secondary">{text}</p>
+            <p className="whitespace-pre-wrap font-mono leading-relaxed text-text-secondary select-text cursor-text">{text}</p>
           ) : (
-            <MarkdownRenderer content={text} variant="thought" className="text-label text-text-secondary leading-relaxed" />
+            <MarkdownRenderer content={text} variant="thought" className="text-label text-text-secondary leading-relaxed select-text cursor-text" />
           )}
         </div>
       )}

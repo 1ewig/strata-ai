@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MoreHorizontal, Copy, FileText, Check } from 'lucide-react';
+import { copyToClipboard, stripMarkdown } from '@/lib/clipboard';
 
 interface MessageActionsMenuProps {
   textContent: string;
@@ -9,67 +10,6 @@ interface MessageActionsMenuProps {
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   className?: string;
-}
-
-/**
- * Strips markdown formatting and decodes basic HTML entities.
- */
-function stripMarkdown(markdown: string): string {
-  let text = markdown
-    .replace(/```[\w-]*\n([\s\S]*?)```/g, '$1') // Code blocks
-    .replace(/`([^`]+)`/g, '$1')                // Inline code
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')    // Images
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')    // Links
-    .replace(/^#{1,6}\s+(.+)$/gm, '$1')          // Headers
-    .replace(/(\*\*|__)(.*?)\1/g, '$2')          // Bold
-    .replace(/(\*|_)(.*?)\1/g, '$2')             // Italic
-    .replace(/~~(.*?)~~/g, '$1')                 // Strikethrough
-    .replace(/^\s*>\s+/gm, '')                   // Blockquotes
-    .replace(/^\s*[-*+]\s+/gm, '')               // Unordered list items
-    .replace(/^\s*\d+\.\s+/gm, '')               // Ordered list items
-    .replace(/^[-*_]{3,}\s*$/gm, '')             // Horizontal rules
-    .replace(/<\/?[^>]+(>|$)/g, '')              // HTML tags
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-
-  // Basic HTML entity decoding in client browser environment
-  if (typeof document !== 'undefined') {
-    const doc = new DOMParser().parseFromString(text, 'text/html');
-    text = doc.body.textContent || text;
-  }
-
-  return text;
-}
-
-/**
- * Robust clipboard utility with legacy execCommand fallback.
- */
-async function copyToClipboard(text: string): Promise<boolean> {
-  if (navigator?.clipboard?.writeText) {
-    try {
-      await navigator.clipboard.writeText(text);
-      return true;
-    } catch {
-      // Proceed to fallback if permission denied or non-active document
-    }
-  }
-
-  try {
-    const textArea = document.createElement('textarea');
-    textArea.value = text;
-    textArea.setAttribute('readonly', '');
-    textArea.style.position = 'absolute';
-    textArea.style.left = '-9999px';
-    textArea.style.top = `${window.scrollY || document.documentElement.scrollTop}px`;
-    document.body.appendChild(textArea);
-    textArea.focus();
-    textArea.select();
-    const successful = document.execCommand('copy');
-    document.body.removeChild(textArea);
-    return successful;
-  } catch {
-    return false;
-  }
 }
 
 export default function MessageActionsMenu({
@@ -152,8 +92,8 @@ export default function MessageActionsMenu({
   if (!textContent.trim()) return null;
 
   return (
-    <div ref={menuRef} className={`relative inline-block ${className}`}>
-      {/* Menu Trigger Button */}
+    <div ref={menuRef} className={`relative inline-block ${isOpen ? 'z-30' : ''} ${className}`}>
+      {/* Optimized Trigger Button */}
       <button
         type="button"
         aria-label="Message options"
@@ -162,14 +102,15 @@ export default function MessageActionsMenu({
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-150 shadow-button backdrop-blur-sm cursor-pointer select-none active:scale-95 ${isUser
+        className={`p-1.5 rounded-lg border transition-all duration-150 cursor-pointer active:scale-95 ${isUser
             ? isOpen
-              ? 'bg-surface/35 text-surface border-surface/50'
-              : 'bg-surface/20 hover:bg-surface/30 text-surface border border-surface/30'
+              ? 'bg-surface/30 text-surface border-surface/40 shadow-button'
+              : 'text-surface/75 hover:text-surface hover:bg-surface/20 border-transparent hover:border-surface/30'
             : isOpen
-              ? 'bg-surface-hover text-text-primary border-edge-hover'
-              : 'bg-surface-elevated/90 hover:bg-surface-hover text-text-muted hover:text-text-primary border border-edge-raised'
-          } ${isOpen ? 'opacity-100' : 'opacity-90 hover:opacity-100'}`}
+              ? 'bg-surface-elevated text-text-primary border-edge-hover shadow-button'
+              : 'text-text-muted hover:text-text-primary hover:bg-surface-elevated border-transparent hover:border-edge-raised'
+          }`}
+        title="Message options"
       >
         <MoreHorizontal className="w-4 h-4" />
       </button>

@@ -13,6 +13,8 @@ export interface ModelOption {
   family: string;
   /** Backend provider that serves this model (defaults to 'google'). */
   provider?: 'google' | 'fireworks';
+  /** Whether the model accepts image attachments on user messages (vision). */
+  supportsVision?: boolean;
   /** Approximate context window in tokens (display metadata only). */
   contextWindow: number;
   /** Maximum output tokens when the provider publishes one. */
@@ -27,6 +29,7 @@ export const MODELS: ModelOption[] = [
     id: 'gemini-3.5-flash-lite',
     label: 'Gemini 3.5 Flash Lite',
     family: 'Gemini 3.5',
+    supportsVision: true,
     contextWindow: 131072,
     maxOutput: 65536,
     pricing: {
@@ -40,6 +43,7 @@ export const MODELS: ModelOption[] = [
     id: 'gemini-3.1-flash-lite',
     label: 'Gemini 3.1 Flash Lite',
     family: 'Gemini 3.1',
+    supportsVision: true,
     contextWindow: 131072,
     maxOutput: 65536,
     pricing: {
@@ -53,6 +57,7 @@ export const MODELS: ModelOption[] = [
     id: 'gemini-3-flash-preview',
     label: 'Gemini 3 Flash Preview',
     family: 'Gemini 3',
+    supportsVision: true,
     contextWindow: 131072,
     maxOutput: 65536,
     pricing: {
@@ -66,6 +71,7 @@ export const MODELS: ModelOption[] = [
     id: 'gemma-4-31b-it',
     label: 'Gemma 4 31B IT',
     family: 'Gemma 4',
+    supportsVision: true,
     contextWindow: 131072,
     maxOutput: 65536,
     pricing: {
@@ -78,6 +84,7 @@ export const MODELS: ModelOption[] = [
     id: 'gemma-4-26b-a4b-it',
     label: 'Gemma 4 26B A4B IT',
     family: 'Gemma 4',
+    supportsVision: true,
     contextWindow: 131072,
     maxOutput: 65536,
     pricing: {
@@ -91,6 +98,7 @@ export const MODELS: ModelOption[] = [
     label: 'DeepSeek V4 Flash 0731',
     family: 'DeepSeek',
     provider: 'fireworks',
+    supportsVision: false,
     contextWindow: 131072,
     maxOutput: 65536,
     pricing: {
@@ -135,6 +143,16 @@ export const MODEL_FAMILIES = [...new Set(MODELS.map(m => m.family))];
  */
 export function getModelContextWindow(modelId: string): number {
   return MODELS.find((m) => m.id === modelId)?.contextWindow ?? MODELS[0].contextWindow;
+}
+
+/**
+ * Resolves whether a model accepts image attachments (vision input).
+ * @param modelId - The model id to look up.
+ * @returns True when the catalog marks the model vision-capable (default true for
+ * unknown ids so newly added Gemini models never block attachments by mistake).
+ */
+export function getModelSupportsVision(modelId: string): boolean {
+  return MODELS.find((m) => m.id === modelId)?.supportsVision ?? true;
 }
 
 /** Supported thinking-effort levels for models that expose the setting. */

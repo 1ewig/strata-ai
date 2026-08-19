@@ -114,8 +114,8 @@ function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps)
             }
             if (item.type === 'text' && item.content) {
               return (
-                <div key={item.key} className="text-body">
-                  <MarkdownRenderer content={item.content} variant="thought" className="text-body" />
+                <div key={item.key} className="text-body select-text cursor-text">
+                  <MarkdownRenderer content={item.content} variant="thought" className="text-body select-text cursor-text" />
                 </div>
               );
             }
