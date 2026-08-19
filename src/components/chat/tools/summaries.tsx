@@ -49,6 +49,24 @@ function InFlightSummary({ title, badgeText, loadingText }: InFlightSummaryProps
 }
 
 /**
+ * Single "label: value" line used by the file-operation summaries.
+ */
+interface SummaryLineProps {
+  label: string;
+  value: ReactNode;
+  valueClass?: string;
+}
+
+function SummaryLine({ label, value, valueClass = 'text-text-primary font-medium' }: SummaryLineProps) {
+  return (
+    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
+      <span className="text-text-muted text-caption">{label}</span>
+      <span className={`truncate ${valueClass}`}>{value}</span>
+    </div>
+  );
+}
+
+/**
  * Summary for listFiles: files found in workspace.
  */
 export function buildListFilesSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
@@ -94,12 +112,7 @@ export function buildReadFileSummary(args: any, result: any, status: 'loading' |
     );
   }
 
-  return (
-    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
-      <span className="text-text-muted text-caption">File Read:</span>
-      <span className="text-text-primary font-medium truncate">{fileName}</span>
-    </div>
-  );
+  return <SummaryLine label="File Read:" value={fileName} />;
 }
 
 /**
@@ -118,12 +131,7 @@ export function buildWriteFileSummary(args: any, result: any, status: 'loading' 
   }
 
   const isCreated = result?.action === 'created';
-  return (
-    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
-      <span className="text-text-muted text-caption">{isCreated ? 'File Created:' : 'File Updated:'}</span>
-      <span className="text-primary font-medium truncate">{name}</span>
-    </div>
-  );
+  return <SummaryLine label={isCreated ? 'File Created:' : 'File Updated:'} value={name} valueClass="text-primary font-medium" />;
 }
 
 /**
@@ -141,12 +149,7 @@ export function buildEditFileSummary(args: any, result: any, status: 'loading' |
     );
   }
 
-  return (
-    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
-      <span className="text-text-muted text-caption">File Edited:</span>
-      <span className="text-warning font-medium truncate">{name}</span>
-    </div>
-  );
+  return <SummaryLine label="File Edited:" value={name} valueClass="text-warning font-medium" />;
 }
 
 /**
@@ -166,12 +169,16 @@ export function buildRenameFileSummary(args: any, result: any, status: 'loading'
   }
 
   return (
-    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
-      <span className="text-text-muted text-caption">File Renamed:</span>
-      <span className="text-text-muted line-through truncate">{oldName}</span>
-      <span className="text-text-secondary">→</span>
-      <span className="text-text-primary font-medium truncate">{newName}</span>
-    </div>
+    <SummaryLine
+      label="File Renamed:"
+      value={
+        <>
+          <span className="text-text-muted line-through">{oldName}</span>
+          <span className="text-text-secondary">→</span>
+          <span className="text-text-primary font-medium">{newName}</span>
+        </>
+      }
+    />
   );
 }
 
@@ -190,12 +197,7 @@ export function buildDeleteFileSummary(args: any, result: any, status: 'loading'
     );
   }
 
-  return (
-    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
-      <span className="text-text-muted text-caption">File Removed:</span>
-      <span className="text-danger font-medium truncate">{name}</span>
-    </div>
-  );
+  return <SummaryLine label="File Removed:" value={name} valueClass="text-danger font-medium" />;
 }
 
 /**

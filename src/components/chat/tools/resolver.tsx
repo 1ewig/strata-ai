@@ -55,95 +55,126 @@ type ToolConfig = {
   accentText: string;
 };
 
-/**
- * Per-tool display configs keyed by normalized tool name.
- */
-const toolConfigs: Record<string, ToolConfig> = {
-  listFiles: {
-    label: 'List Files',
-    badge: 'Listed',
-    icon: Files,
-    accent: 'info',
-    accentBg: 'bg-accent-blue-soft',
-    accentBorder: 'border-accent-blue/60',
-    accentText: 'text-info',
-  },
-  readFile: {
-    label: 'Read File',
-    badge: 'Read',
-    icon: FileSearch,
-    accent: 'info',
-    accentBg: 'bg-accent-blue-soft',
-    accentBorder: 'border-accent-blue/60',
-    accentText: 'text-info',
-  },
-  writeFile: {
-    label: 'Write File',
-    badge: 'Written',
-    icon: FilePlus2,
-    accent: 'primary',
-    accentBg: 'bg-primary-soft',
-    accentBorder: 'border-primary/40',
-    accentText: 'text-primary',
-  },
-  editFile: {
-    label: 'Edit File',
-    badge: 'Edited',
-    icon: FileEdit,
-    accent: 'warning',
-    accentBg: 'bg-warning-soft',
-    accentBorder: 'border-secondary/70',
-    accentText: 'text-warning',
-  },
-  renameFile: {
-    label: 'Rename File',
-    badge: 'Renamed',
-    icon: PenTool,
-    accent: 'accent-pink-deep',
-    accentBg: 'bg-accent-pink-soft',
-    accentBorder: 'border-accent-pink/70',
-    accentText: 'text-accent-pink-deep',
-  },
-  deleteFile: {
-    label: 'Delete File',
-    badge: 'Deleted',
-    icon: FileX,
-    accent: 'danger',
-    accentBg: 'bg-danger-soft',
-    accentBorder: 'border-danger/40',
-    accentText: 'text-danger',
-  },
-  webSearch: {
-    label: 'Web Search',
-    badge: 'Searched',
-    icon: Globe,
-    accent: 'info',
-    accentBg: 'bg-accent-blue-soft',
-    accentBorder: 'border-accent-blue/60',
-    accentText: 'text-info',
-  },
-  extractUrl: {
-    label: 'Extract URL',
-    badge: 'Extracted',
-    icon: Link2,
-    accent: 'info',
-    accentBg: 'bg-accent-blue-soft',
-    accentBorder: 'border-accent-blue/60',
-    accentText: 'text-info',
-  },
-};
+/** Signature of a per-tool summary builder. */
+type SummaryBuilder = (args: any, result: any, status: 'loading' | 'success' | 'error') => ReactNode;
 
 /**
- * Fallback config used when no entry in toolConfigs matches the invoked tool.
+ * Shared "info" accent set, spread by every tool config that uses it.
  */
-const defaultConfig: ToolConfig = {
-  label: 'Tool Executed',
-  badge: 'Executed',
-  icon: Wrench,
+const INFO_ACCENT = {
   accent: 'info',
   accentBg: 'bg-accent-blue-soft',
   accentBorder: 'border-accent-blue/60',
   accentText: 'text-info',
+} as const;
+
+/**
+ * Per-tool display configs + summary builders keyed by normalized tool name.
+ * Each tool is declared exactly once; the dispatch in resolveToolDisplay is a
+ * plain table lookup against this registry.
+ */
+const toolMeta: Record<string, { config: ToolConfig; summary: SummaryBuilder }> = {
+  listFiles: {
+    config: { ...INFO_ACCENT, label: 'List Files', badge: 'Listed', icon: Files },
+    summary: buildListFilesSummary,
+  },
+  readFile: {
+    config: { ...INFO_ACCENT, label: 'Read File', badge: 'Read', icon: FileSearch },
+    summary: buildReadFileSummary,
+  },
+  writeFile: {
+    config: {
+      accent: 'primary',
+      accentBg: 'bg-primary-soft',
+      accentBorder: 'border-primary/40',
+      accentText: 'text-primary',
+      label: 'Write File',
+      badge: 'Written',
+      icon: FilePlus2,
+    },
+    summary: buildWriteFileSummary,
+  },
+  editFile: {
+    config: {
+      accent: 'warning',
+      accentBg: 'bg-warning-soft',
+      accentBorder: 'border-secondary/70',
+      accentText: 'text-warning',
+      label: 'Edit File',
+      badge: 'Edited',
+      icon: FileEdit,
+    },
+    summary: buildEditFileSummary,
+  },
+  renameFile: {
+    config: {
+      accent: 'accent-pink-deep',
+      accentBg: 'bg-accent-pink-soft',
+      accentBorder: 'border-accent-pink/70',
+      accentText: 'text-accent-pink-deep',
+      label: 'Rename File',
+      badge: 'Renamed',
+      icon: PenTool,
+    },
+    summary: buildRenameFileSummary,
+  },
+  deleteFile: {
+    config: {
+      accent: 'danger',
+      accentBg: 'bg-danger-soft',
+      accentBorder: 'border-danger/40',
+      accentText: 'text-danger',
+      label: 'Delete File',
+      badge: 'Deleted',
+      icon: FileX,
+    },
+    summary: buildDeleteFileSummary,
+  },
+  webSearch: {
+    config: { ...INFO_ACCENT, label: 'Web Search', badge: 'Searched', icon: Globe },
+    summary: buildWebSearchSummary,
+  },
+  extractUrl: {
+    config: { ...INFO_ACCENT, label: 'Extract URL', badge: 'Extracted', icon: Link2 },
+    summary: buildExtractUrlSummary,
+  },
+};
+
+/**
+ * Fallback config used when no entry in toolMeta matches the invoked tool.
+ */
+const defaultConfig: ToolConfig = {
+  ...INFO_ACCENT,
+  label: 'Tool Executed',
+  badge: 'Executed',
+  icon: Wrench,
+};
+
+/**
+ * Canonical tool-name aliases: raw tool names (case, dashes, underscores
+ * stripped) map to their normalized config key.
+ */
+const TOOL_ALIASES: Record<string, string> = {
+  listfiles: 'listFiles',
+  list: 'listFiles',
+  readfile: 'readFile',
+  readf: 'readFile',
+  writefile: 'writeFile',
+  writef: 'writeFile',
+  editfile: 'editFile',
+  editf: 'editFile',
+  deletefile: 'deleteFile',
+  deletef: 'deleteFile',
+  renamefile: 'renameFile',
+  renamef: 'renameFile',
+  websearch: 'webSearch',
+  tavilysearch: 'webSearch',
+  tavily: 'webSearch',
+  search: 'webSearch',
+  extracturl: 'extractUrl',
+  extractpage: 'extractUrl',
+  extract: 'extractUrl',
+  tavilyextract: 'extractUrl',
 };
 
 /**
@@ -155,17 +186,10 @@ const defaultConfig: ToolConfig = {
 function normalizeToolName(raw: string): { normalized: string; isCustom: boolean } {
   if (!raw) return { normalized: '', isCustom: true };
   const clean = raw.trim().toLowerCase().replace(/[-_]/g, '');
-
-  if (clean === 'listfiles' || clean === 'list') return { normalized: 'listFiles', isCustom: false };
-  if (clean === 'readfile' || clean === 'readf') return { normalized: 'readFile', isCustom: false };
-  if (clean === 'writefile' || clean === 'writef') return { normalized: 'writeFile', isCustom: false };
-  if (clean === 'editfile' || clean === 'editf') return { normalized: 'editFile', isCustom: false };
-  if (clean === 'deletefile' || clean === 'deletef') return { normalized: 'deleteFile', isCustom: false };
-  if (clean === 'renamefile' || clean === 'renamef') return { normalized: 'renameFile', isCustom: false };
-  if (clean === 'websearch' || clean === 'tavilysearch' || clean === 'tavily' || clean === 'search') return { normalized: 'webSearch', isCustom: false };
-  if (clean === 'extracturl' || clean === 'extractpage' || clean === 'extract' || clean === 'tavilyextract') return { normalized: 'extractUrl', isCustom: false };
-
-  return { normalized: raw, isCustom: true };
+  const normalized = TOOL_ALIASES[clean];
+  return normalized
+    ? { normalized, isCustom: false }
+    : { normalized: raw, isCustom: true };
 }
 
 /**
@@ -269,7 +293,8 @@ function extractToolInfo(toolCall: any) {
 export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): ToolCardProps {
   const { name, rawName, args, result, status, isCustom } = extractToolInfo(toolCall);
 
-  let cfg = toolConfigs[name] || defaultConfig;
+  const meta = toolMeta[name];
+  let cfg = meta?.config || defaultConfig;
   // Custom tools have no config label, so surface their raw name instead.
   let label = !isCustom ? cfg.label : (rawName || cfg.label);
 
@@ -279,36 +304,7 @@ export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): To
     label = action === 'created' ? 'File Created' : 'File Replaced';
   }
 
-  // Route the tool to its dedicated summary builder, passing status
-  let summary: ReactNode;
-  switch (name) {
-    case 'listFiles':
-      summary = buildListFilesSummary(args, result, status);
-      break;
-    case 'readFile':
-      summary = buildReadFileSummary(args, result, status);
-      break;
-    case 'writeFile':
-      summary = buildWriteFileSummary(args, result, status);
-      break;
-    case 'editFile':
-      summary = buildEditFileSummary(args, result, status);
-      break;
-    case 'renameFile':
-      summary = buildRenameFileSummary(args, result, status);
-      break;
-    case 'deleteFile':
-      summary = buildDeleteFileSummary(args, result, status);
-      break;
-    case 'webSearch':
-      summary = buildWebSearchSummary(args, result, status);
-      break;
-    case 'extractUrl':
-      summary = buildExtractUrlSummary(args, result, status);
-      break;
-    default:
-      summary = buildGenericSummary(args, rawName);
-  }
+  const summary = meta ? meta.summary(args, result, status) : buildGenericSummary(args, rawName);
 
   return {
     label,
