@@ -131,24 +131,6 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                     : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/20'
                   } ${isMenuOpen ? 'z-30' : ''}`}
               >
-                {/* Sticky Action Menu */}
-                {userContent && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className={`sticky top-2.5 float-right -mr-5 -mt-0.5 ml-2 ${isMenuOpen ? 'z-30' : 'z-10'
-                      } transition-opacity duration-200 ${isActionActive
-                        ? 'opacity-100 pointer-events-auto'
-                        : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
-                      }`}
-                  >
-                    <MessageActionsMenu
-                      textContent={userContent}
-                      isUser={true}
-                      isOpen={isMenuOpen}
-                      onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
-                    />
-                  </div>
-                )}
                 <div className="text-body text-surface leading-relaxed relative select-text cursor-text">
                   <MarkdownRenderer
                     content={userContent}
@@ -156,6 +138,27 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                     className="text-body text-surface leading-relaxed relative select-text cursor-text"
                   />
                 </div>
+
+                {/* Sticky Action Menu Overlay */}
+                {userContent && (
+                  <div className="absolute inset-y-0 right-2.5 w-7 pointer-events-none flex flex-col justify-start">
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className={`sticky top-16 pt-2.5 pointer-events-auto ${isMenuOpen ? 'z-30' : 'z-10'
+                        } transition-opacity duration-200 ${isActionActive
+                          ? 'opacity-100'
+                          : 'opacity-0 group-hover/bubble:opacity-100 focus-within:opacity-100'
+                        }`}
+                    >
+                      <MessageActionsMenu
+                        textContent={userContent}
+                        isUser={true}
+                        isOpen={isMenuOpen}
+                        onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             );
           }
@@ -195,31 +198,6 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                     : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
                   } ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''} ${isMenuOpen ? 'z-30' : ''}`}
               >
-                {/* Sticky Action Menu */}
-                {!isStreamingActiveSegment && textContent && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className={`sticky top-2.5 float-right -mr-5 -mt-0.5 ml-2 ${isMenuOpen ? 'z-30' : 'z-10'
-                      } transition-opacity duration-200 ${isActionActive
-                        ? 'opacity-100 pointer-events-auto'
-                        : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
-                      }`}
-                  >
-                    <MessageActionsMenu
-                      textContent={textContent}
-                      isUser={false}
-                      isOpen={isMenuOpen}
-                      onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
-                    />
-                  </div>
-                )}
-
-                {isStreamingActiveSegment && (
-                  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
-                    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-primary/8 to-transparent" />
-                  </div>
-                )}
-
                 <div className="text-body text-text-primary leading-relaxed relative select-text cursor-text">
                   <MarkdownRenderer
                     content={textContent}
@@ -228,6 +206,33 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                     className="text-body text-text-primary leading-relaxed relative select-text cursor-text"
                   />
                 </div>
+
+                {/* Sticky Action Menu Overlay */}
+                {!isStreamingActiveSegment && textContent && (
+                  <div className="absolute inset-y-0 right-2.5 w-7 pointer-events-none flex flex-col justify-start">
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className={`sticky top-16 pt-2.5 pointer-events-auto ${isMenuOpen ? 'z-30' : 'z-10'
+                        } transition-opacity duration-200 ${isActionActive
+                          ? 'opacity-100'
+                          : 'opacity-0 group-hover/bubble:opacity-100 focus-within:opacity-100'
+                        }`}
+                    >
+                      <MessageActionsMenu
+                        textContent={textContent}
+                        isUser={false}
+                        isOpen={isMenuOpen}
+                        onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {isStreamingActiveSegment && (
+                  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+                    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-primary/8 to-transparent" />
+                  </div>
+                )}
               </div>
             );
           }

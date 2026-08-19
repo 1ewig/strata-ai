@@ -14,6 +14,7 @@ interface MessageActionsMenuProps {
 
 export default function MessageActionsMenu({
   textContent,
+  isUser = false,
   isOpen: controlledIsOpen,
   onOpenChange,
   className = '',
@@ -92,7 +93,7 @@ export default function MessageActionsMenu({
 
   return (
     <div ref={menuRef} className={`relative inline-block ${isOpen ? 'z-30' : ''} ${className}`}>
-      {/* Menu Trigger Button */}
+      {/* Optimized Trigger Button */}
       <button
         type="button"
         aria-label="Message options"
@@ -101,9 +102,13 @@ export default function MessageActionsMenu({
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        className={`p-1.5 text-text-muted hover:text-text-primary active:scale-95 rounded-lg border transition-all duration-150 cursor-pointer ${isOpen
-            ? 'bg-surface-elevated text-text-primary border-edge-hover shadow-button'
-            : 'hover:bg-surface-elevated border-transparent hover:border-edge-raised'
+        className={`p-1.5 rounded-lg border transition-all duration-150 cursor-pointer active:scale-95 ${isUser
+            ? isOpen
+              ? 'bg-surface/30 text-surface border-surface/40 shadow-button'
+              : 'text-surface/75 hover:text-surface hover:bg-surface/20 border-transparent hover:border-surface/30'
+            : isOpen
+              ? 'bg-surface-elevated text-text-primary border-edge-hover shadow-button'
+              : 'text-text-muted hover:text-text-primary hover:bg-surface-elevated border-transparent hover:border-edge-raised'
           }`}
         title="Message options"
       >

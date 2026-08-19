@@ -63,14 +63,15 @@ function ComposerToolbar({
     <div className="flex items-center justify-between pt-1 gap-2">
       {/* Left Side: Image Attach Button & Files Drawer Button */}
       <div className="flex items-center gap-1.5 shrink-0">
+        {/* Attach Button */}
         <button
           id="chat-attach-btn"
           type="button"
           onClick={onAttachClick}
           disabled={isAttachDisabled}
           className={`group p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${isAttachDisabled
-            ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
-            : 'bg-surface-raised text-text-primary hover:text-primary hover:border-primary/60 active:scale-95 cursor-pointer border-edge-raised'
+              ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
+              : 'bg-surface-raised text-text-primary hover:text-primary hover:border-primary/60 active:scale-95 cursor-pointer border-edge-raised'
             }`}
           title={
             !supportsVision
@@ -96,20 +97,21 @@ function ComposerToolbar({
           )}
         </button>
 
+        {/* Files Drawer Button */}
         {onOpenDrawer && (
           <button
             id="chat-files-btn"
             type="button"
             onClick={onOpenDrawer}
             className="group p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button bg-surface-raised text-text-primary hover:text-primary hover:border-primary/60 active:scale-95 cursor-pointer border-edge-raised"
-            title={`Open Workspace Files Drawer (${filesCount} files)`}
+            title={`Open Workspace Files Drawer (${filesCount} ${filesCount === 1 ? 'file' : 'files'})`}
             aria-label="Open Workspace Files Drawer"
           >
             <Folder className="w-4 h-4 transition-transform duration-150 group-hover:scale-110" />
             <span className="hidden sm:inline text-caption font-semibold">Files</span>
             {filesCount > 0 && (
-              <span className="hidden sm:inline text-caption font-medium text-text-muted group-hover:text-text-primary">
-                ({filesCount})
+              <span className="hidden sm:inline text-caption font-bold text-primary">
+                {filesCount}
               </span>
             )}
           </button>
