@@ -22,14 +22,15 @@ interface ChatInputProps {
   isLoading: boolean;
   isCompacting?: boolean;
   model: string;
+  thinkingLevel?: string;
+  onModelSelect?: (modelId: string) => void;
+  onThinkingLevelChange?: (level: string) => void;
   rateLimitData?: {
     remaining5h: number;
     remainingWeek: number;
     retryAfter?: number;
   } | null;
   isContextWindowExhausted?: boolean;
-  filesCount?: number;
-  onOpenDrawer?: () => void;
 }
 
 /** Available placeholder prompts for the chat input composer. */
@@ -60,8 +61,8 @@ function getRandomPlaceholderIndex(excludeIndex?: number): number {
 /**
  * Renders the message composer orchestrator: owns all input state and handlers,
  * and composes the slash command popup, status row (compacting/blocked/textarea),
- * pending image attachment previews, and the bottom toolbar (attach, files
- * drawer, send/stop) with floating island aesthetics.
+ * pending image attachment previews, and the bottom toolbar (attach, model
+ * selector, send/stop) with floating island aesthetics.
  */
 export default React.memo(function ChatInput({
   chatId,
@@ -71,10 +72,11 @@ export default React.memo(function ChatInput({
   isLoading,
   isCompacting = false,
   model,
+  thinkingLevel,
+  onModelSelect,
+  onThinkingLevelChange,
   rateLimitData: rateLimitDataProp,
   isContextWindowExhausted = false,
-  filesCount = 0,
-  onOpenDrawer,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -385,8 +387,10 @@ export default React.memo(function ChatInput({
           attachedCount={attachedImages.length}
           maxImages={MAX_IMAGES_PER_MESSAGE}
           onAttachClick={handleAttachClick}
-          filesCount={filesCount}
-          onOpenDrawer={onOpenDrawer}
+          model={model}
+          thinkingLevel={thinkingLevel}
+          onModelSelect={onModelSelect}
+          onThinkingLevelChange={onThinkingLevelChange}
           isLoading={isLoading}
           isCompacting={isCompacting}
           onStop={onStop}

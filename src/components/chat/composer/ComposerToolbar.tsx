@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { ArrowUp, Folder, Paperclip, Square } from 'lucide-react';
+import { ArrowUp, Paperclip, Square } from 'lucide-react';
+import ModelSelectorMenu from './ModelSelectorMenu';
 
 /** Props for the composer bottom toolbar (attach, drawer, send/stop). */
 interface ComposerToolbarProps {
@@ -11,8 +12,10 @@ interface ComposerToolbarProps {
   attachedCount: number;
   maxImages: number;
   onAttachClick: () => void;
-  filesCount?: number;
-  onOpenDrawer?: () => void;
+  model?: string;
+  thinkingLevel?: string;
+  onModelSelect?: (modelId: string) => void;
+  onThinkingLevelChange?: (level: string) => void;
   isLoading: boolean;
   isCompacting: boolean;
   onStop?: () => void;
@@ -26,7 +29,7 @@ interface ComposerToolbarProps {
 
 /**
  * Row 2 of the composer: the image attach button (with tooltip chain and
- * pending-count badge), the workspace files drawer button, and the
+ * pending-count badge), the mobile model selector menu trigger, and the
  * send/stop button with its full disabled-state and title logic.
  */
 function ComposerToolbar({
@@ -36,8 +39,10 @@ function ComposerToolbar({
   attachedCount,
   maxImages,
   onAttachClick,
-  filesCount = 0,
-  onOpenDrawer,
+  model,
+  thinkingLevel,
+  onModelSelect,
+  onThinkingLevelChange,
   isLoading,
   isCompacting,
   onStop,
@@ -52,7 +57,7 @@ function ComposerToolbar({
 
   return (
     <div className="flex items-center justify-between pt-1 gap-2">
-      {/* Left Side: Image Attach Button & Files Drawer Button */}
+      {/* Left Side: Image Attach Button & Mobile Model Selector Button */}
       <div className="flex items-center gap-1.5 shrink-0">
         {/* Attach Button */}
         <button
@@ -88,18 +93,17 @@ function ComposerToolbar({
           )}
         </button>
 
-        {/* Files Drawer Button (Mobile view only) */}
-        {onOpenDrawer && (
-          <button
-            id="chat-files-btn"
-            type="button"
-            onClick={onOpenDrawer}
-            className="sm:hidden group p-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center justify-center border shadow-button bg-surface-raised/80 hover:bg-surface-hover text-text-primary hover:text-primary hover:border-edge-hover active:scale-95 cursor-pointer border-edge-raised"
-            title={`Open Workspace Files Drawer (${filesCount} ${filesCount === 1 ? 'file' : 'files'})`}
-            aria-label="Open Workspace Files Drawer"
-          >
-            <Folder className="w-4 h-4 text-text-muted group-hover:text-primary transition-transform duration-150 group-hover:scale-110" />
-          </button>
+        {/* Model Selector Menu Trigger */}
+        {model && onModelSelect && onThinkingLevelChange && (
+          <ModelSelectorMenu
+            model={model}
+            thinkingLevel={thinkingLevel || ''}
+            onModelSelect={onModelSelect}
+            onThinkingLevelChange={onThinkingLevelChange}
+            dropDirection="up"
+            align="left"
+            id="chat-model-selector-btn"
+          />
         )}
       </div>
 

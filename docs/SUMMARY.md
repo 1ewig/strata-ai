@@ -237,11 +237,11 @@ Strata Ai/
     │       └── user/rate-limit/ — GET quota snapshot (read-only, no increment).
     ├── components/
     │   ├── chat/              — ChatPanel (memo, hero), ChatHeader (title, context popover,
-    │   │                        model selector dropdown, desktop files button, mobile toggles),
-    │   │                        ChatInput (composer orchestrator: textarea, attachments, slash
+    │   │                        workspace files button, mobile toggles), ChatInput (composer
+    │   │                        orchestrator: textarea, attachments, model selector, slash
     │   │                        menu, send/stop), TokenUsagePopover.
     │   │   ├── composer/      — AttachmentPreviews, ComposerStatusRow, ComposerToolbar (attach
-    │   │   │                    button, mobile files button, send/stop), ModelSelectorMenu,
+    │   │   │                    button, model selector menu, send/stop), ModelSelectorMenu,
     │   │   │                    SlashCommandMenu.
     │   │   ├── message/       — ChatBubble, UserMessageAttachments (image thumbnails),
     │   │   │                    ToolCallCard (config-agnostic), ThoughtAccordion,
@@ -377,14 +377,14 @@ Strata Ai/
 | `/auth` | RSC (dynamic) | Node | Public | Pure redirect to `/auth/signin`, preserving `callbackUrl` query param (awaits `searchParams`) |
 | `/auth/signin` | Client (dynamic, Suspense-wrapped) | Node | Public | Email/password sign-in: `AuthShell` + `SignInForm`, `useSignIn`, bounces signed-in users to callbackUrl |
 | `/auth/signup` | Client (dynamic, Suspense-wrapped) | Node | Public | Registration: `AuthShell` + `SignUpForm`, `useSignUp`, redirects on success |
-| `/chat-id/[id]` | Client (dynamic, entire subtree) | Node | Protected | The app shell: `Sidebar` (conversation list, cap 5, pin/rename/delete, theme toggle, sign-out, quota ring), `ChatHeader` (title, model selector dropdown, token usage popover, desktop files entry, mobile toggles), `ChatPanel` (hero empty state with suggestion chips + `ChatBubble` list + quota card + typing dots), floating `ChatInput` composer (text + up to 4 image attachments, slash menu), `WorkspaceDrawer` (file selector, editor with top-right char counter, code viewer, footer). Uses `use(params)`; `StickToBottom` owns all scrolling |
+| `/chat-id/[id]` | Client (dynamic, entire subtree) | Node | Protected | The app shell: `Sidebar` (conversation list, cap 5, pin/rename/delete, theme toggle, sign-out, quota ring), `ChatHeader` (title, token usage popover, workspace files button, mobile toggles), `ChatPanel` (hero empty state with suggestion chips + `ChatBubble` list + quota card + typing dots), floating `ChatInput` composer (text + model selector + up to 4 image attachments, slash menu), `WorkspaceDrawer` (file selector, editor with top-right char counter, code viewer, footer). Uses `use(params)`; `StickToBottom` owns all scrolling |
 | `/not-found` (global) | RSC (dynamic) | Node | Public | Milo-styled 404 with back-home CTA |
 | `GET/POST /api/auth/[...all]` | Route Handler (N/A — no page) | Node | Public (auth endpoints) | Better Auth catch-all: sign-in, sign-up, session, callbacks |
 | `POST /api/agent` | Route Handler (streaming SSE; N/A — no page) | Node | Protected + quota | Agent turn: session → quota increment → zod → image-part validation → history slice → `runAgentResponse`; UI-message SSE + `X-RateLimit-*` headers |
 | `POST /api/agent/compact` | Route Handler (streaming SSE; N/A — no page) | Node | Protected + quota | Compaction turn: same shell → `runCompactionResponse` (dedicated Flash Lite, 3500 output cap, `isCompactedSummary` metadata) |
 | `GET /api/user/rate-limit` | Route Handler (N/A — no page) | Node | Protected | Read-only quota snapshot for client hydration/refresh |
 
-- **Chat page composition (leaf components under `/chat-id/[id]`):** the page wires `useChatSession` (one orchestrator returning ~24 props) into `ChatHeader` (title/model selector/token popover/workspace entry), `ChatPanel` (memoized; welcome-message pool hashed by chatId; suggestion chips dispatch a `insert-chat-prompt` custom event that `ChatInput` listens for; `CompactionDivider` markers around `isCompactedSummary` messages; `QuotaErrorCard` above the composer), `ChatInput` (auto-growing textarea, 2000-char counter, image attachments up to 4 with client-side compression, `/` slash menu with `SLASH_COMMANDS`, send/stop — internally composed of `composer/AttachmentPreviews`, `ComposerStatusRow`, `ComposerToolbar`), `Sidebar` (conversation CRUD + user footer), and `WorkspaceDrawer` (slide-over canvas with `WorkspaceFileSelector`, `WorkspaceEditor`/`CodeViewer` with top-right char limit indicators, footer with action buttons).
+- **Chat page composition (leaf components under `/chat-id/[id]`):** the page wires `useChatSession` (one orchestrator returning ~24 props) into `ChatHeader` (title/token popover/workspace entry), `ChatPanel` (memoized; welcome-message pool hashed by chatId; suggestion chips dispatch a `insert-chat-prompt` custom event that `ChatInput` listens for; `CompactionDivider` markers around `isCompactedSummary` messages; `QuotaErrorCard` above the composer), `ChatInput` (auto-growing textarea, 2000-char counter, image attachments up to 4 with client-side compression, `/` slash menu with `SLASH_COMMANDS`, send/stop — internally composed of `composer/AttachmentPreviews`, `ComposerStatusRow`, `ComposerToolbar`), `Sidebar` (conversation CRUD + user footer), and `WorkspaceDrawer` (slide-over canvas with `WorkspaceFileSelector`, `WorkspaceEditor`/`CodeViewer` with top-right char limit indicators, footer with action buttons).
 - **Cross-component events:** `open-workspace-drawer` (window listener in the chat page) and `insert-chat-prompt` (window listener in `ChatInput`) are the only two custom DOM events — do not add more without a strong reason.
 - **Notes:** no parallel or intercepting routes exist; there are no `loading.tsx`/`error.tsx` boundaries (the only error UI is the client-side `QuotaErrorCard` + in-stream error message replacement); all pages render on the Node runtime (no edge runtime anywhere); route groups `(auth)`/`(dashboard)`/`(marketing)` from the generic outline do not exist — auth is a plain `/auth` folder and the whole product is a single page.
 
@@ -398,8 +398,8 @@ Strata Ai/
 | `ChatInput` (React.memo) | Composer ORCHESTRATOR: textarea, 2000-char counter, image attachments (4 cap), slash menu, send/stop | Delegates to `composer/AttachmentPreviews`, `ComposerStatusRow`, `ComposerToolbar`; `onSendMessage`, `onTriggerCompaction`, quota/context gating; listens for `insert-chat-prompt` |
 | `AttachmentPreviews` (`composer/`) | Thumbnail grid of pending image attachments with remove buttons | 4-cap enforcement; sources are the compressed data URLs |
 | `ComposerStatusRow` (`composer/`) | Status line above the toolbar (typing indicator, token/context meter, quota hint) | Presentational; driven by `useChatSession` props |
-| `ComposerToolbar` (`composer/`) | Image attach button (vision-gated), mobile files button, send/stop | Disabled states from quota/context gating |
-| `ChatHeader` | Title, context window popover, model selector dropdown, desktop files drawer button, mobile sidebar toggle, mobile new chat button | `title`, `files`, `activeFileId`, `model`, `thinkingLevel`, `tokenUsage`, `onOpenFile`, `onOpenDrawer`, `onOpenSidebar`, `onNewChat`, `onModelSelect`, `onThinkingLevelChange` |
+| `ComposerToolbar` (`composer/`) | Image attach button (vision-gated), model selector menu, send/stop | Disabled states from quota/context gating |
+| `ChatHeader` | Title, context window popover, workspace files drawer button, mobile sidebar toggle, mobile new chat button | `title`, `files`, `activeFileId`, `model`, `tokenUsage`, `onOpenFile`, `onOpenDrawer`, `onOpenSidebar`, `onNewChat` |
 | `ToolCallCard` (`message/`) | Renders ONE resolved tool invocation | Consumes `ToolCardProps` from `resolveToolDisplay` — config-agnostic, never edited |
 | `tools/resolver.tsx` | Tool-name normalization → config/icon/badge/summary builders | `toolMeta` table (config + summary builder per tool) + `TOOL_ALIASES`; add new tools here |
 | `tools/summaries.tsx` | Per-tool summary builders (`build*`) + `SummaryLine` primitive | Consumed by `resolver.tsx`; 9 builders incl. bespoke listFiles/webSearch/extractUrl |
@@ -412,7 +412,7 @@ Strata Ai/
 | `RateLimitRing` (`sidebar/`) | Live "X left" circular quota indicator | Reads `rateLimitData` |
 | `QuotaErrorCard` (`message/`) | Dismissible exhausted-quota banner | Keyed by retryAfter+message; `onDismiss` |
 | `TokenUsagePopover` | Active context %, session totals, per-model cost breakdown | From `calculateTokenMetrics` |
-| `ModelSelectorMenu` (`composer/`) | Model + thinking-level picker in `ChatHeader` (downward dropdown, mobile gear icon fallback) | Groups by `MODEL_FAMILIES`; clamps levels |
+| `ModelSelectorMenu` (`composer/`) | Model + thinking-level picker in `ComposerToolbar` (upward dropdown, mobile gear icon fallback) | Groups by `MODEL_FAMILIES`; clamps levels |
 | `MessageActionsMenu` (`message/`) | Per-message copy (via `lib/clipboard.ts`: `stripMarkdown` + `copyToClipboard`) / context actions | — |
 | `Sidebar` + `ConversationList/Item` | Chat list: pinned-first, rename/pin/delete, cap hint | All actions via `useConversations` props |
 | `NewChatButton` | New conversation creation | Respects `isMaxConversationsReached` |
