@@ -380,7 +380,15 @@ A finished send flow (see `handleSendMessage` in `useChatSession.ts`):
 - On a user's first message, **auto-title** the conversation: `trimmed.slice(0, 40) + '...'` when longer than 40 chars.
 - Send: `chat.sendMessage({ text: trimmed })`; `status` flips `ready → submitted → streaming`.
 
-Add a **character cap** (`MAX_MESSAGE_CHARS = 2000` from `src/lib/limits.ts`) mirrored on the server with a Zod/HTTP 400 — never trust the client-side `maxLength` alone. `src/lib/limits.ts` centralizes every free-tier limit (message length 2,000; per-file 10,000; workspace 50,000; conversations 5; files-per-workspace 3), the quota constants (`QUOTA_5H_LIMIT` / `QUOTA_WEEK_LIMIT` / `NEAR_LIMIT_PERCENT`), and the canonical quota-error copy (`buildQuotaError` / `buildRateLimitErrorMessage`). Limits are enforced at the call sites (textarea `maxLength`, `WorkspaceDrawer` clamping, tool schema validation) rather than through a shared "over-limit" helper.
+Add a **character cap** (`MAX_MESSAGE_CHARS = 2000` from `src/lib/limits.ts`) mirrored on the server with a Zod/HTTP 400 — never trust the client-side `maxLength` alone. `src/lib/limits.ts` centralizes every free-tier limit (message length 2,000; per-file 10,000; workspace 50,000; conversations 5; files-per-workspace 3; images per message 4; image input 5 MB; image output 1.5 MB; image dimension 1280 px), the quota constants (`QUOTA_5H_LIMIT` / `QUOTA_WEEK_LIMIT` / `NEAR_LIMIT_PERCENT`), and the canonical quota-error copy (`buildQuotaError` / `buildRateLimitErrorMessage`). Limits are enforced at the call sites (textarea `maxLength`, `WorkspaceDrawer` clamping, tool schema validation) rather than through a shared "over-limit" helper.
+
+**Image attachments (multimodal input).** The composer is vision-gated per model: `getModelSupportsVision(modelId)` (from `src/lib/models.ts`) hides the attach button on text-only models (DeepSeek V4 Flash). On a vision model the flow is *validate → compress → send*:
+
+1. **Validate** the picked file with `validateImageFile` (`src/lib/image-utils.ts`): MIME whitelist (JPEG/PNG/WebP/GIF) plus a 5 MB input cap. Pure, so it is unit-testable in bun.
+2. **Compress** with `processImageFile`: a canvas loop downscales the long edge to 1280 px (`MAX_IMAGE_DIMENSION`) and steps JPEG quality 0.85→0.3 (PNG for alpha channels) until the resulting data URL fits a 1.5 MB budget (≈2 M chars on the wire). The output is a `ProcessedImage { dataUrl, mediaType, filename, width, height }`.
+3. **Send** up to 4 images per message (`MAX_IMAGES_PER_MESSAGE`): `handleSendMessage` maps them to AI SDK **`file` UI parts** (`{ type: 'file', mediaType, url: dataUrl, filename }`) and sends text + parts together via `chat.sendMessage`.
+
+The server is the backstop, not the gate: `/api/agent` re-checks the count with `countImageParts` and each part with `findImagePartViolations` (MIME + data-URL length), returning a 400 before any model call. For text-only providers, `stripImageContentForTextOnlyProviders` in `src/lib/ai/agent-runner.ts` removes image parts from replayed history so conversations that once contained images stay usable after a provider switch. On the render side, `flattenMessageSegments` (`src/lib/ai/message-segments.ts`) collects image parts into a `user-images` segment that `ChatBubble` hands to `UserMessageAttachments` (`src/components/chat/message/UserMessageAttachments.tsx`), a memoized thumbnail row above the user's text.
 
 ---
 
@@ -405,7 +413,7 @@ experimental_transform: [
 Weight-conscious notes:
 
 - `chunking: 'word'` reads as natural prose; `'character'` feels more incremental but costs more re-renders (§5).
-- Strata AI pairs server-side `smoothStream` with client-side `SmoothStreamText` (`src/components/chat/SmoothStreamText.tsx`), which renders accumulated text through `ReactMarkdown` in real time with an animated streaming caret (`animate-caret`, 1.1 s blink) appended to the trailing span. No throttling or token-fade transitions are needed — the caret alone signals liveness, and `React.memo(ChatBubble)` (§5.2–5.3) keeps completed bubbles from re-rendering.
+- Strata AI pairs server-side `smoothStream` with client-side `SmoothStreamText` (`src/components/ui/SmoothStreamText.tsx`), which renders accumulated text through `ReactMarkdown` in real time with an animated streaming caret (`animate-caret`, 1.1 s blink) appended to the trailing span. No throttling or token-fade transitions are needed — the caret alone signals liveness, and `React.memo(ChatBubble)` (§5.2–5.3) keeps completed bubbles from re-rendering.
 
 ### 2.2 Status-driven chrome
 
@@ -454,11 +462,11 @@ Open reasoning models emit their *thoughts* as a separate part type. The Strata 
 1. **While reasoning is in progress**, render the thought text inside a collapsible "Thought Process" accordion as **plain pre-wrap text** (`font-mono whitespace-pre-wrap`) with a spinner, and a live clock ("Thinking...") or a fixed "Thought for X s".
 2. **Only once thinking completes**, upgrade that block to styled `ReactMarkdown`.
 
-Why two phases? Because re-parsing a Markdown AST on every 15 ms delta is a top cause of stream jank — quantified in §5.7. `ThoughtAccordion` (`src/components/chat/ThoughtAccordion.tsx`) is fed `isThinking={isStreaming && isLastSegment}` so the in-flight thought stays cheap.
+Why two phases? Because re-parsing a Markdown AST on every 15 ms delta is a top cause of stream jank — quantified in §5.7. `ThoughtAccordion` (`src/components/chat/message/ThoughtAccordion.tsx`) is fed `isThinking={isStreaming && isLastSegment}` so the in-flight thought stays cheap.
 
 ### 2.5 Live Markdown via SmoothStreamText
 
-The active (in-flight) text part renders formatted Markdown via `SmoothStreamText`, which simply wraps `ReactMarkdown` and appends a streaming caret; completed parts fall back to plain `ReactMarkdown` with a memoized component map. From `src/components/chat/ChatBubble.tsx`:
+The active (in-flight) text part renders formatted Markdown via `SmoothStreamText`, which simply wraps `ReactMarkdown` and appends a streaming caret; completed parts fall back to plain `ReactMarkdown` with a memoized component map. From `src/components/chat/message/ChatBubble.tsx`:
 
 ```tsx
 {isStreamingActiveSegment ? (
@@ -474,7 +482,7 @@ When the whole bubble is finished, `React.memo(ChatBubble)` (§5.2–5.3) keeps 
 
 ### 2.6 Group intermediate work, but only after it finishes
 
-A multi-step agent produces a *scaffold* before the final answer: reasoning spans, tool-call cards, intermediate prose. Render it live, then collapse it the instant inference completes. `WorkGroupCard` (`src/components/chat/WorkGroupCard.tsx`) does exactly this:
+A multi-step agent produces a *scaffold* before the final answer: reasoning spans, tool-call cards, intermediate prose. Render it live, then collapse it the instant inference completes. `WorkGroupCard` (`src/components/chat/message/WorkGroupCard.tsx`) does exactly this:
 
 1. **While streaming**, `ChatBubble` returns every segment **ungrouped and in place**, so thoughts, tool-calls, and intermediate text stream chronologically with the spinner.
 2. **On finish**, the memo recomputes and folds *all* pre-answer output into a **single collapsible "Worked for Xs" card**. Only the final text segment renders as the answer bubble.
@@ -718,16 +726,17 @@ export interface ModelOption {
   provider?: 'google' | 'fireworks'; // defaults to 'google'
   contextWindow: number;   // approximate context window in tokens
   maxOutput?: number;      // max output tokens when the provider publishes one
+  supportsVision?: boolean; // image attachments accepted (defaults to true)
   pricing?: ModelPricing;  // USD per 1M tokens, used for cost tracking (§4.9)
 }
 
 export const MODELS: ModelOption[] = [
-  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite', family: 'Gemini 3.5', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.30, outputPerMillion: 2.50, cachedInputPerMillion: 0.075, currency: 'USD' } },
-  { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', family: 'Gemini 3.1', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.25, outputPerMillion: 1.50, cachedInputPerMillion: 0.0625, currency: 'USD' } },
-  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview', family: 'Gemini 3', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.50, outputPerMillion: 3.00, cachedInputPerMillion: 0.125, currency: 'USD' } },
-  { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.14, outputPerMillion: 0.35, currency: 'USD' } },
-  { id: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.07, outputPerMillion: 0.34, currency: 'USD' } },
-  { id: 'accounts/fireworks/models/deepseek-v4-flash-0731', label: 'DeepSeek V4 Flash 0731', family: 'DeepSeek', provider: 'fireworks', contextWindow: 131072, maxOutput: 65536, pricing: { inputPerMillion: 0.14, outputPerMillion: 0.28, cachedInputPerMillion: 0.028, currency: 'USD' } },
+  { id: 'gemini-3.5-flash-lite', label: 'Gemini 3.5 Flash Lite', family: 'Gemini 3.5', contextWindow: 131072, maxOutput: 65536, supportsVision: true, pricing: { inputPerMillion: 0.30, outputPerMillion: 2.50, cachedInputPerMillion: 0.075, currency: 'USD' } },
+  { id: 'gemini-3.1-flash-lite', label: 'Gemini 3.1 Flash Lite', family: 'Gemini 3.1', contextWindow: 131072, maxOutput: 65536, supportsVision: true, pricing: { inputPerMillion: 0.25, outputPerMillion: 1.50, cachedInputPerMillion: 0.0625, currency: 'USD' } },
+  { id: 'gemini-3-flash-preview', label: 'Gemini 3 Flash Preview', family: 'Gemini 3', contextWindow: 131072, maxOutput: 65536, supportsVision: true, pricing: { inputPerMillion: 0.50, outputPerMillion: 3.00, cachedInputPerMillion: 0.125, currency: 'USD' } },
+  { id: 'gemma-4-31b-it', label: 'Gemma 4 31B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536, supportsVision: true, pricing: { inputPerMillion: 0.14, outputPerMillion: 0.35, currency: 'USD' } },
+  { id: 'gemma-4-26b-a4b-it', label: 'Gemma 4 26B A4B IT', family: 'Gemma 4', contextWindow: 131072, maxOutput: 65536, supportsVision: true, pricing: { inputPerMillion: 0.07, outputPerMillion: 0.34, currency: 'USD' } },
+  { id: 'accounts/fireworks/models/deepseek-v4-flash-0731', label: 'DeepSeek V4 Flash 0731', family: 'DeepSeek', provider: 'fireworks', contextWindow: 131072, maxOutput: 65536, supportsVision: false, pricing: { inputPerMillion: 0.14, outputPerMillion: 0.28, cachedInputPerMillion: 0.028, currency: 'USD' } },
 ];
 ```
 
@@ -741,6 +750,7 @@ Plus, per `src/lib/models.ts`:
 - `getInitialModel()` / `saveModelPreference()` / `getStoredThinkingLevel()` — localStorage helpers. `getInitialModel` only trusts a stored id still in the catalog, falling back to `NEXT_PUBLIC_GEMINI_MODEL` then `gemini-3.5-flash-lite`.
 - `getValidThinkingLevelForModel(modelId, level)` — clamps a chosen level to a model's allowed set, else returns the default.
 - `getModelPricing(modelId)` — resolves `ModelPricing` for a model id, falling back to Gemini 3.5 Flash Lite rates for unknown ids. The same pricing block is mirrored in `metadata.json`'s `supportedModels` so the extension manifest and the app catalog never drift.
+- `getModelSupportsVision(modelId)` — resolves the `supportsVision` flag (defaults to `true` for unknown ids); the composer's attach button is gated on it, and `stripImageContentForTextOnlyProviders` in the agent runner uses the same rule to prune image parts for text-only providers on replay (see §1.5).
 
 The catalog is the single source of truth that drives the model picker UI (`ModelSelectorMenu`), validation of stored preferences, and — via the `provider` field — server routing (`resolveAgentModel`, §4.2). The default model falls back to `NEXT_PUBLIC_GEMINI_MODEL`, then `gemini-3.5-flash-lite`. Conversation-level state (`conversations.model` / `thinkingLevel`) wins over stored preferences on load (`useModelSettings`).
 
@@ -1094,7 +1104,7 @@ The motivated Strata AI reported that the unmemoized `WorkspaceDrawer` ran `Reac
 
 ### 5.4 Custom comparators for streaming props
 
-Tool-card props contain **multi-KB argument strings** (`writeFile` content) that legitimately change on every delta — a shallow prop compare would fail and re-render constantly. `ToolCallCard` passes a custom comparator that ignores argument identity unless the *state* transitioned (`src/components/chat/ToolCallCard.tsx`):
+Tool-card props contain **multi-KB argument strings** (`writeFile` content) that legitimately change on every delta — a shallow prop compare would fail and re-render constantly. `ToolCallCard` passes a custom comparator that ignores argument identity unless the *state* transitioned (`src/components/chat/message/ToolCallCard.tsx`):
 
 ```ts
 export function areToolCallCardPropsEqual(prevProps, nextProps) {
@@ -1280,10 +1290,13 @@ Every item shipped and was later fixed. Learn from the receipts:
 | Tool-result file extraction + compaction history slicing (`sliceMessagesAfterCompaction`) | `src/lib/ai/message-extractor.ts` |
 | Message-part → render-segment flattening (streaming ungrouped / finished work-group) | `src/lib/ai/message-segments.ts` |
 | Friendly error mapping | `src/lib/ai/chat-error-handler.ts` |
-| Memoized chat surfaces (ChatBubble, SmoothStreamText, ChatInput, ToolCallCard, WorkGroupCard, resolver) | `src/components/chat/*` |
-| Shared Markdown component maps (assistant / user / thought / canvas variants) | `src/components/chat/create-markdown-components.tsx` |
-| `/compact` slash-command popover + registry | `src/components/chat/SlashCommandMenu.tsx` |
-| Compaction divider pills | `src/components/chat/CompactionDivider.tsx` |
+| Memoized chat surfaces (ChatBubble, UserMessageAttachments, SmoothStreamText, ChatInput, ToolCallCard, WorkGroupCard, resolver) | `src/components/chat/message/*`, `src/components/chat/ChatInput.tsx`, `src/components/ui/SmoothStreamText.tsx`, `src/components/chat/tools/resolver.tsx` |
+| Shared Markdown component maps (assistant / user / thought / canvas variants) | `src/components/ui/createMarkdownComponents.tsx` |
+| Composer internals (attachment previews, status row, toolbar, model/thinking menus) | `src/components/chat/composer/*` |
+| Tool summary builders (`build*` per tool, `SummaryLine` primitive) | `src/components/chat/tools/summaries.tsx` |
+| Client image attachment pipeline (validate → canvas compress → data URL) | `src/lib/image-utils.ts` |
+| Clipboard helpers (`stripMarkdown` / `copyToClipboard`) | `src/lib/clipboard.ts` |
+| Quota ring (sidebar footer) | `src/components/sidebar/RateLimitRing.tsx` |
 | Shared auth form state machine (`useSignIn` / `useSignUp`) | `src/hooks/useAuthForm.ts` |
 | Token usage popover (context meter, cost breakdown, outside-tap dismissal) | `src/components/chat/TokenUsagePopover.tsx` |
 | Global quota context (SSR hydration + header sync) | `src/contexts/RateLimitContext.tsx` |
