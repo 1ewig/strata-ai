@@ -87,7 +87,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
     <div
       ref={bubbleContainerRef}
       className={`group relative flex items-start gap-3.5 ${isUser ? 'flex-row-reverse animate-slide-up' : 'fade-in'
-        }`}
+        } ${openMenuKey ? 'z-30' : ''}`}
     >
       {/* Avatar */}
       <div
@@ -139,12 +139,12 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                 className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full cursor-pointer sm:cursor-default ${isActionActive
                   ? 'border-primary-hover shadow-glow-primary/20'
                   : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/20'
-                  }`}
+                  } ${isMenuOpen ? 'z-30' : ''}`}
               >
                 {userContent && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className={`sticky top-2 float-right ml-2.5 -mr-1 -mt-0.5 z-10 transition-opacity duration-200 ${isActionActive
+                    className={`sticky top-2 float-right ml-2.5 -mr-1 -mt-0.5 ${isMenuOpen ? 'z-30' : 'z-10'} transition-opacity duration-200 ${isActionActive
                       ? 'opacity-100 pointer-events-auto'
                       : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
                       }`}
@@ -201,12 +201,12 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                 className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-overlay/90 border text-text-primary rounded-tl-xs backdrop-blur-sm w-fit max-w-full cursor-pointer sm:cursor-default ${isActionActive
                   ? 'border-primary/60 shadow-card-lg'
                   : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
-                  } ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''}`}
+                  } ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''} ${isMenuOpen ? 'z-30' : ''}`}
               >
                 {!isStreamingActiveSegment && textContent && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className={`sticky top-2 float-right ml-2.5 -mr-1 -mt-0.5 z-10 transition-opacity duration-200 ${isActionActive
+                    className={`sticky top-2 float-right ml-2.5 -mr-1 -mt-0.5 ${isMenuOpen ? 'z-30' : 'z-10'} transition-opacity duration-200 ${isActionActive
                       ? 'opacity-100 pointer-events-auto'
                       : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
                       }`}

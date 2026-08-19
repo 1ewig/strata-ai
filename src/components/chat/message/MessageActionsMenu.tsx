@@ -92,7 +92,7 @@ export default function MessageActionsMenu({
   if (!textContent.trim()) return null;
 
   return (
-    <div ref={menuRef} className={`relative inline-block ${className}`}>
+    <div ref={menuRef} className={`relative inline-block ${isOpen ? 'z-30' : ''} ${className}`}>
       {/* Menu Trigger Button */}
       <button
         type="button"
