@@ -16,6 +16,10 @@ interface ModelSelectorMenuProps {
   onModelSelect: (modelId: string) => void;
   onThinkingLevelChange: (level: string) => void;
   dropDirection?: 'up' | 'down';
+  align?: 'left' | 'right';
+  variant?: 'header' | 'composer' | 'default';
+  id?: string;
+  className?: string;
 }
 
 export default function ModelSelectorMenu({
@@ -24,6 +28,10 @@ export default function ModelSelectorMenu({
   onModelSelect,
   onThinkingLevelChange,
   dropDirection = 'down',
+  align = 'right',
+  variant = 'default',
+  id,
+  className = '',
 }: ModelSelectorMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'main' | 'effort' | 'more-models'>('main');
@@ -117,11 +125,11 @@ export default function ModelSelectorMenu({
   };
 
   return (
-    <div ref={menuRef} className="relative inline-block text-left">
-      {/* TRIGGER BUTTON: Gear on mobile, Model pill on tablet/desktop */}
+    <div ref={menuRef} className={`relative inline-block text-left ${className}`}>
+      {/* TRIGGER BUTTON: Gear icon on mobile, Model name pill + effort badge + chevron on tablet/desktop */}
       <button
         type="button"
-        id="header-model-selector-btn"
+        id={id || 'chat-model-selector-btn'}
         aria-expanded={isOpen}
         aria-label={`Select model (current: ${currentModel?.label || 'Model'})`}
         title={`Model: ${currentModel?.label || 'Model'}${effortLabel ? ` (${effortLabel} effort)` : ''}`}
@@ -132,24 +140,24 @@ export default function ModelSelectorMenu({
             setIsOpen(true);
           }
         }}
-        className={`group flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-xl border transition-all duration-150 active:scale-[0.98] cursor-pointer shrink-0 select-none shadow-button ${
+        className={`group p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center justify-center sm:justify-start gap-1.5 border shadow-button cursor-pointer select-none ${
           isOpen
             ? 'bg-surface-hover border-edge-hover text-text-bright ring-2 ring-primary/20'
-            : 'bg-surface-raised/80 hover:bg-surface-hover border-edge-raised hover:border-edge-hover text-text-primary'
+            : 'bg-surface-raised/80 hover:bg-surface-hover text-text-primary hover:border-edge-hover active:scale-95 border-edge-raised'
         }`}
       >
         {/* Mobile View: Gear Icon */}
         <div className="sm:hidden flex items-center justify-center">
           <Settings
             className={`w-4 h-4 transition-transform duration-200 ${
-              isOpen ? 'rotate-45 text-primary' : 'text-text-muted group-hover:text-text-primary'
+              isOpen ? 'rotate-45 text-primary' : 'text-text-muted group-hover:text-primary'
             }`}
           />
         </div>
 
         {/* Desktop/Tablet View: Model Name + Effort Badge + Chevron */}
         <div className="hidden sm:flex items-center gap-1.5">
-          <span className="text-caption sm:text-label font-semibold text-text-primary truncate max-w-[120px] md:max-w-[180px] lg:max-w-[240px]">
+          <span className="text-caption font-semibold text-text-primary truncate max-w-[120px] md:max-w-[180px] lg:max-w-[240px]">
             {currentModel?.label || 'Model'}
           </span>
           {effortLabel && (
@@ -169,7 +177,9 @@ export default function ModelSelectorMenu({
       {isOpen && (
         <div
           className={`absolute ${
-            dropDirection === 'down' ? 'top-full mt-2 right-0' : 'bottom-full mb-2 right-0'
+            dropDirection === 'down' ? 'top-full mt-2' : 'bottom-full mb-2'
+          } ${
+            align === 'left' ? 'left-0' : 'right-0'
           } w-72 max-w-[calc(100vw-1.5rem)] bg-surface-elevated border border-edge-raised rounded-2xl shadow-card-lg p-1.5 text-label z-50 animate-in fade-in zoom-in-95 duration-100`}
         >
           {/* SUBMENU HEADER */}

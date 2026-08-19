@@ -156,10 +156,11 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
       isLoading={isLoading}
       isCompacting={isCompacting}
       model={model}
+      thinkingLevel={thinkingLevel}
+      onModelSelect={handleModelSelect}
+      onThinkingLevelChange={handleThinkingLevelChange}
       rateLimitData={rateLimitData}
       isContextWindowExhausted={isContextWindowExhausted}
-      filesCount={files.length}
-      onOpenDrawer={handleOpenDrawer}
     />
   );
 
@@ -199,14 +200,11 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               files={files}
               activeFileId={activeFileId}
               model={model}
-              thinkingLevel={thinkingLevel}
               tokenUsage={tokenUsage}
               onOpenFile={handleOpenFile}
               onOpenDrawer={handleOpenDrawer}
               onOpenSidebar={handleOpenSidebar}
               onNewChat={handleNewChat}
-              onModelSelect={handleModelSelect}
-              onThinkingLevelChange={handleThinkingLevelChange}
             />
           );
         })()}
