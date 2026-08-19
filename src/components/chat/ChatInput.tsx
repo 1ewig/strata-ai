@@ -9,7 +9,9 @@ import {
 import AttachmentPreviews from './composer/AttachmentPreviews';
 import ComposerStatusRow from './composer/ComposerStatusRow';
 import ComposerToolbar from './composer/ComposerToolbar';
+import DropZoneOverlay from './composer/DropZoneOverlay';
 import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './composer/SlashCommandMenu';
+import { useComposerFileDrop } from './composer/useComposerFileDrop';
 
 /** Props for the ChatInput composer. */
 interface ChatInputProps {
@@ -137,6 +139,21 @@ export default React.memo(function ChatInput({
     setInputValue(e.target.value);
   };
 
+  /** Appends newly validated and processed image attachments up to the message cap. */
+  const handleImagesAttached = (newImages: ProcessedImage[]) => {
+    setAttachedImages((prev) => [...prev, ...newImages].slice(0, MAX_IMAGES_PER_MESSAGE));
+  };
+
+  // Drag-and-drop & clipboard paste hook for seamless image attachment
+  const { isDraggingOver, dragHandlers } = useComposerFileDrop({
+    supportsVision,
+    isAttachDisabled,
+    attachedCount: attachedImages.length,
+    maxImages: MAX_IMAGES_PER_MESSAGE,
+    onImagesAttached: handleImagesAttached,
+    onError: setAttachError,
+  });
+
   /**
    * Validates and compresses selected image files, appending them to the
    * pending-attachment queue up to the per-message cap. Invalid or oversized
@@ -148,8 +165,21 @@ export default React.memo(function ChatInput({
     if (files.length === 0) return;
 
     setAttachError(null);
+    const availableSlots = MAX_IMAGES_PER_MESSAGE - attachedImages.length;
+    if (availableSlots <= 0) {
+      setAttachError(`Maximum of ${MAX_IMAGES_PER_MESSAGE} images per message reached.`);
+      return;
+    }
+
+    const filesToProcess = files.slice(0, availableSlots);
+    if (files.length > availableSlots) {
+      setAttachError(
+        `Only ${availableSlots} image${availableSlots === 1 ? '' : 's'} could be attached (limit: ${MAX_IMAGES_PER_MESSAGE}).`
+      );
+    }
+
     const next: ProcessedImage[] = [];
-    for (const file of files) {
+    for (const file of filesToProcess) {
       const validationError = validateImageFile(file);
       if (validationError) {
         setAttachError(validationError);
@@ -161,7 +191,9 @@ export default React.memo(function ChatInput({
         setAttachError(`Could not process "${file.name}".`);
       }
     }
-    setAttachedImages((prev) => [...prev, ...next].slice(0, MAX_IMAGES_PER_MESSAGE));
+    if (next.length > 0) {
+      handleImagesAttached(next);
+    }
   };
 
   /** Removes a pending attachment by index. */
@@ -290,13 +322,28 @@ export default React.memo(function ChatInput({
       />
 
       <div
-        className={`flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${isCompacting
+        {...dragHandlers}
+        className={`relative flex flex-col gap-2.5 bg-surface-raised/95 dark:bg-surface-raised/90 backdrop-blur-xl border ${isCompacting
           ? 'border-primary/40 bg-primary-soft/10'
           : isBlocked
             ? 'border-danger/40 bg-danger-soft/20'
-            : 'border-edge-raised hover:border-primary/60 focus-within:border-primary/60 focus-within:shadow-glow-primary/20'
+            : isDraggingOver
+              ? 'border-primary shadow-glow-primary/30 ring-2 ring-primary/20'
+              : 'border-edge-raised hover:border-primary/60 focus-within:border-primary/60 focus-within:shadow-glow-primary/20'
           } rounded-2xl md:rounded-3xl p-3 sm:p-4 transition-all shadow-card`}
       >
+        {/* Floating Drop Zone Overlay: illuminated on dragover */}
+        <DropZoneOverlay
+          isVisible={isDraggingOver}
+          isAttachDisabled={isAttachDisabled}
+          disabledReason={
+            !supportsVision
+              ? 'Selected model does not support images'
+              : isImageCapReached
+                ? `Maximum of ${MAX_IMAGES_PER_MESSAGE} images reached`
+                : 'Image attachment unavailable'
+          }
+        />
         {/* Hidden file picker: multi-image selection, surfaced via the attach button */}
         <input
           ref={fileInputRef}
