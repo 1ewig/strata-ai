@@ -134,7 +134,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                 {userContent && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className={`sticky top-2 float-right -mr-6.5 -mt-1.5 ${isMenuOpen ? 'z-30' : 'z-10'} transition-opacity duration-200 ${isActionActive
+                    className={`absolute top-2.5 right-2.5 ${isMenuOpen ? 'z-30' : 'z-10'} transition-opacity duration-200 ${isActionActive
                       ? 'opacity-100 pointer-events-auto'
                       : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
                       }`}
@@ -196,7 +196,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                 {!isStreamingActiveSegment && textContent && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className={`sticky top-2 float-right -mr-6.5 -mt-1.5 ${isMenuOpen ? 'z-30' : 'z-10'} transition-opacity duration-200 ${isActionActive
+                    className={`absolute top-2.5 right-2.5 ${isMenuOpen ? 'z-30' : 'z-10'} transition-opacity duration-200 ${isActionActive
                       ? 'opacity-100 pointer-events-auto'
                       : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
                       }`}

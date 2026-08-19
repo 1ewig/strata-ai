@@ -115,3 +115,67 @@ describe("findImagePartViolations", () => {
     expect(findImagePartViolations(undefined)).toEqual([]);
   });
 });
+
+describe("sanitizeMessagesForProvider & stripImageContentForTextOnlyProviders", () => {
+  const {
+    sanitizeMessagesForProvider,
+    stripImageContentForTextOnlyProviders,
+  } = require("@/lib/ai/agent-runner");
+
+  it("strips UI image file parts for fireworks while leaving Google unchanged", () => {
+    const input = [
+      {
+        role: "user",
+        parts: [
+          { type: "file", mediaType: "image/png", url: "data:image/png;base64,123" },
+          { type: "text", text: "Explain this diagram" },
+        ],
+      },
+    ];
+
+    const googleOutput = sanitizeMessagesForProvider(input, "google");
+    expect(googleOutput[0].parts).toHaveLength(2);
+
+    const fireworksOutput = sanitizeMessagesForProvider(input, "fireworks");
+    expect(fireworksOutput[0].parts).toHaveLength(1);
+    expect(fireworksOutput[0].parts[0]).toEqual({ type: "text", text: "Explain this diagram" });
+  });
+
+  it("provides a fallback text placeholder when an image-only user message is stripped", () => {
+    const input = [
+      {
+        role: "user",
+        parts: [{ type: "file", mediaType: "image/jpeg", url: "data:image/jpeg;base64,123" }],
+      },
+    ];
+
+    const fireworksOutput = sanitizeMessagesForProvider(input, "fireworks");
+    expect(fireworksOutput[0].parts).toHaveLength(1);
+    expect(fireworksOutput[0].parts[0]).toEqual({ type: "text", text: "[Attached image]" });
+  });
+
+  it("strips model-converted file and image parts for Fireworks provider", () => {
+    const modelMessages = [
+      {
+        role: "user",
+        content: [
+          { type: "file", mediaType: "image/png", data: { type: "url", url: "data:image/png;base64,123" } },
+          { type: "text", text: "Analyze this image" },
+        ],
+      },
+      {
+        role: "user",
+        content: [
+          { type: "image", image: "data:image/jpeg;base64,123" },
+        ],
+      },
+    ];
+
+    const googleResult = stripImageContentForTextOnlyProviders(modelMessages, "google");
+    expect(googleResult).toEqual(modelMessages);
+
+    const fireworksResult = stripImageContentForTextOnlyProviders(modelMessages, "fireworks");
+    expect(fireworksResult[0].content).toEqual([{ type: "text", text: "Analyze this image" }]);
+    expect(fireworksResult[1].content).toEqual([{ type: "text", text: "[Attached image]" }]);
+  });
+});
