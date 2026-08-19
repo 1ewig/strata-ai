@@ -8,6 +8,7 @@ import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
 import WorkGroupCard from './WorkGroupCard';
 import MessageActionsMenu from './MessageActionsMenu';
+import UserMessageAttachments from './UserMessageAttachments';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { flattenMessageSegments, Segment } from '@/lib/ai/message-segments';
 
@@ -116,18 +117,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           const isMenuOpen = openMenuKey === seg.key;
 
           if (seg.type === 'user-images' && seg.images && seg.images.length > 0) {
-            return (
-              <div key={seg.key} className="flex flex-wrap justify-end gap-2 max-w-full">
-                {seg.images.map((img, imgIdx) => (
-                  <img
-                    key={`${img.filename}-${imgIdx}`}
-                    src={img.url}
-                    alt={img.filename}
-                    className="w-auto h-auto max-w-[200px] sm:max-w-[260px] max-h-56 object-contain rounded-xl border border-edge-raised shadow-card bg-surface-raised"
-                  />
-                ))}
-              </div>
-            );
+            return <UserMessageAttachments key={seg.key} images={seg.images} />;
           }
 
           if (seg.type === 'user-text') {

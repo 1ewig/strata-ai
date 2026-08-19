@@ -307,6 +307,15 @@ export default React.memo(function ChatInput({
           onChange={handleFilesSelected}
         />
 
+        {/* Pending image attachments: removable thumbnails awaiting send */}
+        {(attachedImages.length > 0 || attachError) && (
+          <AttachmentPreviews
+            images={attachedImages}
+            error={attachError}
+            onRemove={handleRemoveImage}
+          />
+        )}
+
         {/* Row 1: Text Field Input, Compacting Notice, or Blocking Warning */}
         <ComposerStatusRow
           isCompacting={isCompacting}
@@ -322,15 +331,6 @@ export default React.memo(function ChatInput({
           onKeyDown={handleKeyDown}
           textareaRef={textareaRef}
         />
-
-        {/* Pending image attachments: removable thumbnails awaiting send */}
-        {(attachedImages.length > 0 || attachError) && (
-          <AttachmentPreviews
-            images={attachedImages}
-            error={attachError}
-            onRemove={handleRemoveImage}
-          />
-        )}
 
         {/* Row 2: Bottom Toolbar */}
         <ComposerToolbar

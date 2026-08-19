@@ -24,7 +24,7 @@ function AttachmentPreviews({ images, error, onRemove }: AttachmentPreviewsProps
           <img
             src={image.dataUrl}
             alt={image.filename}
-            className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl border border-edge-raised shadow-button"
+            className="w-11 h-11 sm:w-13 sm:h-13 object-cover rounded-lg border border-edge-raised shadow-button"
           />
           <button
             type="button"
