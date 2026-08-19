@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, mock } from "bun:test";
-import { MAX_MESSAGE_CHARS } from "@/lib/limits";
+import { MAX_MESSAGE_CHARS, MAX_IMAGES_PER_MESSAGE } from "@/lib/limits";
 
 /**
  * POST /api/agent guard-and-delegation tests. All heavyweight dependencies
@@ -165,5 +165,64 @@ describe("POST /api/agent", () => {
     const res = await post({ messages: [{ role: "user", content: "hi" }] });
     expect(res.status).toBe(200);
     expect(runAgentResponseMock.mock.calls[0][0].maxSteps).toBe(25);
+  });
+
+  it("rejects a latest user message exceeding the per-message image cap", async () => {
+    withSession();
+    const imagePart = { type: "file", mediaType: "image/png", filename: "a.png", url: "data:image/png;base64,x" };
+    const res = await post({
+      messages: [
+        {
+          role: "user",
+          parts: Array.from({ length: MAX_IMAGES_PER_MESSAGE + 1 }, () => imagePart),
+        },
+      ],
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain(`maximum of ${MAX_IMAGES_PER_MESSAGE} images`);
+    expect(runAgentResponseMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects image parts with disallowed MIME types", async () => {
+    withSession();
+    const res = await post({
+      messages: [
+        {
+          role: "user",
+          parts: [{ type: "file", mediaType: "image/tiff", filename: "a.tiff", url: "data:image/tiff;base64,x" }],
+        },
+      ],
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Unsupported image type");
+    expect(runAgentResponseMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts valid image parts and forwards them to the runner", async () => {
+    withSession();
+    const res = await post({
+      messages: [
+        {
+          role: "user",
+          parts: [
+            { type: "file", mediaType: "image/png", filename: "a.png", url: "data:image/png;base64,x" },
+            { type: "text", text: "describe this" },
+          ],
+        },
+      ],
+    });
+    expect(res.status).toBe(200);
+    expect(runAgentResponseMock).toHaveBeenCalledTimes(1);
+    const args = runAgentResponseMock.mock.calls[0][0];
+    expect(args.messages[0].parts[0].type).toBe("file");
+    expect(args.messages[0].parts[0].mediaType).toBe("image/png");
+  });
+
+  it("ignores image validation for messages without a parts array", async () => {
+    withSession();
+    const res = await post({ messages: [{ role: "user", content: "plain text" }] });
+    expect(res.status).toBe(200);
   });
 });

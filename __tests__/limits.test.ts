@@ -1,5 +1,11 @@
 import { describe, it, expect } from "bun:test";
 import {
+  ALLOWED_IMAGE_TYPES,
+  MAX_IMAGES_PER_MESSAGE,
+  MAX_IMAGE_DATA_URL_CHARS,
+  MAX_IMAGE_DIMENSION,
+  MAX_IMAGE_INPUT_BYTES,
+  MAX_IMAGE_OUTPUT_BYTES,
   buildQuotaError,
   buildRateLimitErrorMessage,
   formatCharCount,
@@ -47,5 +53,27 @@ describe("buildRateLimitErrorMessage", () => {
 describe("formatCharCount", () => {
   it("formats counts against a limit with locale separators", () => {
     expect(formatCharCount(1200, 2000)).toBe("1,200 / 2,000");
+  });
+});
+
+describe("image attachment limits", () => {
+  it("allows up to 4 images per message", () => {
+    expect(MAX_IMAGES_PER_MESSAGE).toBe(4);
+  });
+
+  it("accepts only the documented image MIME types", () => {
+    expect(ALLOWED_IMAGE_TYPES).toEqual(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+  });
+
+  it("keeps the raw-input gate above the compressed-output gate", () => {
+    expect(MAX_IMAGE_INPUT_BYTES).toBeGreaterThan(MAX_IMAGE_OUTPUT_BYTES);
+  });
+
+  it("caps the wire data URL length proportionally to the output gate", () => {
+    expect(MAX_IMAGE_DATA_URL_CHARS).toBeGreaterThanOrEqual(Math.floor(MAX_IMAGE_OUTPUT_BYTES * (4 / 3)));
+  });
+
+  it("caps the downscaled dimension", () => {
+    expect(MAX_IMAGE_DIMENSION).toBe(1280);
   });
 });

@@ -1,13 +1,19 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ArrowUp, AlertCircle, Square, Sparkles } from 'lucide-react';
-import { MAX_MESSAGE_CHARS, buildQuotaError } from '@/lib/limits';
+import { ArrowUp, AlertCircle, Square, Sparkles, Paperclip, X } from 'lucide-react';
+import { MAX_MESSAGE_CHARS, MAX_IMAGES_PER_MESSAGE, buildQuotaError } from '@/lib/limits';
+import { getModelSupportsVision } from '@/lib/models';
+import {
+  processImageFile,
+  validateImageFile,
+  type ProcessedImage,
+} from '@/lib/image-utils';
 import ModelSelectorMenu from './ModelSelectorMenu';
 import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './SlashCommandMenu';
 
 /** Props for the ChatInput composer. */
 interface ChatInputProps {
   chatId?: string;
-  onSendMessage: (text: string) => void;
+  onSendMessage: (text: string, images?: ProcessedImage[]) => void;
   onTriggerCompaction?: () => void;
   onStop?: () => void;
   isLoading: boolean;
@@ -68,7 +74,10 @@ export default React.memo(function ChatInput({
   isContextWindowExhausted = false,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
+  const [attachedImages, setAttachedImages] = useState<ProcessedImage[]>([]);
+  const [attachError, setAttachError] = useState<string | null>(null);
   const [placeholderIndex, setPlaceholderIndex] = useState(() => getRandomPlaceholderIndex());
   const prevChatIdRef = useRef(chatId);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
@@ -87,6 +96,12 @@ export default React.memo(function ChatInput({
   const isQuotaExhausted = rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
   // Sending is also blocked once cumulative usage crosses the model's context window or during compaction.
   const isBlocked = isQuotaExhausted || isContextWindowExhausted || isCompacting;
+
+  // The active model must be vision-capable for image attachments.
+  const supportsVision = getModelSupportsVision(model);
+  const isImageCapReached = attachedImages.length >= MAX_IMAGES_PER_MESSAGE;
+  const isAttachDisabled =
+    !supportsVision || isLoading || isBlocked || isImageCapReached || isCompacting;
 
   // Canonical quota-exhausted copy (from buildQuotaError) with a retry hint.
   const blockedQuotaCopy = React.useMemo(() => {
@@ -117,6 +132,45 @@ export default React.memo(function ChatInput({
   /** Keeps the input state in sync with the textarea value. */
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
+  };
+
+  /**
+   * Validates and compresses selected image files, appending them to the
+   * pending-attachment queue up to the per-message cap. Invalid or oversized
+   * files surface an inline error without disturbing existing attachments.
+   */
+  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if (files.length === 0) return;
+
+    setAttachError(null);
+    const next: ProcessedImage[] = [];
+    for (const file of files) {
+      const validationError = validateImageFile(file);
+      if (validationError) {
+        setAttachError(validationError);
+        continue;
+      }
+      try {
+        next.push(await processImageFile(file));
+      } catch {
+        setAttachError(`Could not process "${file.name}".`);
+      }
+    }
+    setAttachedImages((prev) => [...prev, ...next].slice(0, MAX_IMAGES_PER_MESSAGE));
+  };
+
+  /** Removes a pending attachment by index. */
+  const handleRemoveImage = (index: number) => {
+    setAttachedImages((prev) => prev.filter((_, i) => i !== index));
+    setAttachError(null);
+  };
+
+  /** Opens the hidden file picker when the attach button is enabled. */
+  const handleAttachClick = () => {
+    if (isAttachDisabled || !fileInputRef.current) return;
+    fileInputRef.current.click();
   };
 
   // Listen for suggestion chip clicks from the empty state
@@ -159,6 +213,7 @@ export default React.memo(function ChatInput({
   /**
    * Validates the trimmed input against the loading/quota/limit guards,
    * submits the message or command, and clears the composer on success.
+   * Image-only messages are allowed (text may be empty when images are attached).
    */
   const handleSend = () => {
     const text = inputValue.trim();
@@ -168,9 +223,12 @@ export default React.memo(function ChatInput({
       return;
     }
 
-    if (text && !isLoading && !isBlocked && !isCharOverLimit) {
-      onSendMessage(text);
+    const hasImages = attachedImages.length > 0;
+    if ((text || hasImages) && !isLoading && !isBlocked && !isCharOverLimit) {
+      onSendMessage(text, hasImages ? attachedImages : undefined);
       setInputValue('');
+      setAttachedImages([]);
+      setAttachError(null);
     }
   };
 
@@ -234,6 +292,16 @@ export default React.memo(function ChatInput({
             : 'border-edge-raised hover:border-primary/60 focus-within:border-primary/60 focus-within:shadow-glow-primary/20'
           } rounded-2xl md:rounded-3xl p-3 sm:p-4 transition-all shadow-card`}
       >
+        {/* Hidden file picker: multi-image selection, surfaced via the attach button */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          multiple
+          hidden
+          onChange={handleFilesSelected}
+        />
+
         {/* Row 1: Text Field Input, Compacting Notice, or Blocking Warning */}
         {isCompacting ? (
           <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-primary text-label font-medium animate-in fade-in">
@@ -275,8 +343,74 @@ export default React.memo(function ChatInput({
           />
         )}
 
+        {/* Pending image attachments: removable thumbnails awaiting send */}
+        {(attachedImages.length > 0 || attachError) && (
+          <div className="flex flex-wrap items-center gap-2.5">
+            {attachedImages.map((image, index) => (
+              <div
+                key={`${image.filename}-${index}`}
+                className="group/img relative"
+              >
+                <img
+                  src={image.dataUrl}
+                  alt={image.filename}
+                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl border border-edge-raised shadow-button"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleRemoveImage(index)}
+                  className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-danger text-surface border border-surface shadow-button transition-transform hover:scale-110 active:scale-95 cursor-pointer"
+                  title={`Remove ${image.filename}`}
+                  aria-label={`Remove ${image.filename}`}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </div>
+            ))}
+            {attachError && (
+              <span className="flex items-center gap-1.5 text-danger text-caption font-medium animate-in fade-in">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                {attachError}
+              </span>
+            )}
+          </div>
+        )}
+
         {/* Row 2: Bottom Toolbar */}
-        <div className="flex items-center justify-end pt-1 gap-2">
+        <div className="flex items-center justify-between pt-1 gap-2">
+          {/* Left Side: Image Attach Button */}
+          <button
+            id="chat-attach-btn"
+            type="button"
+            onClick={handleAttachClick}
+            disabled={isAttachDisabled}
+            className={`group p-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${isAttachDisabled
+              ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
+              : 'bg-surface-raised text-text-primary hover:text-primary hover:border-primary/60 active:scale-95 cursor-pointer border-edge-raised'
+              }`}
+            title={
+              !supportsVision
+                ? 'The selected model does not support images'
+                : isCompacting
+                  ? 'Context compaction in progress'
+                  : isLoading
+                    ? 'Wait for the current response'
+                    : isBlocked
+                      ? 'Quota or context limit reached'
+                      : isImageCapReached
+                        ? `Up to ${MAX_IMAGES_PER_MESSAGE} images per message`
+                        : 'Attach images'
+            }
+            aria-label="Attach images"
+          >
+            <Paperclip className="w-4 h-4 transition-transform duration-150 group-hover:scale-110" />
+            {attachedImages.length > 0 && (
+              <span className="hidden sm:inline text-caption font-bold text-primary">
+                {attachedImages.length}/{MAX_IMAGES_PER_MESSAGE}
+              </span>
+            )}
+          </button>
+
           {/* Right Side: Model Dropdown, Send / Stop Button */}
           <div className="flex items-center gap-2 shrink-0 ml-auto">
             <ModelSelectorMenu
@@ -301,8 +435,8 @@ export default React.memo(function ChatInput({
               <button
                 id="chat-submit-btn"
                 type="submit"
-                disabled={!inputValue.trim() || isBlocked || isCharOverLimit}
-                className={`group p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${!inputValue.trim() || isBlocked || isCharOverLimit
+                disabled={(!inputValue.trim() && attachedImages.length === 0) || isBlocked || isCharOverLimit}
+                className={`group p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${(!inputValue.trim() && attachedImages.length === 0) || isBlocked || isCharOverLimit
                     ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
                     : 'bg-primary hover:bg-primary-hover active:scale-95 text-surface border-transparent cursor-pointer'
                   }`}
@@ -315,8 +449,8 @@ export default React.memo(function ChatInput({
                         ? 'Quota limit reached'
                         : isCharOverLimit
                           ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
-                          : !inputValue.trim()
-                            ? 'Type a message to send'
+                          : !inputValue.trim() && attachedImages.length === 0
+                            ? 'Type a message or attach images to send'
                             : 'Send message'
                 }
               >

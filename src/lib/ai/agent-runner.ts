@@ -7,6 +7,7 @@ import {
   smoothStream,
   createUIMessageStream,
   LanguageModelUsage,
+  type ModelMessage,
 } from "ai";
 import {
   buildSystemInstruction,
@@ -173,6 +174,41 @@ function coalesceToolInputDeltas() {
 }
 
 /**
+ * Removes image content parts from converted model messages when the active
+ * provider cannot accept multimodal input (Fireworks-hosted DeepSeek).
+ *
+ * Conversations that once contained image attachments replay that history on
+ * every request, so a text-only model would otherwise hard-fail forever on an
+ * old image. The client attach gate prevents new images; this strip keeps
+ * existing history usable and logs the drop.
+ *
+ * @param modelMessages - Messages converted by `convertToModelMessages`.
+ * @param provider - The active backend provider.
+ * @returns Messages with image content removed (unchanged for Google).
+ */
+function stripImageContentForTextOnlyProviders(
+  modelMessages: ModelMessage[],
+  provider: "google" | "fireworks",
+): ModelMessage[] {
+  if (provider !== "fireworks") {
+    return modelMessages;
+  }
+  return modelMessages.map((message) => {
+    if (message.role !== "user" || !Array.isArray(message.content)) {
+      return message;
+    }
+    const filtered = message.content.filter((part) => part.type !== "image");
+    if (filtered.length === message.content.length) {
+      return message;
+    }
+    console.log(
+      `[agent] Stripped ${message.content.length - filtered.length} image part(s) for text-only provider.`
+    );
+    return { ...message, content: filtered };
+  });
+}
+
+/**
  * Builds and returns the streaming UI-message response for an agent run.
  *
  * Encapsulates every piece of `streamText` configuration (model resolution,
@@ -294,12 +330,21 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
   );
 
   // Convert once up front (optional trailing user turn appended for compaction).
+  const convertedMessages = await convertToModelMessages(sanitizedMessages);
+  // Text-only providers (Fireworks/DeepSeek) cannot consume image content; strip
+  // it from replayed history so old image conversations stay usable.
   const modelMessages = config.appendUserMessage
     ? [
-        ...(await convertToModelMessages(sanitizedMessages)),
+        ...stripImageContentForTextOnlyProviders(
+          convertedMessages,
+          getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+        ),
         { role: "user" as const, content: config.appendUserMessage },
       ]
-    : await convertToModelMessages(sanitizedMessages);
+    : stripImageContentForTextOnlyProviders(
+        convertedMessages,
+        getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+      );
 
   const stream = createUIMessageStream({
     execute: async ({ writer }) => {

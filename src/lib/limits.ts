@@ -14,6 +14,21 @@ export const QUOTA_5H_LIMIT = 10;
 export const QUOTA_WEEK_LIMIT = 50;
 /** Context-window occupancy percentage that flips the UI and system prompt into "near limit" warning mode. */
 export const NEAR_LIMIT_PERCENT = 80;
+/** Maximum number of images a single user message may attach. */
+export const MAX_IMAGES_PER_MESSAGE = 4;
+/** Maximum raw file size (bytes) accepted for an image attachment before compression. */
+export const MAX_IMAGE_INPUT_BYTES = 5_000_000;
+/** Maximum compressed size (bytes) a processed attachment may reach (base64 data URL ≈ 4/3 bytes per char). */
+export const MAX_IMAGE_OUTPUT_BYTES = 1_500_000;
+/** Maximum pixel dimension (width or height) kept after client-side downscaling. */
+export const MAX_IMAGE_DIMENSION = 1280;
+/** Server-side gate for image data URL length (chars), mirroring MAX_IMAGE_OUTPUT_BYTES on the wire. */
+export const MAX_IMAGE_DATA_URL_CHARS = 2_000_000;
+/** MIME types accepted for image attachments (client picker and server validation). */
+export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'] as const;
+
+/** Type of the MIME whitelist entries in ALLOWED_IMAGE_TYPES. */
+export type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
 
 /**
  * Builds a quota error message and retry hint when a window is exhausted.

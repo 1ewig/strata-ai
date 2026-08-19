@@ -1,12 +1,24 @@
+/** A wire-level image attachment extracted from a user message's `file` parts. */
+export interface ImageAttachmentInfo {
+  /** Data URL of the image (compressed client-side before sending). */
+  url: string;
+  /** Original filename, used as alt text. */
+  filename: string;
+  /** IANA media type, e.g. 'image/jpeg'. */
+  mediaType: string;
+}
+
 /**
- * A flattened, render-ready slice of a message: user text, markdown text,
- * reasoning/thought content, a tool invocation part, or a work group of reasoning + tools.
+ * A flattened, render-ready slice of a message: user text, user images,
+ * markdown text, reasoning/thought content, a tool invocation part, or a work
+ * group of reasoning + tools.
  */
 export interface Segment {
-  type: 'user-text' | 'text' | 'reasoning' | 'tool' | 'work-group' | string;
+  type: 'user-text' | 'user-images' | 'text' | 'reasoning' | 'tool' | 'work-group' | string;
   content?: string;
   part?: any;
   items?: Segment[];
+  images?: ImageAttachmentInfo[];
   key: string;
 }
 
@@ -32,18 +44,35 @@ export function flattenMessageSegments(
   const isUser = message.role === 'user';
 
   if (isUser) {
-    // User bubbles show a single combined bubble: join every text part.
+    // User bubbles show a single combined bubble: join every text part and
+    // collect image attachments (file parts with image/* media type) so the
+    // bubble can render thumbnails above the text.
     let userText = '';
+    const images: ImageAttachmentInfo[] = [];
     if (Array.isArray(message.parts)) {
-      userText = message.parts
-        .filter((p) => p.type === 'text' && typeof p.text === 'string')
-        .map((p) => p.text)
-        .join('');
+      for (const p of message.parts) {
+        if (p?.type === 'file' && typeof p.mediaType === 'string' && p.mediaType.startsWith('image/') && typeof p.url === 'string') {
+          images.push({
+            url: p.url,
+            filename: typeof p.filename === 'string' && p.filename ? p.filename : 'Attached image',
+            mediaType: p.mediaType,
+          });
+        } else if (p?.type === 'text' && typeof p.text === 'string') {
+          userText += p.text;
+        }
+      }
     }
     if (!userText && typeof message.content === 'string') {
       userText = message.content;
     }
-    return [{ type: 'user-text', content: userText, key: 'user-text' }];
+    const segments: Segment[] = [];
+    if (images.length > 0) {
+      segments.push({ type: 'user-images', images, key: 'user-images' });
+    }
+    if (userText) {
+      segments.push({ type: 'user-text', content: userText, key: 'user-text' });
+    }
+    return segments;
   }
 
   // Legacy messages without parts fall back to the raw content string.
