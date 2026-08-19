@@ -1,27 +1,25 @@
 'use client';
 
 import React from 'react';
-import { Copy, Check, Edit3 } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MAX_FILE_CHARS, formatCharCount } from '@/lib/limits';
 import { getLanguageLabel } from '@/lib/languages';
 
 interface WorkspaceDrawerFooterProps {
-  activeFile: WorkspaceFile;
+  activeFile: WorkspaceFile | null;
   isEditing: boolean;
   contentValue: string;
   isFileOverLimit: boolean;
   isFileWarning: boolean;
-  copied: boolean;
-  onCopy: () => void;
-  onStartEditing: () => void;
+  onClose: () => void;
   onCancelEditing: () => void;
   onSaveEdit: () => void;
 }
 
 /**
  * Footer bar for the Workspace Drawer containing character count metrics,
- * copy actions, and edit/save/cancel controls.
+ * edit/save/cancel controls, and the drawer Close button.
  */
 export default React.memo(function WorkspaceDrawerFooter({
   activeFile,
@@ -29,13 +27,11 @@ export default React.memo(function WorkspaceDrawerFooter({
   contentValue,
   isFileOverLimit,
   isFileWarning,
-  copied,
-  onCopy,
-  onStartEditing,
+  onClose,
   onCancelEditing,
   onSaveEdit,
 }: WorkspaceDrawerFooterProps) {
-  const languageLabel = getLanguageLabel(activeFile.name || activeFile.language);
+  const languageLabel = activeFile ? getLanguageLabel(activeFile.name || activeFile.language) : '';
 
   return (
     <div className="h-16 px-4 sm:px-6 border-t border-edge-raised flex items-center justify-between bg-surface-base/60 backdrop-blur-md shrink-0 gap-3">
@@ -53,7 +49,7 @@ export default React.memo(function WorkspaceDrawerFooter({
           >
             {formatCharCount(contentValue.length, MAX_FILE_CHARS)} chars
           </span>
-        ) : (
+        ) : activeFile ? (
           <span className="text-caption text-text-muted font-medium truncate flex items-center gap-1.5">
             <span>
               {activeFile.content ? `${activeFile.content.length.toLocaleString()} chars` : 'Empty'}
@@ -61,27 +57,13 @@ export default React.memo(function WorkspaceDrawerFooter({
             <span>·</span>
             <span className="font-mono text-text-secondary">{languageLabel}</span>
           </span>
+        ) : (
+          <span className="text-caption text-text-muted font-medium">No file selected</span>
         )}
       </div>
 
       {/* Right: Action Buttons */}
       <div className="flex items-center gap-2 shrink-0">
-        {activeFile.content && !isEditing && (
-          <button
-            type="button"
-            onClick={onCopy}
-            className="flex items-center gap-1.5 text-label font-medium text-text-muted hover:text-text-primary bg-surface-elevated hover:bg-surface-hover border border-edge-raised active:scale-95 px-3 py-1.5 rounded-xl shadow-button transition-all duration-150 cursor-pointer"
-            title="Copy file content"
-          >
-            {copied ? (
-              <Check className="w-3.5 h-3.5 text-primary animate-in zoom-in-75 duration-100" />
-            ) : (
-              <Copy className="w-3.5 h-3.5" />
-            )}
-            <span>{copied ? 'Copied' : 'Copy'}</span>
-          </button>
-        )}
-
         {isEditing ? (
           <>
             <button
@@ -113,11 +95,11 @@ export default React.memo(function WorkspaceDrawerFooter({
         ) : (
           <button
             type="button"
-            onClick={onStartEditing}
-            className="flex items-center gap-1.5 text-label font-semibold text-text-bright bg-surface-elevated hover:bg-surface-hover border border-edge-raised hover:border-edge-hover active:scale-95 px-3.5 py-1.5 rounded-xl transition-all duration-150 cursor-pointer shadow-button"
+            onClick={onClose}
+            className="flex items-center gap-1.5 text-label font-medium text-text-muted hover:text-text-primary bg-surface-elevated hover:bg-surface-hover border border-edge-raised hover:border-edge-hover active:scale-95 px-3.5 py-1.5 rounded-xl shadow-button transition-all duration-150 cursor-pointer"
+            title="Close drawer"
           >
-            <Edit3 className="w-3.5 h-3.5 text-primary" />
-            <span>Edit File</span>
+            <span>Close</span>
           </button>
         )}
       </div>
