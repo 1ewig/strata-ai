@@ -305,10 +305,32 @@ html[data-theme="dark"] body::before {
   font-weight: bold;
 }
 
-.token.italic {
-  font-style: italic;
-}
-
 .token.entity {
   cursor: help;
 }
+
+/* ==========================================================================
+   Text Selection Styling (Milo Theme Harmony)
+   ========================================================================== */
+::selection {
+  background-color: var(--color-primary-soft-strong);
+  color: inherit;
+}
+
+/* User bubble (high-contrast white selection on fiery orange background) */
+.bg-primary ::selection {
+  background-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+.dark ::selection,
+html[data-theme="dark"] ::selection {
+  background-color: var(--color-primary-soft-strong);
+  color: inherit;
+}
+
+.dark .bg-primary ::selection,
+html[data-theme="dark"] .bg-primary ::selection {
+  background-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}

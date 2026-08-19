@@ -94,7 +94,7 @@ function ToolCallCard({
 
       {/* Expanded content showing minimal summary */}
       {isOpen && (
-        <div className="pl-5 pt-0.5 pb-1 text-caption text-text-secondary">
+        <div className="pl-5 pt-0.5 pb-1 text-caption text-text-secondary select-text cursor-text">
           {summary}
         </div>
       )}

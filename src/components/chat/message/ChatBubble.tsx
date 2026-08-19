@@ -147,11 +147,11 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                     />
                   </div>
                 )}
-                <div className="text-body text-surface leading-relaxed relative">
+                <div className="text-body text-surface leading-relaxed relative select-text cursor-text">
                   <MarkdownRenderer
                     content={userContent}
                     variant="user"
-                    className="text-body text-surface leading-relaxed relative"
+                    className="text-body text-surface leading-relaxed relative select-text cursor-text"
                   />
                 </div>
               </div>
@@ -216,12 +216,12 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   </div>
                 )}
 
-                <div className="text-body text-text-primary leading-relaxed relative">
+                <div className="text-body text-text-primary leading-relaxed relative select-text cursor-text">
                   <MarkdownRenderer
                     content={textContent}
                     variant="assistant"
                     isStreaming={isStreamingActiveSegment}
-                    className="text-body text-text-primary leading-relaxed relative"
+                    className="text-body text-text-primary leading-relaxed relative select-text cursor-text"
                   />
                 </div>
               </div>
