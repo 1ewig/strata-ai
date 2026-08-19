@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
 
 /** Props for the composer status row (compacting notice, blocked banner, or textarea). */
 interface ComposerStatusRowProps {
@@ -49,8 +48,7 @@ function ComposerStatusRow({
 
   if (isBlocked) {
     return (
-      <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in flex-wrap">
-        <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
+      <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-danger text-caption sm:text-label font-medium animate-in fade-in flex-wrap leading-snug">
         <span>
           {isContextWindowExhausted ? 'Context window reached.' : blockedQuotaCopy}
         </span>
@@ -59,7 +57,7 @@ function ComposerStatusRow({
             type="button"
             onClick={onTriggerCompaction}
             disabled={isLoading || isCompacting}
-            className="underline hover:no-underline font-semibold cursor-pointer disabled:opacity-50 active:scale-95 transition-transform duration-150"
+            className="underline hover:no-underline font-semibold cursor-pointer disabled:opacity-50 active:scale-95 transition-transform duration-150 shrink-0"
             title="Compact conversation history to reclaim context space"
           >
             Compact history

@@ -89,8 +89,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     isLoading,
     isCompacting,
     rateLimitData,
-    quotaError,
-    clearQuotaError,
     handleSendMessage,
     handleTriggerCompaction,
     handleStop,
@@ -166,7 +164,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     />
   );
 
-  const isNewChat = displayMessages.length === 0 && !isLoading && !quotaError;
+  const isNewChat = displayMessages.length === 0 && !isLoading;
 
   return (
     <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
@@ -223,8 +221,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
                   isLoading={isLoading}
                   messagesEndRef={messagesEndRef}
                   onOpenDrawer={handleOpenDrawer}
-                  quotaError={quotaError}
-                  onDismissQuotaError={clearQuotaError}
                   chatId={chatId}
                   isNewChat={isNewChat}
                   chatInputNode={chatInputNode}

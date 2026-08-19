@@ -12,6 +12,23 @@ interface AttachmentPreviewsProps {
 }
 
 /**
+ * Custom shallow comparator so AttachmentPreviews only re-renders when
+ * attachment files or errors actually change.
+ */
+function areAttachmentPropsEqual(
+  prev: AttachmentPreviewsProps,
+  next: AttachmentPreviewsProps,
+): boolean {
+  if (prev.error !== next.error || prev.onRemove !== next.onRemove) return false;
+  if (prev.images === next.images) return true;
+  if (prev.images.length !== next.images.length) return false;
+  for (let i = 0; i < prev.images.length; i++) {
+    if (prev.images[i].dataUrl !== next.images[i].dataUrl) return false;
+  }
+  return true;
+}
+
+/**
  * Removable thumbnail grid for image files awaiting send, plus an inline
  * attachment validation/processing error line. Fully presentational - all
  * state and file processing live in the composer.
@@ -24,7 +41,8 @@ function AttachmentPreviews({ images, error, onRemove }: AttachmentPreviewsProps
           <img
             src={image.dataUrl}
             alt={image.filename}
-            className="w-11 h-11 sm:w-13 sm:h-13 object-cover rounded-lg border border-edge-raised shadow-button"
+            decoding="async"
+            className="w-11 h-11 sm:w-13 sm:h-13 object-cover rounded-lg border border-edge-raised shadow-button [contain:paint] translate-z-0"
           />
           <button
             type="button"
@@ -47,4 +65,4 @@ function AttachmentPreviews({ images, error, onRemove }: AttachmentPreviewsProps
   );
 }
 
-export default React.memo(AttachmentPreviews);
+export default React.memo(AttachmentPreviews, areAttachmentPropsEqual);
