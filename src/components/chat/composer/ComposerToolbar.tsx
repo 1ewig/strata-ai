@@ -2,9 +2,8 @@
 
 import React from 'react';
 import { ArrowUp, Folder, Paperclip, Square } from 'lucide-react';
-import ModelSelectorMenu from './ModelSelectorMenu';
 
-/** Props for the composer bottom toolbar (attach, model picker, send/stop). */
+/** Props for the composer bottom toolbar (attach, drawer, send/stop). */
 interface ComposerToolbarProps {
   isAttachDisabled: boolean;
   supportsVision: boolean;
@@ -14,10 +13,6 @@ interface ComposerToolbarProps {
   onAttachClick: () => void;
   filesCount?: number;
   onOpenDrawer?: () => void;
-  model: string;
-  thinkingLevel: string;
-  onModelSelect: (modelId: string) => void;
-  onThinkingLevelChange: (level: string) => void;
   isLoading: boolean;
   isCompacting: boolean;
   onStop?: () => void;
@@ -31,8 +26,8 @@ interface ComposerToolbarProps {
 
 /**
  * Row 2 of the composer: the image attach button (with tooltip chain and
- * pending-count badge), the workspace files drawer button, the model/thinking-level
- * selector, and the send/stop button with its full disabled-state and title logic.
+ * pending-count badge), the workspace files drawer button, and the
+ * send/stop button with its full disabled-state and title logic.
  */
 function ComposerToolbar({
   isAttachDisabled,
@@ -43,10 +38,6 @@ function ComposerToolbar({
   onAttachClick,
   filesCount = 0,
   onOpenDrawer,
-  model,
-  thinkingLevel,
-  onModelSelect,
-  onThinkingLevelChange,
   isLoading,
   isCompacting,
   onStop,
@@ -118,15 +109,8 @@ function ComposerToolbar({
         )}
       </div>
 
-      {/* Right Side: Model Dropdown, Send / Stop Button */}
+      {/* Right Side: Send / Stop Button */}
       <div className="flex items-center gap-2 shrink-0 ml-auto">
-        <ModelSelectorMenu
-          model={model}
-          thinkingLevel={thinkingLevel}
-          onModelSelect={onModelSelect}
-          onThinkingLevelChange={onThinkingLevelChange}
-        />
-
         {isLoading && !isCompacting ? (
           <button
             id="chat-stop-btn"

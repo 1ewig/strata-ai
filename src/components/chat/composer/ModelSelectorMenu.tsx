@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { ChevronDown, ChevronRight, ChevronLeft } from 'lucide-react';
+import { ChevronDown, ChevronRight, ChevronLeft, Settings } from 'lucide-react';
 import {
   MODELS,
   MODEL_DESCRIPTIONS,
@@ -23,7 +23,7 @@ export default function ModelSelectorMenu({
   thinkingLevel,
   onModelSelect,
   onThinkingLevelChange,
-  dropDirection = 'up',
+  dropDirection = 'down',
 }: ModelSelectorMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'main' | 'effort' | 'more-models'>('main');
@@ -118,10 +118,13 @@ export default function ModelSelectorMenu({
 
   return (
     <div ref={menuRef} className="relative inline-block text-left">
-      {/* TRIGGER BUTTON */}
+      {/* TRIGGER BUTTON: Gear on mobile, Model pill on tablet/desktop */}
       <button
         type="button"
+        id="header-model-selector-btn"
         aria-expanded={isOpen}
+        aria-label={`Select model (current: ${currentModel?.label || 'Model'})`}
+        title={`Model: ${currentModel?.label || 'Model'}${effortLabel ? ` (${effortLabel} effort)` : ''}`}
         onClick={() => {
           if (isOpen) {
             closeMenu();
@@ -129,33 +132,45 @@ export default function ModelSelectorMenu({
             setIsOpen(true);
           }
         }}
-        className={`flex items-center gap-1.5 text-label transition-all duration-150 active:scale-[0.98] cursor-pointer shrink-0 select-none ${
+        className={`group flex items-center justify-center p-2 sm:px-3 sm:py-1.5 rounded-xl border transition-all duration-150 active:scale-[0.98] cursor-pointer shrink-0 select-none shadow-button ${
           isOpen
-            ? 'text-text-primary'
-            : 'text-text-muted hover:text-text-primary'
+            ? 'bg-surface-hover border-edge-hover text-text-bright ring-2 ring-primary/20'
+            : 'bg-surface-raised/80 hover:bg-surface-hover border-edge-raised hover:border-edge-hover text-text-primary'
         }`}
       >
-        <span className="font-semibold text-text-primary truncate max-w-[130px] sm:max-w-[220px] md:max-w-[320px]">
-          {currentModel?.label || 'Model'}
-        </span>
-        {effortLabel && (
-          <span className="text-micro px-1.5 py-0.5 rounded-md bg-surface-hover text-text-muted font-medium capitalize shrink-0">
-            {effortLabel}
+        {/* Mobile View: Gear Icon */}
+        <div className="sm:hidden flex items-center justify-center">
+          <Settings
+            className={`w-4 h-4 transition-transform duration-200 ${
+              isOpen ? 'rotate-45 text-primary' : 'text-text-muted group-hover:text-text-primary'
+            }`}
+          />
+        </div>
+
+        {/* Desktop/Tablet View: Model Name + Effort Badge + Chevron */}
+        <div className="hidden sm:flex items-center gap-1.5">
+          <span className="text-caption sm:text-label font-semibold text-text-primary truncate max-w-[120px] md:max-w-[180px] lg:max-w-[240px]">
+            {currentModel?.label || 'Model'}
           </span>
-        )}
-        <ChevronDown
-          className={`w-4 h-4 text-text-muted shrink-0 transition-transform duration-200 ${
-            isOpen ? 'rotate-180 text-text-primary' : ''
-          }`}
-        />
+          {effortLabel && (
+            <span className="text-micro px-1.5 py-0.5 rounded-md bg-surface-base border border-edge-default text-text-muted font-medium capitalize shrink-0">
+              {effortLabel}
+            </span>
+          )}
+          <ChevronDown
+            className={`w-3.5 h-3.5 text-text-muted shrink-0 transition-transform duration-200 ${
+              isOpen ? 'rotate-180 text-text-primary' : 'group-hover:text-text-primary'
+            }`}
+          />
+        </div>
       </button>
 
       {/* POPOVER MENU */}
       {isOpen && (
         <div
           className={`absolute ${
-            dropDirection === 'down' ? 'top-full mt-2 left-0' : 'bottom-full mb-2 right-0'
-          } w-72 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-2xl shadow-card-lg p-1.5 text-label z-50 animate-in fade-in zoom-in-95 duration-100`}
+            dropDirection === 'down' ? 'top-full mt-2 right-0' : 'bottom-full mb-2 right-0'
+          } w-72 max-w-[calc(100vw-1.5rem)] bg-surface-elevated border border-edge-raised rounded-2xl shadow-card-lg p-1.5 text-label z-50 animate-in fade-in zoom-in-95 duration-100`}
         >
           {/* SUBMENU HEADER */}
           {activeView !== 'main' && (

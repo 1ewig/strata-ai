@@ -24,6 +24,7 @@ const nextConfig: NextConfig = {
   },
   output: 'standalone',
   transpilePackages: ['motion'],
+  serverExternalPackages: ['pg'],
 };
 
 /** The Next.js configuration consumed by `next build` and `next dev`. */
