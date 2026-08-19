@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Eye, Code } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
-import { MAX_FILE_CHARS } from '@/lib/limits';
+import { MAX_FILE_CHARS, formatCharCount } from '@/lib/limits';
 import { detectLanguage, isMarkdownFile } from '@/lib/languages';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
@@ -131,6 +131,20 @@ export default React.memo(function WorkspaceDrawer({
                 />
 
                 <div className="flex items-center gap-2 shrink-0">
+                  {isEditing && (
+                    <span
+                      className={`text-caption font-mono px-2.5 py-1 rounded-lg border transition-colors shadow-button ${
+                        isFileOverLimit
+                          ? 'text-danger bg-danger-soft/30 border-danger/40 font-semibold'
+                          : isFileWarning
+                          ? 'text-warning bg-warning-soft/20 border-warning/30 font-medium'
+                          : 'text-text-muted bg-surface-base border-edge-raised font-medium'
+                      }`}
+                    >
+                      {formatCharCount(contentValue.length, MAX_FILE_CHARS)} chars
+                    </span>
+                  )}
+
                   {activeFile && isMarkdown && !isEditing && activeFile.content && (
                     <div className="flex items-center bg-surface-base border border-edge-raised rounded-lg p-0.5 text-caption">
                       <button
@@ -231,9 +245,7 @@ export default React.memo(function WorkspaceDrawer({
               <WorkspaceDrawerFooter
                 activeFile={activeFile}
                 isEditing={isEditing}
-                contentValue={contentValue}
                 isFileOverLimit={isFileOverLimit}
-                isFileWarning={isFileWarning}
                 onClose={onClose}
                 onCancelEditing={() => setIsEditing(false)}
                 onSaveEdit={handleSaveEdit}

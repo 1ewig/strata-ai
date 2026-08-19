@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Menu, Plus } from 'lucide-react';
+import { Menu, Plus, Folder } from 'lucide-react';
 import { motion } from 'motion/react';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MODELS } from '@/lib/models';
@@ -32,14 +32,16 @@ interface ChatHeaderProps {
 
 /**
  * Sticky chat header with conversation title, active context window indicator badge
- * with separated hover/tap details popover, model selector, mobile sidebar toggle,
- * and mobile new chat button.
+ * with separated hover/tap details popover, model selector, desktop workspace files button,
+ * mobile sidebar toggle, and mobile new chat button.
  */
 export default React.memo(function ChatHeader({
   title,
+  files,
   model,
   thinkingLevel,
   tokenUsage,
+  onOpenDrawer,
   onOpenSidebar,
   onNewChat,
   onModelSelect,
@@ -135,6 +137,26 @@ export default React.memo(function ChatHeader({
         >
           <Plus className="w-4 h-4 text-text-muted group-hover:text-text-primary transition-transform duration-200 group-hover:rotate-90" />
         </motion.button>
+
+        {/* Desktop Files Drawer Button */}
+        {onOpenDrawer && (
+          <button
+            id="header-files-btn"
+            type="button"
+            onClick={onOpenDrawer}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-edge-raised hover:border-edge-hover bg-surface-raised/80 hover:bg-surface-hover text-text-primary shadow-button transition-all duration-150 active:scale-[0.98] cursor-pointer shrink-0 select-none group"
+            title={`Open Workspace Files Drawer (${files?.length ?? 0} ${files?.length === 1 ? 'file' : 'files'})`}
+            aria-label="Open Workspace Files Drawer"
+          >
+            <Folder className="w-4 h-4 text-text-muted group-hover:text-primary transition-transform duration-150 group-hover:scale-105" />
+            <span className="text-caption font-semibold">Files</span>
+            {(files?.length ?? 0) > 0 && (
+              <span className="text-micro font-bold text-primary px-1.5 py-0.5 rounded-md bg-primary-soft">
+                {files?.length}
+              </span>
+            )}
+          </button>
+        )}
 
         {model && onModelSelect && onThinkingLevelChange && (
           <ModelSelectorMenu

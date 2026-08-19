@@ -88,23 +88,17 @@ function ComposerToolbar({
           )}
         </button>
 
-        {/* Files Drawer Button */}
+        {/* Files Drawer Button (Mobile view only) */}
         {onOpenDrawer && (
           <button
             id="chat-files-btn"
             type="button"
             onClick={onOpenDrawer}
-            className="group p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button bg-surface-raised text-text-primary hover:text-primary hover:border-primary/60 active:scale-95 cursor-pointer border-edge-raised"
+            className="sm:hidden group p-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center justify-center border shadow-button bg-surface-raised/80 hover:bg-surface-hover text-text-primary hover:text-primary hover:border-edge-hover active:scale-95 cursor-pointer border-edge-raised"
             title={`Open Workspace Files Drawer (${filesCount} ${filesCount === 1 ? 'file' : 'files'})`}
             aria-label="Open Workspace Files Drawer"
           >
-            <Folder className="w-4 h-4 transition-transform duration-150 group-hover:scale-110" />
-            <span className="hidden sm:inline text-caption font-semibold">Files</span>
-            {filesCount > 0 && (
-              <span className="hidden sm:inline text-caption font-bold text-primary">
-                {filesCount}
-              </span>
-            )}
+            <Folder className="w-4 h-4 text-text-muted group-hover:text-primary transition-transform duration-150 group-hover:scale-110" />
           </button>
         )}
       </div>

@@ -3,30 +3,26 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/schemas';
-import { MAX_FILE_CHARS, formatCharCount } from '@/lib/limits';
+import { MAX_FILE_CHARS } from '@/lib/limits';
 import { getLanguageLabel } from '@/lib/languages';
 
 interface WorkspaceDrawerFooterProps {
   activeFile: WorkspaceFile | null;
   isEditing: boolean;
-  contentValue: string;
   isFileOverLimit: boolean;
-  isFileWarning: boolean;
   onClose: () => void;
   onCancelEditing: () => void;
   onSaveEdit: () => void;
 }
 
 /**
- * Footer bar for the Workspace Drawer containing character count metrics,
+ * Footer bar for the Workspace Drawer containing metadata,
  * edit/save/cancel controls, and the drawer Close button.
  */
 export default React.memo(function WorkspaceDrawerFooter({
   activeFile,
   isEditing,
-  contentValue,
   isFileOverLimit,
-  isFileWarning,
   onClose,
   onCancelEditing,
   onSaveEdit,
@@ -35,21 +31,9 @@ export default React.memo(function WorkspaceDrawerFooter({
 
   return (
     <div className="h-16 px-4 sm:px-6 border-t border-edge-raised flex items-center justify-between bg-surface-base/60 backdrop-blur-md shrink-0 gap-3">
-      {/* Left: Metadata & Character Counter */}
+      {/* Left: Metadata */}
       <div className="flex items-center gap-2 min-w-0">
-        {isEditing ? (
-          <span
-            className={`text-caption font-mono px-2 py-0.5 rounded border transition-colors ${
-              isFileOverLimit
-                ? 'text-danger bg-danger-soft/30 border-danger/40 font-semibold'
-                : isFileWarning
-                ? 'text-warning bg-warning-soft/20 border-warning/30'
-                : 'text-text-muted bg-surface-elevated border-edge-raised'
-            }`}
-          >
-            {formatCharCount(contentValue.length, MAX_FILE_CHARS)} chars
-          </span>
-        ) : activeFile ? (
+        {!isEditing && activeFile ? (
           <span className="text-caption text-text-muted font-medium truncate flex items-center gap-1.5">
             <span>
               {activeFile.content ? `${activeFile.content.length.toLocaleString()} chars` : 'Empty'}
@@ -57,9 +41,9 @@ export default React.memo(function WorkspaceDrawerFooter({
             <span>·</span>
             <span className="font-mono text-text-secondary">{languageLabel}</span>
           </span>
-        ) : (
+        ) : !isEditing ? (
           <span className="text-caption text-text-muted font-medium">No file selected</span>
-        )}
+        ) : null}
       </div>
 
       {/* Right: Action Buttons */}
