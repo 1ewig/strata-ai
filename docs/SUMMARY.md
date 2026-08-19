@@ -32,7 +32,7 @@
 | Layer | Technology / Library | Purpose in this Project | Key Configuration & Notes |
 |-------|---------------------|-------------------------|---------------------------|
 | Framework | Next.js 16.2.10 (App Router, `src/` layout) | SSR shell, client-heavy dynamic pages, streaming Route Handlers | `output: 'standalone'`; `reactStrictMode: true`; `transpilePackages: ['motion']`; TS build errors NOT ignored; proxy file is `src/proxy.ts` (Next 16 renamed middleware → proxy; no `middleware.ts` exists) |
-| React | 19.2.7 + `react-dom` 19.2.7 | UI runtime | App is ~95% Client Components; only root layout, `/auth` redirect, 404, and `not-found` are server-rendered; `use(params)` used for async route params |
+| Runtime & Edge boundaries | Node.js only, no Edge runtime | Every page, Route Handler, and the proxy run on Node | All four Route Handlers and all pages are Node-runtime; the Next 16 proxy runs in the default middleware runtime; zero Edge functions, no `export const runtime = 'edge'` anywhere. New server code should assume Node unless a real edge requirement appears |
 | Language | TypeScript 6.0.3 (strict) | Type safety | `@/*` → `./src/*`; `moduleResolution: bundler`; `target: ES2017`; `next` TS plugin |
 | Runtime / PM | bun (never npm/yarn/npx) | Dev, build, lint, tests, DB scripts | `bun run dev\|build\|lint\|test\|db:migrate\|db:test`; `bun test --isolate` (fresh module registry per file, required by `mock.module` usage) |
 | AI SDK | `ai@^7.0.0` | Unified LLM streaming, tools, UI message protocol | `streamText`, `tool()`, `smoothStream`, `isStepCount`, `createUIMessageStream`, `toUIMessageStream`, `createUIMessageStreamResponse`, `convertToModelMessages`, `DefaultChatTransport`, `readUIMessageStream`, `parseJsonEventStream`, `uiMessageChunkSchema` |
@@ -51,6 +51,8 @@
 | Icons | `lucide-react@^0.553` | UI iconography | Custom `StrataIcon` SVG brand mark in `components/ui/` |
 | Auto-scroll | `use-stick-to-bottom@^1.1` | Chat scroll anchoring + "scroll to bottom" affordance | `<StickToBottom>` wraps the message list in the chat page; manual scroll effects are forbidden |
 | Testing | bun test (15 suites in `__tests__/`) | Unit + route integration tests | `--isolate` flag mandatory; shared fixtures in `__tests__/helpers.ts`; route tests use `mock.module` + dynamic import of the route; constants imported from `@/lib/limits` never hardcoded |
+| Background jobs | None | No queues, cron, or scheduled tasks exist | All model/tool work is request-scoped inside the streaming response; the only recurring work is the 7-day `message_log` purge, which runs opportunistically inside the rate-limit transaction (never a background worker) |
+| Analytics / telemetry | None | No Sentry, PostHog, or third-party analytics | Deliberate prefixed `console.log`/`console.error` lifecycle logging only (`[agent]`, `[compaction]`, `[useChatSession]`, `[rate-limit API error]`, `[useCompaction]`) — keep the prefix convention |
 | Deployment | Vercel (standalone output) | Hosting | `next build` → standalone server; live at strata-ai-five.vercel.app |
 
 **Environment variables** (`.env.example` is authoritative): `GOOGLE_GENERATIVE_AI_API_KEY` (required), `FIREWORKS_API_KEY` (required for DeepSeek), `NEXT_PUBLIC_GEMINI_MODEL` (default model id), `DATABASE_URL` (Supabase pooler), `BETTER_AUTH_SECRET` (≥32 chars), `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL` (auth client base), `TAVILY_API_KEY` (optional).
@@ -166,12 +168,19 @@ ChatInput "/compact" → useCompaction.triggerCompaction (guard: not already com
 - **Server Components (only 4):** root `layout.tsx` (resolves session + quota server-side to hydrate `RateLimitProvider`, injects the anti-flash theme bootstrap script), `/auth/page.tsx` (pure redirect preserving `callbackUrl`), `not-found.tsx`, and static assets. All of these use async APIs (`await headers()`, `await searchParams`) which force per-request dynamic rendering of the root shell.
 - **`'use client'` is permitted and expected** for: every page under `/chat-id`, all auth pages, all chat/workspace/sidebar components, all hooks, and `RateLimitContext`. Rationale: the product IS a real-time streaming chat client — the interactive surface is the entire app; server rendering provides only the auth/quota bootstrap.
 - **Rules that keep this sane:** never import `@ai-sdk/google`/`@ai-sdk/fireworks`/`pg`/`better-auth` (server) into client code; all provider wiring lives in `lib/ai/providers.ts`; pages remain thin presentational shells that call hooks and pass props down (no Dexie queries, session fetching, or navigation inside components).
+- **Decision criterion:** a file needs `'use client'` iff it (or its hook subtree) uses React hooks, event handlers, browser APIs, or streaming state — otherwise it stays an RSC by default. The chat product legitimately requires client rendering nearly everywhere, but the four RSC files are server for a reason: their async request APIs (`await headers()`, `await searchParams`) opt the shell into per-request dynamic rendering and must stay server-side.
 - **Async request APIs:** `params` is typed `Promise<{ id: string }>` and unwrapped with `use(params)` in the chat page; `searchParams` is `Promise<...>` in the server `/auth` page and read via `useSearchParams` (wrapped in `Suspense`) on the client.
 
 ### 3.5 Next.js caching & rendering strategy
 
-- **All pages are dynamic, none are static.** There is no ISR, no PPR, no `use cache`, no `revalidatePath`/`revalidateTag`, and no `generateStaticParams`. The root layout's `await headers()` call opts the whole tree into per-request rendering. This is intentional: every route is session- or client-state dependent, and chat data lives in the browser (IndexedDB), so static caching would serve nothing.
-- **The real caching layer is the browser:** Dexie is the persistence + cache (chat list, messages, files survive reloads); `localStorage` holds theme (`strata-theme`), model (`selectedModel`), thinking level (`selectedThinkingLevel`); `sessionStorage` holds sidebar open state (`strata_sidebar_open`).
+- **All pages are dynamic, none are static — by design.** The following are intentionally ABSENT and must not be introduced without revisiting the local-first premise: `use cache`, `cacheLife`/`cacheTag` profiles, Partial Prerendering (PPR), ISR, `revalidatePath`/`revalidateTag`, and `generateStaticParams`. The root layout's `await headers()` call opts the whole tree into per-request rendering. Every route is session- or client-state dependent, and chat data lives in the browser (IndexedDB), so server-side static caching would serve nothing.
+- **Cache inventory (what actually caches, and where):**
+  - Dexie (IndexedDB v5) — the entity cache/read-model: conversations, messages, workspace files; survives reloads and network drops.
+  - `localStorage` — theme (`strata-theme`), model (`selectedModel`), thinking level (`selectedThinkingLevel`).
+  - `sessionStorage` — sidebar open state (`strata_sidebar_open`).
+  - Better Auth session cookie cache (`cookieCache`, 5 min) — the only server-side cache on the request path; avoids a DB read per proxy/route hit.
+  - `message_log` 7-day purge — bounded table growth, runs inside the rate-limit transaction.
+  - Per-step system-prompt re-injection — a "live state" cache: the model sees the current workspace metadata each step without replaying history.
 - **Context-window "cache" management:** assistant messages carry `metadata.usage` (last-step) + `metadata.stepTotalUsage` (multi-step API totals); `calculateTokenMetrics` derives active-context occupancy (Claude Code/OpenCode/Codex paradigm) and flips the UI + system prompt into "be concise / /compact" mode past `NEAR_LIMIT_PERCENT` (80%); sending is hard-blocked at 100% (with a "Compact history or start a new chat" error).
 - **Server-side cache-like behaviors:** Better Auth session cookie cache (5 min) avoids a DB hit per request in the proxy; the rate-limit log purges entries older than 7 days on every check (bounded table growth); per-step system-prompt re-injection keeps the model's view of the workspace fresh without replaying history.
 - **Runtime:** every route handler and page runs on the Node runtime; no Edge runtime usage anywhere (the proxy runs in the default middleware runtime).
@@ -192,9 +201,8 @@ ChatInput "/compact" → useCompaction.triggerCompaction (guard: not already com
 Strata Ai/
 ├── AGENTS.md                  — Agent operating rules: bun-only commands, Milo design tokens,
 │                                architecture pointers, test conventions (read before editing).
-├── SUMMARY.md                 — THIS FILE. Canonical system-context & architecture guide.
 ├── next.config.ts             — standalone output, strict TS, picsum.photos image allowlist,
-│                                transpilePackages: ['motion'].
+│                                transpilePackages: ['motion'], serverExternalPackages: ['pg'].
 ├── tsconfig.json              — strict TS 6, @/* path alias → ./src/*, incremental builds.
 ├── eslint.config.mjs          — ESLint 9 flat config (eslint-config-next).
 ├── package.json               — bun scripts + dependency manifest; @types/react overrides pinned.
@@ -209,7 +217,7 @@ Strata Ai/
 │   │                            runTool, setupWorkspaceTools, jsonResponse); route tests mock
 │   │                            @/lib/auth, @/lib/rate-limit, @/lib/ai/agent-runner via mock.module.
 │   └── types.d.ts             — Global test typings.
-├── docs/                      — SUMMARY.md (canonical architecture guide) + AI SDK tutorial guide.
+├── docs/                      — SUMMARY.md (THIS FILE — canonical architecture guide) + AI SDK tutorial guide.
 └── src/
     ├── proxy.ts               — Next 16 middleware replacement: session-cookie gate + security
     │                            headers; matcher scoped to app shell + agent API only.
@@ -228,20 +236,23 @@ Strata Ai/
     │       ├── agent/compact/ — POST compaction stream: same shell → runCompactionResponse.
     │       └── user/rate-limit/ — GET quota snapshot (read-only, no increment).
     ├── components/
-    │   ├── chat/              — ChatPanel (memo, hero), ChatHeader, ChatInput (composer
-    │   │                        orchestrator: textarea, attachments, slash menu, model/thinking
-    │   │                        selectors), TokenUsagePopover.
-    │   │   ├── composer/      — AttachmentPreviews, ComposerStatusRow, ComposerToolbar,
-    │   │   │                    ModelSelectorMenu, SlashCommandMenu.
+    │   ├── chat/              — ChatPanel (memo, hero), ChatHeader (title, context popover,
+    │   │                        model selector dropdown, desktop files button, mobile toggles),
+    │   │                        ChatInput (composer orchestrator: textarea, attachments, slash
+    │   │                        menu, send/stop), TokenUsagePopover.
+    │   │   ├── composer/      — AttachmentPreviews, ComposerStatusRow, ComposerToolbar (attach
+    │   │   │                    button, mobile files button, send/stop), ModelSelectorMenu,
+    │   │   │                    SlashCommandMenu.
     │   │   ├── message/       — ChatBubble, UserMessageAttachments (image thumbnails),
     │   │   │                    ToolCallCard (config-agnostic), ThoughtAccordion,
     │   │   │                    WorkGroupCard, MessageActionsMenu, CompactionDivider,
     │   │   │                    QuotaErrorCard.
     │   │   └── tools/         — resolver.tsx (toolMeta table: normalize → config/icon/badge/
     │   │                        summary) + summaries.tsx (summary builders + SummaryLine).
-    │   ├── workspace/         — WorkspaceDrawer, WorkspaceFileSelector, WorkspaceEditor,
-    │   │                        CodeViewer (line numbers + Prism), WorkspaceEmptyState,
-    │   │                        WorkspaceDrawerFooter.
+    │   ├── workspace/         — WorkspaceDrawer (file selector, editor with header char count,
+    │   │                        code viewer, empty state, footer), WorkspaceFileSelector,
+    │   │                        WorkspaceEditor, CodeViewer (line numbers + Prism),
+    │   │                        WorkspaceEmptyState, WorkspaceDrawerFooter.
     │   ├── sidebar/           — Sidebar, SidebarHeader, SidebarFooter, ConversationList,
     │   │                        ConversationItem, NewChatButton, RateLimitRing (quota ring).
     │   ├── auth/              — auth-shell, sign-in-form, sign-up-form, loading-screen, user-button.
@@ -360,20 +371,20 @@ Strata Ai/
 
 ## 6. Routing & Page Architecture (App Router)
 
-| Path / Route Group | Rendering | Runtime | Auth level | Purpose & key child components |
+| Path / Route Group | Rendering Type (RSC / Client / Static) | Runtime (Node / Edge) | Auth level (Public / Protected / Admin) | Purpose & key child components |
 |--------------------|-----------|---------|-----------|--------------------------------|
-| `/` | Client page | Node | Protected (redirects) | Landing spinner; `useLatestConversationRedirect` → newest chat or fresh `/chat-id/<uuid>`; unauthenticated → `/auth` |
-| `/auth` | Server page | Node | Public | Pure redirect to `/auth/signin`, preserving `callbackUrl` query param (awaits `searchParams`) |
-| `/auth/signin` | Client page (Suspense-wrapped) | Node | Public | Email/password sign-in: `AuthShell` + `SignInForm`, `useSignIn`, bounces signed-in users to callbackUrl |
-| `/auth/signup` | Client page (Suspense-wrapped) | Node | Public | Registration: `AuthShell` + `SignUpForm`, `useSignUp`, redirects on success |
-| `/chat-id/[id]` | Client page (entire subtree) | Node | Protected | The app shell: `Sidebar` (conversation list, cap 5, pin/rename/delete, theme toggle, sign-out, quota ring), `ChatHeader` (title, model, token usage, workspace/file entry), `ChatPanel` (hero empty state with suggestion chips + `ChatBubble` list + quota card + typing dots), floating `ChatInput` composer (text + up to 4 image attachments, slash menu, model/thinking selector), `WorkspaceDrawer` (file selector, editor, code viewer, footer). Uses `use(params)`; `StickToBottom` owns all scrolling |
-| `/not-found` (global) | Server page | Node | Public | Milo-styled 404 with back-home CTA |
-| `GET/POST /api/auth/[...all]` | Route Handler | Node | Public (auth endpoints) | Better Auth catch-all: sign-in, sign-up, session, callbacks |
-| `POST /api/agent` | Route Handler (streaming SSE) | Node | Protected + quota | Agent turn: session → quota increment → zod → image-part validation → history slice → `runAgentResponse`; UI-message SSE + `X-RateLimit-*` headers |
-| `POST /api/agent/compact` | Route Handler (streaming SSE) | Node | Protected + quota | Compaction turn: same shell → `runCompactionResponse` (dedicated Flash Lite, 3500 output cap, `isCompactedSummary` metadata) |
-| `GET /api/user/rate-limit` | Route Handler | Node | Protected | Read-only quota snapshot for client hydration/refresh |
+| `/` | Client (dynamic) | Node | Protected (redirects) | Landing spinner; `useLatestConversationRedirect` → newest chat or fresh `/chat-id/<uuid>`; unauthenticated → `/auth` |
+| `/auth` | RSC (dynamic) | Node | Public | Pure redirect to `/auth/signin`, preserving `callbackUrl` query param (awaits `searchParams`) |
+| `/auth/signin` | Client (dynamic, Suspense-wrapped) | Node | Public | Email/password sign-in: `AuthShell` + `SignInForm`, `useSignIn`, bounces signed-in users to callbackUrl |
+| `/auth/signup` | Client (dynamic, Suspense-wrapped) | Node | Public | Registration: `AuthShell` + `SignUpForm`, `useSignUp`, redirects on success |
+| `/chat-id/[id]` | Client (dynamic, entire subtree) | Node | Protected | The app shell: `Sidebar` (conversation list, cap 5, pin/rename/delete, theme toggle, sign-out, quota ring), `ChatHeader` (title, model selector dropdown, token usage popover, desktop files entry, mobile toggles), `ChatPanel` (hero empty state with suggestion chips + `ChatBubble` list + quota card + typing dots), floating `ChatInput` composer (text + up to 4 image attachments, slash menu), `WorkspaceDrawer` (file selector, editor with top-right char counter, code viewer, footer). Uses `use(params)`; `StickToBottom` owns all scrolling |
+| `/not-found` (global) | RSC (dynamic) | Node | Public | Milo-styled 404 with back-home CTA |
+| `GET/POST /api/auth/[...all]` | Route Handler (N/A — no page) | Node | Public (auth endpoints) | Better Auth catch-all: sign-in, sign-up, session, callbacks |
+| `POST /api/agent` | Route Handler (streaming SSE; N/A — no page) | Node | Protected + quota | Agent turn: session → quota increment → zod → image-part validation → history slice → `runAgentResponse`; UI-message SSE + `X-RateLimit-*` headers |
+| `POST /api/agent/compact` | Route Handler (streaming SSE; N/A — no page) | Node | Protected + quota | Compaction turn: same shell → `runCompactionResponse` (dedicated Flash Lite, 3500 output cap, `isCompactedSummary` metadata) |
+| `GET /api/user/rate-limit` | Route Handler (N/A — no page) | Node | Protected | Read-only quota snapshot for client hydration/refresh |
 
-- **Chat page composition (leaf components under `/chat-id/[id]`):** the page wires `useChatSession` (one orchestrator returning ~24 props) into `ChatHeader` (title/model/token popover/workspace entry), `ChatPanel` (memoized; welcome-message pool hashed by chatId; suggestion chips dispatch a `insert-chat-prompt` custom event that `ChatInput` listens for; `CompactionDivider` markers around `isCompactedSummary` messages; `QuotaErrorCard` above the composer), `ChatInput` (auto-growing textarea, 2000-char counter, image attachments up to 4 with client-side compression, `/` slash menu with `SLASH_COMMANDS`, model + thinking-level selectors, send/stop — internally composed of `composer/AttachmentPreviews`, `ComposerStatusRow`, `ComposerToolbar`), `Sidebar` (conversation CRUD + user footer), and `WorkspaceDrawer` (slide-over canvas with `WorkspaceFileSelector`, `WorkspaceEditor`/`CodeViewer`, footer with char budgets).
+- **Chat page composition (leaf components under `/chat-id/[id]`):** the page wires `useChatSession` (one orchestrator returning ~24 props) into `ChatHeader` (title/model selector/token popover/workspace entry), `ChatPanel` (memoized; welcome-message pool hashed by chatId; suggestion chips dispatch a `insert-chat-prompt` custom event that `ChatInput` listens for; `CompactionDivider` markers around `isCompactedSummary` messages; `QuotaErrorCard` above the composer), `ChatInput` (auto-growing textarea, 2000-char counter, image attachments up to 4 with client-side compression, `/` slash menu with `SLASH_COMMANDS`, send/stop — internally composed of `composer/AttachmentPreviews`, `ComposerStatusRow`, `ComposerToolbar`), `Sidebar` (conversation CRUD + user footer), and `WorkspaceDrawer` (slide-over canvas with `WorkspaceFileSelector`, `WorkspaceEditor`/`CodeViewer` with top-right char limit indicators, footer with action buttons).
 - **Cross-component events:** `open-workspace-drawer` (window listener in the chat page) and `insert-chat-prompt` (window listener in `ChatInput`) are the only two custom DOM events — do not add more without a strong reason.
 - **Notes:** no parallel or intercepting routes exist; there are no `loading.tsx`/`error.tsx` boundaries (the only error UI is the client-side `QuotaErrorCard` + in-stream error message replacement); all pages render on the Node runtime (no edge runtime anywhere); route groups `(auth)`/`(dashboard)`/`(marketing)` from the generic outline do not exist — auth is a plain `/auth` folder and the whole product is a single page.
 
@@ -384,11 +395,11 @@ Strata Ai/
 | `ChatPanel` (React.memo) | Message list + hero empty state + quota card + typing dots | `messages`, `isLoading`, `isNewChat`, `chatInputNode`; welcome message hashed from `chatId`; chips dispatch `insert-chat-prompt` |
 | `ChatBubble` (`message/`) | One message row: segments → user-text / user-images / work-group / final text | Renders via `flattenMessageSegments`; delegates image thumbnails to `UserMessageAttachments`; streaming caret on last assistant |
 | `UserMessageAttachments` (`message/`) | Thumbnail row of attached user images (React.memo) | `images: ImageAttachmentInfo[]`; data-URL sources; `rounded-xl` + `shadow-button` chips |
-| `ChatInput` (React.memo) | Composer ORCHESTRATOR: textarea, 2000-char counter, image attachments (4 cap), slash menu, model/thinking selectors, send/stop | Delegates to `composer/AttachmentPreviews`, `ComposerStatusRow`, `ComposerToolbar`; `onSendMessage`, `onTriggerCompaction`, quota/context gating; listens for `insert-chat-prompt` |
+| `ChatInput` (React.memo) | Composer ORCHESTRATOR: textarea, 2000-char counter, image attachments (4 cap), slash menu, send/stop | Delegates to `composer/AttachmentPreviews`, `ComposerStatusRow`, `ComposerToolbar`; `onSendMessage`, `onTriggerCompaction`, quota/context gating; listens for `insert-chat-prompt` |
 | `AttachmentPreviews` (`composer/`) | Thumbnail grid of pending image attachments with remove buttons | 4-cap enforcement; sources are the compressed data URLs |
 | `ComposerStatusRow` (`composer/`) | Status line above the toolbar (typing indicator, token/context meter, quota hint) | Presentational; driven by `useChatSession` props |
-| `ComposerToolbar` (`composer/`) | Image attach button (vision-gated), model + thinking pickers, send/stop | Disabled states from quota/context gating |
-| `ChatHeader` | Title, model badge, token usage popover, file/workspace entry, sidebar toggle | `title`, `files`, `activeFileId`, `tokenUsage` |
+| `ComposerToolbar` (`composer/`) | Image attach button (vision-gated), mobile files button, send/stop | Disabled states from quota/context gating |
+| `ChatHeader` | Title, context window popover, model selector dropdown, desktop files drawer button, mobile sidebar toggle, mobile new chat button | `title`, `files`, `activeFileId`, `model`, `thinkingLevel`, `tokenUsage`, `onOpenFile`, `onOpenDrawer`, `onOpenSidebar`, `onNewChat`, `onModelSelect`, `onThinkingLevelChange` |
 | `ToolCallCard` (`message/`) | Renders ONE resolved tool invocation | Consumes `ToolCardProps` from `resolveToolDisplay` — config-agnostic, never edited |
 | `tools/resolver.tsx` | Tool-name normalization → config/icon/badge/summary builders | `toolMeta` table (config + summary builder per tool) + `TOOL_ALIASES`; add new tools here |
 | `tools/summaries.tsx` | Per-tool summary builders (`build*`) + `SummaryLine` primitive | Consumed by `resolver.tsx`; 9 builders incl. bespoke listFiles/webSearch/extractUrl |
@@ -401,11 +412,11 @@ Strata Ai/
 | `RateLimitRing` (`sidebar/`) | Live "X left" circular quota indicator | Reads `rateLimitData` |
 | `QuotaErrorCard` (`message/`) | Dismissible exhausted-quota banner | Keyed by retryAfter+message; `onDismiss` |
 | `TokenUsagePopover` | Active context %, session totals, per-model cost breakdown | From `calculateTokenMetrics` |
-| `ModelSelectorMenu` (`composer/`) | Model + thinking-level picker | Groups by `MODEL_FAMILIES`; clamps levels |
+| `ModelSelectorMenu` (`composer/`) | Model + thinking-level picker in `ChatHeader` (downward dropdown, mobile gear icon fallback) | Groups by `MODEL_FAMILIES`; clamps levels |
 | `MessageActionsMenu` (`message/`) | Per-message copy (via `lib/clipboard.ts`: `stripMarkdown` + `copyToClipboard`) / context actions | — |
 | `Sidebar` + `ConversationList/Item` | Chat list: pinned-first, rename/pin/delete, cap hint | All actions via `useConversations` props |
 | `NewChatButton` | New conversation creation | Respects `isMaxConversationsReached` |
-| `WorkspaceDrawer` + subcomponents | Canvas: file tabs, editor, code viewer, empty state, footer | `files`, `activeFileId`, CRUD callbacks; motion slide-over |
+| `WorkspaceDrawer` + subcomponents | Canvas: file tabs, editor (with top-right char counter `X / 10,000 chars`), code viewer, empty state, footer | `files`, `activeFileId`, CRUD callbacks; motion slide-over |
 | `SidebarHeader/Footer` | Brand block + user menu (sign-out, theme toggle) | Session + quota + theme props |
 
 ## 7. Data Flow, Server Actions & Integration Map
@@ -422,6 +433,7 @@ Any new "mutation" must follow one of these three lanes — introducing `use ser
 
 - **Pipeline (both agent routes):** auth 401 → rate-limit 429 (with `Retry-After` + `X-RateLimit-*` headers; quota is consumed BEFORE body validation to prevent free probing) → malformed JSON 400 → zod `safeParse` 400 with `.flatten()` details → semantic 400 (message > 2,000 chars; image count > 4; disallowed image MIME; image data URL over 2 M chars) → stream.
 - **Agent route extras:** `maxSteps` clamped to 1..30 (default 25); messages pruned with `sliceMessagesAfterCompaction` (single source of truth, shared by both endpoints — the client transport never mutates the payload).
+- **Webhooks & public endpoints:** none exist today. The only non-auth routes are `/api/agent`, `/api/agent/compact`, and `/api/user/rate-limit` — all session-gated. Inbound-webhook integration guidance lives in §11 Recipe C.
 - **HTTP contract table:**
 
 | Status | Meaning | Body shape | Headers |
@@ -517,6 +529,8 @@ Future agents MUST adhere to these directives:
 15. **Never re-print full workspace file contents into chat messages** — the system prompt enforces metadata-only listings and chat/canvas separation; keep tool outputs on `fileSummarySchema` (content excluded).
 16. **`ToolCallCard.tsx` requires zero modifications when adding tools** — register display configs + summary builders in `components/chat/tools/resolver.tsx` instead.
 17. **All Markdown rendering MUST go through `MarkdownRenderer` (`components/ui/MarkdownRenderer.tsx`).** Never add new `ReactMarkdown`/`remark-gfm` import sites in components; the renderer owns snippet-copy state internally (`enableSnippetCopy` — currently canvas-only) and delegates streaming to `SmoothStreamText`; the component map (`components/ui/createMarkdownComponents.tsx`) and the streaming leaf (`components/ui/SmoothStreamText.tsx`) live in `components/ui/`.
+18. **All server-side database access MUST flow through the two shared `pg` Pool instances** (`lib/auth.ts` for identity, `lib/rate-limit.ts` for quota). No inline SQL, no ad-hoc `new Pool(...)` in routes, components, or tools; `serverExternalPackages: ['pg']` keeps the driver server-side only.
+19. **Never introduce `use cache`, `cacheLife`/`cacheTag` profiles, PPR, ISR, or revalidation directives** without revisiting the local-first premise (§3.5) — the browser (Dexie + storage) is the app's cache layer by design.
 
 ## 11. Feature Development Recipes (AI Agent Playbooks)
 

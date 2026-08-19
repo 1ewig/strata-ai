@@ -18,6 +18,7 @@
   - [1.3 The server: `streamText` to the UI stream response](#13-the-server-streamtext-to-the-ui-stream-response)
   - [1.4 The components](#14-the-components)
   - [1.5 Sending, status, and stopping](#15-sending-status-and-stopping)
+  - [1.6 Image attachments: the multimodal input pipeline](#16-image-attachments-the-multimodal-input-pipeline)
 - [Part 2 — Streaming UX (the "non-glitchy" layer)](#part-2-streaming-ux-the-non-glitchy-layer)
   - [2.1 Word-pace the stream with `smoothStream`](#21-word-pace-the-stream-with-smoothstream)
   - [2.2 Status-driven chrome](#22-status-driven-chrome)
@@ -382,13 +383,149 @@ A finished send flow (see `handleSendMessage` in `useChatSession.ts`):
 
 Add a **character cap** (`MAX_MESSAGE_CHARS = 2000` from `src/lib/limits.ts`) mirrored on the server with a Zod/HTTP 400 — never trust the client-side `maxLength` alone. `src/lib/limits.ts` centralizes every free-tier limit (message length 2,000; per-file 10,000; workspace 50,000; conversations 5; files-per-workspace 3; images per message 4; image input 5 MB; image output 1.5 MB; image dimension 1280 px), the quota constants (`QUOTA_5H_LIMIT` / `QUOTA_WEEK_LIMIT` / `NEAR_LIMIT_PERCENT`), and the canonical quota-error copy (`buildQuotaError` / `buildRateLimitErrorMessage`). Limits are enforced at the call sites (textarea `maxLength`, `WorkspaceDrawer` clamping, tool schema validation) rather than through a shared "over-limit" helper.
 
-**Image attachments (multimodal input).** The composer is vision-gated per model: `getModelSupportsVision(modelId)` (from `src/lib/models.ts`) hides the attach button on text-only models (DeepSeek V4 Flash). On a vision model the flow is *validate → compress → send*:
+**Image attachments (multimodal input).** The composer is vision-gated per model: `getModelSupportsVision(modelId)` (from `src/lib/models.ts`) hides the attach button on text-only models (DeepSeek V4 Flash). On a vision model the flow is *validate → compress → send*, capped at 4 images per message (`MAX_IMAGES_PER_MESSAGE`). The full pipeline — the compression budget loop, the composer drag/drop + paste wiring, the `file` UI-part send path, the server backstop, and the render side — is covered in §1.6.
 
-1. **Validate** the picked file with `validateImageFile` (`src/lib/image-utils.ts`): MIME whitelist (JPEG/PNG/WebP/GIF) plus a 5 MB input cap. Pure, so it is unit-testable in bun.
-2. **Compress** with `processImageFile`: a canvas loop downscales the long edge to 1280 px (`MAX_IMAGE_DIMENSION`) and steps JPEG quality 0.85→0.3 (PNG for alpha channels) until the resulting data URL fits a 1.5 MB budget (≈2 M chars on the wire). The output is a `ProcessedImage { dataUrl, mediaType, filename, width, height }`.
-3. **Send** up to 4 images per message (`MAX_IMAGES_PER_MESSAGE`): `handleSendMessage` maps them to AI SDK **`file` UI parts** (`{ type: 'file', mediaType, url: dataUrl, filename }`) and sends text + parts together via `chat.sendMessage`.
+### 1.6 Image attachments: the multimodal input pipeline
 
-The server is the backstop, not the gate: `/api/agent` re-checks the count with `countImageParts` and each part with `findImagePartViolations` (MIME + data-URL length), returning a 400 before any model call. For text-only providers, `stripImageContentForTextOnlyProviders` in `src/lib/ai/agent-runner.ts` removes image parts from replayed history so conversations that once contained images stay usable after a provider switch. On the render side, `flattenMessageSegments` (`src/lib/ai/message-segments.ts`) collects image parts into a `user-images` segment that `ChatBubble` hands to `UserMessageAttachments` (`src/components/chat/message/UserMessageAttachments.tsx`), a memoized thumbnail row above the user's text.
+A message can carry up to 4 images (`MAX_IMAGES_PER_MESSAGE`) as AI SDK **`file` UI parts**. The design goal is that nothing heavy ever reaches the API: the client validates, downscales, and compresses every attachment to a data URL before the part is even built, and the server re-checks the same rules because a server is the backstop, not a second opinion. The whole flow is *validate → compress → send* (§1.5); this section walks each stage with the exact shipped code.
+
+**The vision gate and the caps (`src/lib/models.ts` + `src/lib/limits.ts`).** The composer's attach button only renders for models that declare `supportsVision` (`getModelSupportsVision`, defaulting to `true`). The image caps all live in `src/lib/limits.ts`:
+
+- `MAX_IMAGES_PER_MESSAGE` — 4 images per message.
+- `MAX_IMAGE_INPUT_BYTES` — 5 MB raw-file input cap, rejected client-side before any decoding.
+- `MAX_IMAGE_OUTPUT_BYTES` — 1.5 MB compressed-output budget.
+- `MAX_IMAGE_DIMENSION` — 1280 px long edge after downscaling.
+- `MAX_IMAGE_DATA_URL_CHARS` — ≈2 M chars; the exact wire mirror of the 1.5 MB output budget (base64 is 4/3 the binary size).
+- `ALLOWED_IMAGE_TYPES` — JPEG, PNG, WebP, GIF.
+
+**The compression pipeline (`src/lib/image-utils.ts`).** The wire-ready shape is `ProcessedImage`; validation is a pure, DOM-free function so it unit-tests in bun:
+
+```ts
+// src/lib/image-utils.ts
+export interface ProcessedImage {
+  dataUrl: string;      // Base64 data URL (compressed, downscaled)
+  mediaType: AllowedImageType; // jpeg for photos, png for alpha/gif
+  filename: string;     // original filename, for alt text and auto-titles
+  width: number;        // encoded width in pixels
+  height: number;       // encoded height in pixels
+}
+
+export function validateImageFile(file: { type: string; size: number }): ImageValidationError {
+  if (!isAllowedImageType(file.type)) {
+    return `Unsupported image type "${file.type || 'unknown'}". Use JPEG, PNG, WebP, or GIF.`;
+  }
+  if (file.size > MAX_IMAGE_INPUT_BYTES) {
+    return `Image exceeds the ${(MAX_IMAGE_INPUT_BYTES / 1_000_000).toFixed(0)} MB size limit.`;
+  }
+  return null;
+}
+```
+
+`processImageFile` is the budget loop. It targets the data-URL char budget directly (`targetChars = MAX_IMAGE_OUTPUT_BYTES × 4/3`, the base64 wire math), encodes at the capped dimensions, and steps JPEG quality 0.85 → 0.3 until it fits. If even the lowest quality overshoots, it shrinks the canvas by 80% and re-enters — down to a 64 px floor — before accepting a tiny 64×64 fallback for pathological images:
+
+```ts
+// src/lib/image-utils.ts
+export async function processImageFile(file: File): Promise<ProcessedImage> {
+  const source = await loadImage(file);
+  const hasAlpha = file.type === 'image/png' || file.type === 'image/gif';
+  const encoder: Encoder = hasAlpha ? 'image/png' : 'image/jpeg';
+
+  // The base64 wire size is ~4/3 the binary size; target the char budget directly.
+  const targetChars = Math.floor(MAX_IMAGE_OUTPUT_BYTES * (4 / 3));
+
+  // First attempt at the full (capped) dimensions; re-enter with a smaller scale
+  // if even the lowest quality cannot fit the budget.
+  for (let dims = capDimensions(source.width, source.height); dims.width >= 64; ) {
+    const result = encodeWithinBudget(source, dims, encoder, targetChars);
+    if (result) return { ...result, filename: file.name };
+    dims = { width: Math.floor(dims.width * 0.8), height: Math.floor(dims.height * 0.8) };
+  }
+
+  // Extreme fallback: the image is pathological (e.g. huge noise) — encode the
+  // smallest frame we allow and accept whatever size it reaches.
+  const tiny = drawScaled(source, 64, 64);
+  const tinyUrl = tiny.canvas.toDataURL(encoder, 0.3);
+  return {
+    dataUrl: tinyUrl,
+    mediaType: encoder,
+    filename: file.name,
+    width: tiny.width,
+    height: tiny.height,
+  };
+}
+```
+
+Two details worth calling out: PNG quality is ignored by canvas, so alpha-bearing formats get a single pass, and animated GIFs collapse to their first frame — the animation is not preserved, a deliberate cost of shipping a data URL instead of a blob.
+
+**The composer wiring (`src/components/chat/composer/*`).** Drag-and-drop and clipboard paste are handled by `useComposerFileDrop`, which also tracks a drag-depth ref so child-element enter/leave events cannot flicker the drop overlay. Every file runs through the vision gate, the cap math (`maxImages - attachedCount`), validation, and async compression before `onImagesAttached` fires:
+
+```ts
+// src/components/chat/composer/useComposerFileDrop.ts
+const availableSlots = maxImages - attachedCount;
+if (availableSlots <= 0) {
+  onError(`Maximum of ${maxImages} images per message reached.`);
+  return;
+}
+const filesToProcess = files.slice(0, availableSlots);
+const processed: ProcessedImage[] = [];
+for (const file of filesToProcess) {
+  const validationError = validateImageFile(file);
+  if (validationError) { onError(validationError); continue; }
+  try {
+    processed.push(await processImageFile(file));
+  } catch {
+    onError(`Could not process "${file.name}".`);
+  }
+}
+if (processed.length > 0) onImagesAttached(processed);
+```
+
+Pending attachments render as a removable thumbnail grid (`AttachmentPreviews`), and the toolbar's attach button carries the full disabled-state chain — no vision / streaming / cap reached / quota blocked (`ComposerToolbar`). Both are memoized with URL-only comparators (§5.4) so the composer never re-renders on streaming deltas.
+
+**The send path (`src/hooks/useChatSession.ts`).** `handleSendMessage` maps each `ProcessedImage` to an AI SDK `file` UI part and sends text + parts together. Image-only messages are allowed, and the auto-title falls back to the first filename when there is no text:
+
+```ts
+// src/hooks/useChatSession.ts
+const parts: any[] = [
+  ...(hasImages
+    ? images.map((image) => ({
+        type: 'file',
+        mediaType: image.mediaType,
+        filename: image.filename,
+        url: image.dataUrl,
+      }))
+    : []),
+];
+if (trimmed) {
+  parts.push({ type: 'text', text: trimmed });
+}
+chat.sendMessage({ parts });
+```
+
+**The server backstop (`src/app/api/agent/route.ts`).** Before any model call, the route re-checks the latest user message with the same pure helpers the client trusts — `countImageParts` (per-message cap) and `findImagePartViolations` (MIME whitelist + data-URL char gate) — returning a 400 on the first violation:
+
+```ts
+// src/app/api/agent/route.ts
+const imageCount = countImageParts(lastUserParts);
+if (imageCount > MAX_IMAGES_PER_MESSAGE) { /* 400 "…max of 4 images per message" */ }
+const violations = findImagePartViolations(lastUserParts);
+if (violations.length > 0) { /* 400 with the joined reasons */ }
+```
+
+**Providers: multimodal in, text-only out (`src/lib/ai/agent-runner.ts`).** `convertToModelMessages` turns `file` parts into multimodal model content for Google models. Fireworks/DeepSeek cannot consume images, so on replay `stripImageContentForTextOnlyProviders` removes image content from replayed history — keeping old image conversations usable after a provider switch — and substitutes a `[Attached image]` text part when a message was image-only. Because the client attach gate and this strip use the same `supportsVision` rule (§4.1), the two sides can never drift.
+
+**Rendering & persistence.** On the render side, `flattenMessageSegments` (`src/lib/ai/message-segments.ts`) collects a message's `file`/`image` parts into a `user-images` segment that `ChatBubble` hands to `UserMessageAttachments` (`src/components/chat/message/UserMessageAttachments.tsx`) — a memoized thumbnail row with a URL-only comparator, async decoding, and `contain:paint` (again §5.4). The same `parts` array (data URLs included) persists verbatim into Dexie, so thumbnails re-hydrate without a single server round trip — the local-first trade-off being that a ≈2 M-char data URL is heavier in storage than the original file would be.
+
+Finally, the system prompt tells the model what to *do* with an image rather than how the bytes got there (`src/lib/ai/prompts.ts`):
+
+```
+## 2. Image Attachments (Vision Input)
+- You can receive images attached to user messages (JPEG, PNG, WebP, or GIF, pre-compressed client-side).
+- When an image is present, analyze it carefully and reference specific visual details (layout, text, colors, diagrams, UI, or code in screenshots).
+- Never claim you cannot see images. If an image is too low-resolution to read, say so honestly and ask for a clearer version or a crop.
+```
+
+The test suite proves the pipeline end-to-end: `__tests__/image-utils.test.ts` exercises the validation matrix and the budget loop, and `__tests__/image-drop.test.ts` covers the composer's drop/paste/slot behavior with `mock.module`-driven `processImageFile` stubs.
 
 ---
 
@@ -750,7 +887,7 @@ Plus, per `src/lib/models.ts`:
 - `getInitialModel()` / `saveModelPreference()` / `getStoredThinkingLevel()` — localStorage helpers. `getInitialModel` only trusts a stored id still in the catalog, falling back to `NEXT_PUBLIC_GEMINI_MODEL` then `gemini-3.5-flash-lite`.
 - `getValidThinkingLevelForModel(modelId, level)` — clamps a chosen level to a model's allowed set, else returns the default.
 - `getModelPricing(modelId)` — resolves `ModelPricing` for a model id, falling back to Gemini 3.5 Flash Lite rates for unknown ids. The same pricing block is mirrored in `metadata.json`'s `supportedModels` so the extension manifest and the app catalog never drift.
-- `getModelSupportsVision(modelId)` — resolves the `supportsVision` flag (defaults to `true` for unknown ids); the composer's attach button is gated on it, and `stripImageContentForTextOnlyProviders` in the agent runner uses the same rule to prune image parts for text-only providers on replay (see §1.5).
+- `getModelSupportsVision(modelId)` — resolves the `supportsVision` flag (defaults to `true` for unknown ids); the composer's attach button is gated on it, and `stripImageContentForTextOnlyProviders` in the agent runner uses the same rule to prune image parts for text-only providers on replay (see §1.5; full pipeline in §1.6).
 
 The catalog is the single source of truth that drives the model picker UI (`ModelSelectorMenu`), validation of stored preferences, and — via the `provider` field — server routing (`resolveAgentModel`, §4.2). The default model falls back to `NEXT_PUBLIC_GEMINI_MODEL`, then `gemini-3.5-flash-lite`. Conversation-level state (`conversations.model` / `thinkingLevel`) wins over stored preferences on load (`useModelSettings`).
 
@@ -830,7 +967,7 @@ export class ChatDatabase extends Dexie {
 }
 ```
 
-No shape conversion, no DTOs — `messages` holds the same `parts` arrays the UI renders, so re-hydration is a one-liner: `chat.setMessages(dexieMessages)` in `useChatSession`.
+No shape conversion, no DTOs — `messages` holds the same `parts` arrays the UI renders, so re-hydration is a one-liner: `chat.setMessages(dexieMessages)` in `useChatSession`. Image attachments ride along as ordinary `file` parts — the data URL persists verbatim, so attached thumbnails re-hydrate from local storage with no server round trip, at the cost of a heavier row per message (≈2 M chars per image; see §1.6).
 
 Schema-versioning notes:
 
@@ -1122,7 +1259,7 @@ export function areToolCallCardPropsEqual(prevProps, nextProps) {
 export default React.memo(ToolCallCard, areToolCallCardPropsEqual);
 ```
 
-Rule of thumb: the comparator encodes **what the user sees change** — status, icon, summary — never the raw argument stream.
+Rule of thumb: the comparator encodes **what the user sees change** — status, icon, summary — never the raw argument stream. The image thumbnails follow the same rule: `UserMessageAttachments` and `AttachmentPreviews` compare only URL/error identity, so attachment rows sit entirely off the per-delta hot path — their arrays are referentially stable until the user actually adds or removes an image (§1.6).
 
 ### 5.5 Stable handlers with `useCallback`
 
@@ -1245,6 +1382,7 @@ Registered in `experimental_transform` **after** `smoothStream`, it turns $O(N \
 - [ ] Auto-scroll owned by `StickToBottom`; zero manual `scrollIntoView`.
 - [ ] All persistence in one `onFinish` reconciliation, atomic Dexie transaction, native `UIMessage` shape.
 - [ ] Semantic Milo design tokens only; no raw sizes/colors/shadows.
+- [ ] Vision-gated attach; images validated + compressed client-side; server backstop mirrors the UI gates (§1.6).
 
 **Prompt & model**
 
@@ -1294,7 +1432,7 @@ Every item shipped and was later fixed. Learn from the receipts:
 | Shared Markdown component maps (assistant / user / thought / canvas variants) | `src/components/ui/createMarkdownComponents.tsx` |
 | Composer internals (attachment previews, status row, toolbar, model/thinking menus) | `src/components/chat/composer/*` |
 | Tool summary builders (`build*` per tool, `SummaryLine` primitive) | `src/components/chat/tools/summaries.tsx` |
-| Client image attachment pipeline (validate → canvas compress → data URL) | `src/lib/image-utils.ts` |
+| Client image attachment pipeline (validate → canvas compress → data URL; composer drop/paste, previews, thumbnail rendering) | `src/lib/image-utils.ts`, `src/components/chat/composer/useComposerFileDrop.ts`, `src/components/chat/composer/AttachmentPreviews.tsx`, `src/components/chat/message/UserMessageAttachments.tsx` |
 | Clipboard helpers (`stripMarkdown` / `copyToClipboard`) | `src/lib/clipboard.ts` |
 | Quota ring (sidebar footer) | `src/components/sidebar/RateLimitRing.tsx` |
 | Shared auth form state machine (`useSignIn` / `useSignUp`) | `src/hooks/useAuthForm.ts` |

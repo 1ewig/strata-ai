@@ -97,7 +97,7 @@ File changes stream in while the model is still working: workspace tools emit cu
 
 ### 4. Workspace Studio Drawer
 
-A slide-over panel next to the chat gives you a file switcher with language tags, a line-numbered, syntax-highlighted code viewer (PrismJS), a raw text editor for manual edits, an empty-state canvas, and a footer with copy-to-clipboard, edit-mode toggle, and character counts. Files can be previewed as Markdown or edited as raw text.
+A slide-over panel next to the chat gives you a file switcher with language tags, a line-numbered, syntax-highlighted code viewer (PrismJS), a raw text editor with a live header character counter, an empty-state canvas, and a footer with copy-to-clipboard, edit-mode toggle, and file metadata. Files can be previewed as Markdown or edited as raw text.
 
 ### 5. Context compaction (`/compact`)
 
