@@ -14,7 +14,6 @@ interface MessageActionsMenuProps {
 
 export default function MessageActionsMenu({
   textContent,
-  isUser = false,
   isOpen: controlledIsOpen,
   onOpenChange,
   className = '',
@@ -102,14 +101,11 @@ export default function MessageActionsMenu({
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        className={`flex items-center justify-center w-7 h-7 rounded-lg transition-all duration-150 shadow-button backdrop-blur-sm cursor-pointer select-none active:scale-95 ${isUser
-            ? isOpen
-              ? 'bg-surface/35 text-surface border-surface/50'
-              : 'bg-surface/20 hover:bg-surface/30 text-surface border border-surface/30'
-            : isOpen
-              ? 'bg-surface-hover text-text-primary border-edge-hover'
-              : 'bg-surface-elevated/90 hover:bg-surface-hover text-text-muted hover:text-text-primary border border-edge-raised'
-          } ${isOpen ? 'opacity-100' : 'opacity-90 hover:opacity-100'}`}
+        className={`p-1.5 text-text-muted hover:text-text-primary active:scale-95 rounded-lg border transition-all duration-150 cursor-pointer ${isOpen
+            ? 'bg-surface-elevated text-text-primary border-edge-hover shadow-button'
+            : 'hover:bg-surface-elevated border-transparent hover:border-edge-raised'
+          }`}
+        title="Message options"
       >
         <MoreHorizontal className="w-4 h-4" />
       </button>

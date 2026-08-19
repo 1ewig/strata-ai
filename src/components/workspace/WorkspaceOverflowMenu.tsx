@@ -79,9 +79,9 @@ export default React.memo(function WorkspaceOverflowMenu({
           <button
             type="button"
             role="menuitem"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               onCopy();
-              setIsOpen(false);
             }}
             disabled={!activeFile.content}
             className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-caption font-medium transition-colors text-left cursor-pointer ${!activeFile.content
