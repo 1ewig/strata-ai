@@ -2,7 +2,7 @@
 
 import React, { useState, type ReactNode } from 'react';
 import { ChevronDown, ChevronUp, Loader2, XCircle, type LucideIcon } from 'lucide-react';
-import { resolveToolDisplay, type ToolCardProps } from './tools/resolver';
+import { resolveToolDisplay, type ToolCardProps } from '../tools/resolver';
 
 /**
  * Card rendering a single AI tool invocation: status icon and badge in the header, plus a
