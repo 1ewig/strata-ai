@@ -62,7 +62,7 @@ function ComposerToolbar({
           disabled={isAttachDisabled}
           className={`group p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${isAttachDisabled
               ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
-              : 'bg-surface-raised/80 hover:bg-surface-hover text-text-primary hover:text-primary hover:border-edge-hover active:scale-95 cursor-pointer border-edge-raised'
+              : 'bg-surface-raised/80 hover:bg-surface-hover text-text-primary hover:border-edge-hover active:scale-95 cursor-pointer border-edge-raised'
             }`}
           title={
             !supportsVision
@@ -80,7 +80,7 @@ function ComposerToolbar({
           aria-label="Attach images"
         >
           <Paperclip className="w-4 h-4 text-text-muted group-hover:text-primary transition-transform duration-150 group-hover:scale-110" />
-          <span className="hidden sm:inline text-caption font-semibold">Attach image</span>
+          <span className="hidden sm:inline text-caption font-semibold text-text-primary">Attach image</span>
           {attachedCount > 0 && (
             <span className="text-caption font-bold text-primary">
               {attachedCount}/{maxImages}
