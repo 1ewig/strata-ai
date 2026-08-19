@@ -11,7 +11,7 @@ import {
   formatTokens,
   ConversationTokenMetrics,
 } from '@/lib/token-usage';
-import TokenUsagePopover from './TokenUsagePopover';
+import TokenUsagePopover from './status/TokenUsagePopover';
 
 /** Props for the ChatHeader component. */
 interface ChatHeaderProps {

@@ -7,8 +7,8 @@ import {
   validateImageFile,
   type ProcessedImage,
 } from '@/lib/image-utils';
-import ModelSelectorMenu from './ModelSelectorMenu';
-import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './SlashCommandMenu';
+import ModelSelectorMenu from './composer/ModelSelectorMenu';
+import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './composer/SlashCommandMenu';
 
 /** Props for the ChatInput composer. */
 interface ChatInputProps {

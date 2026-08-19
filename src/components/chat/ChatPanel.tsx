@@ -3,9 +3,9 @@
 import React from 'react';
 import { Globe, FileText, Compass } from 'lucide-react';
 import { motion } from 'motion/react';
-import ChatBubble from '@/components/chat/ChatBubble';
-import CompactionDivider from '@/components/chat/CompactionDivider';
-import { QuotaErrorCard } from '@/components/chat/QuotaErrorCard';
+import ChatBubble from '@/components/chat/message/ChatBubble';
+import CompactionDivider from '@/components/chat/message/CompactionDivider';
+import { QuotaErrorCard } from '@/components/chat/message/QuotaErrorCard';
 import { StrataIcon } from '@/components/ui/strata-icon';
 
 /** Quick-action suggestion chips for the Dribbble-style hero empty state. */
