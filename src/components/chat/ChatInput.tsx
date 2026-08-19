@@ -31,6 +31,8 @@ interface ChatInputProps {
     retryAfter?: number;
   } | null;
   isContextWindowExhausted?: boolean;
+  filesCount?: number;
+  onOpenDrawer?: () => void;
 }
 
 /** Available placeholder prompts for the chat input composer. */
@@ -77,6 +79,8 @@ export default React.memo(function ChatInput({
   onThinkingLevelChange,
   rateLimitData: rateLimitDataProp,
   isContextWindowExhausted = false,
+  filesCount = 0,
+  onOpenDrawer,
 }: ChatInputProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -387,6 +391,8 @@ export default React.memo(function ChatInput({
           attachedCount={attachedImages.length}
           maxImages={MAX_IMAGES_PER_MESSAGE}
           onAttachClick={handleAttachClick}
+          filesCount={filesCount}
+          onOpenDrawer={onOpenDrawer}
           model={model}
           thinkingLevel={thinkingLevel}
           onModelSelect={onModelSelect}

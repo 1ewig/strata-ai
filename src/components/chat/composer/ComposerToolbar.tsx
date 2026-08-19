@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { ArrowUp, Paperclip, Square } from 'lucide-react';
+import { ArrowUp, Folder, Paperclip, Square } from 'lucide-react';
 import ModelSelectorMenu from './ModelSelectorMenu';
 
 /** Props for the composer bottom toolbar (attach, model picker, send/stop). */
@@ -12,6 +12,8 @@ interface ComposerToolbarProps {
   attachedCount: number;
   maxImages: number;
   onAttachClick: () => void;
+  filesCount?: number;
+  onOpenDrawer?: () => void;
   model: string;
   thinkingLevel: string;
   onModelSelect: (modelId: string) => void;
@@ -29,8 +31,8 @@ interface ComposerToolbarProps {
 
 /**
  * Row 2 of the composer: the image attach button (with tooltip chain and
- * pending-count badge), the model/thinking-level selector, and the send/stop
- * button with its full disabled-state and title logic.
+ * pending-count badge), the workspace files drawer button, the model/thinking-level
+ * selector, and the send/stop button with its full disabled-state and title logic.
  */
 function ComposerToolbar({
   isAttachDisabled,
@@ -39,6 +41,8 @@ function ComposerToolbar({
   attachedCount,
   maxImages,
   onAttachClick,
+  filesCount = 0,
+  onOpenDrawer,
   model,
   thinkingLevel,
   onModelSelect,
@@ -57,38 +61,60 @@ function ComposerToolbar({
 
   return (
     <div className="flex items-center justify-between pt-1 gap-2">
-      {/* Left Side: Image Attach Button */}
-      <button
-        id="chat-attach-btn"
-        type="button"
-        onClick={onAttachClick}
-        disabled={isAttachDisabled}
-        className={`group p-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${isAttachDisabled
-          ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
-          : 'bg-surface-raised text-text-primary hover:text-primary hover:border-primary/60 active:scale-95 cursor-pointer border-edge-raised'
-          }`}
-        title={
-          !supportsVision
-            ? 'The selected model does not support images'
-            : isCompacting
-              ? 'Context compaction in progress'
-              : isLoading
-                ? 'Wait for the current response'
-                : isBlocked
-                  ? 'Quota or context limit reached'
-                  : isImageCapReached
-                    ? `Up to ${maxImages} images per message`
-                    : 'Attach images'
-        }
-        aria-label="Attach images"
-      >
-        <Paperclip className="w-4 h-4 transition-transform duration-150 group-hover:scale-110" />
-        {attachedCount > 0 && (
-          <span className="hidden sm:inline text-caption font-bold text-primary">
-            {attachedCount}/{maxImages}
-          </span>
+      {/* Left Side: Image Attach Button & Files Drawer Button */}
+      <div className="flex items-center gap-1.5 shrink-0">
+        <button
+          id="chat-attach-btn"
+          type="button"
+          onClick={onAttachClick}
+          disabled={isAttachDisabled}
+          className={`group p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${isAttachDisabled
+            ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
+            : 'bg-surface-raised text-text-primary hover:text-primary hover:border-primary/60 active:scale-95 cursor-pointer border-edge-raised'
+            }`}
+          title={
+            !supportsVision
+              ? 'The selected model does not support images'
+              : isCompacting
+                ? 'Context compaction in progress'
+                : isLoading
+                  ? 'Wait for the current response'
+                  : isBlocked
+                    ? 'Quota or context limit reached'
+                    : isImageCapReached
+                      ? `Up to ${maxImages} images per message`
+                      : 'Attach images'
+          }
+          aria-label="Attach images"
+        >
+          <Paperclip className="w-4 h-4 transition-transform duration-150 group-hover:scale-110" />
+          <span className="hidden sm:inline text-caption font-semibold">Attach image</span>
+          {attachedCount > 0 && (
+            <span className="text-caption font-bold text-primary">
+              {attachedCount}/{maxImages}
+            </span>
+          )}
+        </button>
+
+        {onOpenDrawer && (
+          <button
+            id="chat-files-btn"
+            type="button"
+            onClick={onOpenDrawer}
+            className="group p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button bg-surface-raised text-text-primary hover:text-primary hover:border-primary/60 active:scale-95 cursor-pointer border-edge-raised"
+            title={`Open Workspace Files Drawer (${filesCount} files)`}
+            aria-label="Open Workspace Files Drawer"
+          >
+            <Folder className="w-4 h-4 transition-transform duration-150 group-hover:scale-110" />
+            <span className="hidden sm:inline text-caption font-semibold">Files</span>
+            {filesCount > 0 && (
+              <span className="hidden sm:inline text-caption font-medium text-text-muted group-hover:text-text-primary">
+                ({filesCount})
+              </span>
+            )}
+          </button>
         )}
-      </button>
+      </div>
 
       {/* Right Side: Model Dropdown, Send / Stop Button */}
       <div className="flex items-center gap-2 shrink-0 ml-auto">

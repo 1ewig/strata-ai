@@ -48,11 +48,10 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
       <button
         type="button"
         onClick={() => setIsOpen(prev => !prev)}
-        className={`w-full flex items-center justify-center gap-2 px-3 h-9 border rounded-lg text-label font-semibold shadow-button active:scale-95 transition-all duration-150 cursor-pointer ${
-          isQuotaExhausted
+        className={`w-full flex items-center justify-center gap-2 px-3 h-9 border rounded-lg text-label font-semibold shadow-button active:scale-95 transition-all duration-150 cursor-pointer ${isQuotaExhausted
             ? 'border-danger/40 bg-danger-soft/40 text-danger'
             : 'border-edge-raised bg-surface-overlay hover:bg-surface-elevated text-text-secondary hover:text-text-primary'
-        }`}
+          }`}
         aria-label="Toggle quota status popover"
       >
         <svg className="w-3.5 h-3.5 -rotate-90 shrink-0 transition-transform duration-200 group-hover:scale-110" viewBox="0 0 20 20">
@@ -77,13 +76,12 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
             strokeDasharray={43.98}
             strokeDashoffset={43.98 * (1 - Math.min(1, Math.max(0, rateLimitData.remaining5h / QUOTA_5H_LIMIT)))}
             strokeLinecap="round"
-            className={`transition-all duration-500 ${
-              rateLimitData.remaining5h > 3
+            className={`transition-all duration-500 ${rateLimitData.remaining5h > 3
                 ? 'text-primary'
                 : rateLimitData.remaining5h > 1
-                ? 'text-warning'
-                : 'text-danger'
-            }`}
+                  ? 'text-warning'
+                  : 'text-danger'
+              }`}
           />
         </svg>
         <span className={isQuotaExhausted ? 'text-danger font-semibold' : 'text-text-secondary'}>
@@ -93,17 +91,16 @@ export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateL
 
       {/* Popover Tooltip on Hover & Tap */}
       <div
-        className={`absolute bottom-full right-0 mb-2 ${
-          isOpen ? 'block' : 'hidden group-hover:block'
-        } w-56 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-card-lg p-2.5 text-caption text-text-primary z-50 animate-in fade-in zoom-in-95`}
+        className={`absolute bottom-full right-0 mb-2 ${isOpen ? 'block' : 'hidden group-hover:block'
+          } w-56 max-w-[calc(100vw-2rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-card-lg p-2.5 text-caption text-text-primary z-50 animate-in fade-in zoom-in-95`}
       >
         <div className="font-semibold text-text-bright mb-1.5 flex items-center justify-between">
           <span>Remaining Messages</span>
-          <span className={`text-micro font-semibold uppercase px-1.5 py-0.5 rounded ${
-            isQuotaExhausted ? 'bg-danger/15 text-danger' : 'bg-surface-base text-text-faint'
-          }`}>
-            {isQuotaExhausted ? 'Exhausted' : 'Quota'}
-          </span>
+          {isQuotaExhausted && (
+            <span className="text-micro font-semibold uppercase px-1.5 py-0.5 rounded bg-danger/15 text-danger">
+              Exhausted
+            </span>
+          )}
         </div>
         <div className="space-y-1.5 text-caption text-text-muted">
           <div className="flex items-center justify-between">

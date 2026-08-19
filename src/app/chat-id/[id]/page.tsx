@@ -161,6 +161,8 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
       onThinkingLevelChange={handleThinkingLevelChange}
       rateLimitData={rateLimitData}
       isContextWindowExhausted={isContextWindowExhausted}
+      filesCount={files.length}
+      onOpenDrawer={handleOpenDrawer}
     />
   );
 

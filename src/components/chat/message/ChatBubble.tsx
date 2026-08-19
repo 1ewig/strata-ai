@@ -127,16 +127,18 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                 key={seg.key}
                 onClick={(e) => handleBubbleClick(e, seg.key)}
                 className={`group/bubble relative rounded-2xl pl-4.5 pr-8.5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full cursor-pointer sm:cursor-default ${isActionActive
-                  ? 'border-primary-hover shadow-glow-primary/20'
-                  : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/20'
+                    ? 'border-primary-hover shadow-glow-primary/20'
+                    : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/20'
                   } ${isMenuOpen ? 'z-30' : ''}`}
               >
+                {/* Sticky Action Menu */}
                 {userContent && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className={`absolute top-2.5 right-2.5 ${isMenuOpen ? 'z-30' : 'z-10'} transition-opacity duration-200 ${isActionActive
-                      ? 'opacity-100 pointer-events-auto'
-                      : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
+                    className={`sticky top-2.5 float-right -mr-5 -mt-0.5 ml-2 ${isMenuOpen ? 'z-30' : 'z-10'
+                      } transition-opacity duration-200 ${isActionActive
+                        ? 'opacity-100 pointer-events-auto'
+                        : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
                       }`}
                   >
                     <MessageActionsMenu
@@ -189,16 +191,18 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                 key={seg.key}
                 onClick={(e) => !isStreamingActiveSegment && handleBubbleClick(e, seg.key)}
                 className={`group/bubble relative rounded-2xl pl-4.5 pr-8.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-overlay/90 border text-text-primary rounded-tl-xs backdrop-blur-sm w-fit max-w-full cursor-pointer sm:cursor-default ${isActionActive
-                  ? 'border-primary/60 shadow-card-lg'
-                  : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
+                    ? 'border-primary/60 shadow-card-lg'
+                    : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
                   } ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''} ${isMenuOpen ? 'z-30' : ''}`}
               >
+                {/* Sticky Action Menu */}
                 {!isStreamingActiveSegment && textContent && (
                   <div
                     onClick={(e) => e.stopPropagation()}
-                    className={`absolute top-2.5 right-2.5 ${isMenuOpen ? 'z-30' : 'z-10'} transition-opacity duration-200 ${isActionActive
-                      ? 'opacity-100 pointer-events-auto'
-                      : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
+                    className={`sticky top-2.5 float-right -mr-5 -mt-0.5 ml-2 ${isMenuOpen ? 'z-30' : 'z-10'
+                      } transition-opacity duration-200 ${isActionActive
+                        ? 'opacity-100 pointer-events-auto'
+                        : 'opacity-0 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto'
                       }`}
                   >
                     <MessageActionsMenu

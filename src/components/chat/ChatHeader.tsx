@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Folder, Menu, Plus } from 'lucide-react';
+import { Menu, Plus } from 'lucide-react';
 import { motion } from 'motion/react';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MODELS } from '@/lib/models';
@@ -16,26 +16,24 @@ import TokenUsagePopover from './TokenUsagePopover';
 /** Props for the ChatHeader component. */
 interface ChatHeaderProps {
   title?: string;
-  files: WorkspaceFile[];
-  activeFileId: string | null;
+  files?: WorkspaceFile[];
+  activeFileId?: string | null;
   model?: string;
   tokenUsage?: ConversationTokenMetrics | null;
   onOpenFile?: (fileId: string) => void;
-  onOpenDrawer: () => void;
+  onOpenDrawer?: () => void;
   onOpenSidebar?: () => void;
   onNewChat: () => void;
 }
 
 /**
  * Sticky chat header with conversation title, active context window indicator badge
- * with separated hover/tap details popover, mobile sidebar toggle, and workspace files drawer button.
+ * with separated hover/tap details popover, mobile sidebar toggle, and mobile new chat button.
  */
 export default React.memo(function ChatHeader({
   title,
-  files,
   model,
   tokenUsage,
-  onOpenDrawer,
   onOpenSidebar,
   onNewChat,
 }: ChatHeaderProps) {
@@ -129,26 +127,6 @@ export default React.memo(function ChatHeader({
         >
           <Plus className="w-4 h-4 transition-transform duration-250 group-hover:rotate-90 group-hover:scale-110" />
         </motion.button>
-
-        {/* Desktop Files Button (Opens Workspace Drawer) */}
-        <button
-          onClick={onOpenDrawer}
-          className="group hidden md:flex items-center gap-1.5 text-label text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 px-3 py-1.5 rounded-lg hover:bg-primary-soft-strong active:scale-95 shadow-button transition-all duration-150 font-medium cursor-pointer"
-          title="Open Workspace Files Drawer"
-        >
-          <Folder className="w-3.5 h-3.5 transition-transform duration-150 group-hover:scale-110" />
-          Files ({files.length})
-        </button>
-
-        {/* Mobile Files Icon Button (Opens Workspace Drawer) */}
-        <button
-          onClick={onOpenDrawer}
-          className="group md:hidden flex items-center justify-center p-2 text-primary hover:text-primary-hover bg-primary-soft border border-primary/30 rounded-lg hover:bg-primary-soft-strong active:scale-95 shadow-button transition-all duration-150 cursor-pointer"
-          title={`Open Workspace Files Drawer (${files.length} files)`}
-          aria-label="Open Workspace Files Drawer"
-        >
-          <Folder className="w-4 h-4 transition-transform duration-150 group-hover:scale-110" />
-        </button>
       </div>
     </header>
   );
