@@ -1,5 +1,4 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { ArrowUp, AlertCircle, Square, Sparkles, Paperclip, X } from 'lucide-react';
 import { MAX_MESSAGE_CHARS, MAX_IMAGES_PER_MESSAGE, buildQuotaError } from '@/lib/limits';
 import { getModelSupportsVision } from '@/lib/models';
 import {
@@ -7,7 +6,9 @@ import {
   validateImageFile,
   type ProcessedImage,
 } from '@/lib/image-utils';
-import ModelSelectorMenu from './composer/ModelSelectorMenu';
+import AttachmentPreviews from './composer/AttachmentPreviews';
+import ComposerStatusRow from './composer/ComposerStatusRow';
+import ComposerToolbar from './composer/ComposerToolbar';
 import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './composer/SlashCommandMenu';
 
 /** Props for the ChatInput composer. */
@@ -56,8 +57,10 @@ function getRandomPlaceholderIndex(excludeIndex?: number): number {
 }
 
 /**
- * Renders the message composer: auto-growing textarea, slash command popup,
- * model/thinking-level selector, and send button with floating island aesthetics.
+ * Renders the message composer orchestrator: owns all input state and handlers,
+ * and composes the slash command popup, status row (compacting/blocked/textarea),
+ * pending image attachment previews, and the bottom toolbar (attach, model
+ * selector, send/stop) with floating island aesthetics.
  */
 export default React.memo(function ChatInput({
   chatId,
@@ -263,6 +266,8 @@ export default React.memo(function ChatInput({
     }
   };
 
+  const hasContent = inputValue.trim().length > 0 || attachedImages.length > 0;
+
   return (
     <form
       onSubmit={(e) => {
@@ -303,163 +308,52 @@ export default React.memo(function ChatInput({
         />
 
         {/* Row 1: Text Field Input, Compacting Notice, or Blocking Warning */}
-        {isCompacting ? (
-          <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-primary text-label font-medium animate-in fade-in">
-            <div className="w-3.5 h-3.5 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
-            <span>Compacting conversation context... Please wait.</span>
-          </div>
-        ) : isBlocked ? (
-          <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-danger text-label font-medium animate-in fade-in flex-wrap">
-            <AlertCircle className="w-4 h-4 shrink-0 text-danger" />
-            <span>
-              {isContextWindowExhausted
-                ? 'Context window reached.'
-                : blockedQuotaCopy}
-            </span>
-            {isContextWindowExhausted && onTriggerCompaction && (
-              <button
-                type="button"
-                onClick={onTriggerCompaction}
-                disabled={isLoading || isCompacting}
-                className="underline hover:no-underline font-semibold cursor-pointer disabled:opacity-50 active:scale-95 transition-transform duration-150"
-                title="Compact conversation history to reclaim context space"
-              >
-                Compact history
-              </button>
-            )}
-          </div>
-        ) : (
-          <textarea
-            ref={textareaRef}
-            id="chat-input-field"
-            rows={1}
-            disabled={isLoading}
-            maxLength={MAX_MESSAGE_CHARS}
-            placeholder={PLACEHOLDER_PROMPTS[placeholderIndex]}
-            value={inputValue}
-            onChange={handleInput}
-            onKeyDown={handleKeyDown}
-            className="w-full bg-transparent text-text-primary placeholder-text-muted border-none text-label sm:text-body focus:outline-none resize-none min-h-[28px] max-h-48 py-1 focus:ring-0 disabled:opacity-50"
-          />
-        )}
+        <ComposerStatusRow
+          isCompacting={isCompacting}
+          isBlocked={isBlocked}
+          isContextWindowExhausted={isContextWindowExhausted}
+          blockedQuotaCopy={blockedQuotaCopy}
+          onTriggerCompaction={onTriggerCompaction}
+          isLoading={isLoading}
+          value={inputValue}
+          placeholder={PLACEHOLDER_PROMPTS[placeholderIndex]}
+          charLimit={MAX_MESSAGE_CHARS}
+          onChange={handleInput}
+          onKeyDown={handleKeyDown}
+          textareaRef={textareaRef}
+        />
 
         {/* Pending image attachments: removable thumbnails awaiting send */}
         {(attachedImages.length > 0 || attachError) && (
-          <div className="flex flex-wrap items-center gap-2.5">
-            {attachedImages.map((image, index) => (
-              <div
-                key={`${image.filename}-${index}`}
-                className="group/img relative"
-              >
-                <img
-                  src={image.dataUrl}
-                  alt={image.filename}
-                  className="w-16 h-16 sm:w-20 sm:h-20 object-cover rounded-xl border border-edge-raised shadow-button"
-                />
-                <button
-                  type="button"
-                  onClick={() => handleRemoveImage(index)}
-                  className="absolute -top-1.5 -right-1.5 p-0.5 rounded-full bg-danger text-surface border border-surface shadow-button transition-transform hover:scale-110 active:scale-95 cursor-pointer"
-                  title={`Remove ${image.filename}`}
-                  aria-label={`Remove ${image.filename}`}
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-            {attachError && (
-              <span className="flex items-center gap-1.5 text-danger text-caption font-medium animate-in fade-in">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                {attachError}
-              </span>
-            )}
-          </div>
+          <AttachmentPreviews
+            images={attachedImages}
+            error={attachError}
+            onRemove={handleRemoveImage}
+          />
         )}
 
         {/* Row 2: Bottom Toolbar */}
-        <div className="flex items-center justify-between pt-1 gap-2">
-          {/* Left Side: Image Attach Button */}
-          <button
-            id="chat-attach-btn"
-            type="button"
-            onClick={handleAttachClick}
-            disabled={isAttachDisabled}
-            className={`group p-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${isAttachDisabled
-              ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
-              : 'bg-surface-raised text-text-primary hover:text-primary hover:border-primary/60 active:scale-95 cursor-pointer border-edge-raised'
-              }`}
-            title={
-              !supportsVision
-                ? 'The selected model does not support images'
-                : isCompacting
-                  ? 'Context compaction in progress'
-                  : isLoading
-                    ? 'Wait for the current response'
-                    : isBlocked
-                      ? 'Quota or context limit reached'
-                      : isImageCapReached
-                        ? `Up to ${MAX_IMAGES_PER_MESSAGE} images per message`
-                        : 'Attach images'
-            }
-            aria-label="Attach images"
-          >
-            <Paperclip className="w-4 h-4 transition-transform duration-150 group-hover:scale-110" />
-            {attachedImages.length > 0 && (
-              <span className="hidden sm:inline text-caption font-bold text-primary">
-                {attachedImages.length}/{MAX_IMAGES_PER_MESSAGE}
-              </span>
-            )}
-          </button>
-
-          {/* Right Side: Model Dropdown, Send / Stop Button */}
-          <div className="flex items-center gap-2 shrink-0 ml-auto">
-            <ModelSelectorMenu
-              model={model}
-              thinkingLevel={thinkingLevel}
-              onModelSelect={onModelSelect}
-              onThinkingLevelChange={onThinkingLevelChange}
-            />
-
-            {isLoading && !isCompacting ? (
-              <button
-                id="chat-stop-btn"
-                type="button"
-                onClick={onStop}
-                className="group p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none bg-danger hover:bg-danger/90 active:scale-95 cursor-pointer text-surface border border-transparent animate-in fade-in flex items-center gap-1.5 shadow-button"
-                title="Stop generating"
-              >
-                <Square className="w-3.5 h-3.5 fill-surface text-surface group-hover:scale-90 transition-transform duration-150" />
-                <span className="hidden sm:inline text-caption font-bold">Stop</span>
-              </button>
-            ) : (
-              <button
-                id="chat-submit-btn"
-                type="submit"
-                disabled={(!inputValue.trim() && attachedImages.length === 0) || isBlocked || isCharOverLimit}
-                className={`group p-2 sm:px-3.5 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${(!inputValue.trim() && attachedImages.length === 0) || isBlocked || isCharOverLimit
-                    ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
-                    : 'bg-primary hover:bg-primary-hover active:scale-95 text-surface border-transparent cursor-pointer'
-                  }`}
-                title={
-                  isCompacting
-                    ? 'Context compaction in progress'
-                    : isContextWindowExhausted
-                      ? 'Context window reached'
-                      : isQuotaExhausted
-                        ? 'Quota limit reached'
-                        : isCharOverLimit
-                          ? `Message exceeds ${MAX_MESSAGE_CHARS.toLocaleString()} characters`
-                          : !inputValue.trim() && attachedImages.length === 0
-                            ? 'Type a message or attach images to send'
-                            : 'Send message'
-                }
-              >
-                <span className="hidden sm:inline text-caption font-bold">Send</span>
-                <ArrowUp className="w-3.5 h-3.5 transition-transform duration-150 group-hover:-translate-y-0.5" />
-              </button>
-            )}
-          </div>
-        </div>
+        <ComposerToolbar
+          isAttachDisabled={isAttachDisabled}
+          supportsVision={supportsVision}
+          isImageCapReached={isImageCapReached}
+          attachedCount={attachedImages.length}
+          maxImages={MAX_IMAGES_PER_MESSAGE}
+          onAttachClick={handleAttachClick}
+          model={model}
+          thinkingLevel={thinkingLevel}
+          onModelSelect={onModelSelect}
+          onThinkingLevelChange={onThinkingLevelChange}
+          isLoading={isLoading}
+          isCompacting={isCompacting}
+          onStop={onStop}
+          hasContent={hasContent}
+          isBlocked={isBlocked}
+          isCharOverLimit={isCharOverLimit}
+          isQuotaExhausted={isQuotaExhausted}
+          isContextWindowExhausted={isContextWindowExhausted}
+          charLimit={MAX_MESSAGE_CHARS}
+        />
       </div>
     </form>
   );
