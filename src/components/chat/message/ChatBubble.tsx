@@ -144,7 +144,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   <div className="absolute inset-y-0 right-3 pointer-events-none w-7 flex flex-col justify-start">
                     <div
                       onClick={(e) => e.stopPropagation()}
-                      className={`sticky top-16 -mt-3 pointer-events-auto transition-all duration-150 ${isActionActive
+                      className={`sticky top-3 -mt-3 pointer-events-auto transition-all duration-150 ${isActionActive
                           ? 'opacity-100 scale-100 z-30'
                           : 'opacity-0 scale-95 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:scale-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:scale-100 focus-within:pointer-events-auto z-10'
                         }`}
@@ -211,7 +211,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   <div className="absolute inset-y-0 right-3 pointer-events-none w-7 flex flex-col justify-start">
                     <div
                       onClick={(e) => e.stopPropagation()}
-                      className={`sticky top-16 -mt-3 pointer-events-auto transition-all duration-150 ${isActionActive
+                      className={`sticky top-3 -mt-3 pointer-events-auto transition-all duration-150 ${isActionActive
                           ? 'opacity-100 scale-100 z-30'
                           : 'opacity-0 scale-95 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:scale-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:scale-100 focus-within:pointer-events-auto z-10'
                         }`}

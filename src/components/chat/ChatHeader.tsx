@@ -145,7 +145,7 @@ export default React.memo(function ChatHeader({
             <Folder className="w-4 h-4 text-text-muted group-hover:text-primary transition-transform duration-150 group-hover:scale-105" />
             <span className="hidden sm:inline text-caption sm:text-label font-semibold text-text-primary">Files</span>
             {(files?.length ?? 0) > 0 && (
-              <span className="text-micro px-1.5 py-0.5 rounded-md bg-surface-base border border-edge-default text-primary font-medium shrink-0">
+              <span className="hidden sm:inline-flex text-micro px-1.5 py-0.5 rounded-md bg-surface-base border border-edge-default text-primary font-medium shrink-0">
                 {files?.length}
               </span>
             )}
