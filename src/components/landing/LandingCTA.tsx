@@ -1,134 +1,92 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ArrowRight, Sparkles, Feather, Compass, CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CornerDownLeft } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import {
+  staggerContainerVariants,
   fadeUpVariants,
   buttonHoverProps,
   viewportOnce,
-} from './animations';
+} from '@/components/landing/animations';
 
-/** Props for the LandingCTA component. */
 interface LandingCTAProps {
-  /** The current user's id if authenticated. */
   userId?: string;
-  /** Callback to launch the workspace for authenticated users. */
-  onOpenStudio?: () => void;
+  onOpenStudio: () => void;
 }
 
-const STARTER_PROMPTS = [
-  { icon: Feather, text: 'Draft an essay or manifesto' },
-  { icon: Compass, text: 'Map a system architecture' },
-  { icon: Sparkles, text: 'Turn scattered notes into a brief' },
-];
-
-/**
- * Atmospheric, tactile closing invitation to step into the studio.
- */
 export function LandingCTA({ userId, onOpenStudio }: LandingCTAProps) {
-  const [selectedPrompt, setSelectedPrompt] = useState<number | null>(null);
-
   return (
-    <section className="py-20 md:py-28 border-t border-edge-default relative overflow-hidden">
-      {/* Background ambient lighting */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl h-96 bg-primary-soft/50 rounded-full blur-3xl pointer-events-none -z-10" />
-      <div className="absolute bottom-0 right-1/4 w-80 h-80 bg-secondary-soft/40 rounded-full blur-3xl pointer-events-none -z-10" />
+    <section className="py-20 sm:py-28 border-t border-edge-default relative overflow-hidden">
+      {/* Subtle Studio Ambient Background Light */}
+      <div className="absolute inset-0 pointer-events-none -z-10 flex items-center justify-center">
+        <div className="w-[500px] h-[300px] rounded-full bg-gradient-to-tr from-primary/10 via-secondary/10 to-transparent blur-3xl opacity-60" />
+      </div>
 
-      <motion.div
-        variants={fadeUpVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={viewportOnce}
-        className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-8"
-      >
-        {/* Central glowing brand emblem */}
-        <div className="flex justify-center">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-3xl bg-surface-raised border border-edge-raised flex items-center justify-center shadow-card-lg">
-              <StrataIcon className="w-9 h-9" />
-            </div>
-            <div className="absolute -inset-2 rounded-3xl bg-primary-soft blur-md -z-10 animate-pulse" />
-          </div>
-        </div>
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+        <motion.div
+          variants={staggerContainerVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={viewportOnce}
+          className="flex flex-col items-center space-y-6"
+        >
+          {/* Glowing Brand Mark */}
+          <motion.div variants={fadeUpVariants} className="relative group">
+            <StrataIcon className="w-14 h-14 transition-transform duration-300 group-hover:scale-105" />
+            <div className="absolute -inset-2 rounded-full bg-primary/20 blur-md -z-10 animate-pulse" />
+          </motion.div>
 
-        {/* Headings */}
-        <div className="space-y-3 max-w-xl mx-auto">
-          <h2 className="font-display font-bold text-heading sm:text-title md:text-display text-text-bright tracking-tight">
-            The desk is clear. The canvas is open.
-          </h2>
-          <p className="text-body text-text-secondary leading-relaxed">
-            Bring your raw thoughts, unorganized notes, or boldest concepts.
-            Step into a quiet studio where ideas become finished work.
-          </p>
-        </div>
+          <motion.div variants={fadeUpVariants} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-elevated border border-edge-raised text-micro font-mono uppercase tracking-widest text-text-secondary">
+            <span>+ 05 / The Invitation</span>
+          </motion.div>
 
-        {/* Starter Spark Chips */}
-        <div className="flex flex-wrap items-center justify-center gap-2 max-w-lg mx-auto">
-          {STARTER_PROMPTS.map((prompt, idx) => {
-            const Icon = prompt.icon;
-            const isSelected = selectedPrompt === idx;
-            return (
-              <button
-                key={prompt.text}
-                type="button"
-                onClick={() => setSelectedPrompt(isSelected ? null : idx)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-caption transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-primary text-surface shadow-button font-medium'
-                    : 'bg-surface-raised hover:bg-surface-elevated text-text-secondary border border-edge-raised'
-                }`}
-              >
-                <Icon className={`w-3.5 h-3.5 ${isSelected ? 'text-surface' : 'text-primary'}`} />
-                <span>{prompt.text}</span>
-              </button>
-            );
-          })}
-        </div>
+          <motion.h2
+            variants={fadeUpVariants}
+            className="text-display sm:text-[2.75rem] font-bold text-text-bright font-display tracking-tight max-w-xl"
+          >
+            Pull up a chair to the studio desk.
+          </motion.h2>
 
-        {/* Main CTA Button */}
-        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3">
-          {userId ? (
+          <motion.p
+            variants={fadeUpVariants}
+            className="text-body text-text-secondary max-w-lg leading-relaxed font-sans"
+          >
+            Begin with an empty workspace or paste an existing markdown document. No credit card required.
+          </motion.p>
+
+          <motion.div
+            variants={fadeUpVariants}
+            className="flex flex-col sm:flex-row items-center gap-3 pt-4 w-full sm:w-auto"
+          >
             <motion.button
               type="button"
-              {...buttonHoverProps}
               onClick={onOpenStudio}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all cursor-pointer"
+              {...buttonHoverProps}
+              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-primary hover:bg-primary-hover active:scale-[0.98] text-surface font-semibold text-label shadow-button flex items-center justify-center gap-2 transition-colors cursor-pointer group"
             >
-              <span>Open Your Studio</span>
-              <ArrowRight className="w-4 h-4" />
+              <span>{userId ? 'Return to Workspace' : 'Open the Studio'}</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </motion.button>
-          ) : (
-            <motion.div {...buttonHoverProps} className="w-full sm:w-auto">
+
+            {!userId && (
               <Link
                 href="/auth/signup"
-                className="w-full inline-flex items-center justify-center gap-2 px-8 py-3.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl border border-edge-raised hover:border-edge-hover bg-surface-raised/80 dark:bg-surface-elevated/80 hover:bg-surface-hover text-text-primary font-semibold text-label shadow-button transition-colors text-center"
               >
-                <span>Enter the Studio</span>
-                <ArrowRight className="w-4 h-4" />
+                Create Account
               </Link>
-            </motion.div>
-          )}
-        </div>
+            )}
+          </motion.div>
 
-        {/* Reassurances */}
-        <div className="pt-2 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-caption text-text-muted">
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-accent-olive" />
-            <span>Instant browser storage</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-accent-olive" />
-            <span>100% Private by default</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <CheckCircle2 className="w-3.5 h-3.5 text-accent-olive" />
-            <span>No setup required</span>
-          </div>
-        </div>
-      </motion.div>
+          <motion.div variants={fadeUpVariants} className="pt-2 flex items-center gap-2 text-micro font-mono text-text-muted">
+            <CornerDownLeft className="w-3.5 h-3.5 text-text-muted" />
+            <span>Instant local-first session in your browser</span>
+          </motion.div>
+        </motion.div>
+      </div>
     </section>
   );
 }

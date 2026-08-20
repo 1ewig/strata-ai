@@ -15,12 +15,18 @@ export const gentleSpring: Transition = {
   stiffness: 120,
 };
 
+export const tactileSpring: Transition = {
+  type: 'spring',
+  damping: 24,
+  stiffness: 280,
+};
+
 /**
  * Viewport configuration to ensure scroll animations only trigger once.
  */
 export const viewportOnce = {
   once: true,
-  amount: 0.25,
+  amount: 0.2,
 };
 
 /**
@@ -41,7 +47,7 @@ export const staggerContainerVariants: Variants = {
  * Natural fade-up animation for text and cards.
  */
 export const fadeUpVariants: Variants = {
-  hidden: { opacity: 0, y: 14 },
+  hidden: { opacity: 0, y: 16 },
   visible: {
     opacity: 1,
     y: 0,
@@ -53,7 +59,7 @@ export const fadeUpVariants: Variants = {
  * Card reveal animation.
  */
 export const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 18 },
+  hidden: { opacity: 0, y: 20 },
   visible: {
     opacity: 1,
     y: 0,
@@ -62,19 +68,21 @@ export const cardVariants: Variants = {
 };
 
 /**
- * Crossfade transition for switching interactive scenarios.
+ * Marginalia annotation bubble reveal animation.
  */
-export const scenarioContentVariants: Variants = {
-  hidden: { opacity: 0, y: 8 },
+export const marginaliaVariants: Variants = {
+  hidden: { opacity: 0, scale: 0.94, y: 4 },
   visible: {
     opacity: 1,
+    scale: 1,
     y: 0,
-    transition: { duration: 0.22, ease: 'easeOut' },
+    transition: { type: 'spring', damping: 22, stiffness: 320 },
   },
   exit: {
     opacity: 0,
-    y: -8,
-    transition: { duration: 0.14, ease: 'easeIn' },
+    scale: 0.96,
+    y: 2,
+    transition: { duration: 0.12, ease: 'easeIn' },
   },
 };
 
@@ -82,12 +90,17 @@ export const scenarioContentVariants: Variants = {
  * Subtle interactive hover feedback presets.
  */
 export const buttonHoverProps = {
-  whileHover: { scale: 1.015 },
-  whileTap: { scale: 0.985 },
+  whileHover: { scale: 1.02 },
+  whileTap: { scale: 0.98 },
   transition: { duration: 0.12 } as Transition,
 };
 
-export const cardHoverProps = {
+export const artifactHoverProps = {
+  whileHover: { y: -4 },
+  transition: { duration: 0.2, ease: 'easeOut' as const } as Transition,
+};
+
+export const specimenHoverProps = {
   whileHover: { y: -3 },
-  transition: { duration: 0.2, ease: 'easeOut' } as Transition,
+  transition: { duration: 0.2, ease: 'easeOut' as const } as Transition,
 };

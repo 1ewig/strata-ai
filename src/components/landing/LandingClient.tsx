@@ -6,9 +6,9 @@ import { db } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { LandingHero } from '@/components/landing/LandingHero';
-import { InteractiveStudioPreview } from '@/components/landing/InteractiveStudioPreview';
-import { LandingContrast } from '@/components/landing/LandingContrast';
-import { LandingPillars } from '@/components/landing/LandingPillars';
+import { LandingArtifacts } from '@/components/landing/LandingArtifacts';
+import { LandingPhilosophy } from '@/components/landing/LandingPhilosophy';
+import { LandingSpecimens } from '@/components/landing/LandingSpecimens';
 import { LandingCTA } from '@/components/landing/LandingCTA';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 
@@ -19,7 +19,7 @@ interface LandingClientProps {
 }
 
 /**
- * Client component orchestrating the serene, low-cognitive-load Strata AI landing page.
+ * Client component orchestrating the editorial atelier Strata AI landing page.
  */
 export function LandingClient({ userId }: LandingClientProps) {
   const router = useRouter();
@@ -56,9 +56,9 @@ export function LandingClient({ userId }: LandingClientProps) {
 
       <main className="flex-1">
         <LandingHero userId={userId} onOpenStudio={handleOpenStudio} />
-        <InteractiveStudioPreview />
-        <LandingContrast />
-        <LandingPillars />
+        <LandingArtifacts />
+        <LandingPhilosophy />
+        <LandingSpecimens />
         <LandingCTA userId={userId} onOpenStudio={handleOpenStudio} />
       </main>
 

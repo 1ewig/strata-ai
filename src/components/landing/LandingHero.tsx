@@ -2,296 +2,217 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { motion } from 'motion/react';
+import { motion, type TargetAndTransition } from 'motion/react';
 import {
   ArrowRight,
-  Sparkles,
-  Compass,
-  ShieldCheck,
-  HardDriveDownload,
-  CheckCircle2
+  FilePlus2,
+  FileEdit,
+  FileSearch,
+  Globe,
+  Link2,
+  Layers,
 } from 'lucide-react';
+import { StrataIcon } from '@/components/ui/strata-icon';
 import {
   staggerContainerVariants,
   fadeUpVariants,
   buttonHoverProps,
-} from './animations';
+} from '@/components/landing/animations';
 
-/** Props for the LandingHero component. */
 interface LandingHeroProps {
-  /** The current user's id if authenticated. */
   userId?: string;
-  /** Callback to launch the workspace for authenticated users. */
-  onOpenStudio?: () => void;
+  onOpenStudio: () => void;
 }
 
-/* -------------------------------------------------------------------------- */
-/*                        CUSTOM HAND-CRAFTED SVG ASSETS                      */
-/* -------------------------------------------------------------------------- */
-
-/**
- * Topographic strata sediment curves representing layered thought & canvas architecture.
- */
-function StrataTopographySVG({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 1440 680"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      preserveAspectRatio="none"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="strata-grad-1" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.14" />
-          <stop offset="50%" stopColor="var(--color-secondary)" stopOpacity="0.08" />
-          <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0.02" />
-        </linearGradient>
-        <linearGradient id="strata-stroke-1" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="var(--color-primary)" stopOpacity="0.25" />
-          <stop offset="50%" stopColor="var(--color-secondary)" stopOpacity="0.3" />
-          <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0.1" />
-        </linearGradient>
-        <linearGradient id="strata-stroke-2" x1="100%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" stopColor="var(--color-secondary)" stopOpacity="0.2" />
-          <stop offset="100%" stopColor="var(--color-primary)" stopOpacity="0.05" />
-        </linearGradient>
-      </defs>
-
-      {/* Deepest geological stratum */}
-      <path
-        d="M-40 220C240 180 420 310 720 250C1020 190 1200 290 1480 210V680H-40V220Z"
-        fill="url(#strata-grad-1)"
-      />
-
-      {/* Flowing layer line 1 */}
-      <path
-        d="M-20 190C280 140 460 270 760 210C1060 150 1240 260 1460 170"
-        stroke="url(#strata-stroke-1)"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeDasharray="4 6"
-      />
-
-      {/* Flowing layer line 2 */}
-      <path
-        d="M-40 290C220 240 480 380 820 300C1120 230 1320 330 1480 270"
-        stroke="url(#strata-stroke-2)"
-        strokeWidth="1.25"
-        strokeLinecap="round"
-      />
-
-      {/* Flowing layer line 3 */}
-      <path
-        d="M0 420C340 370 580 490 920 410C1220 340 1380 430 1460 390"
-        stroke="url(#strata-stroke-1)"
-        strokeWidth="1"
-        strokeOpacity="0.4"
-      />
-    </svg>
-  );
+interface ToolBadgeConfig {
+  icon: typeof FilePlus2;
+  label: string;
+  badge: string;
+  position: string;
+  accent: string;
+  floatAnimation: TargetAndTransition;
 }
 
-/**
- * Hand-drawn warm marker flourish under key hero phrase.
- */
-function MarkerFlourishSVG({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 280 18"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-    >
-      <path
-        d="M3 13C65 4 185 3 277 9C215 14 95 16 12 15"
-        stroke="var(--color-secondary)"
-        strokeWidth="4"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeOpacity="0.4"
-      />
-      <path
-        d="M18 10C80 5 190 6 265 11"
-        stroke="var(--color-primary)"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-        strokeOpacity="0.85"
-      />
-    </svg>
-  );
-}
-
-/**
- * Proprietary multi-layered geometric brand mark.
- */
-function StrataLayerEmblemSVG({ className }: { className?: string }) {
-  return (
-    <svg
-      viewBox="0 0 44 44"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      className={className}
-      aria-hidden="true"
-    >
-      <defs>
-        <filter id="emblem-shadow" x="0" y="0" width="44" height="44" filterUnits="userSpaceOnUse">
-          <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="rgba(44, 38, 33, 0.15)" />
-        </filter>
-      </defs>
-
-      {/* Bottom foundation sheet */}
-      <rect
-        x="6"
-        y="22"
-        width="28"
-        height="14"
-        rx="4"
-        transform="rotate(-4 6 22)"
-        fill="var(--color-surface-elevated)"
-        stroke="var(--color-edge-raised)"
-        strokeWidth="1.2"
-      />
-
-      {/* Mid file sheet */}
-      <rect
-        x="9"
-        y="14"
-        width="28"
-        height="14"
-        rx="4"
-        transform="rotate(2 9 14)"
-        fill="var(--color-surface-raised)"
-        stroke="var(--color-secondary)"
-        strokeWidth="1.2"
-        strokeOpacity="0.5"
-      />
-
-      {/* Top electric active sheet */}
-      <rect
-        x="10"
-        y="6"
-        width="27"
-        height="14"
-        rx="4"
-        fill="var(--color-primary)"
-        filter="url(#emblem-shadow)"
-      />
-
-      {/* Precision grid notches on active sheet */}
-      <line x1="15" y1="11" x2="23" y2="11" stroke="#ffffff" strokeWidth="1.5" strokeLinecap="round" />
-      <line x1="15" y1="15" x2="31" y2="15" stroke="#ffffff" strokeWidth="1.5" strokeOpacity="0.75" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/*                            HERO COMPONENT ROOT                             */
-/* -------------------------------------------------------------------------- */
+const SURROUNDING_TOOLS: ToolBadgeConfig[] = [
+  {
+    icon: FilePlus2,
+    label: 'writeFile',
+    badge: 'CREATE',
+    position: 'top-6 left-2 lg:left-10',
+    accent: 'text-primary',
+    floatAnimation: { y: [0, -6, 0], transition: { duration: 4.2, repeat: Infinity, ease: 'easeInOut' } },
+  },
+  {
+    icon: Globe,
+    label: 'webSearch',
+    badge: 'REALTIME',
+    position: 'top-8 right-2 lg:right-10',
+    accent: 'text-info',
+    floatAnimation: { y: [0, 7, 0], transition: { duration: 4.8, repeat: Infinity, ease: 'easeInOut', delay: 0.5 } },
+  },
+  {
+    icon: FileEdit,
+    label: 'editFile',
+    badge: 'DIFFS',
+    position: 'bottom-10 left-4 lg:left-14',
+    accent: 'text-secondary',
+    floatAnimation: { y: [0, -7, 0], transition: { duration: 5.1, repeat: Infinity, ease: 'easeInOut', delay: 1 } },
+  },
+  {
+    icon: Link2,
+    label: 'extractUrl',
+    badge: 'CITATIONS',
+    position: 'bottom-10 right-4 lg:right-14',
+    accent: 'text-accent-olive',
+    floatAnimation: { y: [0, 6, 0], transition: { duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 1.5 } },
+  },
+  {
+    icon: Layers,
+    label: 'compactContext',
+    badge: 'MEMORY',
+    position: 'top-1/2 -translate-y-1/2 left-0 lg:left-4 hidden md:flex',
+    accent: 'text-primary',
+    floatAnimation: { y: [0, -5, 0], transition: { duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 } },
+  },
+  {
+    icon: FileSearch,
+    label: 'readFile',
+    badge: 'INSPECT',
+    position: 'top-1/2 -translate-y-1/2 right-0 lg:right-4 hidden md:flex',
+    accent: 'text-info',
+    floatAnimation: { y: [0, 5, 0], transition: { duration: 5.0, repeat: Infinity, ease: 'easeInOut', delay: 1.2 } },
+  },
+];
 
 export function LandingHero({ userId, onOpenStudio }: LandingHeroProps) {
   return (
-    <section className="relative pt-16 pb-16 md:pt-24 md:pb-24 overflow-hidden bg-surface-base selection:bg-primary-soft-strong selection:text-primary">
-      {/* 1. Organic Strata Topographic Sediment Background */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <StrataTopographySVG className="w-full h-full object-cover opacity-70 dark:opacity-40" />
+    <section className="relative pt-24 pb-20 sm:pt-32 sm:pb-28 overflow-hidden">
+      {/* Architectural Background Grid & Registration Marks */}
+      <div className="absolute inset-0 pointer-events-none -z-10 select-none overflow-hidden">
+        {/* Subtle coordinate crosshairs */}
+        <span className="absolute top-12 left-8 text-micro font-mono text-text-faint/60 tracking-widest">+ 01 / ATELIER</span>
+        <span className="absolute top-12 right-8 text-micro font-mono text-text-faint/60 tracking-widest">37.7749° N, 122.4194° W</span>
+        <span className="absolute bottom-10 left-8 text-micro font-mono text-text-faint/60 tracking-widest">EDITION 2026.08</span>
+        <span className="absolute bottom-10 right-8 text-micro font-mono text-text-faint/60 tracking-widest">+ + +</span>
+
+        {/* Stratum contour grid pattern */}
+        <svg
+          className="absolute w-full h-full inset-0 opacity-[0.035] dark:opacity-[0.06] text-text-primary"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <defs>
+            <pattern id="strata-grid" width="64" height="64" patternUnits="userSpaceOnUse">
+              <path d="M 64 0 L 0 0 0 64" fill="none" stroke="currentColor" strokeWidth="1" />
+            </pattern>
+          </defs>
+          <rect width="100%" height="100%" fill="url(#strata-grid)" />
+        </svg>
       </div>
 
-      {/* 2. Tactile Radial Glow Highlights */}
-      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[720px] h-[340px] bg-primary-soft/50 dark:bg-primary-soft/20 rounded-full blur-[110px] pointer-events-none -z-10" />
-      <div className="absolute top-48 right-10 w-[380px] h-[260px] bg-secondary-soft/40 dark:bg-secondary-soft/15 rounded-full blur-[90px] pointer-events-none -z-10" />
+      {/* Floating Surrounding Tool Badges (Desktop & Tablet Orbital Toolbelt) */}
+      <div className="absolute inset-0 max-w-6xl mx-auto pointer-events-none -z-0 hidden md:block">
+        {SURROUNDING_TOOLS.map((tool) => {
+          const Icon = tool.icon;
+          return (
+            <motion.div
+              key={tool.label}
+              animate={tool.floatAnimation}
+              className={`absolute ${tool.position} pointer-events-auto select-none`}
+            >
+              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-raised/90 dark:bg-surface-elevated/85 backdrop-blur-md border border-edge-raised shadow-button hover:shadow-card hover:border-edge-hover transition-all duration-200 cursor-default group">
+                <Icon className={`w-3.5 h-3.5 ${tool.accent} shrink-0 transition-transform duration-200 group-hover:scale-110`} />
+                <span className="text-caption font-mono font-semibold text-text-primary group-hover:text-text-bright">
+                  {tool.label}
+                </span>
+                <span className="text-micro font-mono text-text-muted px-1.5 py-0.2 rounded bg-surface-base border border-edge-default uppercase">
+                  {tool.badge}
+                </span>
+              </div>
+            </motion.div>
+          );
+        })}
+      </div>
 
-      <div className="relative max-w-4xl mx-auto px-4 sm:px-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
         <motion.div
           variants={staggerContainerVariants}
           initial="hidden"
           animate="visible"
-          className="text-center space-y-8"
+          className="flex flex-col items-center space-y-8"
         >
-          {/* Eyebrow Pill with Proprietary Emblem */}
-          <motion.div variants={fadeUpVariants} className="inline-flex items-center">
-            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-surface-raised/90 backdrop-blur-md border border-edge-raised text-caption text-text-secondary shadow-button hover:border-edge-hover transition-all">
-              <StrataLayerEmblemSVG className="w-5 h-5 -my-1" />
-              <span className="font-medium text-text-primary">A quiet space to think</span>
-              <span className="w-1 h-1 rounded-full bg-edge-hover" />
-              <span className="text-secondary font-semibold flex items-center gap-1">
-                <Sparkles className="w-3 h-3 text-secondary" />
-                Local-First
+          {/* Eyebrow badge with glowing brand emblem */}
+          <motion.div variants={fadeUpVariants} className="flex items-center gap-2">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-edge-raised bg-surface-raised/80 dark:bg-surface-elevated/70 backdrop-blur-md shadow-button">
+              <StrataIcon className="w-4 h-4" />
+              <span className="text-micro font-mono tracking-wider uppercase text-text-secondary font-semibold">
+                An Atelier for Human & Machine Craft
               </span>
             </div>
           </motion.div>
 
-          {/* Emotional Headline with Dynamic Marker Flourish */}
-          <motion.div variants={fadeUpVariants} className="space-y-5">
-            <h1 className="font-display font-bold text-text-bright text-display sm:text-[48px] md:text-[58px] tracking-tight leading-[1.08]">
-              A quiet room to{' '}
-              <span className="relative inline-block whitespace-nowrap">
-                <span className="relative z-10 text-primary">think out loud.</span>
-                <MarkerFlourishSVG className="absolute -bottom-3 left-0 w-full h-4 z-0 pointer-events-none" />
-              </span>
-            </h1>
+          {/* Main Editorial Headline */}
+          <motion.h1
+            variants={fadeUpVariants}
+            className="text-display sm:text-[3.25rem] sm:leading-[1.12] font-bold text-text-bright font-display tracking-tight max-w-3xl"
+          >
+            The workshop for thought that outlasts the chat.
+          </motion.h1>
 
-            <p className="text-text-secondary text-subheading md:text-[1.25rem] font-normal leading-relaxed max-w-2xl mx-auto">
-              Speak your mind without worrying about structure. Strata shapes your thoughts
-              into real, living documents right beside you.
-            </p>
-          </motion.div>
+          {/* Editorial Sub-copy */}
+          <motion.p
+            variants={fadeUpVariants}
+            className="text-body sm:text-subheading text-text-secondary max-w-2xl leading-relaxed font-sans"
+          >
+            Most AI tools treat thinking like a slot machine—disposable prompts lost in endless chat streams.
+            Strata is a tactile studio where intelligence shapes living, durable Markdown documents alongside you.
+          </motion.p>
 
-          {/* Action Row */}
+          {/* Primary Action Buttons */}
           <motion.div
             variants={fadeUpVariants}
-            className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2"
+            className="flex flex-col sm:flex-row items-center gap-3 pt-2 w-full sm:w-auto"
           >
-            {userId ? (
-              <motion.button
-                type="button"
-                {...buttonHoverProps}
-                onClick={onOpenStudio}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all cursor-pointer group"
-              >
-                <span>Open Your Studio</span>
-                <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-              </motion.button>
-            ) : (
-              <motion.div {...buttonHoverProps} className="w-full sm:w-auto">
-                <Link
-                  href="/auth/signup"
-                  className="w-full inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all group"
-                >
-                  <span>Enter the Studio</span>
-                  <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                </Link>
-              </motion.div>
-            )}
-
-            <motion.a
-              href="#canvas"
+            <motion.button
+              type="button"
+              onClick={onOpenStudio}
               {...buttonHoverProps}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-surface-raised/80 hover:bg-surface-hover border border-edge-raised text-text-primary text-label font-medium shadow-button transition-colors"
+              className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-primary hover:bg-primary-hover active:scale-[0.98] text-surface font-semibold text-label shadow-button flex items-center justify-center gap-2 transition-colors cursor-pointer group"
             >
-              <Compass className="w-4 h-4 text-text-muted" />
-              <span>See the living canvas</span>
-            </motion.a>
+              <span>{userId ? 'Enter Workspace' : 'Open the Atelier'}</span>
+              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+            </motion.button>
+
+            {!userId && (
+              <Link
+                href="/auth/signin"
+                className="w-full sm:w-auto px-5 py-3.5 rounded-xl border border-edge-raised hover:border-edge-hover bg-surface-raised/80 dark:bg-surface-elevated/80 hover:bg-surface-hover text-text-primary font-semibold text-label shadow-button transition-colors text-center"
+              >
+                Sign In
+              </Link>
+            )}
           </motion.div>
 
-          {/* Minimalist Trust & Reassurance Badges */}
+          {/* Mobile Tools Strip (Visible on mobile where orbital badges are hidden) */}
           <motion.div
             variants={fadeUpVariants}
-            className="pt-4 flex flex-wrap items-center justify-center gap-y-2.5 gap-x-6 text-caption text-text-muted"
+            className="md:hidden pt-4 flex flex-col items-center gap-2 w-full"
           >
-            <div className="flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5 text-accent-olive" />
-              <span>Local-first in your browser</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <HardDriveDownload className="w-3.5 h-3.5 text-text-secondary" />
-              <span>No cloud baggage</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-              <span>Private by default</span>
+            <span className="text-micro font-mono uppercase tracking-widest text-text-muted">
+              Integrated Workspace Tools
+            </span>
+            <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-sm">
+              {SURROUNDING_TOOLS.map((t) => {
+                const Icon = t.icon;
+                return (
+                  <div
+                    key={t.label}
+                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-raised/90 dark:bg-surface-elevated/80 border border-edge-raised text-micro font-mono text-text-secondary shadow-button"
+                  >
+                    <Icon className={`w-3 h-3 ${t.accent} shrink-0`} />
+                    <span className="font-semibold">{t.label}</span>
+                  </div>
+                );
+              })}
             </div>
           </motion.div>
         </motion.div>
