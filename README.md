@@ -12,6 +12,8 @@
 
 Server-side state is deliberately minimal: chat history and workspace files live in the browser's IndexedDB, and the only server-side persistence is the auth identity and message-quota log. File state survives reloads without a server round trip.
 
+A serene public landing page at `/` introduces the product — a hand-crafted strata-topography hero, an interactive two-pane studio preview, a chat-vs-canvas contrast section, and three philosophy pillars — while the workspace itself lives behind auth at `/chat-id/<id>`.
+
 - **Live demo:** [strata-ai-five.vercel.app](https://strata-ai-five.vercel.app) · **Repository:** [github.com/1ewig/strata-ai](https://github.com/1ewig/strata-ai)
 
 ---
@@ -119,6 +121,10 @@ Better Auth 1.6 on Supabase PostgreSQL handles email/password sessions, with a N
 
 A custom design system defined in `@theme` in `src/app/globals.css`: a warm studio-linen light theme and a warm espresso dark theme, toggled via the `.dark` class and `html[data-theme="dark"]` attribute. All colors, shadows, radii, and type sizes use semantic tokens (fiery-orange primary, amber secondary, `text-micro` through `text-display`), with spring-based micro-interactions via `motion`.
 
+### 10. Public landing page
+
+The root route is a public marketing page (the proxy skips it). A hand-crafted strata-topography hero leads into an interactive two-pane studio mock (chat stream + workspace canvas with a preview/source toggle), a "Chats disappear. Documents endure." contrast section, three philosophy pillars (Durable / Gentle / Private), and a starter-prompt CTA. The session is resolved server-side, so the header shows either "Sign In" or "Open Studio" — the latter drops signed-in users straight into their latest conversation or a fresh chat.
+
 ![Workspace Studio Dashboard](./public/hero.webp)
 
 ![Agent Execution & Multi-Tool Reasoning](./public/agent-in-action.webp)
@@ -140,7 +146,7 @@ A custom design system defined in `@theme` in `src/app/globals.css`: a warm stud
 | Server database | Supabase PostgreSQL via `pg` Pool | Better Auth identity + rate-limit log (`better_auth` schema) |
 | Auth | Better Auth 1.6.25 + `nextCookies()` | Email/password sessions, cookie handling, session cache |
 | Styling | Tailwind CSS 4.1 + `@tailwindcss/postcss` | Utility-first UI on the Milo `@theme` design tokens |
-| Animations | `motion` 12 | Drawer slides, spring micro-interactions |
+| Animations | `motion` 12 + `framer-motion` 13 | Drawer slides, jitter-free accordion/popover variants, spring micro-interactions (shared presets in `components/chat/animations.ts` and `components/landing/animations.ts`) |
 | Markdown | `react-markdown` 10 + `remark-gfm` 4 | Chat and drawer Markdown rendering |
 | Syntax highlighting | PrismJS 1.30 | Multi-language highlighting in chat and the code viewer |
 | Validation | Zod 4 | API body parsing and every tool input/output schema |

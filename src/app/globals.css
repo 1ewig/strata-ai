@@ -1,5 +1,8 @@
 @import "tailwindcss";
 
+@source "..";
+@source "../../src";
+
 @theme {
   /* Surfaces (Warm Studio Linen & Tactile Canvas) */
   --color-surface-base: #f9f6f0;      /* Tactile warm linen paper (glare-free canvas) */
