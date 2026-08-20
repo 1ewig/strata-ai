@@ -310,7 +310,7 @@ export default React.memo(function ChatInput({
           handleSend();
         }
       }}
-      className="relative z-10 w-full"
+      className="relative z-20 w-full"
     >
       {/* Floating Slash Command Menu */}
       <SlashCommandMenu

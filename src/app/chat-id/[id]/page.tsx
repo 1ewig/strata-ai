@@ -244,7 +244,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
                           initial="hidden"
                           animate="visible"
                           exit="exit"
-                          className="absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 z-30"
+                          className="absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 z-10 pointer-events-auto"
                         >
                           <motion.button
                             type="button"
