@@ -126,12 +126,12 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
               <div
                 key={seg.key}
                 onClick={(e) => handleBubbleClick(e, seg.key)}
-                className={`group/bubble relative rounded-2xl pl-4.5 pr-8.5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full cursor-pointer sm:cursor-default ${isActionActive
+                className={`group/bubble relative rounded-2xl pl-4.5 pr-8.5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full cursor-default select-none ${isActionActive
                     ? 'border-primary-hover shadow-glow-primary/20'
                     : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/20'
                   } ${isMenuOpen ? 'z-30' : ''}`}
               >
-                <div className="text-body text-surface leading-relaxed relative select-text cursor-text">
+                <div className="text-body text-surface leading-relaxed relative select-text cursor-text w-fit max-w-full">
                   <MarkdownRenderer
                     content={userContent}
                     variant="user"
@@ -193,12 +193,12 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
               <div
                 key={seg.key}
                 onClick={(e) => !isStreamingActiveSegment && handleBubbleClick(e, seg.key)}
-                className={`group/bubble relative rounded-2xl pl-4.5 pr-8.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-overlay/90 border text-text-primary rounded-tl-xs backdrop-blur-sm w-fit max-w-full cursor-pointer sm:cursor-default ${isActionActive
+                className={`group/bubble relative rounded-2xl pl-4.5 pr-8.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-overlay/90 border text-text-primary rounded-tl-xs backdrop-blur-sm w-fit max-w-full cursor-default select-none ${isActionActive
                     ? 'border-primary/60 shadow-card-lg'
                     : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
                   } ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''} ${isMenuOpen ? 'z-30' : ''}`}
               >
-                <div className="text-body text-text-primary leading-relaxed relative select-text cursor-text">
+                <div className="text-body text-text-primary leading-relaxed relative select-text cursor-text w-fit max-w-full">
                   <MarkdownRenderer
                     content={textContent}
                     variant="assistant"
