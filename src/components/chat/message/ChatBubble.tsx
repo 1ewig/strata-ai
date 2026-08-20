@@ -126,7 +126,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
               <div
                 key={seg.key}
                 onClick={(e) => handleBubbleClick(e, seg.key)}
-                className={`group/bubble relative rounded-2xl pl-4.5 pr-8.5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full cursor-default select-none ${isActionActive
+                className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full cursor-default select-none ${isActionActive
                     ? 'border-primary-hover shadow-glow-primary/20'
                     : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/20'
                   } ${isMenuOpen ? 'z-30' : ''}`}
@@ -139,24 +139,21 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   />
                 </div>
 
-                {/* Sticky Action Menu Overlay */}
+                {/* Floating Top Action Menu Overlay */}
                 {userContent && (
-                  <div className="absolute inset-y-0 right-2.5 w-7 pointer-events-none flex flex-col justify-start">
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className={`sticky top-16 pt-2.5 pointer-events-auto ${isMenuOpen ? 'z-30' : 'z-10'
-                        } transition-opacity duration-200 ${isActionActive
-                          ? 'opacity-100'
-                          : 'opacity-0 group-hover/bubble:opacity-100 focus-within:opacity-100'
-                        }`}
-                    >
-                      <MessageActionsMenu
-                        textContent={userContent}
-                        isUser={true}
-                        isOpen={isMenuOpen}
-                        onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
-                      />
-                    </div>
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className={`absolute -top-3 right-3 pointer-events-auto transition-all duration-150 ${isActionActive
+                        ? 'opacity-100 scale-100 z-30'
+                        : 'opacity-0 scale-95 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:scale-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:scale-100 focus-within:pointer-events-auto z-10'
+                      }`}
+                  >
+                    <MessageActionsMenu
+                      textContent={userContent}
+                      isUser={true}
+                      isOpen={isMenuOpen}
+                      onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
+                    />
                   </div>
                 )}
               </div>
@@ -193,7 +190,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
               <div
                 key={seg.key}
                 onClick={(e) => !isStreamingActiveSegment && handleBubbleClick(e, seg.key)}
-                className={`group/bubble relative rounded-2xl pl-4.5 pr-8.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-overlay/90 border text-text-primary rounded-tl-xs backdrop-blur-sm w-fit max-w-full cursor-default select-none ${isActionActive
+                className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-overlay/90 border text-text-primary rounded-tl-xs backdrop-blur-sm w-fit max-w-full cursor-default select-none ${isActionActive
                     ? 'border-primary/60 shadow-card-lg'
                     : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
                   } ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''} ${isMenuOpen ? 'z-30' : ''}`}
@@ -207,24 +204,21 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                   />
                 </div>
 
-                {/* Sticky Action Menu Overlay */}
+                {/* Floating Top Action Menu Overlay */}
                 {!isStreamingActiveSegment && textContent && (
-                  <div className="absolute inset-y-0 right-2.5 w-7 pointer-events-none flex flex-col justify-start">
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className={`sticky top-16 pt-2.5 pointer-events-auto ${isMenuOpen ? 'z-30' : 'z-10'
-                        } transition-opacity duration-200 ${isActionActive
-                          ? 'opacity-100'
-                          : 'opacity-0 group-hover/bubble:opacity-100 focus-within:opacity-100'
-                        }`}
-                    >
-                      <MessageActionsMenu
-                        textContent={textContent}
-                        isUser={false}
-                        isOpen={isMenuOpen}
-                        onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
-                      />
-                    </div>
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className={`absolute -top-3 right-3 pointer-events-auto transition-all duration-150 ${isActionActive
+                        ? 'opacity-100 scale-100 z-30'
+                        : 'opacity-0 scale-95 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:scale-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:scale-100 focus-within:pointer-events-auto z-10'
+                      }`}
+                  >
+                    <MessageActionsMenu
+                      textContent={textContent}
+                      isUser={false}
+                      isOpen={isMenuOpen}
+                      onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
+                    />
                   </div>
                 )}
 
