@@ -100,37 +100,39 @@ function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps)
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="pl-3 border-l border-edge-raised/50 space-y-1 my-1"
+            className="overflow-hidden"
           >
-            {items.map((item, idx) => {
-              const isLastItem = idx === items.length - 1;
-              if (item.type === 'reasoning' && item.content) {
-                return (
-                  <ThoughtAccordion
-                    key={item.key}
-                    text={item.content}
-                    isThinking={isStreaming && isLastItem}
-                  />
-                );
-              }
-              if (item.type === 'tool') {
-                return (
-                  <ToolCallCard
-                    key={item.key}
-                    part={item.part}
-                    onOpenDrawer={onOpenDrawer}
-                  />
-                );
-              }
-              if (item.type === 'text' && item.content) {
-                return (
-                  <div key={item.key} className="text-body select-text cursor-text">
-                    <MarkdownRenderer content={item.content} variant="thought" className="text-body select-text cursor-text" />
-                  </div>
-                );
-              }
-              return null;
-            })}
+            <div className="mt-1 pl-3 border-l border-edge-raised/50 space-y-1 my-1">
+              {items.map((item, idx) => {
+                const isLastItem = idx === items.length - 1;
+                if (item.type === 'reasoning' && item.content) {
+                  return (
+                    <ThoughtAccordion
+                      key={item.key}
+                      text={item.content}
+                      isThinking={isStreaming && isLastItem}
+                    />
+                  );
+                }
+                if (item.type === 'tool') {
+                  return (
+                    <ToolCallCard
+                      key={item.key}
+                      part={item.part}
+                      onOpenDrawer={onOpenDrawer}
+                    />
+                  );
+                }
+                if (item.type === 'text' && item.content) {
+                  return (
+                    <div key={item.key} className="text-body select-text cursor-text">
+                      <MarkdownRenderer content={item.content} variant="thought" className="text-body select-text cursor-text" />
+                    </div>
+                  );
+                }
+                return null;
+              })}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

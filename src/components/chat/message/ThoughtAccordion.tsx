@@ -82,14 +82,16 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="pl-5 py-1 text-label text-text-secondary leading-relaxed max-h-60 overflow-y-auto font-mono select-text cursor-text"
+            className="overflow-hidden"
           >
-            {/* While actively thinking, render plain pre-wrap whitespace to avoid per-token Markdown AST parsing freeze */}
-            {isThinking ? (
-              <p className="whitespace-pre-wrap font-mono leading-relaxed text-text-secondary select-text cursor-text">{text}</p>
-            ) : (
-              <MarkdownRenderer content={text} variant="thought" className="text-label text-text-secondary leading-relaxed select-text cursor-text" />
-            )}
+            <div className="pl-5 py-1 text-label text-text-secondary leading-relaxed max-h-60 overflow-y-auto font-mono select-text cursor-text">
+              {/* While actively thinking, render plain pre-wrap whitespace to avoid per-token Markdown AST parsing freeze */}
+              {isThinking ? (
+                <p className="whitespace-pre-wrap font-mono leading-relaxed text-text-secondary select-text cursor-text">{text}</p>
+              ) : (
+                <MarkdownRenderer content={text} variant="thought" className="text-label text-text-secondary leading-relaxed select-text cursor-text" />
+              )}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

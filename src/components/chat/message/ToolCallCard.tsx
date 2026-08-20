@@ -103,9 +103,11 @@ function ToolCallCard({
             initial="hidden"
             animate="visible"
             exit="hidden"
-            className="pl-5 pt-0.5 pb-1 text-caption text-text-secondary select-text cursor-text"
+            className="overflow-hidden"
           >
-            {summary}
+            <div className="pl-5 pt-0.5 pb-1 text-caption text-text-secondary select-text cursor-text">
+              {summary}
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

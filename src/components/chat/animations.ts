@@ -16,25 +16,23 @@ export const gentleSpring: Transition = {
 };
 
 /**
- * Height collapse & expand animation for reasoning accordions and expandable panels.
+ * Jitter-free height collapse & expand animation with pure ease curves and strict overflow containment.
  */
 export const accordionVariants: Variants = {
   hidden: {
     height: 0,
     opacity: 0,
-    overflow: 'hidden',
     transition: {
-      height: { duration: 0.2, ease: 'easeInOut' },
-      opacity: { duration: 0.15 },
+      height: { duration: 0.18, ease: [0.4, 0, 0.2, 1] },
+      opacity: { duration: 0.12 },
     },
   },
   visible: {
     height: 'auto',
     opacity: 1,
-    overflow: 'visible',
     transition: {
-      height: { type: 'spring', damping: 30, stiffness: 280 },
-      opacity: { duration: 0.22, delay: 0.04 },
+      height: { duration: 0.2, ease: [0, 0, 0.2, 1] },
+      opacity: { duration: 0.16, delay: 0.02 },
     },
   },
 };
