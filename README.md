@@ -12,6 +12,8 @@
 
 Server-side state is deliberately minimal: chat history and workspace files live in the browser's IndexedDB, and the only server-side persistence is the auth identity and message-quota log. File state survives reloads without a server round trip.
 
+An "editorial atelier" public landing page at `/` introduces the product — a contour-grid hero with floating tool badges, an artifact showcase (compaction index card, living manuscript, field ledger), three design tenets, and engine-specimen calibration plates — while the workspace itself lives behind auth at `/chat-id/<id>`.
+
 - **Live demo:** [strata-ai-five.vercel.app](https://strata-ai-five.vercel.app) · **Repository:** [github.com/1ewig/strata-ai](https://github.com/1ewig/strata-ai)
 
 ---
@@ -119,6 +121,10 @@ Better Auth 1.6 on Supabase PostgreSQL handles email/password sessions, with a N
 
 A custom design system defined in `@theme` in `src/app/globals.css`: a warm studio-linen light theme and a warm espresso dark theme, toggled via the `.dark` class and `html[data-theme="dark"]` attribute. All colors, shadows, radii, and type sizes use semantic tokens (fiery-orange primary, amber secondary, `text-micro` through `text-display`), with spring-based micro-interactions via `motion`.
 
+### 10. Public landing page
+
+The root route is a public marketing page (the proxy skips it), styled as an editorial atelier: a contour-grid hero with six floating tool badges (writeFile, webSearch, editFile, extractUrl, compactContext, readFile) that drift in infinite loops, a three-card artifact showcase — the `/compact` Context Index Card, a Living Manuscript with interactive margin-note annotations, and a Tavily Field Ledger — plus three design tenets (atelier over slot machine, durable files, surgical compaction) and engine-specimen calibration plates for Gemini, DeepSeek, and Tavily. The session is resolved server-side, so the header shows either "Sign In" or "Open Studio" — the latter drops signed-in users straight into their latest conversation or a fresh chat.
+
 ![Workspace Studio Dashboard](./public/hero.webp)
 
 ![Agent Execution & Multi-Tool Reasoning](./public/agent-in-action.webp)
@@ -140,7 +146,7 @@ A custom design system defined in `@theme` in `src/app/globals.css`: a warm stud
 | Server database | Supabase PostgreSQL via `pg` Pool | Better Auth identity + rate-limit log (`better_auth` schema) |
 | Auth | Better Auth 1.6.25 + `nextCookies()` | Email/password sessions, cookie handling, session cache |
 | Styling | Tailwind CSS 4.1 + `@tailwindcss/postcss` | Utility-first UI on the Milo `@theme` design tokens |
-| Animations | `motion` 12 | Drawer slides, spring micro-interactions |
+| Animations | `motion` 12 + `framer-motion` 13 | Drawer slides, jitter-free accordion/popover variants, spring micro-interactions (shared presets in `components/chat/animations.ts` and `components/landing/animations.ts`) |
 | Markdown | `react-markdown` 10 + `remark-gfm` 4 | Chat and drawer Markdown rendering |
 | Syntax highlighting | PrismJS 1.30 | Multi-language highlighting in chat and the code viewer |
 | Validation | Zod 4 | API body parsing and every tool input/output schema |

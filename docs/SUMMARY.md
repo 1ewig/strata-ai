@@ -14,6 +14,7 @@
   - Live streaming UX: word-paced tokens (`smoothStream` 25ms), `SmoothStreamText` markdown rendering, reasoning/thought accordions, tool-execution cards with status badges, animated typing dots, "scroll to bottom" affordance.
   - Per-conversation model + thinking-level selection with localStorage memory and conversation-row override.
   - Image attachments with vision input: up to 4 images (JPEG/PNG/WebP/GIF) validated and client-side compressed into compact data URLs, gated by per-model vision support, rendered as thumbnails in the bubble.
+  - Public marketing landing page: an "editorial atelier" RSC (session resolved server-side) — contour-grid hero with six floating tool badges, a three-card artifact showcase (compaction index card, living manuscript with marginalia, field ledger), three design tenets, and engine-specimen calibration plates; the proxy bypasses `/` entirely.
   - Full conversation history in IndexedDB; sidebar switcher with pin/rename/delete; per-user conversation cap (5).
   - Context compaction via `/compact` (dedicated Flash Lite model, high reasoning, 3,500-token output cap).
   - Quota-aware usage: server-enforced caps mirrored live (rate ring, countdown error cards).
@@ -25,7 +26,7 @@
   - **Latency/UX:** word-paced streaming with live reasoning + tool cards; `React.memo` on hot chat components; observer-driven auto-scroll (`use-stick-to-bottom`); system prompt carries file metadata only (never full contents) to minimize input tokens; `data-workspace` events update the canvas in parallel with the stream.
   - **Compliance/privacy:** no PII stored server-side beyond auth identity; all conversation/workspace data is client-local IndexedDB, so nothing leaves the browser except the current message batch posted to `/api/agent`.
   - **Multi-tenancy:** server-side isolation is per-user via `userId` on sessions and `message_log`; client-side isolation is per-user via `userId` indexes in Dexie (schema v5), with legacy unscoped records deliberately still visible.
-- **Architectural posture in one sentence:** a deliberately "boring" Next.js 16 shell — 4 route handlers, zero Server Actions, zero static generation — wrapping one highly-tuned AI SDK 7 streaming pipeline, with IndexedDB as the entire read-model of the app.
+- **Architectural posture in one sentence:** a deliberately "boring" Next.js 16 shell — 4 route handlers, zero Server Actions, zero static pages (the only statically prerendered outputs are SEO boilerplate: `robots.ts`/`sitemap.ts` → `/robots.txt`, `/sitemap.xml`, plus `/icon.svg`) — wrapping one highly-tuned AI SDK 7 streaming pipeline, with IndexedDB as the entire read-model of the app.
 
 ## 2. Technical Stack & Infrastructure
 
@@ -47,7 +48,7 @@
 | Validation | zod 4.4.3 | API body parsing, tool input/output schemas, shared file schema | `agentRequestBodySchema` (messages loose `z.any()` array, files validated); tool schemas declared inline per tool |
 | Markdown | `react-markdown@10` + `remark-gfm@4` | Chat bubbles + drawer rendering | Single render hub `MarkdownRenderer` (`components/ui/MarkdownRenderer.tsx`) + custom component map (`components/ui/createMarkdownComponents.tsx`): h1→`text-title font-display`, h2→`text-heading`, h3→`text-subheading`, p/li→`text-body`, code→`text-micro font-mono`, table/blockquote→`text-caption`; renderer owns snippet-copy state internally and delegates streaming to `SmoothStreamText`; no `prose` plugin |
 | Syntax highlighting | PrismJS 1.30 | 24+ languages in chat code blocks and workspace canvas | Singleton registration in `lib/syntax-highlighter.ts`; Milo-themed Prism token styles in `globals.css`; `CodeViewer` pairs line numbers with highlighted code |
-| Animations | `motion@^12` (Framer Motion 12) | Drawer springs, hero stagger, tactile micro-interactions | Transpiled via `transpilePackages`; `AnimatePresence` for drawers/menus |
+| Animations | `motion@^12` + `framer-motion@^13.1.1` (direct dep) | Drawer springs, hero stagger, accordion/popover/pill variants, tactile micro-interactions | All components import from `motion/react` (framer-motion is a direct dep but never imported in source — the lockfile carries two copies: 13.1.1 direct, 12.42.2 nested under `motion`); shared presets live in `components/chat/animations.ts` + `components/landing/animations.ts`; `AnimatePresence` for drawers/menus/accordions |
 | Icons | `lucide-react@^0.553` | UI iconography | Custom `StrataIcon` SVG brand mark in `components/ui/` |
 | Auto-scroll | `use-stick-to-bottom@^1.1` | Chat scroll anchoring + "scroll to bottom" affordance | `<StickToBottom>` wraps the message list in the chat page; manual scroll effects are forbidden |
 | Testing | bun test (15 suites in `__tests__/`) | Unit + route integration tests | `--isolate` flag mandatory; shared fixtures in `__tests__/helpers.ts`; route tests use `mock.module` + dynamic import of the route; constants imported from `@/lib/limits` never hardcoded |
@@ -165,7 +166,7 @@ ChatInput "/compact" → useCompaction.triggerCompaction (guard: not already com
 
 ### 3.4 Server vs. Client component boundary
 
-- **Server Components (only 4):** root `layout.tsx` (resolves session + quota server-side to hydrate `RateLimitProvider`, injects the anti-flash theme bootstrap script), `/auth/page.tsx` (pure redirect preserving `callbackUrl`), `not-found.tsx`, and static assets. All of these use async APIs (`await headers()`, `await searchParams`) which force per-request dynamic rendering of the root shell.
+- **Server Components (4):** root `layout.tsx` (resolves session + quota server-side to hydrate `RateLimitProvider`, injects the anti-flash theme bootstrap script), `/` `page.tsx` (public landing page — resolves the session server-side and renders `LandingClient`), `/auth/page.tsx` (pure redirect preserving `callbackUrl`), and `not-found.tsx`. All of these use async APIs (`await headers()`, `await searchParams`) which force per-request dynamic rendering of the root shell.
 - **`'use client'` is permitted and expected** for: every page under `/chat-id`, all auth pages, all chat/workspace/sidebar components, all hooks, and `RateLimitContext`. Rationale: the product IS a real-time streaming chat client — the interactive surface is the entire app; server rendering provides only the auth/quota bootstrap.
 - **Rules that keep this sane:** never import `@ai-sdk/google`/`@ai-sdk/fireworks`/`pg`/`better-auth` (server) into client code; all provider wiring lives in `lib/ai/providers.ts`; pages remain thin presentational shells that call hooks and pass props down (no Dexie queries, session fetching, or navigation inside components).
 - **Decision criterion:** a file needs `'use client'` iff it (or its hook subtree) uses React hooks, event handlers, browser APIs, or streaming state — otherwise it stays an RSC by default. The chat product legitimately requires client rendering nearly everywhere, but the four RSC files are server for a reason: their async request APIs (`await headers()`, `await searchParams`) opt the shell into per-request dynamic rendering and must stay server-side.
@@ -173,7 +174,7 @@ ChatInput "/compact" → useCompaction.triggerCompaction (guard: not already com
 
 ### 3.5 Next.js caching & rendering strategy
 
-- **All pages are dynamic, none are static — by design.** The following are intentionally ABSENT and must not be introduced without revisiting the local-first premise: `use cache`, `cacheLife`/`cacheTag` profiles, Partial Prerendering (PPR), ISR, `revalidatePath`/`revalidateTag`, and `generateStaticParams`. The root layout's `await headers()` call opts the whole tree into per-request rendering. Every route is session- or client-state dependent, and chat data lives in the browser (IndexedDB), so server-side static caching would serve nothing.
+- **All pages are dynamic, none are static — by design.** The following are intentionally ABSENT and must not be introduced without revisiting the local-first premise: `use cache`, `cacheLife`/`cacheTag` profiles, Partial Prerendering (PPR), ISR, `revalidatePath`/`revalidateTag`, and `generateStaticParams`. The root layout's `await headers()` call opts the whole tree into per-request rendering. Every route is session- or client-state dependent, and chat data lives in the browser (IndexedDB), so server-side static caching would serve nothing. The only statically prerendered outputs are the SEO MetadataRoute files (`src/app/robots.ts`, `src/app/sitemap.ts`) — no page is ever static.
 - **Cache inventory (what actually caches, and where):**
   - Dexie (IndexedDB v5) — the entity cache/read-model: conversations, messages, workspace files; survives reloads and network drops.
   - `localStorage` — theme (`strata-theme`), model (`selectedModel`), thinking level (`selectedThinkingLevel`).
@@ -188,7 +189,7 @@ ChatInput "/compact" → useCompaction.triggerCompaction (guard: not already com
 ### 3.6 Authentication, authorization & session lifecycle
 
 - **Enforcement layers (defense in depth):**
-  1. **Proxy (pre-render):** `getSessionCookie(request)` — a cheap cookie-presence check only. Missing cookie → API routes get JSON 401, pages get 302 to `/auth?callbackUrl=<path>`. Matcher scoped to `/`, `/chat-id/:path*`, `/api/agent`, `/api/agent/:path*`; `/auth`, `/api/auth`, `/_next/`, favicon bypass. Also sets security headers.
+  1. **Proxy (pre-render):** `getSessionCookie(request)` — a cheap cookie-presence check only. Missing cookie → API routes get JSON 401, pages get 302 to `/auth?callbackUrl=<path>`. Matcher scoped to `/`, `/chat-id/:path*`, `/api/agent`, `/api/agent/:path*`; `/` is a public bypass (the landing page is unauthenticated by design), as are `/auth`, `/api/auth`, `/_next/`, favicon. Also sets security headers.
   2. **Route Handlers:** every API route independently calls `auth.api.getSession({ headers })` (real session validation, not just cookie presence) and returns 401 before touching quota or model.
   3. **Client pages:** `useSession()` from the Better Auth client; pages render a "Verifying session..." spinner and `router.replace('/auth?callbackUrl=...)` when unauthenticated.
 - **Model:** session-based, not RBAC/ABAC. There is exactly one role tier (signed-in user). Authorization questions reduce to "is there a valid session, and does the quota allow this?" There is no admin surface in the app.
@@ -223,9 +224,16 @@ Strata Ai/
     │                            headers; matcher scoped to app shell + agent API only.
     ├── app/
     │   ├── layout.tsx         — Root RSC: Plus Jakarta Sans font, viewport (interactiveWidget),
-    │   │                        anti-flash theme script, SSR session+quota → RateLimitProvider.
-    │   ├── page.tsx           — Client landing: session check → latest-chat redirect or /auth.
+    │   │                        full SEO metadata (OG/Twitter cards, JSON-LD WebApplication,
+    │   │                        Google verification, canonical), anti-flash theme script,
+    │   │                        SSR session+quota → RateLimitProvider.
+    │   ├── page.tsx           — Server landing: public marketing page resolving the session
+    │   │                        server-side (graceful fallback) → renders LandingClient.
     │   ├── not-found.tsx      — 404 page (Milo-styled, text-display).
+    │   ├── robots.ts          — SEO MetadataRoute: crawl rules (allow all, disallow agent API
+    │   │                        paths) + sitemap URL → static /robots.txt.
+    │   ├── sitemap.ts         — SEO MetadataRoute: public routes (/, /auth/signin, /auth/signup)
+    │   │                        with priorities → static /sitemap.xml.
     │   ├── auth/              — Route group (public): /auth redirect server page, /auth/signin
     │   │   └── signup/        —   + /auth/signup client pages (Suspense-wrapped useSearchParams).
     │   ├── chat-id/[id]/      — THE app: full chat workspace page (client); StickToBottom scroll,
@@ -239,7 +247,8 @@ Strata Ai/
     │   ├── chat/              — ChatPanel (memo, hero), ChatHeader (title, context popover,
     │   │                        workspace files button, mobile toggles), ChatInput (composer
     │   │                        orchestrator: textarea, attachments, model selector, slash
-    │   │                        menu, send/stop), TokenUsagePopover.
+    │   │                        menu, send/stop), TokenUsagePopover, animations.ts (shared
+    │   │                        motion presets: accordion/popover/pill/hero/attachment variants).
     │   │   ├── composer/      — AttachmentPreviews, ComposerStatusRow, ComposerToolbar (attach
     │   │   │                    button, model selector menu, send/stop), ModelSelectorMenu,
     │   │   │                    SlashCommandMenu.
@@ -249,6 +258,17 @@ Strata Ai/
     │   │   │                    QuotaErrorCard.
     │   │   └── tools/         — resolver.tsx (toolMeta table: normalize → config/icon/badge/
     │   │                        summary) + summaries.tsx (summary builders + SummaryLine).
+    │   ├── landing/          — Public landing page (all 'use client', under LandingClient):
+    │   │                        LandingHeader (sticky nav w/ #artifacts/#philosophy/#specimens
+    │   │                        anchors, theme toggle), LandingHero (contour-grid background,
+    │   │                        registration marks, 6 floating tool badges, mobile tools strip),
+    │   │                        LandingArtifacts (#artifacts: 3 artifact cards — compaction
+    │   │                        index card, living manuscript w/ interactive marginalia, field
+    │   │                        ledger), LandingPhilosophy (#philosophy: 3 tenets),
+    │   │                        LandingSpecimens (#specimens: engine calibration plates),
+    │   │                        LandingCTA (+05 invitation, no prompt chips), LandingFooter,
+    │   │                        animations.ts (fadeUp/card/stagger + marginalia + artifact/
+    │   │                        specimen hover variants, viewportOnce scroll reveals).
     │   ├── workspace/         — WorkspaceDrawer (file selector, editor with header char count,
     │   │                        code viewer, empty state, footer), WorkspaceFileSelector,
     │   │                        WorkspaceEditor, CodeViewer (line numbers + Prism),
@@ -265,7 +285,9 @@ Strata Ai/
     │   │                        header parsing), useCompaction (manual SSE client), useConversations
     │   │                        (list/cap/pin/rename/delete+nav), useModelSettings, useWorkspaceFiles
     │   │                        (150ms write coalescing), useTheme (useSyncExternalStore),
-    │   │                        useAuthForm/useSignIn/useSignUp/useSignOut, useLatestConversationRedirect,
+    │   │                        useAuthForm/useSignIn/useSignUp/useSignOut,
+    │   │                        useLatestConversationRedirect (retained but UNUSED — landing
+    │   │                        navigation moved into LandingClient's handleOpenStudio),
     │   │                        useCopyClipboard, use-mobile.
     └── lib/
         ├── auth.ts            — Server Better Auth instance (pg Pool, cookie cache, nextCookies).
@@ -373,7 +395,7 @@ Strata Ai/
 
 | Path / Route Group | Rendering Type (RSC / Client / Static) | Runtime (Node / Edge) | Auth level (Public / Protected / Admin) | Purpose & key child components |
 |--------------------|-----------|---------|-----------|--------------------------------|
-| `/` | Client (dynamic) | Node | Protected (redirects) | Landing spinner; `useLatestConversationRedirect` → newest chat or fresh `/chat-id/<uuid>`; unauthenticated → `/auth` |
+| `/` | RSC (dynamic) | Node | Public (proxy bypass) | Public landing page: session resolved server-side → `LandingClient` (sticky `LandingHeader` with theme toggle + Sign In / Open Studio, `LandingHero` with contour grid + floating tool badges, `LandingArtifacts` #artifacts, `LandingPhilosophy` #philosophy, `LandingSpecimens` #specimens, `LandingCTA`, `LandingFooter`). "Open Studio" routes authenticated users to the latest Dexie conversation or a fresh `/chat-id/<uuid>` |
 | `/auth` | RSC (dynamic) | Node | Public | Pure redirect to `/auth/signin`, preserving `callbackUrl` query param (awaits `searchParams`) |
 | `/auth/signin` | Client (dynamic, Suspense-wrapped) | Node | Public | Email/password sign-in: `AuthShell` + `SignInForm`, `useSignIn`, bounces signed-in users to callbackUrl |
 | `/auth/signup` | Client (dynamic, Suspense-wrapped) | Node | Public | Registration: `AuthShell` + `SignUpForm`, `useSignUp`, redirects on success |
@@ -383,10 +405,11 @@ Strata Ai/
 | `POST /api/agent` | Route Handler (streaming SSE; N/A — no page) | Node | Protected + quota | Agent turn: session → quota increment → zod → image-part validation → history slice → `runAgentResponse`; UI-message SSE + `X-RateLimit-*` headers |
 | `POST /api/agent/compact` | Route Handler (streaming SSE; N/A — no page) | Node | Protected + quota | Compaction turn: same shell → `runCompactionResponse` (dedicated Flash Lite, 3500 output cap, `isCompactedSummary` metadata) |
 | `GET /api/user/rate-limit` | Route Handler (N/A — no page) | Node | Protected | Read-only quota snapshot for client hydration/refresh |
+| `/robots.txt` / `/sitemap.xml` | Static (MetadataRoute: `robots.ts` / `sitemap.ts`) | Node (build-time) | Public | SEO: crawl rules disallowing agent API paths + sitemap of public routes (landing, signin, signup) |
 
 - **Chat page composition (leaf components under `/chat-id/[id]`):** the page wires `useChatSession` (one orchestrator returning ~24 props) into `ChatHeader` (title/token popover/workspace entry), `ChatPanel` (memoized; welcome-message pool hashed by chatId; suggestion chips dispatch a `insert-chat-prompt` custom event that `ChatInput` listens for; `CompactionDivider` markers around `isCompactedSummary` messages; `QuotaErrorCard` above the composer), `ChatInput` (auto-growing textarea, 2000-char counter, image attachments up to 4 with client-side compression, `/` slash menu with `SLASH_COMMANDS`, send/stop — internally composed of `composer/AttachmentPreviews`, `ComposerStatusRow`, `ComposerToolbar`), `Sidebar` (conversation CRUD + user footer), and `WorkspaceDrawer` (slide-over canvas with `WorkspaceFileSelector`, `WorkspaceEditor`/`CodeViewer` with top-right char limit indicators, footer with action buttons).
 - **Cross-component events:** `open-workspace-drawer` (window listener in the chat page) and `insert-chat-prompt` (window listener in `ChatInput`) are the only two custom DOM events — do not add more without a strong reason.
-- **Notes:** no parallel or intercepting routes exist; there are no `loading.tsx`/`error.tsx` boundaries (the only error UI is the client-side `QuotaErrorCard` + in-stream error message replacement); all pages render on the Node runtime (no edge runtime anywhere); route groups `(auth)`/`(dashboard)`/`(marketing)` from the generic outline do not exist — auth is a plain `/auth` folder and the whole product is a single page.
+- **Notes:** no parallel or intercepting routes exist; there are no `loading.tsx`/`error.tsx` boundaries (the only error UI is the client-side `QuotaErrorCard` + in-stream error message replacement); all pages render on the Node runtime (no edge runtime anywhere); route groups `(auth)`/`(dashboard)`/`(marketing)` from the generic outline do not exist — the root `/` is a public landing page (proxy bypass), the product's single app page is `/chat-id/[id]`, and auth is a plain `/auth` folder.
 
 ### 6.1 Chat-shell component inventory (all `'use client'`, all presentational)
 
@@ -418,6 +441,20 @@ Strata Ai/
 | `NewChatButton` | New conversation creation | Respects `isMaxConversationsReached` |
 | `WorkspaceDrawer` + subcomponents | Canvas: file tabs, editor (with top-right char counter `X / 10,000 chars`), code viewer, empty state, footer | `files`, `activeFileId`, CRUD callbacks; motion slide-over |
 | `SidebarHeader/Footer` | Brand block + user menu (sign-out, theme toggle) | Session + quota + theme props |
+
+### 6.2 Landing-page component inventory (all `'use client'`, under `components/landing/`)
+
+| Component | Responsibility | Key conventions |
+|-----------|---------------|-----------------|
+| `LandingClient` | Landing orchestrator: Header → Hero → Artifacts → Philosophy → Specimens → CTA → Footer | Props `userId?` (server-resolved); `handleOpenStudio` Dexie-queries latest conversation → `router.push` or fresh `generateId()` chat |
+| `LandingHeader` | Sticky top nav: brand, anchor links (`#artifacts` / `#philosophy` / `#specimens`), theme toggle, Sign In link / Open Studio button | Uses `useTheme`; `buttonHoverProps`; brand "Studio" chip |
+| `LandingHero` | Editorial atelier hero: architectural contour-grid background + coordinate registration marks, headline "The workshop for thought that outlasts the chat.", 6 floating orbital tool badges (writeFile / webSearch / editFile / extractUrl / compactContext / readFile) with infinite float loops, mobile tools strip, CTA "Open the Atelier" / "Enter Workspace" | `SURROUNDING_TOOLS` config array (`TargetAndTransition` float animations); `staggerContainerVariants` / `fadeUpVariants`; badges hidden on mobile in favor of the strip |
+| `LandingArtifacts` | "+ 02 / The Material Output" (#artifacts): 3 artifact cards — The Context Index Card (`/compact`, -84% tokens), The Living Manuscript (hover-triggered marginalia annotation bubble), The Field Ledger (Tavily realtime) | `marginaliaVariants` popup via `AnimatePresence`; `artifactHoverProps`; mono typewriter styling throughout |
+| `LandingPhilosophy` | "+ 03 / The Three Tenets" (#philosophy): Atelier Not Slot Machine / Durable Files Not Disposable Bubbles / Surgical Compaction Not Context Rot | `TENETS` array; `cardVariants` |
+| `LandingSpecimens` | "+ 04 / The Engine Specimens" (#specimens): calibration plates for Google Gemini 3.5, DeepSeek V4, Tavily with spec rows | `SPECIMENS` array; `specimenHoverProps`; per-spec accent tokens |
+| `LandingCTA` | "+ 05 / The Invitation" — "Pull up a chair to the studio desk."; "Return to Workspace" / "Open the Studio" buttons + Create Account link (no starter-prompt chips) | Ambient `primary/10`→`secondary/10` glow; `buttonHoverProps` |
+| `LandingFooter` | Minimal footer: brand + anchor links (#artifacts/#philosophy/#specimens) | Presentational |
+| `animations.ts` | Landing-specific motion presets: softSpring/gentleSpring/tactileSpring, fadeUp, card, staggerContainer, `marginaliaVariants` (annotation bubble pop), `artifactHoverProps`/`specimenHoverProps`, `viewportOnce` | Types from `motion/react` only |
 
 ## 7. Data Flow, Server Actions & Integration Map
 
@@ -506,7 +543,7 @@ A user with 3 messages in the last 5 hours and 9 in the last 7 days sends a mess
 - **Styling conventions (Milo):** semantic tokens only — colors from the `@theme` block (never hex/Tailwind color names), type scale `text-micro|caption|label|body|subheading|heading|title|display` (never raw `text-xs`...`text-2xl` or arbitrary `text-[11px]`), shadows `shadow-button|card|card-lg` (+ glow variants), radius remap (rounded-lg 12px / xl 20px / 2xl 32px), `font-display`/`font-sans` for headings/body, `text-surface` for white-on-primary. Dark mode = `.dark` class + `html[data-theme="dark"]` attribute + `color-scheme: dark`; Prism token styles are Milo-themed in globals.css.
 - **Markdown hierarchy:** `components/ui/createMarkdownComponents.tsx` maps h1→`text-title font-display`, h2→`text-heading font-display`, h3→`text-subheading`, p/li→`text-body`, code→`text-micro font-mono`, table/blockquote→`text-caption`; `prose` classes are forbidden (no typography plugin); fenced code blocks get copy buttons and Prism highlighting.
 - **Theme:** `useTheme` uses `useSyncExternalStore` over the DOM class, syncing across tabs via a custom `strata-theme-change` event + `storage` events; the root layout injects an inline script to apply the saved theme before hydration (anti-flash).
-- **Performance conventions:** `React.memo` on `ChatPanel` and `ChatInput`; `useMemo` for token metrics; deterministic hash (not `Math.random`) picks the welcome message per chatId; random placeholder prompts avoid consecutive repeats; `motion` springs used for hero/drawer micro-interactions only.
+- **Performance conventions:** `React.memo` on `ChatPanel` and `ChatInput`; `useMemo` for token metrics; deterministic hash (not `Math.random`) picks the welcome message per chatId; random placeholder prompts avoid consecutive repeats. Motion presets are centralized (never inline variants) in `components/chat/animations.ts` (hero stagger, accordion, popover, pill, attachment-thumb variants) and `components/landing/animations.ts` (fadeUp/card/stagger + marginalia bubble + artifact/specimen hover props + `viewportOnce`); accordions use pure-ease height transitions with strict overflow containment for jitter-free collapse; z-index layering is deliberate — scroll button z-10 < composer z-20 < open message-action trigger z-40 < dropdowns z-50.
 
 ## 10. Non-Negotiable Architectural Rules & Anti-Patterns
 

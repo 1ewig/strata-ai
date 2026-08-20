@@ -20,19 +20,108 @@ export const viewport: Viewport = {
   interactiveWidget: 'resizes-visual',
 };
 
-/** Default document metadata for the app. */
+const SITE_URL = 'https://strata-ai-five.vercel.app';
+const SITE_TITLE = 'Strata AI - The Agentic Workshop & Document Studio';
+const SITE_DESCRIPTION =
+  'The workshop for thought that outlasts the chat. Create, edit, and orchestrate living Markdown documents with local-first agent tools, real-time web research, and surgical context compaction.';
+
+/** Comprehensive document metadata for search indexing and social graph previews. */
 export const metadata: Metadata = {
-  title: 'Strata AI - Agentic Workspace & Document Studio',
-  description: 'Create, edit, and orchestrate documents with AI tools and live workspace canvas',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: '%s | Strata AI',
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: 'Strata AI',
+  keywords: [
+    'Strata AI',
+    'AI workspace',
+    'agentic document studio',
+    'markdown editor',
+    'context compaction',
+    'Google Gemini 3.5',
+    'DeepSeek V4',
+    'Tavily web search',
+    'local-first AI',
+    'AI pair programmer',
+  ],
+  authors: [{ name: 'Strata AI Studio' }],
+  creator: 'Strata AI',
+  publisher: 'Strata AI',
+  alternates: {
+    canonical: '/',
+  },
   icons: {
     icon: '/icon.svg',
     shortcut: '/icon.svg',
     apple: '/icon.svg',
   },
+  openGraph: {
+    type: 'website',
+    locale: 'en_US',
+    url: SITE_URL,
+    siteName: 'Strata AI',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: '/icon.svg',
+        width: 512,
+        height: 512,
+        alt: 'Strata AI - Agentic Workspace & Document Studio',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    creator: '@strata_ai',
+    images: ['/icon.svg'],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
+  },
+  verification: {
+    google: '9J08ynnXmMMnmafKEStxv7Gq74qqsfqFc28ayctn-HU',
+  },
+};
+
+/** Schema.org structured data for WebApplication */
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Strata AI',
+  url: SITE_URL,
+  description: SITE_DESCRIPTION,
+  applicationCategory: 'BusinessApplication, Productivity',
+  operatingSystem: 'All modern web browsers',
+  browserRequirements: 'Requires JavaScript. Requires HTML5.',
+  offers: {
+    '@type': 'Offer',
+    price: '0',
+    priceCurrency: 'USD',
+  },
+  featureList: [
+    'Local-first document workspace',
+    'Surgical Markdown file operations',
+    'Continuous context compaction and state preservation',
+    'Real-time neural web search with Tavily',
+    'Multimodal image vision reasoning with Google Gemini',
+  ],
 };
 
 /**
- * Root layout wrapping the app in the theme, fonts, and rate-limit provider.
+ * Root layout wrapping the app in the theme, fonts, rate-limit provider, and SEO JSON-LD.
  * Resolves the user's rate-limit quota server-side so the provider can
  * hydrate with data instead of fetching after mount.
  *
@@ -55,6 +144,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        {/* Google Search Console Verification */}
+        <meta name="google-site-verification" content="9J08ynnXmMMnmafKEStxv7Gq74qqsfqFc28ayctn-HU" />
+        {/* Schema.org Structured Data */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
         {/* Apply the saved theme (or OS preference) before React hydrates to avoid a theme flash */}
         <script
           dangerouslySetInnerHTML={{

@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { BrainCircuit, ChevronDown, ChevronUp, Loader2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { BrainCircuit, ChevronDown, Loader2 } from 'lucide-react';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
+import { accordionVariants } from '@/components/chat/animations';
 
 /**
  * Props for the ThoughtAccordion component.
@@ -72,16 +74,27 @@ function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
         </div>
       </button>
 
-      {isOpen && (
-        <div className="mt-1 pl-5 py-1.5 text-label text-text-secondary leading-relaxed max-h-60 overflow-y-auto font-mono select-text cursor-text">
-          {/* While actively thinking, render plain pre-wrap whitespace to avoid per-token Markdown AST parsing freeze */}
-          {isThinking ? (
-            <p className="whitespace-pre-wrap font-mono leading-relaxed text-text-secondary select-text cursor-text">{text}</p>
-          ) : (
-            <MarkdownRenderer content={text} variant="thought" className="text-label text-text-secondary leading-relaxed select-text cursor-text" />
-          )}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key="thought-content"
+            variants={accordionVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="overflow-hidden"
+          >
+            <div className="pl-5 py-1 text-label text-text-secondary leading-relaxed max-h-60 overflow-y-auto font-mono select-text cursor-text">
+              {/* While actively thinking, render plain pre-wrap whitespace to avoid per-token Markdown AST parsing freeze */}
+              {isThinking ? (
+                <p className="whitespace-pre-wrap font-mono leading-relaxed text-text-secondary select-text cursor-text">{text}</p>
+              ) : (
+                <MarkdownRenderer content={text} variant="thought" className="text-label text-text-secondary leading-relaxed select-text cursor-text" />
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

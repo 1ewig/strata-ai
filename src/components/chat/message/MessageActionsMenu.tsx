@@ -14,7 +14,7 @@ interface MessageActionsMenuProps {
 
 export default function MessageActionsMenu({
   textContent,
-  isUser = false,
+  isUser: _isUser = false,
   isOpen: controlledIsOpen,
   onOpenChange,
   className = '',
@@ -92,8 +92,8 @@ export default function MessageActionsMenu({
   if (!textContent.trim()) return null;
 
   return (
-    <div ref={menuRef} className={`relative inline-block ${isOpen ? 'z-30' : ''} ${className}`}>
-      {/* Optimized Trigger Button */}
+    <div ref={menuRef} className={`relative inline-block ${isOpen ? 'z-40' : 'z-20'} ${className}`}>
+      {/* Floating Pill Trigger Button */}
       <button
         type="button"
         aria-label="Message options"
@@ -102,17 +102,14 @@ export default function MessageActionsMenu({
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        className={`p-1.5 rounded-lg border transition-all duration-150 cursor-pointer active:scale-95 ${isUser
-            ? isOpen
-              ? 'bg-surface/30 text-surface border-surface/40 shadow-button'
-              : 'text-surface/75 hover:text-surface hover:bg-surface/20 border-transparent hover:border-surface/30'
-            : isOpen
-              ? 'bg-surface-elevated text-text-primary border-edge-hover shadow-button'
-              : 'text-text-muted hover:text-text-primary hover:bg-surface-elevated border-transparent hover:border-edge-raised'
-          }`}
+        className={`p-1 rounded-lg border backdrop-blur-md shadow-button transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center ${
+          isOpen
+            ? 'bg-surface-elevated text-text-bright border-edge-hover shadow-card'
+            : 'bg-surface-raised/95 dark:bg-surface-elevated/95 text-text-muted hover:text-text-primary hover:bg-surface-hover border-edge-raised hover:border-edge-hover'
+        }`}
         title="Message options"
       >
-        <MoreHorizontal className="w-4 h-4" />
+        <MoreHorizontal className="w-3.5 h-3.5" />
       </button>
 
       {/* Dropdown Menu */}
@@ -120,7 +117,7 @@ export default function MessageActionsMenu({
         <div
           role="menu"
           aria-orientation="vertical"
-          className="absolute right-0 top-full mt-1.5 z-30 min-w-[170px] max-w-[calc(100vw-32px)] p-1 rounded-xl bg-surface-elevated/95 backdrop-blur-md border border-edge-raised shadow-card-lg flex flex-col gap-0.5 animate-fade-in"
+          className="absolute right-0 top-full mt-1.5 z-50 min-w-[170px] max-w-[calc(100vw-32px)] p-1 rounded-xl bg-surface-elevated/95 backdrop-blur-md border border-edge-raised shadow-card-lg flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100"
         >
           {/* Copy as Markdown */}
           <button
@@ -130,10 +127,11 @@ export default function MessageActionsMenu({
               e.stopPropagation();
               handleCopyMarkdown();
             }}
-            className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-caption font-medium transition-colors text-left cursor-pointer ${copiedType === 'markdown'
+            className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-caption font-medium transition-colors text-left cursor-pointer ${
+              copiedType === 'markdown'
                 ? 'bg-accent-olive-soft text-accent-olive'
                 : 'text-text-primary hover:bg-surface-hover hover:text-text-bright'
-              }`}
+            }`}
           >
             <div className="flex items-center gap-2">
               {copiedType === 'markdown' ? (
@@ -153,10 +151,11 @@ export default function MessageActionsMenu({
               e.stopPropagation();
               handleCopyPlainText();
             }}
-            className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-caption font-medium transition-colors text-left cursor-pointer ${copiedType === 'text'
+            className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg text-caption font-medium transition-colors text-left cursor-pointer ${
+              copiedType === 'text'
                 ? 'bg-accent-olive-soft text-accent-olive'
                 : 'text-text-primary hover:bg-surface-hover hover:text-text-bright'
-              }`}
+            }`}
           >
             <div className="flex items-center gap-2">
               {copiedType === 'text' ? (

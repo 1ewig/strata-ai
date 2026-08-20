@@ -6,6 +6,12 @@ import { motion } from 'motion/react';
 import ChatBubble from '@/components/chat/message/ChatBubble';
 import CompactionDivider from '@/components/chat/message/CompactionDivider';
 import { StrataIcon } from '@/components/ui/strata-icon';
+import {
+  heroStaggerVariants,
+  heroItemVariants,
+  emblemPopVariants,
+  chipHoverProps,
+} from '@/components/chat/animations';
 
 /** Quick-action suggestion chips for the Dribbble-style hero empty state. */
 const SUGGESTION_CHIPS = [
@@ -92,29 +98,12 @@ export default React.memo(function ChatPanel({
         key={chatId || 'new-chat-hero'}
         initial="hidden"
         animate="visible"
-        variants={{
-          hidden: { opacity: 0 },
-          visible: {
-            opacity: 1,
-            transition: {
-              staggerChildren: 0.08,
-              delayChildren: 0.02,
-            },
-          },
-        }}
+        variants={heroStaggerVariants}
         className="flex flex-col items-center justify-center text-center space-y-6 max-w-2xl mx-auto w-full px-2 py-4"
       >
         {/* Brand Icon matching Sidebar with spring pop and ambient glow */}
         <motion.div
-          variants={{
-            hidden: { scale: 0.5, opacity: 0, rotate: -12 },
-            visible: {
-              scale: 1,
-              opacity: 1,
-              rotate: 0,
-              transition: { type: 'spring', stiffness: 400, damping: 20 },
-            },
-          }}
+          variants={emblemPopVariants}
           className="relative group"
         >
           <StrataIcon className="w-14 h-14 transition-transform duration-300 group-hover:scale-105" />
@@ -124,14 +113,7 @@ export default React.memo(function ChatPanel({
 
         {/* Hero Greeting */}
         <motion.h2
-          variants={{
-            hidden: { y: 18, opacity: 0 },
-            visible: {
-              y: 0,
-              opacity: 1,
-              transition: { type: 'spring', stiffness: 360, damping: 26 },
-            },
-          }}
+          variants={heroItemVariants}
           className="text-title sm:text-display font-bold text-text-bright font-display tracking-tight"
         >
           {welcomeMessage}
@@ -139,19 +121,7 @@ export default React.memo(function ChatPanel({
 
         {/* Quick Action Suggestion Chips */}
         <motion.div
-          variants={{
-            hidden: { y: 12, opacity: 0 },
-            visible: {
-              y: 0,
-              opacity: 1,
-              transition: {
-                type: 'spring',
-                stiffness: 350,
-                damping: 26,
-                staggerChildren: 0.06,
-              },
-            },
-          }}
+          variants={heroItemVariants}
           className="flex flex-wrap items-center justify-center gap-2 pt-1 max-w-xl"
         >
           {SUGGESTION_CHIPS.map((chip) => {
@@ -159,17 +129,8 @@ export default React.memo(function ChatPanel({
             return (
               <motion.button
                 key={chip.label}
-                variants={{
-                  hidden: { y: 10, opacity: 0, scale: 0.94 },
-                  visible: {
-                    y: 0,
-                    opacity: 1,
-                    scale: 1,
-                    transition: { type: 'spring', stiffness: 420, damping: 25 },
-                  },
-                }}
-                whileHover={{ scale: 1.035, y: -1.5 }}
-                whileTap={{ scale: 0.96 }}
+                variants={heroItemVariants}
+                {...chipHoverProps}
                 type="button"
                 onClick={() => handleChipClick(chip.prompt)}
                 className="group flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-surface-raised/90 dark:bg-surface-elevated/90 hover:bg-surface-hover dark:hover:bg-surface-hover border border-edge-raised hover:border-primary/40 text-caption font-semibold text-text-secondary hover:text-text-bright shadow-button transition-colors duration-150 cursor-pointer"
@@ -184,15 +145,7 @@ export default React.memo(function ChatPanel({
         {/* Composer Slot */}
         {chatInputNode && (
           <motion.div
-            variants={{
-              hidden: { y: 20, opacity: 0, scale: 0.98 },
-              visible: {
-                y: 0,
-                opacity: 1,
-                scale: 1,
-                transition: { type: 'spring', stiffness: 320, damping: 26, delay: 0.08 },
-              },
-            }}
+            variants={heroItemVariants}
             className="w-full text-left pt-2"
           >
             {chatInputNode}
@@ -201,14 +154,7 @@ export default React.memo(function ChatPanel({
 
         {/* Official Engines Strip */}
         <motion.div
-          variants={{
-            hidden: { opacity: 0, y: 10 },
-            visible: {
-              opacity: 1,
-              y: 0,
-              transition: { duration: 0.35, delay: 0.16 },
-            },
-          }}
+          variants={heroItemVariants}
           className="pt-2 flex flex-col items-center gap-2 text-micro text-text-muted font-medium"
         >
           <span className="uppercase tracking-widest text-micro text-text-muted">Supported Engines</span>
@@ -226,10 +172,15 @@ export default React.memo(function ChatPanel({
     <div className="pt-4 space-y-4">
       {/* Fallback empty state if isNewChat flag is not explicitly passed */}
       {messages.length === 0 && !isLoading && (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
+        <motion.div
+          variants={heroItemVariants}
+          initial="hidden"
+          animate="visible"
+          className="flex flex-col items-center justify-center py-20 text-center space-y-3"
+        >
           <StrataIcon className="w-12 h-12" />
           <h3 className="text-heading font-semibold text-text-primary font-display">Ready to help with your workspace</h3>
-        </div>
+        </motion.div>
       )}
 
       {/* Messages rendering with compaction dividers */}
@@ -256,7 +207,7 @@ export default React.memo(function ChatPanel({
           <div className="hidden sm:flex shrink-0 mt-0.5">
             <StrataIcon className="w-7 h-7" />
           </div>
-          <div className="px-4 py-3 rounded-2xl rounded-tl-xs bg-surface-overlay/90 border border-edge-raised flex items-center gap-1.5 backdrop-blur-sm">
+          <div className="px-4 py-3 rounded-2xl rounded-tl-xs bg-surface-overlay/90 border border-edge-raised flex items-center gap-1.5 backdrop-blur-sm shadow-card">
             <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
             <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
             <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />

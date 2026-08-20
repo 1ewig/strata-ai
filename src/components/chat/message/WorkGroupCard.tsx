@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { ChevronDown, ChevronUp, Loader2, Workflow } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ChevronDown, Loader2, Workflow } from 'lucide-react';
 import ThoughtAccordion from './ThoughtAccordion';
 import ToolCallCard from './ToolCallCard';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { Segment } from '@/lib/ai/message-segments';
+import { accordionVariants } from '@/components/chat/animations';
 
 interface WorkGroupCardProps {
   items: Segment[];
@@ -90,39 +92,50 @@ function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps)
         </div>
       </button>
 
-      {isOpen && (
-        <div className="mt-1 pl-3 border-l border-edge-raised/50 space-y-1 my-1">
-          {items.map((item, idx) => {
-            const isLastItem = idx === items.length - 1;
-            if (item.type === 'reasoning' && item.content) {
-              return (
-                <ThoughtAccordion
-                  key={item.key}
-                  text={item.content}
-                  isThinking={isStreaming && isLastItem}
-                />
-              );
-            }
-            if (item.type === 'tool') {
-              return (
-                <ToolCallCard
-                  key={item.key}
-                  part={item.part}
-                  onOpenDrawer={onOpenDrawer}
-                />
-              );
-            }
-            if (item.type === 'text' && item.content) {
-              return (
-                <div key={item.key} className="text-body select-text cursor-text">
-                  <MarkdownRenderer content={item.content} variant="thought" className="text-body select-text cursor-text" />
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key="work-group-content"
+            variants={accordionVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="overflow-hidden"
+          >
+            <div className="mt-1 pl-3 border-l border-edge-raised/50 space-y-1 my-1">
+              {items.map((item, idx) => {
+                const isLastItem = idx === items.length - 1;
+                if (item.type === 'reasoning' && item.content) {
+                  return (
+                    <ThoughtAccordion
+                      key={item.key}
+                      text={item.content}
+                      isThinking={isStreaming && isLastItem}
+                    />
+                  );
+                }
+                if (item.type === 'tool') {
+                  return (
+                    <ToolCallCard
+                      key={item.key}
+                      part={item.part}
+                      onOpenDrawer={onOpenDrawer}
+                    />
+                  );
+                }
+                if (item.type === 'text' && item.content) {
+                  return (
+                    <div key={item.key} className="text-body select-text cursor-text">
+                      <MarkdownRenderer content={item.content} variant="thought" className="text-body select-text cursor-text" />
+                    </div>
+                  );
+                }
+                return null;
+              })}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -13,9 +13,10 @@ const PUBLIC_ROUTES = ["/auth", "/api/auth"];
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // 1. Bypass public auth routes & static assets immediately
+  // 1. Bypass public routes, landing page & static assets immediately
   if (
     PUBLIC_ROUTES.some((route) => pathname.startsWith(route)) ||
+    pathname === "/" ||
     pathname.startsWith("/_next/") ||
     pathname === "/favicon.ico"
   ) {

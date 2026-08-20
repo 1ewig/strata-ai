@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState, type ReactNode } from 'react';
-import { ChevronDown, ChevronUp, Loader2, XCircle, type LucideIcon } from 'lucide-react';
-import { resolveToolDisplay, type ToolCardProps } from '../tools/resolver';
+import { motion, AnimatePresence } from 'motion/react';
+import { ChevronDown, Loader2, XCircle, type LucideIcon } from 'lucide-react';
+import { resolveToolDisplay } from '../tools/resolver';
+import { accordionVariants } from '@/components/chat/animations';
 
 /**
  * Card rendering a single AI tool invocation: status icon and badge in the header, plus a
@@ -93,11 +95,22 @@ function ToolCallCard({
       </button>
 
       {/* Expanded content showing minimal summary */}
-      {isOpen && (
-        <div className="pl-5 pt-0.5 pb-1 text-caption text-text-secondary select-text cursor-text">
-          {summary}
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            key="tool-summary-content"
+            variants={accordionVariants}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            className="overflow-hidden"
+          >
+            <div className="pl-5 pt-0.5 pb-1 text-caption text-text-secondary select-text cursor-text">
+              {summary}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
