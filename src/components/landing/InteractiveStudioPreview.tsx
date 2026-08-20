@@ -161,11 +161,10 @@ export function InteractiveStudioPreview() {
                   type="button"
                   {...buttonHoverProps}
                   onClick={() => setActiveScenario(scenario)}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-caption font-medium transition-all cursor-pointer whitespace-nowrap ${
-                    isActive
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-caption font-medium transition-all cursor-pointer whitespace-nowrap ${isActive
                       ? 'bg-surface-raised border border-primary/40 text-primary shadow-button'
                       : 'text-text-secondary hover:text-text-primary hover:bg-surface-elevated border border-transparent'
-                  }`}
+                    }`}
                 >
                   <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-primary' : 'text-text-muted'}`} />
                   <span>{scenario.label}</span>
@@ -270,11 +269,10 @@ export function InteractiveStudioPreview() {
                         <button
                           type="button"
                           onClick={() => setViewMode('preview')}
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-caption font-medium transition-all cursor-pointer ${
-                            viewMode === 'preview'
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-caption font-medium transition-all cursor-pointer ${viewMode === 'preview'
                               ? 'bg-surface-raised text-primary shadow-sm font-semibold'
                               : 'text-text-muted hover:text-text-primary'
-                          }`}
+                            }`}
                           title="Rendered Markdown Preview"
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -283,11 +281,10 @@ export function InteractiveStudioPreview() {
                         <button
                           type="button"
                           onClick={() => setViewMode('source')}
-                          className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-caption font-medium transition-all cursor-pointer ${
-                            viewMode === 'source'
+                          className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-caption font-medium transition-all cursor-pointer ${viewMode === 'source'
                               ? 'bg-surface-raised text-primary shadow-sm font-semibold'
                               : 'text-text-muted hover:text-text-primary'
-                          }`}
+                            }`}
                           title="Raw Markdown Source"
                         >
                           <Code className="w-3.5 h-3.5" />
