@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
-import { ArrowRight, Sparkles, Moon, Sun } from 'lucide-react';
+import { ArrowRight, Moon, Sun } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import { useTheme } from '@/hooks/useTheme';
 import { db } from '@/lib/db/db';
@@ -107,7 +107,7 @@ export function LandingHeader({ userId, isPending }: LandingHeaderProps) {
 
           {/* Dynamic auth / studio CTA */}
           {isPending ? (
-            <div className="w-24 h-9 rounded-xl bg-surface-elevated animate-pulse" />
+            <div className="w-20 h-9 rounded-xl bg-surface-elevated animate-pulse" />
           ) : userId ? (
             <motion.button
               type="button"
@@ -119,23 +119,14 @@ export function LandingHeader({ userId, isPending }: LandingHeaderProps) {
               <ArrowRight className="w-3.5 h-3.5" />
             </motion.button>
           ) : (
-            <div className="flex items-center gap-2">
+            <motion.div {...buttonHoverProps}>
               <Link
                 href="/auth/signin"
-                className="hidden sm:inline-flex items-center px-3 py-1.5 rounded-xl text-text-secondary hover:text-text-bright text-label font-medium transition-colors"
+                className="inline-flex items-center px-3.5 py-1.5 rounded-xl text-text-secondary hover:text-text-bright hover:bg-surface-elevated border border-edge-raised text-label font-medium transition-colors"
               >
                 Sign In
               </Link>
-              <motion.div {...buttonHoverProps}>
-                <Link
-                  href="/auth/signup"
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all duration-150"
-                >
-                  <Sparkles className="w-3.5 h-3.5" />
-                  <span>Get Started</span>
-                </Link>
-              </motion.div>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
