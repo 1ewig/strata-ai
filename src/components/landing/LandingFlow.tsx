@@ -1,7 +1,15 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'motion/react';
 import { MessageSquarePlus, Compass, Sparkles, ArrowRight } from 'lucide-react';
+import {
+  staggerContainerVariants,
+  fadeUpVariants,
+  cardVariants,
+  cardHoverProps,
+  viewportOnce,
+} from './animations';
 
 const STEPS = [
   {
@@ -36,8 +44,14 @@ const STEPS = [
 export function LandingFlow() {
   return (
     <section id="flow" className="py-16 md:py-24 border-t border-edge-default bg-surface-base/50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12">
-        <div className="text-center max-w-2xl mx-auto space-y-3">
+      <motion.div
+        variants={staggerContainerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12"
+      >
+        <motion.div variants={fadeUpVariants} className="text-center max-w-2xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-elevated border border-edge-raised text-micro font-semibold uppercase tracking-wider text-text-muted">
             The Flow
           </div>
@@ -48,16 +62,18 @@ export function LandingFlow() {
             A simple, intuitive rhythm designed to get you out of blank-page paralysis
             and into clear, structured writing.
           </p>
-        </div>
+        </motion.div>
 
         {/* Steps Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 relative">
           {STEPS.map((step, idx) => {
             const Icon = step.icon;
             return (
-              <div
+              <motion.div
                 key={step.step}
-                className="bg-surface-raised border border-edge-raised rounded-3xl p-6 sm:p-8 shadow-card flex flex-col justify-between space-y-6 relative group hover:border-edge-hover hover:shadow-card-lg transition-all duration-200"
+                variants={cardVariants}
+                {...cardHoverProps}
+                className="bg-surface-raised border border-edge-raised rounded-3xl p-6 sm:p-8 shadow-card flex flex-col justify-between space-y-6 relative group hover:border-edge-hover hover:shadow-card-lg transition-colors duration-200"
               >
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
@@ -84,11 +100,11 @@ export function LandingFlow() {
                     <ArrowRight className="w-3.5 h-3.5" />
                   </div>
                 )}
-              </div>
+              </motion.div>
             );
           })}
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

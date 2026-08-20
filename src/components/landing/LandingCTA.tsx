@@ -2,7 +2,13 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { motion } from 'motion/react';
 import { ArrowRight, Sparkles } from 'lucide-react';
+import {
+  fadeUpVariants,
+  buttonHoverProps,
+  viewportOnce,
+} from './animations';
 
 /** Props for the LandingCTA component. */
 interface LandingCTAProps {
@@ -18,7 +24,13 @@ interface LandingCTAProps {
 export function LandingCTA({ userId, onOpenStudio }: LandingCTAProps) {
   return (
     <section className="py-16 md:py-24 border-t border-edge-default">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+      <motion.div
+        variants={fadeUpVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        className="max-w-4xl mx-auto px-4 sm:px-6"
+      >
         <div className="relative rounded-3xl bg-surface-raised border border-edge-raised p-8 sm:p-12 md:p-16 text-center shadow-card-lg overflow-hidden space-y-6">
           {/* Warm background ambient gradient */}
           <div className="absolute inset-0 bg-gradient-to-b from-primary-soft/40 via-transparent to-secondary-soft/20 pointer-events-none" />
@@ -40,22 +52,25 @@ export function LandingCTA({ userId, onOpenStudio }: LandingCTAProps) {
 
             <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-3">
               {userId ? (
-                <button
+                <motion.button
                   type="button"
+                  {...buttonHoverProps}
                   onClick={onOpenStudio}
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary active:scale-95 transition-all duration-150 cursor-pointer"
+                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all duration-150 cursor-pointer"
                 >
                   <span>Open Your Studio</span>
                   <ArrowRight className="w-4 h-4" />
-                </button>
+                </motion.button>
               ) : (
-                <Link
-                  href="/auth/signup"
-                  className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary active:scale-95 transition-all duration-150"
-                >
-                  <span>Start in the Studio</span>
-                  <ArrowRight className="w-4 h-4" />
-                </Link>
+                <motion.div {...buttonHoverProps} className="w-full sm:w-auto">
+                  <Link
+                    href="/auth/signup"
+                    className="w-full inline-flex items-center justify-center gap-2 px-7 py-3.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all duration-150"
+                  >
+                    <span>Start in the Studio</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </Link>
+                </motion.div>
               )}
             </div>
 
@@ -64,7 +79,7 @@ export function LandingCTA({ userId, onOpenStudio }: LandingCTAProps) {
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

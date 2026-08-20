@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import {
   FileText,
   Sparkles,
@@ -13,6 +14,12 @@ import {
   Feather,
 } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
+import {
+  fadeUpVariants,
+  viewportOnce,
+  scenarioContentVariants,
+  buttonHoverProps,
+} from './animations';
 
 interface Scenario {
   id: string;
@@ -123,7 +130,13 @@ export function InteractiveStudioPreview() {
 
   return (
     <section id="preview" className="py-12 md:py-20">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6">
+      <motion.div
+        variants={fadeUpVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        className="max-w-6xl mx-auto px-4 sm:px-6 space-y-6"
+      >
         {/* Section heading */}
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <h2 className="font-display font-bold text-heading sm:text-title text-text-bright tracking-tight">
@@ -141,9 +154,10 @@ export function InteractiveStudioPreview() {
             const Icon = scenario.icon;
             const isActive = activeScenario.id === scenario.id;
             return (
-              <button
+              <motion.button
                 key={scenario.id}
                 type="button"
+                {...buttonHoverProps}
                 onClick={() => setActiveScenario(scenario)}
                 className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-label font-medium transition-all duration-150 cursor-pointer ${
                   isActive
@@ -153,7 +167,7 @@ export function InteractiveStudioPreview() {
               >
                 <Icon className={`w-4 h-4 ${isActive ? 'text-primary' : 'text-text-muted'}`} />
                 <span>{scenario.label}</span>
-              </button>
+              </motion.button>
             );
           })}
         </div>
@@ -178,110 +192,119 @@ export function InteractiveStudioPreview() {
           </div>
 
           {/* Side-by-side: Left Chat / Right Canvas */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 min-h-[480px]">
-            {/* Left: Conversational Stream (5 cols) */}
-            <div className="lg:col-span-5 border-b lg:border-b-0 lg:border-r border-edge-default p-5 sm:p-6 bg-surface-base/50 flex flex-col justify-between space-y-6">
-              <div className="space-y-4">
-                <div className="text-micro font-semibold uppercase tracking-wider text-text-muted">
-                  Conversational Stream
-                </div>
-
-                {/* User Message Bubble */}
-                <div className="flex flex-col items-end space-y-1">
-                  <div className="bg-primary text-surface p-3.5 rounded-2xl rounded-tr-sm text-body shadow-button max-w-[90%] font-normal">
-                    {activeScenario.userPrompt}
-                  </div>
-                  <span className="text-micro text-text-muted pr-1">You • just now</span>
-                </div>
-
-                {/* Assistant Turn */}
-                <div className="flex items-start gap-3 max-w-[95%]">
-                  <div className="w-7 h-7 rounded-xl bg-surface-raised border border-edge-raised flex items-center justify-center shadow-button shrink-0 mt-0.5">
-                    <StrataIcon className="w-4 h-4" />
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeScenario.id}
+              variants={scenarioContentVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="grid grid-cols-1 lg:grid-cols-12 min-h-[480px]"
+            >
+              {/* Left: Conversational Stream (5 cols) */}
+              <div className="lg:col-span-5 border-b lg:border-b-0 lg:border-r border-edge-default p-5 sm:p-6 bg-surface-base/50 flex flex-col justify-between space-y-6">
+                <div className="space-y-4">
+                  <div className="text-micro font-semibold uppercase tracking-wider text-text-muted">
+                    Conversational Stream
                   </div>
 
-                  <div className="space-y-2.5 flex-1">
-                    {/* Tool Action Badge */}
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-raised border border-edge-raised text-micro font-mono text-text-secondary shadow-button">
-                      <CheckCircle2 className="w-3.5 h-3.5 text-accent-olive" />
-                      <span>{activeScenario.toolAction}</span>
+                  {/* User Message Bubble */}
+                  <div className="flex flex-col items-end space-y-1">
+                    <div className="bg-primary text-surface p-3.5 rounded-2xl rounded-tr-sm text-body shadow-button max-w-[90%] font-normal">
+                      {activeScenario.userPrompt}
+                    </div>
+                    <span className="text-micro text-text-muted pr-1">You • just now</span>
+                  </div>
+
+                  {/* Assistant Turn */}
+                  <div className="flex items-start gap-3 max-w-[95%]">
+                    <div className="w-7 h-7 rounded-xl bg-surface-raised border border-edge-raised flex items-center justify-center shadow-button shrink-0 mt-0.5">
+                      <StrataIcon className="w-4 h-4" />
                     </div>
 
-                    {/* Assistant Thought & Response */}
-                    <div className="bg-surface-raised border border-edge-raised p-4 rounded-2xl rounded-tl-sm text-body text-text-primary shadow-card">
-                      <p className="leading-relaxed">{activeScenario.assistantSummary}</p>
+                    <div className="space-y-2.5 flex-1">
+                      {/* Tool Action Badge */}
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-surface-raised border border-edge-raised text-micro font-mono text-text-secondary shadow-button">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-accent-olive" />
+                        <span>{activeScenario.toolAction}</span>
+                      </div>
+
+                      {/* Assistant Thought & Response */}
+                      <div className="bg-surface-raised border border-edge-raised p-4 rounded-2xl rounded-tl-sm text-body text-text-primary shadow-card">
+                        <p className="leading-relaxed">{activeScenario.assistantSummary}</p>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Chat footer hint */}
-              <div className="pt-4 border-t border-edge-default flex items-center justify-between text-caption text-text-muted">
-                <div className="flex items-center gap-1.5">
-                  <Code2 className="w-3.5 h-3.5 text-secondary" />
-                  <span>Surgical file operations</span>
+                {/* Chat footer hint */}
+                <div className="pt-4 border-t border-edge-default flex items-center justify-between text-caption text-text-muted">
+                  <div className="flex items-center gap-1.5">
+                    <Code2 className="w-3.5 h-3.5 text-secondary" />
+                    <span>Surgical file operations</span>
+                  </div>
+                  <span>25-step agent loop</span>
                 </div>
-                <span>25-step agent loop</span>
               </div>
-            </div>
 
-            {/* Right: Living Canvas / Workspace Drawer (7 cols) */}
-            <div className="lg:col-span-7 bg-surface-raised p-5 sm:p-6 flex flex-col justify-between">
-              <div className="space-y-4">
-                {/* File Header Tabs */}
-                <div className="flex items-center justify-between pb-3 border-b border-edge-default gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-elevated border border-edge-raised text-label font-medium text-text-bright">
-                      <FileText className="w-3.5 h-3.5 text-primary" />
-                      <span>{activeScenario.fileName}</span>
+              {/* Right: Living Canvas / Workspace Drawer (7 cols) */}
+              <div className="lg:col-span-7 bg-surface-raised p-5 sm:p-6 flex flex-col justify-between">
+                <div className="space-y-4">
+                  {/* File Header Tabs */}
+                  <div className="flex items-center justify-between pb-3 border-b border-edge-default gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-elevated border border-edge-raised text-label font-medium text-text-bright">
+                        <FileText className="w-3.5 h-3.5 text-primary" />
+                        <span>{activeScenario.fileName}</span>
+                      </div>
+                      <span className="text-micro text-text-muted uppercase px-2 py-0.5 rounded bg-surface-base border border-edge-default font-mono">
+                        {activeScenario.fileLanguage}
+                      </span>
                     </div>
-                    <span className="text-micro text-text-muted uppercase px-2 py-0.5 rounded bg-surface-base border border-edge-default font-mono">
-                      {activeScenario.fileLanguage}
-                    </span>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleCopy}
+                        title="Copy document content"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-base hover:bg-surface-elevated border border-edge-default text-caption text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
+                      >
+                        {copied ? (
+                          <>
+                            <Check className="w-3 h-3 text-accent-olive" />
+                            <span>Copied</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleCopy}
-                      title="Copy document content"
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-surface-base hover:bg-surface-elevated border border-edge-default text-caption text-text-secondary hover:text-text-primary transition-colors cursor-pointer"
-                    >
-                      {copied ? (
-                        <>
-                          <Check className="w-3 h-3 text-accent-olive" />
-                          <span>Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          <span>Copy</span>
-                        </>
-                      )}
-                    </button>
+                  {/* Document preview render */}
+                  <div className="bg-surface-base/60 border border-edge-default rounded-2xl p-5 font-sans overflow-y-auto max-h-[340px] space-y-3">
+                    <pre className="whitespace-pre-wrap font-sans text-body text-text-primary leading-relaxed">
+                      {activeScenario.content}
+                    </pre>
                   </div>
                 </div>
 
-                {/* Document preview render */}
-                <div className="bg-surface-base/60 border border-edge-default rounded-2xl p-5 font-sans overflow-y-auto max-h-[340px] space-y-3">
-                  <pre className="whitespace-pre-wrap font-sans text-body text-text-primary leading-relaxed">
-                    {activeScenario.content}
-                  </pre>
+                {/* Canvas footer metadata */}
+                <div className="pt-4 mt-4 border-t border-edge-default flex items-center justify-between text-caption text-text-muted">
+                  <span>{activeScenario.charCount.toLocaleString()} characters • auto-saved</span>
+                  <div className="flex items-center gap-1.5 text-primary font-medium">
+                    <PanelRightClose className="w-3.5 h-3.5" />
+                    <span>Durable workspace</span>
+                  </div>
                 </div>
               </div>
-
-              {/* Canvas footer metadata */}
-              <div className="pt-4 mt-4 border-t border-edge-default flex items-center justify-between text-caption text-text-muted">
-                <span>{activeScenario.charCount.toLocaleString()} characters • auto-saved</span>
-                <div className="flex items-center gap-1.5 text-primary font-medium">
-                  <PanelRightClose className="w-3.5 h-3.5" />
-                  <span>Durable workspace</span>
-                </div>
-              </div>
-            </div>
-          </div>
+            </motion.div>
+          </AnimatePresence>
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

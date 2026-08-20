@@ -2,8 +2,14 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { motion } from 'motion/react';
 import { ArrowRight, ShieldCheck, HardDrive, Compass, FileText } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
+import {
+  staggerContainerVariants,
+  fadeUpVariants,
+  buttonHoverProps,
+} from './animations';
 
 /** Props for the LandingHero component. */
 interface LandingHeroProps {
@@ -14,26 +20,54 @@ interface LandingHeroProps {
 }
 
 /**
- * Hero section of the Strata AI landing page.
- * Sets a warm, reflective, and human tone highlighting calm collaboration
- * and durable document creation over ephemeral chat bubbles.
+ * Hero section of the Strata AI landing page with subtle spring entrance animations.
  */
 export function LandingHero({ userId, onOpenStudio }: LandingHeroProps) {
   return (
     <section className="relative pt-12 pb-16 md:pt-20 md:pb-24 overflow-hidden">
-      {/* Soft background ambient radial glows */}
-      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-primary-soft rounded-full blur-3xl pointer-events-none -z-10" />
-      <div className="absolute top-1/3 right-10 w-72 h-72 bg-secondary-soft rounded-full blur-3xl pointer-events-none -z-10" />
+      {/* Soft ambient background radial glows with gentle float */}
+      <motion.div
+        animate={{
+          scale: [1, 1.05, 1],
+          opacity: [0.7, 0.9, 0.7],
+        }}
+        transition={{
+          duration: 8,
+          repeat: Infinity,
+          ease: 'easeInOut',
+        }}
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-4xl h-96 bg-primary-soft rounded-full blur-3xl pointer-events-none -z-10"
+      />
+      <motion.div
+        animate={{
+          scale: [1, 1.08, 1],
+          opacity: [0.6, 0.8, 0.6],
+        }}
+        transition={{
+          duration: 10,
+          repeat: Infinity,
+          ease: 'easeInOut',
+          delay: 1,
+        }}
+        className="absolute top-1/3 right-10 w-72 h-72 bg-secondary-soft rounded-full blur-3xl pointer-events-none -z-10"
+      />
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-8">
+      <motion.div
+        variants={staggerContainerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-4xl mx-auto px-4 sm:px-6 text-center space-y-8"
+      >
         {/* Soft studio pill badge */}
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-raised border border-edge-raised shadow-button text-caption font-medium text-text-secondary">
-          <StrataIcon className="w-4 h-4" />
-          <span>A calmer, more natural way to work with AI</span>
-        </div>
+        <motion.div variants={fadeUpVariants} className="inline-block">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-raised border border-edge-raised shadow-button text-caption font-medium text-text-secondary hover:border-edge-hover transition-colors">
+            <StrataIcon className="w-4 h-4" />
+            <span>A calmer, more natural way to work with AI</span>
+          </div>
+        </motion.div>
 
         {/* Hero headline */}
-        <div className="space-y-4 max-w-3xl mx-auto">
+        <motion.div variants={fadeUpVariants} className="space-y-4 max-w-3xl mx-auto">
           <h1 className="font-display font-bold text-text-bright text-display sm:text-[42px] md:text-[50px] tracking-tight leading-[1.12]">
             Where messy thoughts become{' '}
             <span className="text-primary relative inline-block">
@@ -59,40 +93,50 @@ export function LandingHero({ userId, onOpenStudio }: LandingHeroProps) {
             Strata works beside you as a quiet partner — shaping unorganized notes,
             proposals, and ideas into durable documents on your live canvas.
           </p>
-        </div>
+        </motion.div>
 
         {/* Primary & secondary CTAs */}
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2">
+        <motion.div
+          variants={fadeUpVariants}
+          className="flex flex-col sm:flex-row items-center justify-center gap-3.5 pt-2"
+        >
           {userId ? (
-            <button
+            <motion.button
               type="button"
+              {...buttonHoverProps}
               onClick={onOpenStudio}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary active:scale-95 transition-all duration-150 cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all duration-150 cursor-pointer"
             >
               <span>Open Your Studio</span>
               <ArrowRight className="w-4 h-4" />
-            </button>
+            </motion.button>
           ) : (
-            <Link
-              href="/auth/signup"
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary active:scale-95 transition-all duration-150"
-            >
-              <span>Enter the Studio</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
+            <motion.div {...buttonHoverProps} className="w-full sm:w-auto">
+              <Link
+                href="/auth/signup"
+                className="w-full inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all duration-150"
+              >
+                <span>Enter the Studio</span>
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </motion.div>
           )}
 
-          <a
+          <motion.a
             href="#preview"
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-surface-raised hover:bg-surface-elevated text-text-primary border border-edge-raised text-label font-medium shadow-button active:scale-95 transition-all duration-150"
+            {...buttonHoverProps}
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-surface-raised hover:bg-surface-elevated text-text-primary border border-edge-raised text-label font-medium shadow-button transition-all duration-150"
           >
             <Compass className="w-4 h-4 text-text-muted" />
             <span>See how it feels</span>
-          </a>
-        </div>
+          </motion.a>
+        </motion.div>
 
         {/* Reassurance pills */}
-        <div className="pt-4 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-caption text-text-muted">
+        <motion.div
+          variants={fadeUpVariants}
+          className="pt-4 flex flex-wrap items-center justify-center gap-y-2 gap-x-6 text-caption text-text-muted"
+        >
           <div className="flex items-center gap-1.5">
             <HardDrive className="w-3.5 h-3.5 text-secondary" />
             <span>Local-first in your browser</span>
@@ -105,8 +149,8 @@ export function LandingHero({ userId, onOpenStudio }: LandingHeroProps) {
             <FileText className="w-3.5 h-3.5 text-primary" />
             <span>Multi-file tactile canvas</span>
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     </section>
   );
 }

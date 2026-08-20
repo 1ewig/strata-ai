@@ -1,7 +1,15 @@
 'use client';
 
 import React from 'react';
+import { motion } from 'motion/react';
 import { Layers, Feather, ShieldCheck } from 'lucide-react';
+import {
+  staggerContainerVariants,
+  fadeUpVariants,
+  cardVariants,
+  cardHoverProps,
+  viewportOnce,
+} from './animations';
 
 const PILLARS = [
   {
@@ -42,8 +50,14 @@ const PILLARS = [
 export function LandingPillars() {
   return (
     <section id="philosophy" className="py-16 md:py-24 border-t border-edge-default">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12">
-        <div className="text-center max-w-2xl mx-auto space-y-3">
+      <motion.div
+        variants={staggerContainerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={viewportOnce}
+        className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12"
+      >
+        <motion.div variants={fadeUpVariants} className="text-center max-w-2xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-elevated border border-edge-raised text-micro font-semibold uppercase tracking-wider text-text-muted">
             The Philosophy
           </div>
@@ -54,16 +68,18 @@ export function LandingPillars() {
             Writing and problem solving are messy, iterative, and deeply personal.
             Strata gives you the calm canvas and thoughtful partner you need to bring ideas home.
           </p>
-        </div>
+        </motion.div>
 
         {/* 3 Value Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {PILLARS.map((pillar) => {
             const Icon = pillar.icon;
             return (
-              <div
+              <motion.div
                 key={pillar.title}
-                className="bg-surface-raised border border-edge-raised rounded-3xl p-6 sm:p-8 shadow-card flex flex-col justify-between space-y-6 hover:border-edge-hover hover:shadow-card-lg transition-all duration-200"
+                variants={cardVariants}
+                {...cardHoverProps}
+                className="bg-surface-raised border border-edge-raised rounded-3xl p-6 sm:p-8 shadow-card flex flex-col justify-between space-y-6 hover:border-edge-hover hover:shadow-card-lg transition-colors duration-200"
               >
                 <div className="space-y-4">
                   <div
@@ -82,11 +98,11 @@ export function LandingPillars() {
                 <div className="pt-4 border-t border-edge-default text-caption font-medium text-text-muted">
                   {pillar.highlight}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
-      </div>
+      </motion.div>
     </section>
   );
 }

@@ -3,11 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { motion } from 'motion/react';
 import { ArrowRight, Sparkles, Moon, Sun } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import { useTheme } from '@/hooks/useTheme';
 import { db } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
+import { buttonHoverProps } from './animations';
 
 /** Props for the LandingHeader component. */
 interface LandingHeaderProps {
@@ -88,32 +90,34 @@ export function LandingHeader({ userId, isPending }: LandingHeaderProps) {
         {/* Right side actions: theme toggle & auth buttons */}
         <div className="flex items-center gap-2.5">
           {/* Subtle theme toggle button */}
-          <button
+          <motion.button
             type="button"
+            whileTap={{ scale: 0.92 }}
             onClick={toggleTheme}
             aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
             title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-            className="p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface-elevated border border-edge-default transition-all duration-150 cursor-pointer"
+            className="p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface-elevated border border-edge-default transition-colors duration-150 cursor-pointer"
           >
             {isDark ? (
               <Sun className="w-4 h-4 text-secondary" />
             ) : (
               <Moon className="w-4 h-4 text-text-muted" />
             )}
-          </button>
+          </motion.button>
 
           {/* Dynamic auth / studio CTA */}
           {isPending ? (
             <div className="w-24 h-9 rounded-xl bg-surface-elevated animate-pulse" />
           ) : userId ? (
-            <button
+            <motion.button
               type="button"
+              {...buttonHoverProps}
               onClick={handleOpenStudio}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary active:scale-95 transition-all duration-150 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all duration-150 cursor-pointer"
             >
               <span>Open Studio</span>
               <ArrowRight className="w-3.5 h-3.5" />
-            </button>
+            </motion.button>
           ) : (
             <div className="flex items-center gap-2">
               <Link
@@ -122,13 +126,15 @@ export function LandingHeader({ userId, isPending }: LandingHeaderProps) {
               >
                 Sign In
               </Link>
-              <Link
-                href="/auth/signup"
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary active:scale-95 transition-all duration-150"
-              >
-                <Sparkles className="w-3.5 h-3.5" />
-                <span>Get Started</span>
-              </Link>
+              <motion.div {...buttonHoverProps}>
+                <Link
+                  href="/auth/signup"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all duration-150"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Get Started</span>
+                </Link>
+              </motion.div>
             </div>
           )}
         </div>
