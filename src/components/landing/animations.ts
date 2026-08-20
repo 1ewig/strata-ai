@@ -1,18 +1,18 @@
 import type { Variants, Transition } from 'motion/react';
 
 /**
- * Shared spring and ease transitions for subtle, natural feel.
+ * Gentle, organic spring and ease curves for a quiet, human atmosphere.
  */
-export const smoothSpring: Transition = {
+export const softSpring: Transition = {
   type: 'spring',
-  damping: 24,
-  stiffness: 200,
+  damping: 30,
+  stiffness: 140,
 };
 
 export const gentleSpring: Transition = {
   type: 'spring',
-  damping: 28,
-  stiffness: 160,
+  damping: 34,
+  stiffness: 120,
 };
 
 /**
@@ -20,65 +20,40 @@ export const gentleSpring: Transition = {
  */
 export const viewportOnce = {
   once: true,
-  amount: 0.2,
+  amount: 0.25,
 };
 
 /**
- * Stagger container for animating children sequentially.
+ * Stagger container for animating items with calm, unhurried pacing.
  */
 export const staggerContainerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.12,
-      delayChildren: 0.05,
+      staggerChildren: 0.1,
+      delayChildren: 0.04,
     },
   },
 };
 
 /**
- * Faster stagger container for feature grids.
- */
-export const gridStaggerVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.1,
-    },
-  },
-};
-
-/**
- * Natural fade-up animation for text, badges, and headers.
+ * Natural fade-up animation for text and cards.
  */
 export const fadeUpVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 14 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: smoothSpring,
+    transition: softSpring,
   },
 };
 
 /**
- * Soft fade-in animation without vertical translation.
- */
-export const fadeInVariants: Variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: { duration: 0.4, ease: 'easeOut' },
-  },
-};
-
-/**
- * Card reveal animation for philosophy and flow steps.
+ * Card reveal animation.
  */
 export const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 18 },
   visible: {
     opacity: 1,
     y: 0,
@@ -87,19 +62,19 @@ export const cardVariants: Variants = {
 };
 
 /**
- * Crossfade slide transition for the interactive scenario switcher.
+ * Crossfade transition for switching interactive scenarios.
  */
 export const scenarioContentVariants: Variants = {
-  hidden: { opacity: 0, y: 10 },
+  hidden: { opacity: 0, y: 8 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.25, ease: 'easeOut' },
+    transition: { duration: 0.22, ease: 'easeOut' },
   },
   exit: {
     opacity: 0,
-    y: -10,
-    transition: { duration: 0.15, ease: 'easeIn' },
+    y: -8,
+    transition: { duration: 0.14, ease: 'easeIn' },
   },
 };
 
@@ -107,12 +82,12 @@ export const scenarioContentVariants: Variants = {
  * Subtle interactive hover feedback presets.
  */
 export const buttonHoverProps = {
-  whileHover: { scale: 1.02 },
-  whileTap: { scale: 0.98 },
+  whileHover: { scale: 1.015 },
+  whileTap: { scale: 0.985 },
   transition: { duration: 0.12 } as Transition,
 };
 
 export const cardHoverProps = {
-  whileHover: { y: -4 },
+  whileHover: { y: -3 },
   transition: { duration: 0.2, ease: 'easeOut' } as Transition,
 };

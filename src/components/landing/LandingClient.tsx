@@ -7,9 +7,8 @@ import { generateId } from '@/lib/id';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { LandingHero } from '@/components/landing/LandingHero';
 import { InteractiveStudioPreview } from '@/components/landing/InteractiveStudioPreview';
+import { LandingContrast } from '@/components/landing/LandingContrast';
 import { LandingPillars } from '@/components/landing/LandingPillars';
-import { LandingFlow } from '@/components/landing/LandingFlow';
-import { LandingDetails } from '@/components/landing/LandingDetails';
 import { LandingCTA } from '@/components/landing/LandingCTA';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 
@@ -20,8 +19,7 @@ interface LandingClientProps {
 }
 
 /**
- * Client component for the Strata AI landing page.
- * Receives the server-resolved session state to eliminate client-side waterfalls.
+ * Client component orchestrating the serene, low-cognitive-load Strata AI landing page.
  */
 export function LandingClient({ userId }: LandingClientProps) {
   const router = useRouter();
@@ -59,9 +57,8 @@ export function LandingClient({ userId }: LandingClientProps) {
       <main className="flex-1">
         <LandingHero userId={userId} onOpenStudio={handleOpenStudio} />
         <InteractiveStudioPreview />
-        <LandingFlow />
+        <LandingContrast />
         <LandingPillars />
-        <LandingDetails />
         <LandingCTA userId={userId} onOpenStudio={handleOpenStudio} />
       </main>
 

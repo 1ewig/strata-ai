@@ -15,15 +15,12 @@ import { buttonHoverProps } from './animations';
 interface LandingHeaderProps {
   /** The current user's id if authenticated. */
   userId?: string;
-  /** Whether the session is currently resolving. */
-  isPending?: boolean;
 }
 
 /**
- * Top navigation header for the Strata AI landing page.
- * Provides brand identity, section anchors, theme toggle, and session-aware CTA.
+ * Clean, distraction-free top navigation for the Strata AI landing page.
  */
-export function LandingHeader({ userId, isPending }: LandingHeaderProps) {
+export function LandingHeader({ userId }: LandingHeaderProps) {
   const { isDark, toggle: toggleTheme } = useTheme();
   const router = useRouter();
 
@@ -50,53 +47,52 @@ export function LandingHeader({ userId, isPending }: LandingHeaderProps) {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-edge-default bg-surface-base/80 backdrop-blur-md transition-colors duration-200">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-        {/* Brand logo & wordmark */}
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+        {/* Brand mark & title */}
         <Link
           href="/"
-          className="flex items-center gap-2.5 text-text-bright hover:opacity-90 transition-opacity"
+          className="flex items-center gap-2 text-text-bright hover:opacity-90 transition-opacity"
         >
-          <StrataIcon className="w-6 h-6" />
-          <span className="font-display font-bold text-subheading tracking-tight text-text-bright">
+          <StrataIcon className="w-5 h-5" />
+          <span className="font-display font-bold text-label tracking-tight text-text-bright">
             Strata
           </span>
-          <span className="hidden sm:inline-block px-2 py-0.5 rounded-lg bg-surface-elevated border border-edge-raised text-micro text-text-muted font-medium">
+          <span className="text-micro px-2 py-0.5 rounded-full bg-surface-elevated text-text-muted font-medium border border-edge-default">
             Studio
           </span>
         </Link>
 
-        {/* Navigation links */}
-        <nav className="hidden md:flex items-center gap-6 text-label text-text-secondary font-medium">
+        {/* Minimalist navigation */}
+        <nav className="hidden md:flex items-center gap-7 text-label text-text-secondary">
           <a
-            href="#flow"
-            className="hover:text-text-bright transition-colors duration-150"
+            href="#canvas"
+            className="hover:text-text-bright transition-colors"
           >
-            The Flow
+            The Canvas
+          </a>
+          <a
+            href="#contrast"
+            className="hover:text-text-bright transition-colors"
+          >
+            The Contrast
           </a>
           <a
             href="#philosophy"
-            className="hover:text-text-bright transition-colors duration-150"
+            className="hover:text-text-bright transition-colors"
           >
             Philosophy
           </a>
-          <a
-            href="#details"
-            className="hover:text-text-bright transition-colors duration-150"
-          >
-            Details
-          </a>
         </nav>
 
-        {/* Right side actions: theme toggle & auth buttons */}
-        <div className="flex items-center gap-2.5">
-          {/* Subtle theme toggle button */}
+        {/* Right side actions: theme toggle & auth button */}
+        <div className="flex items-center gap-3">
           <motion.button
             type="button"
             whileTap={{ scale: 0.92 }}
             onClick={toggleTheme}
             aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
             title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-            className="p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface-elevated border border-edge-default transition-colors duration-150 cursor-pointer"
+            className="p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface-elevated border border-edge-default transition-colors cursor-pointer"
           >
             {isDark ? (
               <Sun className="w-4 h-4 text-secondary" />
@@ -105,15 +101,12 @@ export function LandingHeader({ userId, isPending }: LandingHeaderProps) {
             )}
           </motion.button>
 
-          {/* Dynamic auth / studio CTA */}
-          {isPending ? (
-            <div className="w-20 h-9 rounded-xl bg-surface-elevated animate-pulse" />
-          ) : userId ? (
+          {userId ? (
             <motion.button
               type="button"
               {...buttonHoverProps}
               onClick={handleOpenStudio}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all duration-150 cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all cursor-pointer"
             >
               <span>Open Studio</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -122,7 +115,7 @@ export function LandingHeader({ userId, isPending }: LandingHeaderProps) {
             <motion.div {...buttonHoverProps}>
               <Link
                 href="/auth/signin"
-                className="inline-flex items-center px-3.5 py-1.5 rounded-xl text-text-secondary hover:text-text-bright hover:bg-surface-elevated border border-edge-raised text-label font-medium transition-colors"
+                className="inline-flex items-center px-3.5 py-1.5 rounded-xl bg-surface-raised hover:bg-surface-elevated text-text-primary border border-edge-raised text-label font-medium shadow-button transition-colors"
               >
                 Sign In
               </Link>

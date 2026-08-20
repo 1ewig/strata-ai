@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { Layers, Feather, ShieldCheck } from 'lucide-react';
 import {
   staggerContainerVariants,
   fadeUpVariants,
@@ -13,39 +12,27 @@ import {
 
 const PILLARS = [
   {
-    icon: Layers,
-    accent: 'text-primary',
-    badgeBg: 'bg-primary-soft',
-    badgeBorder: 'border-primary/20',
-    title: 'Living Documents, Not Disposable Chats',
+    num: '01',
+    title: 'Durable',
     description:
-      'Endless chat threads are where great thoughts get lost. Strata turns ideas into organized, tactile files that stay open and editable right beside your conversation.',
-    highlight: 'No scrolling back 50 bubbles to find a draft.',
+      'Thoughts are shaped directly into living files on your canvas. No more losing good paragraphs to the chat scrollback.',
   },
   {
-    icon: Feather,
-    accent: 'text-secondary',
-    badgeBg: 'bg-secondary-soft',
-    badgeBorder: 'border-secondary/20',
-    title: 'Surgical Edits That Respect Your Voice',
+    num: '02',
+    title: 'Gentle',
     description:
-      'Most AI tools erase your individuality by rewriting entire pages. Strata pinpoints exact sentences and sections, refining tone and structure while keeping what you wrote.',
-    highlight: 'Precision changes that preserve your style.',
+      'Surgical edits pinpoint exact lines and sections — polishing structure and tone without erasing your natural style.',
   },
   {
-    icon: ShieldCheck,
-    accent: 'text-accent-olive',
-    badgeBg: 'bg-accent-olive-soft',
-    badgeBorder: 'border-accent-olive/20',
-    title: 'Local Solitude & Total Privacy',
+    num: '03',
+    title: 'Private',
     description:
-      'Your workspace is saved directly in your browser. Fast, distraction-free, and private by default — you can think, write, and explore in uninterrupted focus.',
-    highlight: 'Zero cloud lock-in. Your work remains yours.',
+      'Everything persists right in your browser. Fast, distraction-free, and private with zero cloud baggage.',
   },
 ];
 
 /**
- * Pillars component highlighting the human-centric design philosophy of Strata AI.
+ * Three quiet principles presented with generous whitespace and low cognitive load.
  */
 export function LandingPillars() {
   return (
@@ -55,52 +42,40 @@ export function LandingPillars() {
         initial="hidden"
         whileInView="visible"
         viewport={viewportOnce}
-        className="max-w-6xl mx-auto px-4 sm:px-6 space-y-12"
+        className="max-w-5xl mx-auto px-4 sm:px-6 space-y-12"
       >
-        <motion.div variants={fadeUpVariants} className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-elevated border border-edge-raised text-micro font-semibold uppercase tracking-wider text-text-muted">
+        <motion.div variants={fadeUpVariants} className="text-center max-w-xl mx-auto space-y-2">
+          <span className="text-micro font-semibold uppercase tracking-wider text-text-muted">
             The Philosophy
-          </div>
+          </span>
           <h2 className="font-display font-bold text-heading sm:text-title md:text-display text-text-bright tracking-tight">
-            Built for how humans actually create.
+            Three quiet promises.
           </h2>
           <p className="text-body text-text-secondary">
-            Writing and problem solving are messy, iterative, and deeply personal.
-            Strata gives you the calm canvas and thoughtful partner you need to bring ideas home.
+            Designed for how humans actually think, draft, and finish work.
           </p>
         </motion.div>
 
-        {/* 3 Value Cards */}
+        {/* 3 Airy Pillar Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {PILLARS.map((pillar) => {
-            const Icon = pillar.icon;
-            return (
-              <motion.div
-                key={pillar.title}
-                variants={cardVariants}
-                {...cardHoverProps}
-                className="bg-surface-raised border border-edge-raised rounded-3xl p-6 sm:p-8 shadow-card flex flex-col justify-between space-y-6 hover:border-edge-hover hover:shadow-card-lg transition-colors duration-200"
-              >
-                <div className="space-y-4">
-                  <div
-                    className={`w-12 h-12 rounded-2xl ${pillar.badgeBg} border ${pillar.badgeBorder} flex items-center justify-center`}
-                  >
-                    <Icon className={`w-6 h-6 ${pillar.accent}`} />
-                  </div>
-                  <h3 className="font-display font-bold text-subheading text-text-bright tracking-tight">
-                    {pillar.title}
-                  </h3>
-                  <p className="text-body text-text-secondary leading-relaxed">
-                    {pillar.description}
-                  </p>
-                </div>
-
-                <div className="pt-4 border-t border-edge-default text-caption font-medium text-text-muted">
-                  {pillar.highlight}
-                </div>
-              </motion.div>
-            );
-          })}
+          {PILLARS.map((pillar) => (
+            <motion.div
+              key={pillar.num}
+              variants={cardVariants}
+              {...cardHoverProps}
+              className="bg-surface-raised border border-edge-raised rounded-3xl p-7 space-y-4 shadow-card hover:border-edge-hover transition-colors"
+            >
+              <span className="font-mono text-caption font-semibold text-primary px-2 py-0.5 rounded-lg bg-primary-soft">
+                {pillar.num}
+              </span>
+              <h3 className="font-display font-bold text-subheading text-text-bright">
+                {pillar.title}
+              </h3>
+              <p className="text-body text-text-secondary leading-relaxed">
+                {pillar.description}
+              </p>
+            </motion.div>
+          ))}
         </div>
       </motion.div>
     </section>
