@@ -172,10 +172,15 @@ export default React.memo(function ChatPanel({
     <div className="pt-4 space-y-4">
       {/* Fallback empty state if isNewChat flag is not explicitly passed */}
       {messages.length === 0 && !isLoading && (
-        <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
+        <motion.div
+          variants={heroItemVariants}
+          initial="hidden"
+          animate="visible"
+          className="flex flex-col items-center justify-center py-20 text-center space-y-3"
+        >
           <StrataIcon className="w-12 h-12" />
           <h3 className="text-heading font-semibold text-text-primary font-display">Ready to help with your workspace</h3>
-        </div>
+        </motion.div>
       )}
 
       {/* Messages rendering with compaction dividers */}
@@ -202,7 +207,7 @@ export default React.memo(function ChatPanel({
           <div className="hidden sm:flex shrink-0 mt-0.5">
             <StrataIcon className="w-7 h-7" />
           </div>
-          <div className="px-4 py-3 rounded-2xl rounded-tl-xs bg-surface-overlay/90 border border-edge-raised flex items-center gap-1.5 backdrop-blur-sm">
+          <div className="px-4 py-3 rounded-2xl rounded-tl-xs bg-surface-overlay/90 border border-edge-raised flex items-center gap-1.5 backdrop-blur-sm shadow-card">
             <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
             <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
             <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
