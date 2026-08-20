@@ -58,7 +58,7 @@ const SPECIMENS = [
 
 export function LandingSpecimens() {
   return (
-    <section className="py-20 sm:py-28 border-t border-edge-default relative">
+    <section id="specimens" className="py-20 sm:py-28 border-t border-edge-default relative">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 mb-16 text-center">
         <motion.div
           variants={staggerContainerVariants}

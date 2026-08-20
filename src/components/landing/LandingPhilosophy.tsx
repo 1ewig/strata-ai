@@ -39,7 +39,7 @@ const TENETS = [
 
 export function LandingPhilosophy() {
   return (
-    <section className="py-20 sm:py-28 border-t border-edge-default relative bg-surface-base/50">
+    <section id="philosophy" className="py-20 sm:py-28 border-t border-edge-default relative bg-surface-base/50">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 mb-16 text-center">
         <motion.div
           variants={staggerContainerVariants}

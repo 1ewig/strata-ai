@@ -22,22 +22,22 @@ export function LandingFooter() {
         {/* Links */}
         <div className="flex flex-wrap items-center justify-center gap-6 text-caption text-text-secondary">
           <a
-            href="#canvas"
+            href="#artifacts"
             className="hover:text-text-bright transition-colors"
           >
-            The Canvas
-          </a>
-          <a
-            href="#contrast"
-            className="hover:text-text-bright transition-colors"
-          >
-            The Contrast
+            The Artifacts
           </a>
           <a
             href="#philosophy"
             className="hover:text-text-bright transition-colors"
           >
-            Philosophy
+            The Tenets
+          </a>
+          <a
+            href="#specimens"
+            className="hover:text-text-bright transition-colors"
+          >
+            The Specimens
           </a>
           <Link
             href="/auth/signin"

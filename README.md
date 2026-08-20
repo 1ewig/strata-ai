@@ -12,7 +12,7 @@
 
 Server-side state is deliberately minimal: chat history and workspace files live in the browser's IndexedDB, and the only server-side persistence is the auth identity and message-quota log. File state survives reloads without a server round trip.
 
-A serene public landing page at `/` introduces the product — a hand-crafted strata-topography hero, an interactive two-pane studio preview, a chat-vs-canvas contrast section, and three philosophy pillars — while the workspace itself lives behind auth at `/chat-id/<id>`.
+An "editorial atelier" public landing page at `/` introduces the product — a contour-grid hero with floating tool badges, an artifact showcase (compaction index card, living manuscript, field ledger), three design tenets, and engine-specimen calibration plates — while the workspace itself lives behind auth at `/chat-id/<id>`.
 
 - **Live demo:** [strata-ai-five.vercel.app](https://strata-ai-five.vercel.app) · **Repository:** [github.com/1ewig/strata-ai](https://github.com/1ewig/strata-ai)
 
@@ -123,7 +123,7 @@ A custom design system defined in `@theme` in `src/app/globals.css`: a warm stud
 
 ### 10. Public landing page
 
-The root route is a public marketing page (the proxy skips it). A hand-crafted strata-topography hero leads into an interactive two-pane studio mock (chat stream + workspace canvas with a preview/source toggle), a "Chats disappear. Documents endure." contrast section, three philosophy pillars (Durable / Gentle / Private), and a starter-prompt CTA. The session is resolved server-side, so the header shows either "Sign In" or "Open Studio" — the latter drops signed-in users straight into their latest conversation or a fresh chat.
+The root route is a public marketing page (the proxy skips it), styled as an editorial atelier: a contour-grid hero with six floating tool badges (writeFile, webSearch, editFile, extractUrl, compactContext, readFile) that drift in infinite loops, a three-card artifact showcase — the `/compact` Context Index Card, a Living Manuscript with interactive margin-note annotations, and a Tavily Field Ledger — plus three design tenets (atelier over slot machine, durable files, surgical compaction) and engine-specimen calibration plates for Gemini, DeepSeek, and Tavily. The session is resolved server-side, so the header shows either "Sign In" or "Open Studio" — the latter drops signed-in users straight into their latest conversation or a fresh chat.
 
 ![Workspace Studio Dashboard](./public/hero.webp)
 

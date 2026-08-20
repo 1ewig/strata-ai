@@ -65,22 +65,22 @@ export function LandingHeader({ userId }: LandingHeaderProps) {
         {/* Minimalist navigation */}
         <nav className="hidden md:flex items-center gap-7 text-label text-text-secondary">
           <a
-            href="#canvas"
+            href="#artifacts"
             className="hover:text-text-bright transition-colors"
           >
-            The Canvas
-          </a>
-          <a
-            href="#contrast"
-            className="hover:text-text-bright transition-colors"
-          >
-            The Contrast
+            The Artifacts
           </a>
           <a
             href="#philosophy"
             className="hover:text-text-bright transition-colors"
           >
-            Philosophy
+            The Tenets
+          </a>
+          <a
+            href="#specimens"
+            className="hover:text-text-bright transition-colors"
+          >
+            The Specimens
           </a>
         </nav>
 
