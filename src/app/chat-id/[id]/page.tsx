@@ -3,6 +3,7 @@
 import React, { use, useRef, useState } from 'react';
 import { StickToBottom } from 'use-stick-to-bottom';
 import { ArrowDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import Sidebar from '@/components/Sidebar';
 import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
 import ChatPanel from '@/components/chat/ChatPanel';
@@ -14,6 +15,7 @@ import { useChatSession } from '@/hooks/useChatSession';
 import { useConversations } from '@/hooks/useConversations';
 import { useSignOut } from '@/hooks/useSignOut';
 import { useTheme } from '@/hooks/useTheme';
+import { pillFloatVariants } from '@/components/chat/animations';
 
 /**
  * Main chat workspace for a conversation: chat panel, input, header, sidebar,
@@ -234,18 +236,29 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
                 >
                   <div className="relative max-w-4xl mx-auto pointer-events-auto">
                     {/* Floating button appears when scrolled up - anchored cleanly above ChatInput */}
-                    {!context.isAtBottom && (
-                      <div className="absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 z-30 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                        <button
-                          type="button"
-                          onClick={() => context.scrollToBottom()}
-                          className="flex items-center gap-1.5 rounded-full border border-edge-raised bg-surface-raised/95 dark:bg-surface-raised/90 px-3.5 py-1.5 text-caption font-semibold text-text-primary hover:text-text-bright shadow-card-lg backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer select-none"
+                    <AnimatePresence>
+                      {!context.isAtBottom && (
+                        <motion.div
+                          key="scroll-to-bottom"
+                          variants={pillFloatVariants}
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                          className="absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 z-30"
                         >
-                          <ArrowDown className="w-3.5 h-3.5 text-primary" />
-                          <span>Scroll to bottom</span>
-                        </button>
-                      </div>
-                    )}
+                          <motion.button
+                            type="button"
+                            whileHover={{ scale: 1.04 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => context.scrollToBottom()}
+                            className="flex items-center gap-1.5 rounded-full border border-edge-raised bg-surface-raised/95 dark:bg-surface-raised/90 px-3.5 py-1.5 text-caption font-semibold text-text-primary hover:text-text-bright shadow-card-lg backdrop-blur-md transition-colors cursor-pointer select-none"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                            <span>Scroll to bottom</span>
+                          </motion.button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                     {chatInputNode}
                   </div>
                 </div>
