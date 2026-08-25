@@ -26,3 +26,7 @@ export const agentRequestBodySchema = z.object({
   thinkingLevel: z.string().optional(),
   maxSteps: z.number().optional(),
 });
+
+/** Request payload validated against `agentRequestBodySchema`. */
+export type AgentRequestBody = z.infer<typeof agentRequestBodySchema>;
+

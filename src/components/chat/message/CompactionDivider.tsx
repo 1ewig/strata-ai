@@ -2,28 +2,111 @@
 
 import React from 'react';
 
-/** Props for the CompactionDivider component. */
-export interface CompactionDividerProps {
+export type CompactionDividerVariant = 'default' | 'danger' | 'warning' | 'info';
+export type CompactionDividerLineStyle = 'gradient' | 'solid' | 'dashed';
+
+export interface CompactionDividerProps extends React.ComponentPropsWithoutRef<'div'> {
   label: string;
+  variant?: CompactionDividerVariant;
+  icon?: React.ReactNode;
+  lineStyle?: CompactionDividerLineStyle;
 }
 
-/**
- * Visual horizontal rule with a centered pill label marking the boundary
- * where conversation history was compacted.
- */
-function CompactionDivider({ label }: CompactionDividerProps) {
+const VARIANT_STYLES: Record<
+  CompactionDividerVariant,
+  {
+    pill: string;
+    lineSolid: string;
+    lineGradLeft: string;
+    lineGradRight: string;
+    iconColor: string;
+  }
+> = {
+  default: {
+    pill: 'bg-surface-elevated/95 dark:bg-surface-elevated/90 border-edge-raised text-text-muted dark:text-text-secondary',
+    lineSolid: 'border-edge-raised',
+    lineGradLeft: 'bg-gradient-to-r from-transparent to-edge-raised',
+    lineGradRight: 'bg-gradient-to-l from-transparent to-edge-raised',
+    iconColor: 'text-text-muted',
+  },
+  danger: {
+    pill: 'bg-danger-soft/90 dark:bg-danger-soft/80 border-danger/40 text-danger',
+    lineSolid: 'border-danger/30 dark:border-danger/40',
+    lineGradLeft: 'bg-gradient-to-r from-transparent to-danger/40',
+    lineGradRight: 'bg-gradient-to-l from-transparent to-danger/40',
+    iconColor: 'text-danger',
+  },
+  warning: {
+    pill: 'bg-warning-soft/90 dark:bg-warning-soft/80 border-warning/40 text-warning',
+    lineSolid: 'border-warning/30 dark:border-warning/40',
+    lineGradLeft: 'bg-gradient-to-r from-transparent to-warning/40',
+    lineGradRight: 'bg-gradient-to-l from-transparent to-warning/40',
+    iconColor: 'text-warning',
+  },
+  info: {
+    pill: 'bg-info-soft/90 dark:bg-info-soft/80 border-info/40 text-info',
+    lineSolid: 'border-info/30 dark:border-info/40',
+    lineGradLeft: 'bg-gradient-to-r from-transparent to-info/40',
+    lineGradRight: 'bg-gradient-to-l from-transparent to-info/40',
+    iconColor: 'text-info',
+  },
+};
+
+function CompactionDivider({
+  label,
+  variant = 'default',
+  icon,
+  lineStyle = 'gradient',
+  className = '',
+  ...props
+}: CompactionDividerProps) {
+  const styles = VARIANT_STYLES[variant] ?? VARIANT_STYLES.default;
+
+  const renderLeftLine = () => {
+    if (lineStyle === 'solid') {
+      return <div className={`flex-1 border-t ${styles.lineSolid}`} />;
+    }
+    if (lineStyle === 'dashed') {
+      return <div className={`flex-1 border-t border-dashed ${styles.lineSolid}`} />;
+    }
+    return <div className={`flex-1 h-px ${styles.lineGradLeft}`} />;
+  };
+
+  const renderRightLine = () => {
+    if (lineStyle === 'solid') {
+      return <div className={`flex-1 border-t ${styles.lineSolid}`} />;
+    }
+    if (lineStyle === 'dashed') {
+      return <div className={`flex-1 border-t border-dashed ${styles.lineSolid}`} />;
+    }
+    return <div className={`flex-1 h-px ${styles.lineGradRight}`} />;
+  };
+
   return (
     <div
-      className="my-6 flex items-center justify-center relative fade-in"
       role="separator"
-      aria-label={`${label} divider`}
+      aria-label={label}
+      aria-orientation="horizontal"
+      className={`relative my-6 flex items-center gap-3 fade-in ${className}`}
+      {...props}
     >
-      <div className="absolute inset-0 flex items-center" aria-hidden="true">
-        <div className="w-full border-t border-edge-raised" />
-      </div>
-      <div className="relative px-3.5 py-1 rounded-full bg-surface-elevated/95 dark:bg-surface-elevated/90 border border-edge-raised text-micro font-semibold uppercase tracking-wider text-text-muted dark:text-text-secondary shadow-button backdrop-blur-md">
+      {/* Left divider segment */}
+      {renderLeftLine()}
+
+      {/* Centered pill label (no line behind it) */}
+      <div
+        className={`shrink-0 inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full border text-micro font-semibold uppercase tracking-wider shadow-button backdrop-blur-md transition-colors select-none ${styles.pill}`}
+      >
+        {icon && (
+          <span className={`inline-flex items-center shrink-0 ${styles.iconColor}`}>
+            {icon}
+          </span>
+        )}
         <span>{label}</span>
       </div>
+
+      {/* Right divider segment */}
+      {renderRightLine()}
     </div>
   );
 }

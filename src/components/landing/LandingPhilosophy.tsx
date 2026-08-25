@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { Sparkles, Hammer, Cpu, Repeat } from 'lucide-react';
 import {
   staggerContainerVariants,
   fadeUpVariants,

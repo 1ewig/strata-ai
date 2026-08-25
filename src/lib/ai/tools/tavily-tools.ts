@@ -174,16 +174,19 @@ export function createWebSearchTool() {
         .optional(),
       error: z.string().optional(),
     }),
-    execute: async ({
-      query,
-      searchDepth = "basic",
-      topic = "general",
-      maxResults = 6,
-      timeRange,
-      days,
-      includeDomains,
-      excludeDomains,
-    }) => {
+    execute: async (
+      {
+        query,
+        searchDepth = "basic",
+        topic = "general",
+        maxResults = 6,
+        timeRange,
+        days,
+        includeDomains,
+        excludeDomains,
+      },
+      options,
+    ) => {
       const payload: Record<string, unknown> = {
         query,
         search_depth: searchDepth,
@@ -196,7 +199,7 @@ export function createWebSearchTool() {
       if (includeDomains?.length) payload.include_domains = includeDomains;
       if (excludeDomains?.length) payload.exclude_domains = excludeDomains;
 
-      const apiRes = await callTavilyApi<any>("search", payload, 30000);
+      const apiRes = await callTavilyApi<any>("search", payload, 30000, options?.abortSignal);
 
       if (!apiRes.success || !apiRes.data) {
         return {
@@ -280,13 +283,16 @@ export function createExtractUrlTool() {
         .optional(),
       error: z.string().optional(),
     }),
-    execute: async ({
-      urls,
-      extractDepth = "advanced",
-      query,
-      chunksPerSource,
-      format = "markdown",
-    }) => {
+    execute: async (
+      {
+        urls,
+        extractDepth = "advanced",
+        query,
+        chunksPerSource,
+        format = "markdown",
+      },
+      options,
+    ) => {
       const normalizedUrls = urls.map(normalizeUrl).filter(Boolean);
       if (normalizedUrls.length === 0) {
         return {
@@ -305,7 +311,7 @@ export function createExtractUrlTool() {
       if (query) payload.query = query;
       if (chunksPerSource != null) payload.chunks_per_source = chunksPerSource;
 
-      const apiRes = await callTavilyApi<any>("extract", payload, 45000);
+      const apiRes = await callTavilyApi<any>("extract", payload, 45000, options?.abortSignal);
 
       if (!apiRes.success || !apiRes.data) {
         return {

@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
+    "lint:fast": "oxlint",
+    "oxlint": "oxlint",
+    "typecheck": "tsc --noEmit",
     "test": "bun test --isolate",
     "test:watch": "bun test --isolate --watch",
     "clean": "next clean",
@@ -46,6 +49,7 @@
     "@types/react-dom": "19.2.3",
     "eslint": "^9.0.0",
     "eslint-config-next": "16.2.10",
+    "oxlint": "^1.80.0",
     "tailwindcss": "4.1.11",
     "typescript": "6.0.3"
   },

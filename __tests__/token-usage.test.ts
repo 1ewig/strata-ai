@@ -5,7 +5,6 @@ import {
   formatCost,
   formatTokens,
   formatContextWindow,
-  type ChatMetadata,
 } from "@/lib/token-usage";
 
 type TestMessage = { role?: string; metadata?: any };

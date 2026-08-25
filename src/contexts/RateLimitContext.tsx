@@ -53,7 +53,14 @@ const buildQuotaErrorFromData = (data: RateLimitData | null | undefined): QuotaE
  */
 async function fetchRateLimitSnapshot(signal?: AbortSignal): Promise<RateLimitData | null> {
   try {
-    const res = await fetch('/api/user/rate-limit', { signal });
+    const res = await fetch(`/api/user/rate-limit?t=${Date.now()}`, {
+      signal,
+      cache: 'no-store',
+      headers: {
+        'Cache-Control': 'no-cache',
+        Pragma: 'no-cache',
+      },
+    });
     if (!res.ok) return null;
     const data = await res.json();
     return {

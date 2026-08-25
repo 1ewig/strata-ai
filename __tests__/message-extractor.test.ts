@@ -165,12 +165,21 @@ describe("findLatestCompactedMessageIndex", () => {
   });
 
   it("finds the latest message stamped as a compaction summary", () => {
-    const messages: Array<{ id: string; metadata?: { isCompactedSummary?: boolean } }> = [
+    const messages: Array<{ id: string; metadata?: { isCompactedSummary?: boolean; isCompactionFailed?: boolean } }> = [
       { id: "m1", metadata: { isCompactedSummary: true } },
       { id: "m2", metadata: {} },
       { id: "m3", metadata: { isCompactedSummary: true } },
     ];
     expect(findLatestCompactedMessageIndex(messages)).toBe(2);
+  });
+
+  it("ignores compaction messages that failed", () => {
+    const messages: Array<{ id: string; metadata?: { isCompactedSummary?: boolean; isCompactionFailed?: boolean } }> = [
+      { id: "m1", metadata: { isCompactedSummary: true } },
+      { id: "m2", metadata: {} },
+      { id: "m3", metadata: { isCompactedSummary: true, isCompactionFailed: true } },
+    ];
+    expect(findLatestCompactedMessageIndex(messages)).toBe(0);
   });
 });
 

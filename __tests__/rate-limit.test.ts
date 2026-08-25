@@ -25,7 +25,7 @@ mock.module("pg", () => ({
   default: { Pool: FakePool },
 }));
 
-const { checkAndIncrementRateLimit, getRateLimitStatus } = await import("@/lib/rate-limit");
+const { checkAndIncrementRateLimit, getRateLimitStatus, refundRateLimit } = await import("@/lib/rate-limit");
 
 function countRows(value: number) {
   return { rows: [{ cnt: String(value) }] };
@@ -51,7 +51,7 @@ function programQueries(opts: {
   const { fiveHourCount = 0, weekCount = 0, oldest5h, oldestWeek, failInsert = false } = opts;
   client.query.mockImplementation((sql: string) => {
     if (sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK") return OK;
-    if (sql.startsWith("DELETE FROM")) return OK;
+    if (sql.startsWith("DELETE FROM")) return { rowCount: 1, rows: [] };
     if (sql.includes("COUNT(*)") && sql.includes("5 hours")) return countRows(fiveHourCount);
     if (sql.includes("COUNT(*)") && sql.includes("7 days")) return countRows(weekCount);
     if (sql.includes("ORDER BY created_at ASC") && sql.includes("5 hours")) {
@@ -62,7 +62,7 @@ function programQueries(opts: {
     }
     if (sql.startsWith("INSERT INTO")) {
       if (failInsert) throw new Error("insert failed");
-      return OK;
+      return { rows: [{ id: "mock-log-id-123" }] };
     }
     throw new Error(`unexpected query: ${sql}`);
   });
@@ -78,7 +78,12 @@ describe("checkAndIncrementRateLimit", () => {
     programQueries({ fiveHourCount: 4, weekCount: 30 });
 
     const result = await checkAndIncrementRateLimit("user-1");
-    expect(result).toEqual({ allowed: true, remaining5h: 5, remainingWeek: 19 });
+    expect(result).toEqual({
+      allowed: true,
+      remaining5h: 5,
+      remainingWeek: 19,
+      messageLogId: "mock-log-id-123",
+    });
 
     const inserts = client.query.mock.calls.filter(([sql]) => String(sql).startsWith("INSERT INTO"));
     expect(inserts).toHaveLength(1);
@@ -122,6 +127,26 @@ describe("checkAndIncrementRateLimit", () => {
     await expect(checkAndIncrementRateLimit("user-1")).rejects.toThrow("insert failed");
     expect(client.query.mock.calls.some(([sql]) => sql === "ROLLBACK")).toBe(true);
     expect(client.release).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("refundRateLimit", () => {
+  it("deletes the message log row by id", async () => {
+    programQueries({});
+
+    const refunded = await refundRateLimit("mock-log-id-123");
+    expect(refunded).toBe(true);
+
+    const deletes = client.query.mock.calls.filter(([sql]) => String(sql).startsWith("DELETE FROM better_auth.message_log WHERE id ="));
+    expect(deletes).toHaveLength(1);
+    expect(deletes[0][1]).toEqual(["mock-log-id-123"]);
+    expect(client.release).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns false without querying if no messageLogId is provided", async () => {
+    const refunded = await refundRateLimit(undefined);
+    expect(refunded).toBe(false);
+    expect(client.query).not.toHaveBeenCalled();
   });
 });
 

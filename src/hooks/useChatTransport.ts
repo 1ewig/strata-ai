@@ -12,6 +12,7 @@ interface UseChatTransportParams {
   chatRef: React.RefObject<any>;
   updateRateLimitData: (data: any) => void;
   setQuotaError: (data: any) => void;
+  checkQuotaStatus?: () => Promise<void>;
 }
 
 /**
@@ -26,6 +27,7 @@ export function useChatTransport({
   chatRef,
   updateRateLimitData,
   setQuotaError,
+  checkQuotaStatus,
 }: UseChatTransportParams) {
   /* eslint-disable react-hooks/refs */
   return useMemo(
@@ -41,7 +43,13 @@ export function useChatTransport({
           // History pruning to the latest compaction summary is handled server-side
           // in /api/agent (shared sliceMessagesAfterCompaction), so this transport
           // stays a pure network/header layer.
-          const res = await fetch(url, options);
+          let res: Response;
+          try {
+            res = await fetch(url, options);
+          } catch (fetchErr) {
+            void checkQuotaStatus?.();
+            throw fetchErr;
+          }
           // Rate-limit state is returned on every response; surface it to the global quota context
           const rem5h = res.headers.get('X-RateLimit-Remaining-5h');
           const remWeek = res.headers.get('X-RateLimit-Remaining-Week');
@@ -77,6 +85,7 @@ export function useChatTransport({
               }
             }, 0);
           } else if (!res.ok) {
+            void checkQuotaStatus?.();
             const data = await res.clone().json().catch(() => null);
             const detailMsg = data?.error || data?.message || `HTTP ${res.status}`;
             throw new Error(`[API Error ${res.status}] ${detailMsg}`);
@@ -84,7 +93,7 @@ export function useChatTransport({
           return res;
         },
       }),
-    [updateRateLimitData, setQuotaError, chatRef, filesRef, modelRef, thinkingLevelRef],
+    [updateRateLimitData, setQuotaError, checkQuotaStatus, chatRef, filesRef, modelRef, thinkingLevelRef],
   );
   /* eslint-enable react-hooks/refs */
 }

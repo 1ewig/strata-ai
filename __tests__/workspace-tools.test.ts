@@ -10,7 +10,6 @@ import {
 import {
   MAX_FILE_CHARS,
   MAX_FILES_PER_WORKSPACE,
-  MAX_WORKSPACE_TOTAL_CHARS,
 } from "@/lib/limits";
 import { makeFile, runTool, setupWorkspaceTools } from "./helpers";
 

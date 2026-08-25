@@ -102,22 +102,28 @@ export function extractDeletedFilesFromMessage(
   return deletions;
 }
 
-/**
- * Structural slice of a message that just exposes compaction-summary metadata.
- */
-type CompactionAwareMessage = { metadata?: { isCompactedSummary?: boolean } };
+type CompactionAwareMessage = {
+  metadata?: {
+    isCompactedSummary?: boolean;
+    isCompactionFailed?: boolean;
+  };
+};
 
 /**
  * Finds the index of the latest compaction summary message in a messages array.
+ * Ignores failed compaction attempts so that full conversation context remains intact.
  * @param messages - Array of messages to search.
- * @returns The index of the latest compaction summary message, or -1 if none exists.
+ * @returns The index of the latest successful compaction summary message, or -1 if none exists.
  */
 export function findLatestCompactedMessageIndex(
   messages: CompactionAwareMessage[] | undefined,
 ): number {
   if (!messages || messages.length === 0) return -1;
   for (let i = messages.length - 1; i >= 0; i--) {
-    if (messages[i]?.metadata?.isCompactedSummary === true) {
+    if (
+      messages[i]?.metadata?.isCompactedSummary === true &&
+      messages[i]?.metadata?.isCompactionFailed !== true
+    ) {
       return i;
     }
   }
