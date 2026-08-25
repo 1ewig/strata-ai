@@ -58,7 +58,7 @@
 
 **Environment variables** (`.env.example` is authoritative): `GOOGLE_GENERATIVE_AI_API_KEY` (required), `FIREWORKS_API_KEY` (required for DeepSeek), `NEXT_PUBLIC_GEMINI_MODEL` (default model id), `DATABASE_URL` (Supabase pooler), `BETTER_AUTH_SECRET` (≥32 chars), `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL` (auth client base), `TAVILY_API_KEY` (optional).
 
-**Runtime scripts** (all `bun run`): `dev` (next dev) · `build` (next build; must pass) · `start` (standalone server) · `lint` (eslint .; must pass) · `test` (bun test --isolate) · `test:watch` · `clean` (next clean) · `db:migrate` (executes `scripts/better-auth-schema.sql` via `migrate-better-auth-schema.ts`) · `db:test` (connection + schema healthcheck).
+**Runtime scripts** (all `bun run`): `dev` (next dev) · `build` (next build; must pass) · `start` (standalone server) · `lint` (eslint .; must pass) · `lint:fast` (oxlint fast linter) · `typecheck` (tsc --noEmit) · `test` (bun test --isolate) · `test:watch` · `clean` (next clean) · `db:migrate` (executes `scripts/better-auth-schema.sql` via `migrate-better-auth-schema.ts`) · `db:test` (connection + schema healthcheck).
 
 **Test suite inventory (`__tests__/`, bun test --isolate):**
 
@@ -66,7 +66,8 @@
 |-------|--------|
 | `api-agent-route.test.ts` | Auth/rate-limit/zod/step-clamp pipeline of POST /api/agent (mock.module of auth, rate-limit, agent-runner) |
 | `api-agent-compact-route.test.ts` | Same pipeline for POST /api/agent/compact |
-| `rate-limit.test.ts` | Scriptable fake pg pool: BEGIN/COUNT/INSERT/COMMIT SQL-shape dispatch, retryAfter math |
+| `error-classifier.test.ts` | Provider error mapping (Google, Fireworks, network, auth) to ClassifiedError and retry/refund flags |
+| `rate-limit.test.ts` | Scriptable fake pg pool: BEGIN/COUNT/INSERT/COMMIT SQL-shape dispatch, refundRateLimit, retryAfter math |
 | `workspace-tools.test.ts` | Cap enforcement, truncation, upsert semantics, rename collision, section extraction |
 | `edit-engine.test.ts` | All 3 StringEditEngine strategies + ambiguity errors |
 | `message-extractor.test.ts` | File delta extraction (modern + legacy tool shapes), compaction slicing |
@@ -87,20 +88,21 @@ ChatInput (textarea, slash menu, char counter)
           reads model/thinkingLevel/files from refs — never re-created)
          └─ src/proxy.ts (Next 16 proxy): session cookie gate (getSessionCookie),
             JSON 401 for APIs / redirect to /auth?callbackUrl= for pages, security headers
-           └─ POST /api/agent (Route Handler shell):
-              auth.api.getSession → checkAndIncrementRateLimit (consumes quota,
-              BEGIN/COMMIT transaction) → JSON parse (400) → zod safeParse (400)
-              → sliceMessagesAfterCompaction → 2000-char check on last user message
-              → clamp maxSteps 1..30 (default 25) → runAgentResponse
+           └─ POST /api/agent (delegates to withAgentRouteGuard in lib/ai/route-guards.ts):
+              auth.api.getSession (401) → JSON parse (400) → zod safeParse (400)
+              → limit guards (2000-char max, ≤4 images) → checkAndIncrementRateLimit (429)
+              → sliceMessagesAfterCompaction → clamp maxSteps 1..30 (default 25)
+              → execution delegate: runAgentResponse with abort signal + safeAsyncRefundRateLimit
                 └─ lib/ai/agent-runner.ts (createUIStreamResponder):
                    resolveAgentModel (google|fireworks) → sanitizeMessagesForProvider
-                   (prune foreign providerMetadata/call/resultProviderMetadata)
+                   (prune foreign providerMetadata/call/resultProviderMetadata via lib/ai/sanitization.ts)
                    → convertToModelMessages → streamText with buildSystemInstruction
                    (file metadata only + token budget), tools from createWorkspaceTools
                    bound to a per-request createMutableWorkspace closure, smoothStream
-                   (word, 25ms) + coalesceToolInputDeltas transforms, prepareStep
-                   re-injects system prompt with fresh tokenBudget each step,
-                   stopWhen = isStepCount(maxSteps), provider usage captured per step
+                   (word, 25ms) + coalesceToolInputDeltas (lib/ai/stream-transforms.ts),
+                   prepareStep re-injects system prompt with fresh tokenBudget each step,
+                   stopWhen = isStepCount(maxSteps), provider usage captured per step,
+                   onError / catch classifies errors (lib/ai/error-classifier.ts) + triggers quota refund
                    └─ SSE UI-message stream (createUIMessageStreamResponse) +
                       X-RateLimit-Remaining-5h / X-RateLimit-Remaining-Week headers;
                       messageMetadata stamps usage/stepTotalUsage/modelId on finish part
@@ -116,7 +118,7 @@ ChatInput (textarea, slash menu, char counter)
 
 ```
 ChatInput "/compact" → useCompaction.triggerCompaction (guard: not already compacting,
-  messages exist, not loading) → POST /api/agent/compact (same auth + quota + zod shell)
+  messages exist, not loading) → POST /api/agent/compact (via withAgentRouteGuard: auth + rate-limit)
   → runCompactionResponse reuses createUIStreamResponder with:
      model = COMPACTION_MODEL_ID (gemini-3.1-flash-lite), thinking = 'high',
      initialSystem = buildCompactionInstruction(files) [metadata only],
@@ -126,6 +128,7 @@ ChatInput "/compact" → useCompaction.triggerCompaction (guard: not already com
      fetch → parseJsonEventStream({ schema: uiMessageChunkSchema }) → readUIMessageStream
      → withCompactionMetadata stamps isCompactedSummary + modelId onto a stable
        `compact-<timestamp>` message id → live setMessages each chunk
+     (on stream error: CompactionDivider renders failed state with retry button + instant quota sync)
   → reconcileFinishedStep persists the summary + all messages
   → NEXT agent/compact requests: sliceMessagesAfterCompaction trims history to
     [latest summary, ...newMessages] server-side — pre-summary dialogue is never
@@ -292,7 +295,7 @@ Strata Ai/
     └── lib/
         ├── auth.ts            — Server Better Auth instance (pg Pool, cookie cache, nextCookies).
         ├── auth-client.ts     — Browser Better Auth client + useSession export.
-        ├── rate-limit.ts      — Atomic sliding-window quota check/increment + read-only status.
+        ├── rate-limit.ts      — Atomic sliding-window quota check/increment + read-only status + refundRateLimit.
         ├── models.ts          — Model catalog (6 entries, pricing, context windows, per-model
         │                        supportsVision), thinking-level config, localStorage preferences,
         │                        COMPACTION_MODEL_ID.
@@ -315,6 +318,12 @@ Strata Ai/
             ├── index.ts       — Barrel: prompts + tools.
             ├── agent-runner.ts— ALL streamText config; createUIStreamResponder shared by agent
             │                    and compaction; SSE wrapping + quota headers.
+            ├── route-guards.ts — withAgentRouteGuard: 5-stage API route pipeline (auth, json, limits,
+            │                    rate-limit, delegate with safeAsyncRefundRateLimit on error).
+            ├── error-classifier.ts — classifyProviderError: maps provider/network/auth errors into
+            │                    structured ClassifiedError shapes with retry/refund semantics.
+            ├── sanitization.ts — sanitizeMessagesForProvider + stripImageContentForTextOnlyProviders.
+            ├── stream-transforms.ts — coalesceToolInputDeltas transform to prevent UI freezes on tool args.
             ├── providers.ts   — resolveAgentModel (google/fireworks wiring, reasoning mapping,
             │                    providerOptions); DEFAULT_AGENT_MODEL.
             ├── prompts.ts     — buildSystemInstruction (8 sections, file metadata only, token
@@ -515,8 +524,12 @@ A user with 3 messages in the last 5 hours and 9 in the last 7 days sends a mess
 ## 8. Unique Project Patterns, Optimizations & Quirks
 
 - **`createUIStreamResponder` (agent-runner.ts) — the single collapse point:** every `streamText` concern (model resolution, metadata sanitization, reasoning wiring, system-prompt re-injection per step, word-paced smoothing, tool-delta coalescing, step caps, lifecycle logging, UI-message SSE wrapping, quota headers, usage stamping) lives in ONE shared function; `runAgentResponse` and `runCompactionResponse` are just delta configs. New endpoints must reuse it — never hand-roll a second stream assembly.
-- **`coalesceToolInputDeltas` transform:** buffers `tool-input-delta` chunks per tool-call id and flushes them once at `tool-input-end`/`tool-call`. Prevents AI SDK 7's message reducer from running O(N·length) `parsePartialJson` + `fixJson` per token on large tool args, which froze the UI. Delicate: must stay ahead of `smoothStream` in the transform array and preserve `providerMetadata`; logs coalescing stats at `[agent]` prefix.
-- **`sanitizeMessagesForProvider`:** strips `providerMetadata` / `callProviderMetadata` / `resultProviderMetadata` keys belonging to providers other than the active one. Fixes Fireworks rejecting Gemini thought signatures re-emitted as `extra_content` on tool-call parts ("Extra inputs are not permitted"). The active provider's keys are intentionally kept (Gemini thought round-trip).
+- **5-Stage Route Guard Pipeline (`withAgentRouteGuard` in `lib/ai/route-guards.ts`):** wraps both `/api/agent` and `/api/agent/compact` with a uniform 5-stage pipeline: (1) Better Auth session resolution (401), (2) request JSON body parse (400), (3) message length and image count guards (400), (4) PostgreSQL sliding-window quota check/increment (429), and (5) execution delegate with abort signal forwarding.
+- **Inference Failure Quota Refund (`refundRateLimit` + `safeAsyncRefundRateLimit`):** when an LLM provider errors (5xx, timeouts, model auth issues) or stream initialization fails, the route guard and agent runner catch the error, map it via `classifyProviderError`, and execute an asynchronous refund against the database `message_log` row. Users are never charged for infrastructure or provider failures.
+- **Upstream Error Classification (`lib/ai/error-classifier.ts`):** maps Google Gemini, Fireworks/DeepSeek, network timeouts, and HTTP status codes into typed `ClassifiedError` objects (`code`, `message`, `status`, `retryAfter`, `refundable`). Emits UI stream error chunks (`{ type: 'error', errorText: ... }`) and surfaces user-friendly explanations.
+- **Instant Client Quota Synchronization:** `RateLimitContext` exposes `checkQuotaStatus`, which calls `/api/user/rate-limit` to fetch fresh sliding-window state whenever a transport or compaction stream encounters an error, instantly clearing false quota blocks in the UI.
+- **`coalesceToolInputDeltas` transform (`lib/ai/stream-transforms.ts`):** buffers `tool-input-delta` chunks per tool-call id and flushes them once at `tool-input-end`/`tool-call`. Prevents AI SDK 7's message reducer from running O(N·length) `parsePartialJson` + `fixJson` per token on large tool args, which froze the UI. Delicate: must stay ahead of `smoothStream` in the transform array and preserve `providerMetadata`; logs coalescing stats at `[agent]` prefix.
+- **`sanitizeMessagesForProvider` (`lib/ai/sanitization.ts`):** strips `providerMetadata` / `callProviderMetadata` / `resultProviderMetadata` keys belonging to providers other than the active one. Fixes Fireworks rejecting Gemini thought signatures re-emitted as `extra_content` on tool-call parts ("Extra inputs are not permitted"). The active provider's keys are intentionally kept (Gemini thought round-trip).
 - **StringEditEngine fallback ladder:** exact → whitespace-normalized (CRLF + whitespace-run collapse, line-trimmed matching) → anchor-matched (first/last line within a ±5-line drift window). Every strategy refuses ambiguous multi-matches with instructive errors. This is the safety net that makes agent edits non-destructive; the system prompt instructs `readFile` before `editFile` and verbatim `searchString` copying.
 - **Per-step system prompt re-injection:** `prepareStep` rebuilds `buildSystemInstruction` with the CURRENT workspace file list and token budget before every tool-loop step, so the model sees file changes without re-sending the full history — combined with `isStepCount` this makes long agent runs stable.
 - **Active-context token accounting:** `metadata.usage` = final step only (avoids multi-step N-pass inflation); `stepTotalUsage` keeps the real API totals for cost; compaction resets the active meter to a 1,500-token system baseline + summary output; `calculateTokenCost` uses catalog pricing per model, grouping breakdowns by model id.
