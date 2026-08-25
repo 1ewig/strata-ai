@@ -13,6 +13,8 @@ export interface ChatMetadata {
   modelId?: string;
   /** True when this message is a context compaction summary (created via the /compact slash command). */
   isCompactedSummary?: boolean;
+  /** True when context compaction attempted to run but failed. */
+  isCompactionFailed?: boolean;
 }
 
 /** Active context window usage for the current conversation state. */
@@ -132,7 +134,7 @@ export function calculateTokenMetrics(
     if (!usage) continue;
 
     latestUsage = usage;
-    isLatestTurnCompacted = m.metadata?.isCompactedSummary === true;
+    isLatestTurnCompacted = m.metadata?.isCompactedSummary === true && m.metadata?.isCompactionFailed !== true;
     turnCount += 1;
 
     const input = usage.inputTokens ?? 0;

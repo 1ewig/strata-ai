@@ -141,6 +141,9 @@ export function useCompaction({
           new TransformStream({
             transform(chunk, controller) {
               if (chunk.success) {
+                if (chunk.value.type === 'error') {
+                  throw new Error(String((chunk.value as any).error || 'Inference error'));
+                }
                 controller.enqueue(chunk.value);
               }
             },
@@ -160,6 +163,16 @@ export function useCompaction({
           );
 
           chatRef.current?.setMessages([...messagesToCompact, latestCompactionMsg]);
+        }
+
+        // Validate that compaction generated substantive summary content
+        const rawText = (latestCompactionMsg.parts || [])
+          .filter((p: any) => p.type === 'text')
+          .map((p: any) => p.text)
+          .join('') || (typeof latestCompactionMsg.content === 'string' ? latestCompactionMsg.content : '');
+
+        if (!rawText.trim()) {
+          throw new Error('Inference failed: no compaction summary was generated.');
         }
 
         const finalCompactionMsg = withCompactionMetadata(latestCompactionMsg, COMPACTION_MODEL_ID);
