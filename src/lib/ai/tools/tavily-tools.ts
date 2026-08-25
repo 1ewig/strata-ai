@@ -185,7 +185,7 @@ export function createWebSearchTool() {
         includeDomains,
         excludeDomains,
       },
-      { abortSignal } = {},
+      options,
     ) => {
       const payload: Record<string, unknown> = {
         query,
@@ -199,7 +199,7 @@ export function createWebSearchTool() {
       if (includeDomains?.length) payload.include_domains = includeDomains;
       if (excludeDomains?.length) payload.exclude_domains = excludeDomains;
 
-      const apiRes = await callTavilyApi<any>("search", payload, 30000, abortSignal);
+      const apiRes = await callTavilyApi<any>("search", payload, 30000, options?.abortSignal);
 
       if (!apiRes.success || !apiRes.data) {
         return {
@@ -291,7 +291,7 @@ export function createExtractUrlTool() {
         chunksPerSource,
         format = "markdown",
       },
-      { abortSignal } = {},
+      options,
     ) => {
       const normalizedUrls = urls.map(normalizeUrl).filter(Boolean);
       if (normalizedUrls.length === 0) {
@@ -311,7 +311,7 @@ export function createExtractUrlTool() {
       if (query) payload.query = query;
       if (chunksPerSource != null) payload.chunks_per_source = chunksPerSource;
 
-      const apiRes = await callTavilyApi<any>("extract", payload, 45000, abortSignal);
+      const apiRes = await callTavilyApi<any>("extract", payload, 45000, options?.abortSignal);
 
       if (!apiRes.success || !apiRes.data) {
         return {

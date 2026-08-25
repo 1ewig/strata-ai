@@ -260,7 +260,7 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
               try {
                 writer.write({
                   type: "error",
-                  error: classified.message,
+                  errorText: classified.message,
                 });
               } catch {
                 // Writer might already be closed
@@ -295,7 +295,7 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
           try {
             writer.write({
               type: "error",
-              error: classified.message,
+              errorText: classified.message,
             });
           } catch {
             // Writer might already be closed
