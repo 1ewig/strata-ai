@@ -1,6 +1,8 @@
 import { auth } from "@/lib/auth";
 import { getRateLimitStatus } from "@/lib/rate-limit";
 
+export const dynamic = "force-dynamic";
+
 /**
  * GET /api/user/rate-limit - reports the signed-in user's current quota
  * usage. Requires an authenticated session; returns a RateLimitResult JSON
@@ -15,7 +17,10 @@ export async function GET(req: Request) {
   if (!session) {
     return new Response(JSON.stringify({ error: "Unauthorized" }), {
       status: 401,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
     });
   }
 
@@ -24,13 +29,19 @@ export async function GET(req: Request) {
     const status = await getRateLimitStatus(session.user.id);
     return new Response(JSON.stringify(status), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
     });
   } catch (error) {
     console.error("[rate-limit API error]:", error);
     return new Response(JSON.stringify({ error: "Failed to fetch rate limit status" }), {
       status: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store, no-cache, must-revalidate",
+      },
     });
   }
 }

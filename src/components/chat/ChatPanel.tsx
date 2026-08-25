@@ -187,6 +187,7 @@ export default React.memo(function ChatPanel({
       {messages.map((message, idx) => {
         const isLastAssistant = isLoading && message.role === 'assistant' && idx === messages.length - 1;
         const isCompacted = message.metadata?.isCompactedSummary === true;
+        const isCompactionFailed = message.metadata?.isCompactionFailed === true;
 
         return (
           <React.Fragment key={message.id}>
@@ -196,7 +197,12 @@ export default React.memo(function ChatPanel({
               isStreaming={isLastAssistant}
               onOpenDrawer={onOpenDrawer}
             />
-            {isCompacted && !isLastAssistant && <CompactionDivider label="Compaction completed" />}
+            {isCompacted && !isLastAssistant && (
+              <CompactionDivider
+                label={isCompactionFailed ? 'Compaction failed' : 'Compaction completed'}
+                variant={isCompactionFailed ? 'danger' : 'default'}
+              />
+            )}
           </React.Fragment>
         );
       })}

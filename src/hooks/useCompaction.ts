@@ -9,7 +9,6 @@ import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
 import { buildQuotaError } from '@/lib/limits';
 import { getFriendlyErrorMessage } from '@/lib/ai/chat-error-handler';
 import { persistMessages } from '@/lib/db/db';
-import { generateId } from '@/lib/id';
 
 /** Parameters required by the `useCompaction` hook. */
 export interface UseCompactionParams {
@@ -179,16 +178,32 @@ export function useCompaction({
       } catch (err) {
         console.error('[useCompaction] Compaction failed:', err);
         void checkQuotaStatus?.();
+
+        const errMsg = (err instanceof Error ? err.message : String(err)) || '';
+        const isQuota = errMsg.includes('429') || errMsg.toLowerCase().includes('rate limit');
+
+        if (isQuota) {
+          setQuotaError((prev: any) => prev || {
+            message: buildQuotaError(0, 0)?.message || 'Usage quota reached. Please wait before trying again.',
+          });
+        }
+
         const friendlyError = getFriendlyErrorMessage(
           err instanceof Error ? err : new Error(String(err))
         );
-        const errorContent = `Context compaction failed: ${friendlyError}`;
+
         const errorMsg = {
-          id: generateId(),
-          role: 'assistant',
-          content: errorContent,
-          parts: [{ type: 'text', text: errorContent }],
+          id: compactionMessageId,
+          role: 'assistant' as const,
+          content: friendlyError,
+          parts: [{ type: 'text' as const, text: friendlyError }],
+          metadata: {
+            isCompactedSummary: true,
+            isCompactionFailed: true,
+            modelId: COMPACTION_MODEL_ID,
+          },
         };
+
         const messagesWithError = [...messagesToCompact, errorMsg];
         chatRef.current?.setMessages(messagesWithError);
         await persistMessages(chatId, messagesWithError, userId).catch((pErr) => {
