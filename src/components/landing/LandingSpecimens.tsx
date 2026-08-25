@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import { Cpu, Zap, Globe, Eye, Code, Terminal, Layers } from 'lucide-react';
 import {
   staggerContainerVariants,
   fadeUpVariants,

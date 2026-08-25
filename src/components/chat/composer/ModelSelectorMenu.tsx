@@ -17,7 +17,6 @@ interface ModelSelectorMenuProps {
   onThinkingLevelChange: (level: string) => void;
   dropDirection?: 'up' | 'down';
   align?: 'left' | 'right';
-  variant?: 'header' | 'composer' | 'default';
   id?: string;
   className?: string;
 }
@@ -29,7 +28,6 @@ export default function ModelSelectorMenu({
   onThinkingLevelChange,
   dropDirection = 'down',
   align = 'right',
-  variant = 'default',
   id,
   className = '',
 }: ModelSelectorMenuProps) {

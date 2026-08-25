@@ -268,7 +268,7 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
                 // while preserving stepTotalUsage for cumulative session analytics.
                 if (part.type === "finish") {
                   return {
-                    ...(config.extraMetadata ?? {}),
+                    ...config.extraMetadata,
                     usage: lastStepUsage || part.totalUsage,
                     stepTotalUsage: part.totalUsage,
                     modelId: modelId || DEFAULT_AGENT_MODEL,

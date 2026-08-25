@@ -267,16 +267,14 @@ export function useChatSession(chatId: string) {
         }
         // Build the UI-message parts: file parts (data URLs) first, then the text.
         // convertToModelMessages turns these into multimodal model content on the server.
-        const parts: any[] = [
-          ...(hasImages
-            ? images.map((image) => ({
-                type: 'file',
-                mediaType: image.mediaType,
-                filename: image.filename,
-                url: image.dataUrl,
-              }))
-            : []),
-        ];
+        const parts: any[] = hasImages
+          ? images.map((image) => ({
+              type: 'file',
+              mediaType: image.mediaType,
+              filename: image.filename,
+              url: image.dataUrl,
+            }))
+          : [];
         if (trimmed) {
           parts.push({ type: 'text', text: trimmed });
         }

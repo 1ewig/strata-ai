@@ -38,7 +38,7 @@ function withCompactionMetadata(msg: any, modelId: string = COMPACTION_MODEL_ID)
   return {
     ...msg,
     metadata: {
-      ...(msg?.metadata || {}),
+      ...msg?.metadata,
       isCompactedSummary: true,
       modelId,
     },

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileText, Layers, Globe, Sparkles, CheckCircle2, Bookmark, ArrowUpRight } from 'lucide-react';
+import { FileText, Globe, Sparkles, CheckCircle2, Bookmark, ArrowUpRight } from 'lucide-react';
 import {
   staggerContainerVariants,
   fadeUpVariants,

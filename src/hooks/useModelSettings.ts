@@ -1,13 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   getInitialModel,
   saveModelPreference,
   getStoredThinkingLevel,
   saveThinkingLevel,
   getValidThinkingLevelForModel,
-  MODEL_THINKING_LEVELS,
 } from '@/lib/models';
 import { updateConversationModel, Conversation } from '@/lib/db/db';
 

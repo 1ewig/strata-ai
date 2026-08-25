@@ -294,7 +294,7 @@ export async function saveMessage(chatId: string, message: UIMessage, userId?: s
 export async function getChatMessages(chatId: string): Promise<UIMessage[]> {
   const dbMsgs = await db.messages.where('chatId').equals(chatId).sortBy('timestamp');
   // Strip the storage-only fields (`chatId`, `timestamp`) from each row.
-  return dbMsgs.map(({ chatId: _, timestamp: __, ...msg }) => msg as UIMessage);
+  return dbMsgs.map(({ chatId: _chatId, timestamp: _timestamp, ...msg }) => msg as UIMessage);
 }
 
 /**
