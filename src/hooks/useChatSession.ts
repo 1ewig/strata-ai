@@ -48,6 +48,7 @@ export function useChatSession(chatId: string) {
     updateRateLimitData,
     setQuotaError,
     clearQuotaError,
+    checkQuotaStatus,
   } = useRateLimit();
 
   const dexieMessages = useLiveQuery(
@@ -104,6 +105,7 @@ export function useChatSession(chatId: string) {
     chatRef,
     updateRateLimitData,
     setQuotaError,
+    checkQuotaStatus,
   });
 
   // Modular context compaction hook
@@ -116,6 +118,7 @@ export function useChatSession(chatId: string) {
     sendMessageRef,
     updateRateLimitData,
     setQuotaError,
+    checkQuotaStatus,
   });
 
   const chat = useChat({
@@ -143,8 +146,9 @@ export function useChatSession(chatId: string) {
           chatRef,
           setQuotaError,
         });
+        void checkQuotaStatus();
       },
-      [chatId, userId, setQuotaError],
+      [chatId, userId, setQuotaError, checkQuotaStatus],
     ),
     onFinish: useCallback(
       async ({

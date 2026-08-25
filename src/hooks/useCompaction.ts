@@ -21,6 +21,7 @@ export interface UseCompactionParams {
   sendMessageRef: React.RefObject<((msg: { text: string }) => void) | null>;
   updateRateLimitData: (data: Partial<RateLimitData>) => void;
   setQuotaError: React.Dispatch<React.SetStateAction<QuotaError | null>>;
+  checkQuotaStatus?: () => Promise<void>;
 }
 
 /** Return interface of `useCompaction`. */
@@ -57,6 +58,7 @@ export function useCompaction({
   sendMessageRef,
   updateRateLimitData,
   setQuotaError,
+  checkQuotaStatus,
 }: UseCompactionParams): UseCompactionReturn {
   const [isCompacting, setIsCompacting] = useState(false);
   const isCompactingRef = useRef(false);
@@ -176,6 +178,7 @@ export function useCompaction({
         });
       } catch (err) {
         console.error('[useCompaction] Compaction failed:', err);
+        void checkQuotaStatus?.();
         const friendlyError = getFriendlyErrorMessage(
           err instanceof Error ? err : new Error(String(err))
         );
@@ -205,6 +208,7 @@ export function useCompaction({
       sendMessageRef,
       updateRateLimitData,
       setQuotaError,
+      checkQuotaStatus,
     ],
   );
 
