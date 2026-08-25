@@ -13,6 +13,7 @@ const DEFAULT_RESPONSE = (_opts?: any) => new Response("streamed", { status: 200
 
 const sessionMock = mock(DEFAULT_SESSION);
 const rateLimitMock = mock(DEFAULT_QUOTA);
+const refundRateLimitMock = mock(() => Promise.resolve(true));
 const runAgentResponseMock = mock(DEFAULT_RESPONSE);
 
 mock.module("@/lib/auth", () => ({
@@ -21,6 +22,7 @@ mock.module("@/lib/auth", () => ({
 
 mock.module("@/lib/rate-limit", () => ({
   checkAndIncrementRateLimit: rateLimitMock,
+  refundRateLimit: refundRateLimitMock,
 }));
 
 mock.module("@/lib/ai/agent-runner", () => ({
@@ -43,16 +45,18 @@ function withSession(userId = "user-1") {
   sessionMock.mockImplementation(() => ({ user: { id: userId } }));
 }
 
-function withQuota(allowed: boolean, remaining5h = 0, remainingWeek = 0, retryAfter?: number) {
-  rateLimitMock.mockImplementation(() => ({ allowed, remaining5h, remainingWeek, retryAfter }));
+function withQuota(allowed: boolean, remaining5h = 0, remainingWeek = 0, retryAfter?: number, messageLogId?: string) {
+  rateLimitMock.mockImplementation(() => ({ allowed, remaining5h, remainingWeek, retryAfter, messageLogId }));
 }
 
 afterEach(() => {
   sessionMock.mockClear();
   rateLimitMock.mockClear();
+  refundRateLimitMock.mockClear();
   runAgentResponseMock.mockClear();
   sessionMock.mockImplementation(DEFAULT_SESSION);
   rateLimitMock.mockImplementation(DEFAULT_QUOTA);
+  refundRateLimitMock.mockImplementation(() => Promise.resolve(true));
   runAgentResponseMock.mockImplementation(DEFAULT_RESPONSE);
 });
 
@@ -91,25 +95,27 @@ describe("POST /api/agent", () => {
     withSession();
     const res = await post("not json");
     expect(res.status).toBe(400);
-    expect(rateLimitMock).toHaveBeenCalledTimes(1);
+    expect(rateLimitMock).not.toHaveBeenCalled();
     expect(runAgentResponseMock).not.toHaveBeenCalled();
   });
 
-  it("returns flattened zod details for schema failures", async () => {
+  it("returns flattened zod details for schema failures without consuming quota", async () => {
     withSession();
     const res = await post({});
     expect(res.status).toBe(400);
+    expect(rateLimitMock).not.toHaveBeenCalled();
     const body = await res.json();
     expect(body.error).toBe("Invalid request");
     expect(body.details).toBeDefined();
   });
 
-  it("rejects an overlong latest user message", async () => {
+  it("rejects an overlong latest user message without consuming quota", async () => {
     withSession();
     const res = await post({
       messages: [{ role: "user", content: "x".repeat(MAX_MESSAGE_CHARS + 1) }],
     });
     expect(res.status).toBe(400);
+    expect(rateLimitMock).not.toHaveBeenCalled();
     const body = await res.json();
     expect(body.error).toContain("maximum character limit");
     expect(runAgentResponseMock).not.toHaveBeenCalled();
@@ -121,6 +127,13 @@ describe("POST /api/agent", () => {
       messages: [{ role: "assistant", content: "x".repeat(MAX_MESSAGE_CHARS + 1) }],
     });
     expect(res.status).toBe(200);
+  });
+
+  it("forwards onInferenceError callback to runAgentResponse", async () => {
+    withSession();
+    const res = await post({ messages: [{ role: "user", content: "hi" }] });
+    expect(res.status).toBe(200);
+    expect(runAgentResponseMock.mock.calls[0][0].onInferenceError).toBeDefined();
   });
 
   it("prunes history at the latest compaction summary before delegating", async () => {

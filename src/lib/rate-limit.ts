@@ -14,6 +14,7 @@ export interface RateLimitResult {
   remaining5h: number;
   remainingWeek: number;
   retryAfter?: number;
+  messageLogId?: string;
 }
 
 // Rolling windows and per-window caps for the two rate limits
@@ -27,7 +28,7 @@ const MAX_WEEK = 50;
  * message when allowed, all within a single transaction.
  * @param userId - The user's unique identifier.
  * @returns The current rate-limit state; `retryAfter` (seconds) is set when
- * a window is exhausted.
+ * a window is exhausted, and `messageLogId` is set when a message is logged.
  */
 export async function checkAndIncrementRateLimit(userId: string): Promise<RateLimitResult> {
   const client = await pool.connect();
@@ -85,17 +86,45 @@ export async function checkAndIncrementRateLimit(userId: string): Promise<RateLi
       return { allowed: false, remaining5h: MAX_5H - fiveHourCount, remainingWeek: 0, retryAfter };
     }
 
-    // Both windows have room: record the message, then report the remaining budget
-    await client.query(
-      `INSERT INTO better_auth.message_log (user_id) VALUES ($1)`,
+    // Both windows have room: record the message and retrieve the generated log id
+    const insertRes = await client.query(
+      `INSERT INTO better_auth.message_log (user_id) VALUES ($1) RETURNING id`,
       [userId],
     );
+    const messageLogId = insertRes.rows[0]?.id as string | undefined;
 
     await client.query("COMMIT");
-    return { allowed: true, remaining5h: MAX_5H - fiveHourCount - 1, remainingWeek: MAX_WEEK - weekCount - 1 };
+    return {
+      allowed: true,
+      remaining5h: MAX_5H - fiveHourCount - 1,
+      remainingWeek: MAX_WEEK - weekCount - 1,
+      messageLogId,
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Refunds a previously recorded quota message entry if an inference fails.
+ * @param messageLogId - The UUID of the message log record to remove.
+ * @returns True if a log row was deleted, false otherwise.
+ */
+export async function refundRateLimit(messageLogId?: string): Promise<boolean> {
+  if (!messageLogId) return false;
+  const client = await pool.connect();
+  try {
+    const res = await client.query(
+      `DELETE FROM better_auth.message_log WHERE id = $1`,
+      [messageLogId],
+    );
+    return (res.rowCount ?? 0) > 0;
+  } catch (error) {
+    console.error("[rate-limit] Failed to refund rate limit:", error);
+    return false;
   } finally {
     client.release();
   }

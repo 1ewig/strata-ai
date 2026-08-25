@@ -7,7 +7,6 @@ import {
   smoothStream,
   createUIMessageStream,
   LanguageModelUsage,
-  type ModelMessage,
 } from "ai";
 import {
   buildSystemInstruction,
@@ -19,96 +18,17 @@ import { WorkspaceToolsContext } from "@/lib/ai/tools/types";
 import { WorkspaceFile } from "@/lib/schemas";
 import { getModelContextWindow, COMPACTION_MODEL_ID, COMPACTION_THINKING_LEVEL } from "@/lib/models";
 import { calculateTokenMetrics, ChatMetadata } from "@/lib/token-usage";
+import {
+  sanitizeMessagesForProvider,
+  stripImageContentForTextOnlyProviders,
+} from "./sanitization";
+import { coalesceToolInputDeltas } from "./stream-transforms";
 
-/**
- * Strips provider-specific metadata from conversation messages that belongs to a
- * provider other than the one serving the current request.
- *
- * Prevents cross-provider metadata leaks that break strict-schema providers.
- * The classic failure: a Gemini (Google) tool-call part carries a stored thought
- * signature (UI `callProviderMetadata.google.thoughtSignature`); when that
- * history is later replayed into a Fireworks/DeepSeek request,
- * `convertToModelMessages` re-emits it as `providerOptions` on the tool-call
- * part and the openai-compatible converter turns it into `extra_content`, which
- * Fireworks rejects with:
- * "Extra inputs are not permitted, field: 'messages[N].tool_calls[0].extra_content'".
- * Keeping the active provider's own keys is intentional so Google's thought
- * signatures still round-trip for Gemini requests.
- *
- * All three metadata field shapes are pruned: `providerMetadata` (text/reasoning
- * parts), `callProviderMetadata` / `resultProviderMetadata` (tool parts).
- *
- * @param messages - The UI message parts arriving in the request body.
- * @param provider - The active backend provider ('google' | 'fireworks').
- * @returns A shallow-copied message array with non-active provider metadata pruned.
- */
-export function sanitizeMessagesForProvider(
-  messages: Parameters<typeof convertToModelMessages>[0],
-  provider: "google" | "fireworks",
-): Parameters<typeof convertToModelMessages>[0] {
-  const prune = (metadata?: Record<string, unknown>) => {
-    if (!metadata) {
-      return undefined;
-    }
-    const pruned = Object.fromEntries(
-      Object.entries(metadata).filter(([key]) => key === provider),
-    );
-    return Object.keys(pruned).length > 0 ? pruned : undefined;
-  };
-
-  const isUIImagePart = (part: any) => {
-    if (!part) return false;
-    if (part.type === "image") return true;
-    if (part.type === "file") {
-      const mediaType = part.mediaType || part.mimeType;
-      if (typeof mediaType === "string" && mediaType.startsWith("image/")) {
-        return true;
-      }
-    }
-    return false;
-  };
-
-  return messages.map((message) => {
-    const parts = message.parts;
-    if (!Array.isArray(parts)) {
-      return message;
-    }
-
-    let nextParts = parts.map((part) => {
-      const typedPart = part as {
-        providerMetadata?: Record<string, unknown>;
-        callProviderMetadata?: Record<string, unknown>;
-        resultProviderMetadata?: Record<string, unknown>;
-      };
-      return {
-        ...part,
-        ...(typedPart.providerMetadata !== undefined
-          ? { providerMetadata: prune(typedPart.providerMetadata) }
-          : {}),
-        ...(typedPart.callProviderMetadata !== undefined
-          ? { callProviderMetadata: prune(typedPart.callProviderMetadata) }
-          : {}),
-        ...(typedPart.resultProviderMetadata !== undefined
-          ? { resultProviderMetadata: prune(typedPart.resultProviderMetadata) }
-          : {}),
-      };
-    });
-
-    if (provider === "fireworks" && message.role === "user") {
-      const nonImageParts = nextParts.filter((part) => !isUIImagePart(part));
-      if (nonImageParts.length !== nextParts.length) {
-        nextParts = nonImageParts.length > 0
-          ? nonImageParts
-          : [{ type: "text", text: "[Attached image]" }];
-      }
-    }
-
-    return {
-      ...message,
-      parts: nextParts,
-    };
-  }) as Parameters<typeof convertToModelMessages>[0];
-}
+// Re-export sanitization helpers for backwards compatibility
+export {
+  sanitizeMessagesForProvider,
+  stripImageContentForTextOnlyProviders,
+} from "./sanitization";
 
 /**
  * Server-side agent run configuration.
@@ -120,6 +40,7 @@ export function sanitizeMessagesForProvider(
  * @property signal - Optional abort signal tied to the incoming request.
  * @property remaining5h - Remaining 5-hour message quota, echoed as a header.
  * @property remainingWeek - Remaining weekly message quota, echoed as a header.
+ * @property onInferenceError - Optional callback invoked when stream or generation encounters an error.
  */
 export interface RunAgentResponseParams {
   workspace: WorkspaceToolsContext;
@@ -130,121 +51,7 @@ export interface RunAgentResponseParams {
   signal?: AbortSignal;
   remaining5h: number;
   remainingWeek: number;
-}
-
-/**
- * Server-side stream transform that buffers and coalesces `tool-input-delta` chunks
- * per tool call before emitting them to the client.
- *
- * Prevents client-side UI freezes caused by AI SDK 7's message reducer running O(N * length)
- * `parsePartialJson` + `fixJson()` operations on every token chunk of large tool arguments.
- */
-function coalesceToolInputDeltas() {
-  return () => {
-    const buffers = new Map<
-      string,
-      { delta: string; chunkCount: number; providerMetadata?: unknown }
-    >();
-
-    function flush(id: string, controller: TransformStreamDefaultController) {
-      const entry = buffers.get(id);
-      if (entry && entry.delta.length > 0) {
-        console.log(
-          `[agent] Coalesced tool-input-delta for tool call "${id}": ${entry.delta.length} chars across ${entry.chunkCount} chunks.`
-        );
-        controller.enqueue({
-          type: "tool-input-delta",
-          id,
-          delta: entry.delta,
-          ...(entry.providerMetadata ? { providerMetadata: entry.providerMetadata } : {}),
-        });
-        buffers.delete(id);
-      }
-    }
-
-    return new TransformStream({
-      async transform(chunk: any, controller) {
-        if (chunk.type === "tool-input-delta") {
-          const existing = buffers.get(chunk.id);
-          if (existing) {
-            existing.delta += chunk.delta;
-            existing.chunkCount += 1;
-            if (chunk.providerMetadata) {
-              existing.providerMetadata = chunk.providerMetadata;
-            }
-          } else {
-            buffers.set(chunk.id, {
-              delta: chunk.delta,
-              chunkCount: 1,
-              providerMetadata: chunk.providerMetadata,
-            });
-          }
-          return;
-        }
-
-        if ((chunk.type === "tool-input-end" || chunk.type === "tool-call") && chunk.id) {
-          flush(chunk.id, controller);
-        }
-
-        controller.enqueue(chunk);
-      },
-      async flush(controller) {
-        for (const id of Array.from(buffers.keys())) {
-          flush(id, controller);
-        }
-      },
-    });
-  };
-}
-
-function isImageModelPart(part: any): boolean {
-  if (!part) return false;
-  if (part.type === "image") return true;
-  if (part.type === "file") {
-    const mediaType = part.mediaType || part.mimeType;
-    if (typeof mediaType === "string" && mediaType.startsWith("image/")) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
- * Removes image content parts from converted model messages when the active
- * provider cannot accept multimodal input (Fireworks-hosted DeepSeek).
- *
- * Conversations that once contained image attachments replay that history on
- * every request, so a text-only model would otherwise hard-fail forever on an
- * old image. The client attach gate prevents new images; this strip keeps
- * existing history usable and logs the drop.
- *
- * @param modelMessages - Messages converted by `convertToModelMessages`.
- * @param provider - The active backend provider.
- * @returns Messages with image content removed (unchanged for Google).
- */
-export function stripImageContentForTextOnlyProviders(
-  modelMessages: ModelMessage[],
-  provider: "google" | "fireworks",
-): ModelMessage[] {
-  if (provider !== "fireworks") {
-    return modelMessages;
-  }
-  return modelMessages.map((message) => {
-    if (message.role !== "user" || !Array.isArray(message.content)) {
-      return message;
-    }
-    const filtered = message.content.filter((part) => !isImageModelPart(part));
-    if (filtered.length === message.content.length) {
-      return message;
-    }
-    console.log(
-      `[agent] Stripped ${message.content.length - filtered.length} image part(s) for text-only provider.`
-    );
-    return {
-      ...message,
-      content: filtered.length > 0 ? filtered : [{ type: "text" as const, text: "[Attached image]" }],
-    };
-  });
+  onInferenceError?: (error: unknown) => Promise<void> | void;
 }
 
 /**
@@ -267,6 +74,7 @@ export async function runAgentResponse({
   signal,
   remaining5h,
   remainingWeek,
+  onInferenceError,
 }: RunAgentResponseParams): Promise<Response> {
   // Token budget: active model's context window + active context occupancy from the
   // latest assistant message (metadata.usage round-trips through the request body).
@@ -293,6 +101,7 @@ export async function runAgentResponse({
     signal,
     remaining5h,
     remainingWeek,
+    onInferenceError,
     initialSystem: buildSystemInstruction(workspace.getCurrentFiles()),
     buildTools: (writer) => createWorkspaceTools({ ...workspace, writer }),
     stopWhen: isStepCount(maxSteps),
@@ -323,6 +132,7 @@ export async function runAgentResponse({
  * @property maxOutputTokens - Optional output cap (compaction).
  * @property appendUserMessage - Optional user turn appended after converted history.
  * @property extraMetadata - Extra metadata merged onto the finished assistant message.
+ * @property onInferenceError - Optional callback invoked when stream or generation encounters an error.
  */
 interface UIStreamResponderConfig {
   prefix: string;
@@ -341,6 +151,7 @@ interface UIStreamResponderConfig {
   maxOutputTokens?: number;
   appendUserMessage?: string;
   extraMetadata?: Record<string, unknown>;
+  onInferenceError?: (error: unknown) => Promise<void> | void;
 }
 
 /**
@@ -357,115 +168,141 @@ interface UIStreamResponderConfig {
 async function createUIStreamResponder(config: UIStreamResponderConfig): Promise<Response> {
   const { modelId, thinkingLevel } = config;
 
-  // Resolve the requested model to its provider-specific config (Google or Fireworks).
-  const resolvedModel = resolveAgentModel(modelId || DEFAULT_AGENT_MODEL, thinkingLevel);
+  let hasTriggeredInferenceError = false;
+  const triggerInferenceError = async (err: unknown) => {
+    if (hasTriggeredInferenceError) return;
+    hasTriggeredInferenceError = true;
+    if (config.onInferenceError) {
+      try {
+        await config.onInferenceError(err);
+      } catch (callbackError) {
+        console.error(`${config.prefix} Failed to execute onInferenceError callback:`, callbackError);
+      }
+    }
+  };
 
-  // Prune provider metadata belonging to other providers before the message
-  // converters run, so stale Gemini thought signatures (or any other
-  // cross-provider leftovers) never leak into a Fireworks/DeepSeek payload.
-  const sanitizedMessages = sanitizeMessagesForProvider(
-    config.messages,
-    getModelProvider(modelId || DEFAULT_AGENT_MODEL),
-  );
+  try {
+    // Resolve the requested model to its provider-specific config (Google or Fireworks).
+    const resolvedModel = resolveAgentModel(modelId || DEFAULT_AGENT_MODEL, thinkingLevel);
 
-  // Convert once up front (optional trailing user turn appended for compaction).
-  const convertedMessages = await convertToModelMessages(sanitizedMessages);
-  // Text-only providers (Fireworks/DeepSeek) cannot consume image content; strip
-  // it from replayed history so old image conversations stay usable.
-  const modelMessages = config.appendUserMessage
-    ? [
-        ...stripImageContentForTextOnlyProviders(
+    // Prune provider metadata belonging to other providers before the message
+    // converters run, so stale Gemini thought signatures (or any other
+    // cross-provider leftovers) never leak into a Fireworks/DeepSeek payload.
+    const sanitizedMessages = sanitizeMessagesForProvider(
+      config.messages,
+      getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+    );
+
+    // Convert once up front (optional trailing user turn appended for compaction).
+    const convertedMessages = await convertToModelMessages(sanitizedMessages);
+    // Text-only providers (Fireworks/DeepSeek) cannot consume image content; strip
+    // it from replayed history so old image conversations stay usable.
+    const modelMessages = config.appendUserMessage
+      ? [
+          ...stripImageContentForTextOnlyProviders(
+            convertedMessages,
+            getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+          ),
+          { role: "user" as const, content: config.appendUserMessage },
+        ]
+      : stripImageContentForTextOnlyProviders(
           convertedMessages,
           getModelProvider(modelId || DEFAULT_AGENT_MODEL),
-        ),
-        { role: "user" as const, content: config.appendUserMessage },
-      ]
-    : stripImageContentForTextOnlyProviders(
-        convertedMessages,
-        getModelProvider(modelId || DEFAULT_AGENT_MODEL),
-      );
+        );
 
-  const stream = createUIMessageStream({
-    execute: async ({ writer }) => {
-      let lastStepUsage: LanguageModelUsage | undefined;
+    const stream = createUIMessageStream({
+      execute: async ({ writer }) => {
+        try {
+          let lastStepUsage: LanguageModelUsage | undefined;
 
-      const result = streamText({
-        model: resolvedModel.model,
-        ...(resolvedModel.reasoning !== undefined
-          ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
+          const result = streamText({
+            model: resolvedModel.model,
+            ...(resolvedModel.reasoning !== undefined
+              ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
+              : {}),
+            ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
+            system: config.initialSystem,
+            messages: modelMessages,
+            ...(config.buildTools ? { tools: config.buildTools(writer) } : {}),
+            abortSignal: config.signal,
+            ...(config.maxOutputTokens !== undefined ? { maxOutputTokens: config.maxOutputTokens } : {}),
+            experimental_transform: [
+              smoothStream({
+                delayInMs: 25,
+                chunking: "word",
+              }),
+              coalesceToolInputDeltas() as any,
+            ],
+            ...(config.prepareStep ? { prepareStep: config.prepareStep } : {}),
+            ...(config.stopWhen ? { stopWhen: config.stopWhen } : {}),
+            onStart() {
+              console.log(`${config.prefix} Generation stream started.`);
+            },
+            onStepEnd({ stepNumber, toolCalls, usage }) {
+              if (usage) {
+                lastStepUsage = usage;
+              }
+              console.log(
+                `${config.prefix} Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`
+              );
+            },
+            onEnd({ finishReason, usage }) {
+              console.log(
+                `${config.prefix} Stream finished (${finishReason}). Total token usage:`,
+                usage
+              );
+            },
+            onError({ error }) {
+              console.error(`${config.prefix} Stream error:`, error);
+              void triggerInferenceError(error);
+            },
+          });
+
+          writer.merge(
+            toUIMessageStream({
+              stream: result.stream,
+              messageMetadata: ({ part }) => {
+                // Attach the provider-reported usage to the finished assistant message.
+                // Following Claude Code / OpenCode / Codex standard, we record the final step's
+                // usage as the active conversation context snapshot (avoiding multi-step N-pass inflation),
+                // while preserving stepTotalUsage for cumulative session analytics.
+                if (part.type === "finish") {
+                  return {
+                    ...(config.extraMetadata ?? {}),
+                    usage: lastStepUsage || part.totalUsage,
+                    stepTotalUsage: part.totalUsage,
+                    modelId: modelId || DEFAULT_AGENT_MODEL,
+                  };
+                }
+                return undefined;
+              },
+            })
+          );
+        } catch (execError) {
+          console.error(`${config.prefix} Execution error:`, execError);
+          await triggerInferenceError(execError);
+          throw execError;
+        }
+      },
+    });
+
+    // Wrap the UI message stream and attach quota headers.
+    return createUIMessageStreamResponse({
+      stream,
+      headers: {
+        ...(config.remaining5h !== undefined
+          ? { "X-RateLimit-Remaining-5h": String(config.remaining5h) }
           : {}),
-        ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
-        system: config.initialSystem,
-        messages: modelMessages,
-        ...(config.buildTools ? { tools: config.buildTools(writer) } : {}),
-        abortSignal: config.signal,
-        ...(config.maxOutputTokens !== undefined ? { maxOutputTokens: config.maxOutputTokens } : {}),
-        experimental_transform: [
-          smoothStream({
-            delayInMs: 25,
-            chunking: "word",
-          }),
-          coalesceToolInputDeltas() as any,
-        ],
-        ...(config.prepareStep ? { prepareStep: config.prepareStep } : {}),
-        ...(config.stopWhen ? { stopWhen: config.stopWhen } : {}),
-        onStart() {
-          console.log(`${config.prefix} Generation stream started.`);
-        },
-        onStepEnd({ stepNumber, toolCalls, usage }) {
-          if (usage) {
-            lastStepUsage = usage;
-          }
-          console.log(
-            `${config.prefix} Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`
-          );
-        },
-        onEnd({ finishReason, usage }) {
-          console.log(
-            `${config.prefix} Stream finished (${finishReason}). Total token usage:`,
-            usage
-          );
-        },
-        onError({ error }) {
-          console.error(`${config.prefix} Stream error:`, error);
-        },
-      });
-
-      writer.merge(
-        toUIMessageStream({
-          stream: result.stream,
-          messageMetadata: ({ part }) => {
-            // Attach the provider-reported usage to the finished assistant message.
-            // Following Claude Code / OpenCode / Codex standard, we record the final step's
-            // usage as the active conversation context snapshot (avoiding multi-step N-pass inflation),
-            // while preserving stepTotalUsage for cumulative session analytics.
-            if (part.type === "finish") {
-              return {
-                ...(config.extraMetadata ?? {}),
-                usage: lastStepUsage || part.totalUsage,
-                stepTotalUsage: part.totalUsage,
-                modelId: modelId || DEFAULT_AGENT_MODEL,
-              };
-            }
-            return undefined;
-          },
-        })
-      );
-    },
-  });
-
-  // Wrap the UI message stream and attach quota headers.
-  return createUIMessageStreamResponse({
-    stream,
-    headers: {
-      ...(config.remaining5h !== undefined
-        ? { "X-RateLimit-Remaining-5h": String(config.remaining5h) }
-        : {}),
-      ...(config.remainingWeek !== undefined
-        ? { "X-RateLimit-Remaining-Week": String(config.remainingWeek) }
-        : {}),
-    },
-  });
+        ...(config.remainingWeek !== undefined
+          ? { "X-RateLimit-Remaining-Week": String(config.remainingWeek) }
+          : {}),
+      },
+    });
+  } catch (setupError) {
+    console.error(`${config.prefix} Responder setup error:`, setupError);
+    await triggerInferenceError(setupError);
+    throw setupError;
+  }
 }
 
 /**
@@ -475,6 +312,7 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
  * @property modelId - Optional catalog model id; defaults to the lite Gemini model.
  * @property thinkingLevel - Optional thinking effort requested by the client.
  * @property signal - Optional abort signal tied to the incoming request.
+ * @property onInferenceError - Optional callback invoked when stream or generation encounters an error.
  */
 export interface RunCompactionResponseParams {
   files?: WorkspaceFile[];
@@ -484,6 +322,7 @@ export interface RunCompactionResponseParams {
   signal?: AbortSignal;
   remaining5h?: number;
   remainingWeek?: number;
+  onInferenceError?: (error: unknown) => Promise<void> | void;
 }
 
 /**
@@ -500,6 +339,7 @@ export async function runCompactionResponse({
   signal,
   remaining5h,
   remainingWeek,
+  onInferenceError,
 }: RunCompactionResponseParams): Promise<Response> {
   return createUIStreamResponder({
     prefix: "[compaction]",
@@ -509,10 +349,11 @@ export async function runCompactionResponse({
     signal,
     remaining5h,
     remainingWeek,
+    onInferenceError,
     initialSystem: buildCompactionInstruction(files),
     maxOutputTokens: 3500,
     appendUserMessage:
       "Please generate the comprehensive context compaction summary for the conversation and workspace state above now, following the required structured format.",
     extraMetadata: { isCompactedSummary: true },
   });
-}
+}

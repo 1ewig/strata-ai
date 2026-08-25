@@ -6,7 +6,7 @@ import { runAgentResponse } from "@/lib/ai/agent-runner";
 import { sliceMessagesAfterCompaction } from "@/lib/ai/message-extractor";
 
 import { auth } from "@/lib/auth";
-import { checkAndIncrementRateLimit } from "@/lib/rate-limit";
+import { checkAndIncrementRateLimit, refundRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/agent - streams an agent reply using the AI SDK UI message
@@ -31,30 +31,8 @@ export async function POST(req: Request) {
     });
   }
 
-  // Enforce the quota (10 messages / 5 hours, 50 / week) before streaming.
-  const rateLimit = await checkAndIncrementRateLimit(session.user.id);
-  if (!rateLimit.allowed) {
-    return new Response(
-      JSON.stringify({
-        error: "Rate limit exceeded",
-        message: buildRateLimitErrorMessage(rateLimit.retryAfter),
-        retryAfter: rateLimit.retryAfter,
-      }),
-      {
-        status: 429,
-        headers: {
-          "Content-Type": "application/json",
-          "Retry-After": String(rateLimit.retryAfter),
-          "X-RateLimit-Remaining-5h": "0",
-          "X-RateLimit-Remaining-Week": String(rateLimit.remainingWeek),
-          "X-RateLimit-Retry-After": String(rateLimit.retryAfter || 0),
-        },
-      },
-    );
-  }
-
-  // Validate the body shape before use. Malformed JSON is a client error, not
-  // a server fault, so surface it as a 400 rather than an unhandled 500.
+  // Validate the body shape before touching quota. Malformed JSON is a client error, not
+  // a server fault, so surface it as a 400 rather than an unhandled 500 or wasted quota.
   let body: unknown;
   try {
     body = await req.json();
@@ -122,15 +100,50 @@ export async function POST(req: Request) {
   // Clamp the requested step limit to the 1-30 range, defaulting to 25.
   const maxStepsLimit = Math.min(Math.max(maxSteps || 25, 1), 30);
 
+  // Enforce the quota (10 messages / 5 hours, 50 / week) after validating request inputs.
+  const rateLimit = await checkAndIncrementRateLimit(session.user.id);
+  if (!rateLimit.allowed) {
+    return new Response(
+      JSON.stringify({
+        error: "Rate limit exceeded",
+        message: buildRateLimitErrorMessage(rateLimit.retryAfter),
+        retryAfter: rateLimit.retryAfter,
+      }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(rateLimit.retryAfter),
+          "X-RateLimit-Remaining-5h": "0",
+          "X-RateLimit-Remaining-Week": String(rateLimit.remainingWeek),
+          "X-RateLimit-Retry-After": String(rateLimit.retryAfter || 0),
+        },
+      },
+    );
+  }
+
   // Delegate model streaming, tool wiring, and SSE wrapping to the agent runner.
-  return runAgentResponse({
-    workspace: createMutableWorkspace(parsed.data.files || []),
-    messages,
-    modelId: model,
-    thinkingLevel,
-    maxSteps: maxStepsLimit,
-    signal: req.signal,
-    remaining5h: rateLimit.remaining5h,
-    remainingWeek: rateLimit.remainingWeek,
-  });
+  // If the model fails or streaming aborts due to provider errors, refund the quota.
+  try {
+    return await runAgentResponse({
+      workspace: createMutableWorkspace(parsed.data.files || []),
+      messages,
+      modelId: model,
+      thinkingLevel,
+      maxSteps: maxStepsLimit,
+      signal: req.signal,
+      remaining5h: rateLimit.remaining5h,
+      remainingWeek: rateLimit.remainingWeek,
+      onInferenceError: async () => {
+        if (rateLimit.messageLogId) {
+          await refundRateLimit(rateLimit.messageLogId);
+        }
+      },
+    });
+  } catch (error) {
+    if (rateLimit.messageLogId) {
+      await refundRateLimit(rateLimit.messageLogId);
+    }
+    throw error;
+  }
 }
