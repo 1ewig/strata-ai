@@ -23,6 +23,7 @@ import {
   stripImageContentForTextOnlyProviders,
 } from "./sanitization";
 import { coalesceToolInputDeltas } from "./stream-transforms";
+import { classifyProviderError } from "./error-classifier";
 
 // Re-export sanitization helpers for backwards compatibility
 export {
@@ -253,8 +254,17 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
               );
             },
             onError({ error }) {
-              console.error(`${config.prefix} Stream error:`, error);
-              void triggerInferenceError(error);
+              const classified = classifyProviderError(error);
+              console.error(`${config.prefix} Stream error [${classified.code}]:`, error);
+              void triggerInferenceError(classified);
+              try {
+                writer.write({
+                  type: "error",
+                  error: classified.message,
+                });
+              } catch {
+                // Writer might already be closed
+              }
             },
           });
 
@@ -279,8 +289,17 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
             })
           );
         } catch (execError) {
-          console.error(`${config.prefix} Execution error:`, execError);
-          await triggerInferenceError(execError);
+          const classified = classifyProviderError(execError);
+          console.error(`${config.prefix} Execution error [${classified.code}]:`, execError);
+          await triggerInferenceError(classified);
+          try {
+            writer.write({
+              type: "error",
+              error: classified.message,
+            });
+          } catch {
+            // Writer might already be closed
+          }
           throw execError;
         }
       },
