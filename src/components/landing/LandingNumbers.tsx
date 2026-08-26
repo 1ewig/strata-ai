@@ -11,64 +11,64 @@ import {
 const METRICS = [
   {
     value: '8',
-    title: 'Integrated tools',
-    description: 'workspace CRUD + Tavily realtime search',
+    title: 'Hands-on tools',
+    description: 'searching, editing, reading, and organizing files',
   },
   {
     value: '128k',
-    title: 'Context window',
-    description: 'active token budgeting & cost metrics',
+    title: 'Room to think',
+    description: 'generous memory so conversations never lose context',
   },
   {
     value: '0ms',
-    title: 'Cloud storage latency',
-    description: '100% local-first Dexie IndexedDB',
+    title: 'Zero cloud lag',
+    description: 'everything saves privately and instantly to your device',
   },
   {
-    value: '-84%',
-    title: 'Token compaction delta',
-    description: 'zero memory amnesia via /compact',
+    value: '84%',
+    title: 'Clutter saved',
+    description: 'turns long back-and-forth into clear, clean summaries',
   },
 ];
 
 const PILLARS = [
   {
-    tag: 'WORKSPACE ENGINE',
+    tag: 'PRECISE EDITING',
     description:
-      'Surgical 3-tier string edit engine with exact, whitespace-normalized, and 2-point anchor bounded matching.',
+      'The assistant updates exact lines in your drafts without rewriting or losing your original tone and style.',
   },
   {
-    tag: 'LIVE STREAMING',
+    tag: 'LIVE WRITING',
     description:
-      'Custom data-workspace SSE channel updates multi-file canvas tabs live in parallel with model reasoning.',
+      'Watch documents take shape on your canvas in real time as the assistant works through ideas alongside you.',
   },
   {
-    tag: 'OBSERVABILITY',
+    tag: 'CLEAR AWARENESS',
     description:
-      'OpenTelemetry trace waterfalls, token budgeting, and transparent per-model dollar expense accounting.',
+      'Always see where your project stands, how much room you have left, and exactly what changes were made.',
   },
   {
-    tag: 'LOCAL FIRST',
+    tag: 'YOURS TO KEEP',
     description:
-      'Dexie IndexedDB v5 schema with per-user isolation stores all files locally with zero server retention.',
+      'Your files live on your computer. No hidden servers, no tracking, and complete privacy for all your thoughts.',
   },
 ];
 
 const PIPELINE_STEPS = [
   {
-    num: '01 Ingest',
+    num: '01 Explore',
     description:
-      'Inspect workspace files, extract URL text, and gather realtime research citations.',
+      'Share rough thoughts or search the web for fresh facts and reference material.',
   },
   {
-    num: '02 Mutate',
+    num: '02 Shape',
     description:
-      'Execute multi-step file writes, surgical edits, and language re-indexing.',
+      'Let the assistant draft sections, clean up phrasing, and organize your files.',
   },
   {
-    num: '03 Reconcile',
+    num: '03 Polish',
     description:
-      'Render syntax-highlighted code, persist state, and distill long-context memory.',
+      'Review living drafts on your canvas, export clean markdown, and keep creating.',
   },
 ];
 
@@ -88,9 +88,10 @@ export function LandingNumbers() {
         >
           {/* Bold Headline */}
           <motion.div variants={fadeUpVariants} className="max-w-4xl">
-            <h2 className="font-display font-extrabold text-4xl sm:text-6xl lg:text-7xl tracking-tight text-text-bright leading-[1.02]">
-              What we engineered <br className="hidden sm:inline" />
-              into the studio.
+            <h2 className="font-display font-extrabold text-4xl sm:text-6xl lg:text-7xl tracking-tight text-text-bright leading-[1.02] uppercase">
+              Where real <br className="hidden sm:inline" />
+              momentum finds <br className="hidden sm:inline" />
+              its shape<span className="text-primary">.</span>
             </h2>
           </motion.div>
 

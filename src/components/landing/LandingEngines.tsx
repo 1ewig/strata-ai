@@ -23,47 +23,47 @@ interface EngineCardData {
 const ENGINES: EngineCardData[] = [
   {
     initial: 'G',
-    badgeLeft: 'Default',
-    badgeRight: '128k context',
+    badgeLeft: 'Everyday Lead',
+    badgeRight: 'Vision ready',
     name: 'Gemini 3.5',
-    category: 'Studio Architect',
+    category: 'Creative Partner',
     isAccent: false,
-    summary: 'Primary multimodal agent for multi-step file creation & editing.',
+    summary: 'Primary conversational partner for drafting and editing.',
     description:
-      'Google Gemini 3.5 Flash serves as the primary reasoning engine, supporting up to 4 image attachments, autonomous tool calling, and live workspace mutation loops.',
+      'Your go-to assistant for brainstorming, drafting long articles, reviewing attached images, and organizing multi-file workspaces.',
   },
   {
     initial: 'D',
-    badgeLeft: 'Reasoning',
-    badgeRight: 'High effort',
+    badgeLeft: 'Deep Thinker',
+    badgeRight: 'High focus',
     name: 'DeepSeek V4',
-    category: 'Code & Logic',
+    category: 'Logic & Code',
     isAccent: false,
-    summary: 'High-effort algorithmic reasoning for surgical code refactoring.',
+    summary: 'Focused reasoning engine for problem solving and code.',
     description:
-      'Fireworks-hosted DeepSeek V4 Flash 0731 delivers ultra-low first-token latency with dynamic reasoning effort for complex architectural refactoring and string edits.',
+      'Tackles intricate problem-solving, structured technical writing, and meticulous code edits with thorough step-by-step reasoning.',
   },
   {
     initial: 'T',
-    badgeLeft: 'Realtime',
-    badgeRight: 'Neural search',
+    badgeLeft: 'Live Search',
+    badgeRight: 'Fresh facts',
     name: 'Tavily Search',
-    category: 'Web Intelligence',
+    category: 'Web Research',
     isAccent: false,
-    summary: 'Direct URL text extraction and structured web research.',
+    summary: 'Real-time internet intelligence and clean citations.',
     description:
-      'Live search and extraction tools parse documentation, research papers, and technical APIs into clean markdown payloads without ad clutter or synthetic hallucinations.',
+      'Finds credible web sources and extracts clean reference text without distractions, ads, or made-up information.',
   },
   {
     initial: 'C',
     badgeLeft: 'Memory',
-    badgeRight: '-84% tokens',
-    name: 'Compactor',
-    category: 'State Synthesis',
+    badgeRight: '84% cleaner',
+    name: 'Smart Recap',
+    category: 'Context Saver',
     isAccent: true,
-    summary: 'Surgical context compaction engine for long projects.',
+    summary: 'Intelligent summary engine that keeps projects fast.',
     description:
-      'Dedicated Gemini 3.1 Flash Lite synthesis engine distills sprawling multi-turn dialogue into dense, permanent working state—completely preventing context rot.',
+      'Condenses long working sessions into a crisp summary so your workspace stays quick, light, and focused.',
   },
 ];
 
@@ -84,8 +84,9 @@ export function LandingEngines() {
           {/* Bold Headline */}
           <motion.div variants={fadeUpVariants} className="max-w-4xl">
             <h2 className="font-display font-extrabold text-5xl sm:text-7xl lg:text-8xl tracking-tight text-text-bright leading-[0.95] uppercase">
-              Engineered <br />
-              with precision<span className="text-primary">.</span>
+              Smart companions <br />
+              tuned for <br />
+              deep work<span className="text-primary">.</span>
             </h2>
           </motion.div>
 

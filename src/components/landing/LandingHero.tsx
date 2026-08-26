@@ -46,17 +46,17 @@ export function LandingHero({ userId, onOpenStudio }: LandingHeroProps) {
                 strata<span className="text-micro align-super font-mono opacity-80">®</span>
               </span>
               <span className="text-micro font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface/20 text-surface border border-surface/30">
-                STUDIO ATELIER
+                WRITING STUDIO
               </span>
             </div>
 
             <p className="text-label text-surface/90 leading-relaxed font-sans font-medium">
-              We invest surgical AI tooling, living canvas editing, and local-first persistence into deep document engineering.
+              Most AI chats feel disposable. Strata gives your ideas a real home—where you and AI write, edit, and organize living documents side by side.
             </p>
 
             <div className="pt-2 border-t border-surface/20">
               <p className="text-label font-bold text-surface">
-                From raw prompt to durable multi-file artifacts in seconds.
+                From a rough outline to finished work in minutes.
               </p>
             </div>
           </div>
@@ -66,7 +66,7 @@ export function LandingHero({ userId, onOpenStudio }: LandingHeroProps) {
               href="#numbers"
               className="inline-flex items-center gap-1.5 text-caption font-mono uppercase tracking-wider text-surface font-semibold hover:translate-x-1 transition-transform cursor-pointer"
             >
-              <span>Explore Numbers</span>
+              <span>See how it works</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </a>
           </div>
@@ -81,11 +81,10 @@ export function LandingHero({ userId, onOpenStudio }: LandingHeroProps) {
         >
           <motion.div variants={fadeUpVariants} className="space-y-4">
             <h1 className="font-display font-extrabold text-5xl sm:text-7xl md:text-8xl lg:text-[5.75rem] xl:text-[6.5rem] tracking-tighter text-text-bright leading-[0.92] uppercase">
-              Forging <br />
-              durable <br />
-              documents <br />
-              that <br />
-              scale<span className="text-primary">.</span>
+              Turning <br />
+              passing <br />
+              ideas into <br />
+              real work<span className="text-primary">.</span>
             </h1>
           </motion.div>
 
@@ -134,7 +133,7 @@ export function LandingHero({ userId, onOpenStudio }: LandingHeroProps) {
           <span className="text-text-faint">// strata®</span>
         </div>
         <div className="text-right text-text-secondary">
-          Agentic Document Studio & Local Workspace
+          A quiet studio for deep thinking & writing
         </div>
       </div>
     </section>

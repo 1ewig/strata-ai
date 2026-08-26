@@ -32,15 +32,16 @@ export function LandingCTA({ userId, onOpenStudio }: LandingCTAProps) {
               variants={fadeUpVariants}
               className="font-display font-extrabold text-5xl sm:text-7xl lg:text-8xl tracking-tight text-text-bright leading-[0.95] uppercase"
             >
-              Enter the <br />
-              workshop<span className="text-primary">.</span>
+              Pull up a chair <br />
+              and start <br />
+              creating<span className="text-primary">.</span>
             </motion.h2>
 
             <motion.p
               variants={fadeUpVariants}
               className="text-body sm:text-subheading text-text-secondary max-w-xl font-sans leading-relaxed"
             >
-              Start with an empty workspace or paste existing markdown notes. Your documents live in your browser&apos;s IndexedDB and never leave your control.
+              Start with a clean page or bring in your existing notes. Everything is saved directly to your browser—private, instant, and completely yours.
             </motion.p>
           </div>
 
@@ -75,7 +76,7 @@ export function LandingCTA({ userId, onOpenStudio }: LandingCTAProps) {
             variants={fadeUpVariants}
             className="pt-6 text-micro font-mono text-text-muted uppercase tracking-widest"
           >
-            // Zero credit card required · Free sliding-window quota · Private by design
+            // Free to explore · No credit card needed · Stays on your device
           </motion.div>
         </motion.div>
       </div>

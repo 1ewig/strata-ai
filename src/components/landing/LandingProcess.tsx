@@ -12,45 +12,45 @@ import {
 const PROCESS_STEPS = [
   {
     num: '01',
-    title: 'Inspect',
+    title: 'Understand',
     description:
-      'Reads workspace files, queries Tavily realtime web search, and extracts clean markdown from target URLs.',
+      'Reads your files, searches the web, and gets up to speed on your context and goals.',
   },
   {
     num: '02',
-    title: 'Mutate',
+    title: 'Create',
     description:
-      'Applies surgical string edits, creates multi-file workspace artifacts, and manages file lifecycle.',
+      'Drafts thoughtful sections, makes surgical edits, and builds multi-file projects.',
   },
   {
     num: '03',
-    title: 'Verify',
+    title: 'Refine',
     description:
-      'Validates file bounds, highlights code across 24+ languages, and streams live updates via SSE.',
+      'Polishes tone, formats code across 24+ languages, and updates your canvas live.',
   },
   {
     num: '04',
-    title: 'Compact',
+    title: 'Remember',
     description:
-      'Distills sprawling multi-turn dialogue into dense, permanent working state via the /compact engine.',
+      'Turns long brainstorming sessions into clear recaps so you never lose the thread.',
   },
 ];
 
 const ACCENT_BANNER_STEPS = [
   {
     num: '01',
-    title: 'Prompt',
-    desc: 'State your document goals or drop existing notes into chat.',
+    title: 'Drop an idea',
+    desc: 'Start with rough bullet points, a fresh prompt, or existing notes.',
   },
   {
     num: '02',
-    title: 'Agentic Loop',
-    desc: 'Multi-step autonomous tool calls with live streamed reasoning.',
+    title: 'Work together',
+    desc: 'The assistant suggests edits and checks facts in real time.',
   },
   {
     num: '03',
-    title: 'Durable File',
-    desc: 'Polished, structured artifacts ready in your local canvas.',
+    title: 'Own the result',
+    desc: 'Clean, structured markdown documents ready to share or export.',
   },
 ];
 
@@ -73,8 +73,10 @@ export function LandingProcess() {
             {/* Left Headline Column */}
             <motion.div variants={fadeUpVariants} className="lg:col-span-5">
               <h2 className="font-display font-extrabold text-5xl sm:text-7xl lg:text-8xl tracking-tight text-text-bright leading-[0.95] uppercase sticky top-24">
-                How we <br />
-                forge<span className="text-primary">.</span>
+                From first <br />
+                spark to <br />
+                finished <br />
+                writing<span className="text-primary">.</span>
               </h2>
             </motion.div>
 
@@ -120,7 +122,7 @@ export function LandingProcess() {
                 <div className="font-display font-black text-5xl sm:text-7xl lg:text-8xl tracking-tighter leading-none text-surface flex items-baseline gap-2">
                   <span>0 → 1</span>
                   <span className="text-caption font-mono uppercase tracking-widest opacity-80">
-                    in seconds
+                    in minutes
                   </span>
                 </div>
               </div>
