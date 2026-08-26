@@ -35,7 +35,7 @@ export function safeAsyncRefundRateLimit(messageLogId?: string): void {
 /**
  * Shared higher-order route guard for `/api/agent` and `/api/agent/compact`.
  *
- * Enforces the standardized 5-stage pipeline:
+ * Enforces the standardized pipeline:
  * 1. Authentication (401)
  * 2. JSON Body Parsing (400)
  * 3. Zod Schema Validation (400)

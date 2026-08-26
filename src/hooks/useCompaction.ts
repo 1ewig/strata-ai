@@ -96,6 +96,7 @@ export function useCompaction({
             messages: messagesToCompact,
             files: filesRef.current,
             model: COMPACTION_MODEL_ID,
+            chatId,
           }),
         });
 

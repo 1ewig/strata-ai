@@ -24,6 +24,8 @@ import {
 } from "./sanitization";
 import { coalesceToolInputDeltas } from "./stream-transforms";
 import { classifyProviderError } from "./error-classifier";
+import { propagateAttributes } from "@langfuse/tracing";
+import { langfuseSpanProcessor } from "@/instrumentation";
 
 // Re-export sanitization helpers for backwards compatibility
 export {
@@ -41,6 +43,8 @@ export {
  * @property signal - Optional abort signal tied to the incoming request.
  * @property remaining5h - Remaining 5-hour message quota, echoed as a header.
  * @property remainingWeek - Remaining weekly message quota, echoed as a header.
+ * @property userId - Optional authenticated user ID for trace attribution.
+ * @property sessionId - Optional conversation / chat ID for trace session grouping.
  * @property onInferenceError - Optional callback invoked when stream or generation encounters an error.
  */
 export interface RunAgentResponseParams {
@@ -52,6 +56,8 @@ export interface RunAgentResponseParams {
   signal?: AbortSignal;
   remaining5h: number;
   remainingWeek: number;
+  userId?: string;
+  sessionId?: string;
   onInferenceError?: (error: unknown) => Promise<void> | void;
 }
 
@@ -75,6 +81,8 @@ export async function runAgentResponse({
   signal,
   remaining5h,
   remainingWeek,
+  userId,
+  sessionId,
   onInferenceError,
 }: RunAgentResponseParams): Promise<Response> {
   // Token budget: active model's context window + active context occupancy from the
@@ -102,6 +110,8 @@ export async function runAgentResponse({
     signal,
     remaining5h,
     remainingWeek,
+    userId,
+    sessionId,
     onInferenceError,
     initialSystem: buildSystemInstruction(workspace.getCurrentFiles()),
     buildTools: (writer) => createWorkspaceTools({ ...workspace, writer }),
@@ -126,6 +136,8 @@ export async function runAgentResponse({
  * @property thinkingLevel - Optional thinking effort requested by the client.
  * @property signal - Optional abort signal tied to the incoming request.
  * @property remaining5h / remainingWeek - Quota echoed as response headers.
+ * @property userId - Optional authenticated user ID for trace attribution.
+ * @property sessionId - Optional conversation / chat ID for trace session grouping.
  * @property initialSystem - System prompt emitted with the initial step.
  * @property buildTools - Optional factory producing tools bound to the live writer.
  * @property prepareStep - Optional system re-injection hook between agent steps.
@@ -143,6 +155,8 @@ interface UIStreamResponderConfig {
   signal?: AbortSignal;
   remaining5h?: number;
   remainingWeek?: number;
+  userId?: string;
+  sessionId?: string;
   initialSystem: string;
   buildTools?: (
     writer: NonNullable<WorkspaceToolsContext["writer"]>,
@@ -214,79 +228,106 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
         try {
-          let lastStepUsage: LanguageModelUsage | undefined;
-
-          const result = streamText({
-            model: resolvedModel.model,
-            ...(resolvedModel.reasoning !== undefined
-              ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
-              : {}),
-            ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
-            system: config.initialSystem,
-            messages: modelMessages,
-            ...(config.buildTools ? { tools: config.buildTools(writer) } : {}),
-            abortSignal: config.signal,
-            ...(config.maxOutputTokens !== undefined ? { maxOutputTokens: config.maxOutputTokens } : {}),
-            experimental_transform: [
-              smoothStream({
-                delayInMs: 25,
-                chunking: "word",
-              }),
-              coalesceToolInputDeltas() as any,
-            ],
-            ...(config.prepareStep ? { prepareStep: config.prepareStep } : {}),
-            ...(config.stopWhen ? { stopWhen: config.stopWhen } : {}),
-            onStart() {
-              console.log(`${config.prefix} Generation stream started.`);
-            },
-            onStepEnd({ stepNumber, toolCalls, usage }) {
-              if (usage) {
-                lastStepUsage = usage;
-              }
-              console.log(
-                `${config.prefix} Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`
-              );
-            },
-            onEnd({ finishReason, usage }) {
-              console.log(
-                `${config.prefix} Stream finished (${finishReason}). Total token usage:`,
-                usage
-              );
-            },
-            onError({ error }) {
-              const classified = classifyProviderError(error);
-              console.error(`${config.prefix} Stream error [${classified.code}]:`, error);
-              void triggerInferenceError(classified);
-              try {
-                writer.write({
-                  type: "error",
-                  errorText: classified.message,
-                });
-              } catch {
-                // Writer might already be closed
-              }
-            },
-          });
-
-          writer.merge(
-            toUIMessageStream({
-              stream: result.stream,
-              messageMetadata: ({ part }) => {
-                // Attach the provider-reported usage to the finished assistant message.
-                // Following Claude Code / OpenCode / Codex standard, we record the final step's
-                // usage as the active conversation context snapshot (avoiding multi-step N-pass inflation),
-                // while preserving stepTotalUsage for cumulative session analytics.
-                if (part.type === "finish") {
-                  return {
-                    ...config.extraMetadata,
-                    usage: lastStepUsage || part.totalUsage,
-                    stepTotalUsage: part.totalUsage,
-                    modelId: modelId || DEFAULT_AGENT_MODEL,
-                  };
-                }
-                return undefined;
+          await propagateAttributes(
+            {
+              traceName: config.prefix === "[compaction]" ? "context-compaction" : "agent-workspace",
+              userId: config.userId,
+              sessionId: config.sessionId,
+              tags: [
+                "strata-ai",
+                config.prefix === "[compaction]" ? "compaction" : "agent",
+                getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+              ],
+              metadata: {
+                modelId: modelId || DEFAULT_AGENT_MODEL,
+                thinkingLevel: thinkingLevel || "default",
               },
-            })
+            },
+            async () => {
+              let lastStepUsage: LanguageModelUsage | undefined;
+
+              const result = streamText({
+                model: resolvedModel.model,
+                ...(resolvedModel.reasoning !== undefined
+                  ? { reasoning: resolvedModel.reasoning as Parameters<typeof streamText>[0]["reasoning"] }
+                  : {}),
+                ...(resolvedModel.providerOptions ? { providerOptions: resolvedModel.providerOptions } : {}),
+                system: config.initialSystem,
+                messages: modelMessages,
+                ...(config.buildTools ? { tools: config.buildTools(writer) } : {}),
+                abortSignal: config.signal,
+                ...(config.maxOutputTokens !== undefined ? { maxOutputTokens: config.maxOutputTokens } : {}),
+                telemetry: {
+                  functionId: config.prefix === "[compaction]" ? "compaction-response" : "agent-response",
+                },
+                experimental_transform: [
+                  smoothStream({
+                    delayInMs: 25,
+                    chunking: "word",
+                  }),
+                  coalesceToolInputDeltas() as any,
+                ],
+                ...(config.prepareStep ? { prepareStep: config.prepareStep } : {}),
+                ...(config.stopWhen ? { stopWhen: config.stopWhen } : {}),
+                onStart() {
+                  console.log(`${config.prefix} Generation stream started.`);
+                },
+                onStepEnd({ stepNumber, toolCalls, usage }) {
+                  if (usage) {
+                    lastStepUsage = usage;
+                  }
+                  console.log(
+                    `${config.prefix} Step ${stepNumber} completed. Tool calls: ${toolCalls?.length || 0}`
+                  );
+                },
+                onEnd({ finishReason, usage }) {
+                  console.log(
+                    `${config.prefix} Stream finished (${finishReason}). Total token usage:`,
+                    usage
+                  );
+                  void langfuseSpanProcessor.forceFlush().catch((err) => {
+                    console.warn(`${config.prefix} Langfuse span flush error:`, err);
+                  });
+                },
+                onError({ error }) {
+                  const classified = classifyProviderError(error);
+                  console.error(`${config.prefix} Stream error [${classified.code}]:`, error);
+                  void triggerInferenceError(classified);
+                  try {
+                    writer.write({
+                      type: "error",
+                      errorText: classified.message,
+                    });
+                  } catch {
+                    // Writer might already be closed
+                  }
+                  void langfuseSpanProcessor.forceFlush().catch((err) => {
+                    console.warn(`${config.prefix} Langfuse span flush error:`, err);
+                  });
+                },
+              });
+
+              writer.merge(
+                toUIMessageStream({
+                  stream: result.stream,
+                  messageMetadata: ({ part }) => {
+                    // Attach the provider-reported usage to the finished assistant message.
+                    // Following Claude Code / OpenCode / Codex standard, we record the final step's
+                    // usage as the active conversation context snapshot (avoiding multi-step N-pass inflation),
+                    // while preserving stepTotalUsage for cumulative session analytics.
+                    if (part.type === "finish") {
+                      return {
+                        ...config.extraMetadata,
+                        usage: lastStepUsage || part.totalUsage,
+                        stepTotalUsage: part.totalUsage,
+                        modelId: modelId || DEFAULT_AGENT_MODEL,
+                      };
+                    }
+                    return undefined;
+                  },
+                })
+              );
+            }
           );
         } catch (execError) {
           const classified = classifyProviderError(execError);
@@ -300,6 +341,9 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
           } catch {
             // Writer might already be closed
           }
+          void langfuseSpanProcessor.forceFlush().catch((err) => {
+            console.warn(`${config.prefix} Langfuse span flush error:`, err);
+          });
           throw execError;
         }
       },
@@ -320,6 +364,9 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
   } catch (setupError) {
     console.error(`${config.prefix} Responder setup error:`, setupError);
     await triggerInferenceError(setupError);
+    void langfuseSpanProcessor.forceFlush().catch((err) => {
+      console.warn(`${config.prefix} Langfuse span flush error:`, err);
+    });
     throw setupError;
   }
 }
@@ -331,6 +378,8 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
  * @property modelId - Optional catalog model id; defaults to the lite Gemini model.
  * @property thinkingLevel - Optional thinking effort requested by the client.
  * @property signal - Optional abort signal tied to the incoming request.
+ * @property userId - Optional authenticated user ID for trace attribution.
+ * @property sessionId - Optional conversation / chat ID for trace session grouping.
  * @property onInferenceError - Optional callback invoked when stream or generation encounters an error.
  */
 export interface RunCompactionResponseParams {
@@ -341,6 +390,8 @@ export interface RunCompactionResponseParams {
   signal?: AbortSignal;
   remaining5h?: number;
   remainingWeek?: number;
+  userId?: string;
+  sessionId?: string;
   onInferenceError?: (error: unknown) => Promise<void> | void;
 }
 
@@ -358,6 +409,8 @@ export async function runCompactionResponse({
   signal,
   remaining5h,
   remainingWeek,
+  userId,
+  sessionId,
   onInferenceError,
 }: RunCompactionResponseParams): Promise<Response> {
   return createUIStreamResponder({
@@ -368,6 +421,8 @@ export async function runCompactionResponse({
     signal,
     remaining5h,
     remainingWeek,
+    userId,
+    sessionId,
     onInferenceError,
     initialSystem: buildCompactionInstruction(files),
     maxOutputTokens: 3500,

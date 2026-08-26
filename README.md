@@ -45,7 +45,7 @@ Create a `.env.local` file in the project root (see `.env.example` for the autho
 GOOGLE_GENERATIVE_AI_API_KEY="AIzaSy..."
 # Fireworks API Key (Required for DeepSeek models)
 FIREWORKS_API_KEY="fw_..."
-# Tavily API Key (Required for web search & extraction)
+# Tavily API Key (Optional - for web search & extraction)
 TAVILY_API_KEY="tvly-..."
 # Supabase Postgres Database (Required for Better Auth + rate limiting)
 DATABASE_URL="postgresql://postgres.user:password@aws-0-region.pooler.supabase.com:6543/postgres"
@@ -55,6 +55,10 @@ BETTER_AUTH_URL="http://localhost:3000"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 # Default Model Override (Optional)
 NEXT_PUBLIC_GEMINI_MODEL="gemini-3.5-flash-lite"
+# Langfuse Observability (Optional — traces are passive when unset)
+LANGFUSE_SECRET_KEY="sk-lf-..."
+LANGFUSE_PUBLIC_KEY="pk-lf-..."
+LANGFUSE_BASE_URL="https://cloud.langfuse.com"
 ```
 
 ### 3. Set up the database
@@ -125,6 +129,10 @@ A custom design system defined in `@theme` in `src/app/globals.css`: a warm stud
 
 The root route is a public marketing page (the proxy skips it), styled as an editorial atelier: a contour-grid hero with six floating tool badges (writeFile, webSearch, editFile, extractUrl, compactContext, readFile) that drift in infinite loops, a three-card artifact showcase — the `/compact` Context Index Card, a Living Manuscript with interactive margin-note annotations, and a Tavily Field Ledger — plus three design tenets (atelier over slot machine, durable files, surgical compaction) and engine-specimen calibration plates for Gemini, DeepSeek, and Tavily. The session is resolved server-side, so the header shows either "Sign In" or "Open Studio" — the latter drops signed-in users straight into their latest conversation or a fresh chat.
 
+### 11. LLM observability (Langfuse, optional)
+
+The app ships with a fully wired but optional Langfuse integration for LLM tracing. Three packages (`@langfuse/otel`, `@langfuse/tracing`, `@langfuse/vercel-ai-sdk`) are bootstrapped in `src/instrumentation.ts` on Node.js server startup, producing OpenTelemetry trace waterfalls that capture model calls, token usage, costs, and latency. Every agent and compaction call is attributed with `userId`, `sessionId`, and tags for dashboard filtering; traces are force-flushed on all exit paths to survive serverless termination. The integration is entirely passive when `LANGFUSE_*` env vars are unset.
+
 ![Workspace Studio Dashboard](./public/hero.webp)
 
 ![Agent Execution & Multi-Tool Reasoning](./public/agent-in-action.webp)
@@ -152,7 +160,8 @@ The root route is a public marketing page (the proxy skips it), styled as an edi
 | Validation | Zod 4 | API body parsing and every tool input/output schema |
 | Icons | lucide-react | Iconography |
 | Auto-scroll | `use-stick-to-bottom` | Chat scroll behavior (no manual scroll effects) |
-| Testing | `bun test` (15 suites in `__tests__/`) | Unit + route-integration tests | `bun run test` / `bun run test:watch` (`--isolate` flag); shared fixtures in `__tests__/helpers.ts`; constants imported from `@/lib/limits` |
+| Testing | `bun test` (17 suites in `__tests__/`) | Unit + route-integration tests | `bun run test` / `bun run test:watch` (`--isolate` flag); shared fixtures in `__tests__/helpers.ts`; constants imported from `@/lib/limits` |
+| Observability | Langfuse (`@langfuse/otel`, `@langfuse/tracing`, `@langfuse/vercel-ai-sdk`) | Optional LLM trace waterfalls via OpenTelemetry — token costs, session grouping, model metadata | Server-side `LangfuseSpanProcessor` in `src/instrumentation.ts`; per-request attribution (userId, sessionId, tags); force-flush on all exit paths |
 
 ---
 
@@ -219,10 +228,10 @@ All models share a 128k-token context window (131,072 tokens) and 64k maximum ou
 |----------|-------|----------|--------|-----------------|---------------|
 | `gemini-3.5-flash-lite` | Gemini 3.5 Flash Lite | Google | Yes | minimal, low, medium, high | low |
 | `gemini-3.1-flash-lite` | Gemini 3.1 Flash Lite | Google | Yes | minimal, high | minimal |
-| `gemini-3-flash-preview` | Gemini 3 Flash | Google | Yes | minimal, low, medium, high | high |
-| `gemma-4-31b-it` | Gemma 4 31B | Google | Yes | none | — |
-| `gemma-4-26b-a4b-it` | Gemma 4 26B | Google | Yes | none | — |
-| `accounts/fireworks/models/deepseek-v4-flash-0731` | DeepSeek V4 Flash | Fireworks | No | low, high | high |
+| `gemini-3-flash-preview` | Gemini 3 Flash Preview | Google | Yes | minimal, low, medium, high | high |
+| `gemma-4-31b-it` | Gemma 4 31B IT | Google | Yes | none | — |
+| `gemma-4-26b-a4b-it` | Gemma 4 26B A4B IT | Google | Yes | none | — |
+| `accounts/fireworks/models/deepseek-v4-flash-0731` | DeepSeek V4 Flash 0731 | Fireworks | No | low, high | high |
 
 Notes:
 
@@ -261,10 +270,12 @@ All scripts run through Bun.
 |--------|---------|--------|
 | `bun run dev` | `next dev` | Start the Next.js dev server |
 | `bun run build` | `next build` | Create a production build with type checking |
-| `bun run start` | `node .next/standalone/server.js` | Serve the standalone production build |
-| `bun run lint` | `eslint .` | Run ESLint across the codebase |
-| `bun run test` | `bun test --isolate` | Run the unit & integration test suite (15 suites in `__tests__/`) |
+| `bun run start` | `next start` | Start the production server |
+| `bun run typecheck` | `tsc --noEmit` | Run TypeScript type checking |
+| `bun run lint` | `oxlint` | Run Oxlint across the codebase |
+| `bun run test` | `bun test --isolate` | Run the unit & integration test suite (17 suites in `__tests__/`) |
 | `bun run test:watch` | `bun test --isolate --watch` | Re-run tests on file changes |
+| `bun run test:langfuse` | `bun run scripts/test-langfuse.ts` | Langfuse connectivity smoke test |
 | `bun run clean` | `next clean` | Clear the `.next` cache and build artifacts |
 | `bun run db:migrate` | `bun run scripts/migrate-better-auth-schema.ts` | Run the PostgreSQL schema migration |
 | `bun run db:test` | `bun run scripts/test-db.ts` | Test the database connection and table integrity |

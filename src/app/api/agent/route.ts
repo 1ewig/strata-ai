@@ -15,8 +15,8 @@ import { withAgentRouteGuards, safeAsyncRefundRateLimit } from "@/lib/ai/route-g
  * @returns A streaming text/plain response or a JSON error response
  */
 export async function POST(req: Request) {
-  return withAgentRouteGuards(req, async ({ body, messages, rateLimit, signal }) => {
-    const { model, thinkingLevel, maxSteps, files } = body;
+  return withAgentRouteGuards(req, async ({ session, body, messages, rateLimit, signal }) => {
+    const { model, thinkingLevel, maxSteps, files, chatId } = body;
 
     // Clamp the requested step limit to the 1-30 range, defaulting to 25.
     const maxStepsLimit = Math.min(Math.max(maxSteps || 25, 1), 30);
@@ -30,6 +30,8 @@ export async function POST(req: Request) {
       signal,
       remaining5h: rateLimit.remaining5h,
       remainingWeek: rateLimit.remainingWeek,
+      userId: session.user.id,
+      sessionId: chatId || session.session?.id,
       onInferenceError: async () => {
         safeAsyncRefundRateLimit(rateLimit.messageLogId);
       },

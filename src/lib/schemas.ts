@@ -25,6 +25,7 @@ export const agentRequestBodySchema = z.object({
   model: z.string().optional(),
   thinkingLevel: z.string().optional(),
   maxSteps: z.number().optional(),
+  chatId: z.string().optional(),
 });
 
 /** Request payload validated against `agentRequestBodySchema`. */

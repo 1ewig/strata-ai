@@ -53,12 +53,12 @@
 | Auto-scroll | `use-stick-to-bottom@^1.1` | Chat scroll anchoring + "scroll to bottom" affordance | `<StickToBottom>` wraps the message list in the chat page; manual scroll effects are forbidden |
 | Testing | bun test (15 suites in `__tests__/`) | Unit + route integration tests | `--isolate` flag mandatory; shared fixtures in `__tests__/helpers.ts`; route tests use `mock.module` + dynamic import of the route; constants imported from `@/lib/limits` never hardcoded |
 | Background jobs | None | No queues, cron, or scheduled tasks exist | All model/tool work is request-scoped inside the streaming response; the only recurring work is the 7-day `message_log` purge, which runs opportunistically inside the rate-limit transaction (never a background worker) |
-| Analytics / telemetry | None | No Sentry, PostHog, or third-party analytics | Deliberate prefixed `console.log`/`console.error` lifecycle logging only (`[agent]`, `[compaction]`, `[useChatSession]`, `[rate-limit API error]`, `[useCompaction]`) — keep the prefix convention |
+| Analytics / telemetry | Langfuse (`@langfuse/otel`, `@langfuse/tracing`, `@langfuse/vercel-ai-sdk`) | OpenTelemetry-based LLM observability, trace waterfalls, token costs, session grouping, and lifecycle logging (`[agent]`, `[compaction]`) | Server-side `NodeTracerProvider` with `LangfuseSpanProcessor` registered in `src/instrumentation.ts`; `propagateAttributes` attaches `userId`, `sessionId`, and tags; traces flush asynchronously on finish |
 | Deployment | Vercel (standalone output) | Hosting | `next build` → standalone server; live at strata-ai-five.vercel.app |
 
-**Environment variables** (`.env.example` is authoritative): `GOOGLE_GENERATIVE_AI_API_KEY` (required), `FIREWORKS_API_KEY` (required for DeepSeek), `NEXT_PUBLIC_GEMINI_MODEL` (default model id), `DATABASE_URL` (Supabase pooler), `BETTER_AUTH_SECRET` (≥32 chars), `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL` (auth client base), `TAVILY_API_KEY` (optional).
+**Environment variables** (`.env.example` is authoritative): `GOOGLE_GENERATIVE_AI_API_KEY` (required), `FIREWORKS_API_KEY` (required for DeepSeek), `NEXT_PUBLIC_GEMINI_MODEL` (default model id), `DATABASE_URL` (Supabase pooler), `BETTER_AUTH_SECRET` (≥32 chars), `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL` (auth client base), `TAVILY_API_KEY` (optional), `LANGFUSE_SECRET_KEY` / `LANGFUSE_PUBLIC_KEY` / `LANGFUSE_BASE_URL` (optional observability).
 
-**Runtime scripts** (all `bun run`): `dev` (next dev) · `build` (next build; must pass) · `start` (standalone server) · `lint` (eslint .; must pass) · `lint:fast` (oxlint fast linter) · `typecheck` (tsc --noEmit) · `test` (bun test --isolate) · `test:watch` · `clean` (next clean) · `db:migrate` (executes `scripts/better-auth-schema.sql` via `migrate-better-auth-schema.ts`) · `db:test` (connection + schema healthcheck).
+**Runtime scripts** (all `bun run`): `dev` (next dev) · `build` (next build; must pass) · `start` (standalone server) · `lint` (oxlint; must pass) · `typecheck` (tsc --noEmit) · `test` (bun test --isolate) · `test:watch` · `clean` (next clean) · `db:migrate` (executes `scripts/better-auth-schema.sql` via `migrate-better-auth-schema.ts`) · `db:test` (connection + schema healthcheck) · `test:langfuse` (Langfuse connectivity smoke test).
 
 **Test suite inventory (`__tests__/`, bun test --isolate):**
 
@@ -74,6 +74,8 @@
 | `message-segments.test.ts` | flattenMessageSegments grouping (streaming vs. finished, work-group folding) |
 | `token-usage.test.ts` | Active-context/session/cost math, compaction reset, pricing lookups |
 | `tavily-tools.test.ts` | Payload building, error-shape extraction, timeout composition |
+| `image-utils.test.ts` | Client image pipeline: MIME validation, canvas downscale, quality stepping, budget fitting |
+| `image-drop.test.ts` | Drag-and-drop image file handling, file-type validation, composer integration |
 | `workspace.test.ts` / `languages.test.ts` / `limits.test.ts` / `models.test.ts` / `schemas.test.ts` | Pure-unit coverage of the lib layer |
 
 ## 3. High-Level Architectural Mental Model & Data Flow
@@ -88,7 +90,7 @@ ChatInput (textarea, slash menu, char counter)
           reads model/thinkingLevel/files from refs — never re-created)
          └─ src/proxy.ts (Next 16 proxy): session cookie gate (getSessionCookie),
             JSON 401 for APIs / redirect to /auth?callbackUrl= for pages, security headers
-           └─ POST /api/agent (delegates to withAgentRouteGuard in lib/ai/route-guards.ts):
+           └─ POST /api/agent (delegates to withAgentRouteGuards in lib/ai/route-guards.ts):
               auth.api.getSession (401) → JSON parse (400) → zod safeParse (400)
               → limit guards (2000-char max, ≤4 images) → checkAndIncrementRateLimit (429)
               → sliceMessagesAfterCompaction → clamp maxSteps 1..30 (default 25)
@@ -118,7 +120,7 @@ ChatInput (textarea, slash menu, char counter)
 
 ```
 ChatInput "/compact" → useCompaction.triggerCompaction (guard: not already compacting,
-  messages exist, not loading) → POST /api/agent/compact (via withAgentRouteGuard: auth + rate-limit)
+  messages exist, not loading) → POST /api/agent/compact (via withAgentRouteGuards: auth + rate-limit)
   → runCompactionResponse reuses createUIStreamResponder with:
      model = COMPACTION_MODEL_ID (gemini-3.1-flash-lite), thinking = 'high',
      initialSystem = buildCompactionInstruction(files) [metadata only],
@@ -216,13 +218,16 @@ Strata Ai/
 │   ├── better-auth-schema.sql — DDL: better_auth schema (user/session/account/verification)
 │   │                            + message_log quota table + (user_id, created_at) index.
 │   ├── migrate-better-auth-schema.ts — Executes the SQL above (bun run db:migrate).
-│   └── test-db.ts             — Connection + schema healthcheck (bun run db:test).
-├── __tests__/                 — 15 bun test suites; helpers.ts shared fixtures (makeFile,
+│   ├── test-db.ts             — Connection + schema healthcheck (bun run db:test).
+│   └── test-langfuse.ts       — Langfuse connectivity smoke test (bun run test:langfuse).
+├── __tests__/                 — 17 bun test suites; helpers.ts shared fixtures (makeFile,
 │   │                            runTool, setupWorkspaceTools, jsonResponse); route tests mock
 │   │                            @/lib/auth, @/lib/rate-limit, @/lib/ai/agent-runner via mock.module.
 │   └── types.d.ts             — Global test typings.
-├── docs/                      — SUMMARY.md (THIS FILE — canonical architecture guide) + AI SDK tutorial guide.
+├── docs/                      — SUMMARY.md (THIS FILE — canonical architecture guide) + AI SDK tutorial guide + CV_BULLETS_BANK.md.
 └── src/
+    ├── instrumentation.ts     — Next.js server startup hook: OpenTelemetry NodeTracerProvider +
+    │                            LangfuseSpanProcessor + LangfuseVercelAiSdkIntegration.
     ├── proxy.ts               — Next 16 middleware replacement: session-cookie gate + security
     │                            headers; matcher scoped to app shell + agent API only.
     ├── app/
@@ -254,7 +259,8 @@ Strata Ai/
     │   │                        motion presets: accordion/popover/pill/hero/attachment variants).
     │   │   ├── composer/      — AttachmentPreviews, ComposerStatusRow, ComposerToolbar (attach
     │   │   │                    button, model selector menu, send/stop), ModelSelectorMenu,
-    │   │   │                    SlashCommandMenu.
+    │   │   │                    SlashCommandMenu, DropZoneOverlay (file-drag overlay),
+    │   │   │                    useComposerFileDrop (drag-and-drop image handling).
     │   │   ├── message/       — ChatBubble, UserMessageAttachments (image thumbnails),
     │   │   │                    ToolCallCard (config-agnostic), ThoughtAccordion,
     │   │   │                    WorkGroupCard, MessageActionsMenu, CompactionDivider,
@@ -275,7 +281,8 @@ Strata Ai/
     │   ├── workspace/         — WorkspaceDrawer (file selector, editor with header char count,
     │   │                        code viewer, empty state, footer), WorkspaceFileSelector,
     │   │                        WorkspaceEditor, CodeViewer (line numbers + Prism),
-    │   │                        WorkspaceEmptyState, WorkspaceDrawerFooter.
+    │   │                        WorkspaceEmptyState, WorkspaceDrawerFooter,
+    │   │                        WorkspaceOverflowMenu (copy/edit/delete context menu).
     │   ├── sidebar/           — Sidebar, SidebarHeader, SidebarFooter, ConversationList,
     │   │                        ConversationItem, NewChatButton, RateLimitRing (quota ring).
     │   ├── auth/              — auth-shell, sign-in-form, sign-up-form, loading-screen, user-button.
@@ -318,7 +325,7 @@ Strata Ai/
             ├── index.ts       — Barrel: prompts + tools.
             ├── agent-runner.ts— ALL streamText config; createUIStreamResponder shared by agent
             │                    and compaction; SSE wrapping + quota headers.
-            ├── route-guards.ts — withAgentRouteGuard: 5-stage API route pipeline (auth, json, limits,
+            ├── route-guards.ts — withAgentRouteGuards: pipeline (auth, json, limits,
             │                    rate-limit, delegate with safeAsyncRefundRateLimit on error).
             ├── error-classifier.ts — classifyProviderError: maps provider/network/auth errors into
             │                    structured ClassifiedError shapes with retry/refund semantics.
@@ -523,10 +530,23 @@ A user with 3 messages in the last 5 hours and 9 in the last 7 days sends a mess
 
 ## 8. Unique Project Patterns, Optimizations & Quirks
 
-- **`createUIStreamResponder` (agent-runner.ts) — the single collapse point:** every `streamText` concern (model resolution, metadata sanitization, reasoning wiring, system-prompt re-injection per step, word-paced smoothing, tool-delta coalescing, step caps, lifecycle logging, UI-message SSE wrapping, quota headers, usage stamping) lives in ONE shared function; `runAgentResponse` and `runCompactionResponse` are just delta configs. New endpoints must reuse it — never hand-roll a second stream assembly.
-- **5-Stage Route Guard Pipeline (`withAgentRouteGuard` in `lib/ai/route-guards.ts`):** wraps both `/api/agent` and `/api/agent/compact` with a uniform 5-stage pipeline: (1) Better Auth session resolution (401), (2) request JSON body parse (400), (3) message length and image count guards (400), (4) PostgreSQL sliding-window quota check/increment (429), and (5) execution delegate with abort signal forwarding.
+- **`createUIStreamResponder` (agent-runner.ts, internal) — the single collapse point:** every `streamText` concern (model resolution, metadata sanitization, reasoning wiring, system-prompt re-injection per step, word-paced smoothing, tool-delta coalescing, step caps, lifecycle logging, UI-message SSE wrapping, quota headers, usage stamping) lives in ONE shared internal function (not exported); `runAgentResponse` and `runCompactionResponse` are just delta configs that call it. New endpoints must reuse it via the exported wrappers — never hand-roll a second stream assembly.
+- **Route Guard Pipeline (`withAgentRouteGuards` in `lib/ai/route-guards.ts`):** wraps both `/api/agent` and `/api/agent/compact` with a uniform pipeline: (1) Better Auth session resolution (401), (2) request JSON body parse (400), (3) Zod schema validation (400), (4) message length and image count guards (400), (5) PostgreSQL sliding-window quota check/increment (429), and (6) execution delegate with auto-refund on failure.
 - **Inference Failure Quota Refund (`refundRateLimit` + `safeAsyncRefundRateLimit`):** when an LLM provider errors (5xx, timeouts, model auth issues) or stream initialization fails, the route guard and agent runner catch the error, map it via `classifyProviderError`, and execute an asynchronous refund against the database `message_log` row. Users are never charged for infrastructure or provider failures.
-- **Upstream Error Classification (`lib/ai/error-classifier.ts`):** maps Google Gemini, Fireworks/DeepSeek, network timeouts, and HTTP status codes into typed `ClassifiedError` objects (`code`, `message`, `status`, `retryAfter`, `refundable`). Emits UI stream error chunks (`{ type: 'error', errorText: ... }`) and surfaces user-friendly explanations.
+- **Upstream Error Classification (`lib/ai/error-classifier.ts`):** maps Google Gemini, Fireworks/DeepSeek, network timeouts, and HTTP status codes into typed `ClassifiedError` objects (`code`, `message`, `status`, `retryAfter`, `refundable`). Emits UI stream error chunks (`{ type: 'error', errorText: ... }`) and surfaces user-friendly explanations. The 7 classification codes and their retry semantics:
+
+  | Code | Trigger patterns | Retryable |
+  |------|-----------------|-----------|
+  | `ABORTED` | "abort", "cancelled", "the user aborted" | No |
+  | `PROVIDER_RATE_LIMIT` | "resource_exhausted", "quota", "429", "rate limit", "too many requests", "overloaded", "503" | Yes |
+  | `PROVIDER_RESTRICTED` | "restricted", "permission_denied", "403", "project has been restricted" | No |
+  | `SAFETY_FILTER_TRIGGERED` | "safety", "harm_category", "blocked", "candidate was blocked" | No |
+  | `CONTEXT_EXCEEDED` | "context_length_exceeded", "max_tokens", "context length", "prompt is too long", "maximum context" | Yes |
+  | `AUTHENTICATION_ERROR` | "api_key", "unauthorized", "401" | No |
+  | `NETWORK_ERROR` | "fetch failed", "network", "econnreset", "etimedout", "enotfound", "socket hang up" | Yes |
+  | `INFERENCE_FAILURE` | Default fallback for unclassified errors | Yes |
+
+  The `CONTEXT_EXCEEDED` code specifically nudges the user to run `/compact` — a cross-feature prompt that appears in the error card.
 - **Instant Client Quota Synchronization:** `RateLimitContext` exposes `checkQuotaStatus`, which calls `/api/user/rate-limit` to fetch fresh sliding-window state whenever a transport or compaction stream encounters an error, instantly clearing false quota blocks in the UI.
 - **`coalesceToolInputDeltas` transform (`lib/ai/stream-transforms.ts`):** buffers `tool-input-delta` chunks per tool-call id and flushes them once at `tool-input-end`/`tool-call`. Prevents AI SDK 7's message reducer from running O(N·length) `parsePartialJson` + `fixJson` per token on large tool args, which froze the UI. Delicate: must stay ahead of `smoothStream` in the transform array and preserve `providerMetadata`; logs coalescing stats at `[agent]` prefix.
 - **`sanitizeMessagesForProvider` (`lib/ai/sanitization.ts`):** strips `providerMetadata` / `callProviderMetadata` / `resultProviderMetadata` keys belonging to providers other than the active one. Fixes Fireworks rejecting Gemini thought signatures re-emitted as `extra_content` on tool-call parts ("Extra inputs are not permitted"). The active provider's keys are intentionally kept (Gemini thought round-trip).
@@ -536,10 +556,10 @@ A user with 3 messages in the last 5 hours and 9 in the last 7 days sends a mess
 - **Refs-as-live-values in memoized closures:** the `DefaultChatTransport` and `chatRef` are created once (useMemo) but read model/thinkingLevel/files through refs updated by effects — this avoids transport re-creation on every keystroke while keeping payloads current (`eslint-disable react-hooks/refs` documented in-place).
 - **Dexie write coalescing:** `useWorkspaceFiles.handleUpdateFile` debounces 150ms into a pending-map, batching rapid streaming-driven file updates into one DB write; `saveWorkspaceFile` also short-circuits no-op writes.
 - **Auto-continuation loop:** `finishReason === 'step-limit'` silently re-invokes the agent (≤2 passes, 300ms apart) with a canned continuation prompt; the counter is per-user-turn and ref-based. Race-condition sensitivity: must reset on user send and never fire while `isCompacting`.
-- **Compaction client protocol:** the compaction stream bypasses `useChat`'s transport entirely — a manual `fetch` + `parseJsonEventStream` + `readUIMessageStream` loop that stamps `isCompactedSummary` onto a stable `compact-<ts>` message id, then reconciles via the same `reconcileFinishedStep`. Server prunes history with `sliceMessagesAfterCompaction` on the NEXT requests. Compaction failures render + persist an in-stream error message.
-- **SSR quota hydration:** root layout resolves session + `getRateLimitStatus` and passes `initialData` into `RateLimitContext`; the provider normalizes via a stable key string (avoids effect loops from fresh prop identity) and refetches `/api/user/rate-limit` client-side when SSR data is absent; state resets during render when `userId`/key changes (no effect needed).
+- **Compaction client protocol:** the compaction stream bypasses `useChat`'s transport entirely — a manual `fetch` + `parseJsonEventStream` + `readUIMessageStream` loop that stamps `isCompactedSummary` onto a stable `compact-<ts>` message id, then reconciles via the same `reconcileFinishedStep`. Server prunes history with `sliceMessagesAfterCompaction` on the NEXT requests. Compaction failures are persisted to Dexie as `isCompactedSummary: true, isCompactionFailed: true` messages — they survive reload and the `CompactionDivider` renders them in a failed state with a retry button. A post-stream guard rejects empty compaction summaries (throws `"Inference failed: no compaction summary was generated."`), and 429 errors are detected both via HTTP status and a catch-block string-match heuristic so quota syncs even on compaction failures.
+- **SSR quota hydration:** root layout resolves session + `getRateLimitStatus` and passes `initialData` into `RateLimitContext`; the provider normalizes via a stable key string (avoids effect loops from fresh prop identity) and refetches `/api/user/rate-limit` client-side when SSR data is absent; state resets during render when `userId`/key changes (no effect needed). The anti-hydration technique: a stable string key (`remaining5h:remainingWeek:retryAfter`) is derived from the SSR data and parsed via `useMemo`; when `userId` or the key changes, state is reset during the render phase (comparing prev/current in the component body, not in an effect) — this prevents the flash-of-old-data that an effect-based approach would cause.
 - **Timestamps as ordering keys:** message order derives from fabricated `Date.now()+idx` timestamps — sorting by timestamp reproduces conversation order exactly; mutating this scheme risks reordering history.
-- **Segmented message rendering (`flattenMessageSegments`):** during streaming every part renders ungrouped and live; on finish, all pre-answer output (intermediate narration, reasoning, tool cards) folds into one collapsible `work-group` segment, leaving only the final text as the bubble body. The memo recompute on `isStreaming` flip drives the collapse.
+- **Segmented message rendering (`flattenMessageSegments`):** during streaming every part renders ungrouped and live; on finish, all pre-answer output (intermediate narration, reasoning, tool cards) folds into one collapsible `work-group` segment, leaving only the final text as the bubble body. The memo recompute on `isStreaming` flip drives the collapse. For user messages, image parts (data-URL `file` parts with `image/*` mediaType) are extracted into a dedicated `user-images` segment that renders as a thumbnail row above the user text via `UserMessageAttachments`.
 - **Tool display normalization (`tools/resolver.tsx`):** one `toolMeta` table maps each canonical tool to a `{ config, summary }` pair (icon, accent tokens, badge, and a builder from `tools/summaries.tsx`); raw names are normalized case/dash/underscore-insensitively via `TOOL_ALIASES` (`websearch`, `tavily`, `extractpage`, `listf`, `editf`); unknown tools render a generic card — `ToolCallCard` itself is config-agnostic and must stay untouched.
 - **Client-side image attachments + server backstop:** images (JPEG/PNG/WebP/GIF, ≤4 per message, ≤5 MB input) are validated and re-encoded in the browser by `lib/image-utils.ts` — a canvas loop downscales to a 1280 px long edge and steps JPEG quality 0.85→0.3 (PNG for alpha) until the data URL fits a 1.5 MB budget (2 M chars on the wire). Pure helpers (`countImageParts`, `findImagePartViolations`) are shared with the `/api/agent` route so its 400 backstop mirrors the UI gate exactly. `getModelSupportsVision` disables attach on text-only models (DeepSeek), and `stripImageContentForTextOnlyProviders` removes image parts from replayed history so old image conversations survive a provider switch. Attachments render as a `user-images` segment (thumbnail row via `message/UserMessageAttachments`) above the user text.
 - **`smoothStream` word-pacing + `SmoothStreamText`:** the server emits word-chunked deltas (25ms delay) and the client renders markdown progressively (via `MarkdownRenderer` → `SmoothStreamText`) with a streaming caret — this pair is the perceived-latency win; changing the delay or chunking affects the whole UX.
@@ -570,7 +590,7 @@ Future agents MUST adhere to these directives:
 6. **Never write manual scroll effects** (`useEffect` + `scrollIntoView`); `StickToBottom` in the chat page owns scrolling.
 7. **All dynamic route params and searchParams MUST be awaited** (`use(params)`, `await searchParams`) and validated (zod at the API boundary) before use.
 8. **Magic numbers are forbidden in tests and business code** — import constants from `@/lib/limits` (e.g. `QUOTA_5H_LIMIT`, `MAX_FILES_PER_WORKSPACE`, `10000`, `3`, `12000`).
-9. **Keep pages presentational:** components must not query Dexie, fetch sessions, or navigate; pages call hooks and pass props. Parent layouts must not be marked `'use client'` — push interactivity to leaf components.
+9. **Keep pages presentational:** components must not query Dexie, fetch sessions, or navigate; pages call hooks and pass props. Parent layouts must not be marked `'use client'` — push interactivity to leaf components. Exception: `LandingClient` and `LandingHeader` directly query Dexie to resolve the latest conversation for "Open Studio" routing — this is intentional for the public landing page.
 10. **Preserve the agent-runner stream transform order** (`smoothStream` word-pacing then `coalesceToolInputDeltas`) and the `prepareStep` system-prompt re-injection — both are load-bearing for streaming UX and tool correctness.
 11. **Maintain per-user isolation invariants:** new Dexie records get stamped with `userId`; legacy unscoped records stay visible; server queries always filter by session `user.id`.
 12. **Rate-limit/quota ordering is contractual:** consume quota before body validation; echo `X-RateLimit-*` headers on every response; never bypass `checkAndIncrementRateLimit` on agent routes.
@@ -603,6 +623,10 @@ Future agents MUST adhere to these directives:
 4. **Schema changes (Dexie):** add a new `version(n).stores(...)` block in `db.ts` mirroring the full table shapes (never edit an existing version); keep `userId` indexes for per-user isolation; legacy-scoped records remain readable by the existing `!c.userId || c.userId === userId` filters.
 5. **Schema changes (Postgres):** extend `scripts/better-auth-schema.sql` + `scripts/migrate-better-auth-schema.ts`, run `bun run db:migrate` and `bun run db:test`.
 6. **Tests:** mirror `api-agent-route.test.ts` for route validation (mock auth/rate-limit/agent-runner before dynamic import); `rate-limit.test.ts` pattern for SQL-shape dispatch; unit tests for any new pure functions.
+
+### Recipe B1 — Adding a slash command
+
+`SlashCommandMenu` (`components/chat/composer/SlashCommandMenu.tsx`) uses a simple registry array (`SLASH_COMMANDS`). To add a new command: push a new `SlashCommand` object (id, label, description, icon, handler) to the array. The menu is keyboard-navigable and styled with Milo tokens — no component modifications needed.
 
 ### Recipe C — Integrating an external API / webhook
 
