@@ -102,14 +102,14 @@ export default function MessageActionsMenu({
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        className={`p-1 rounded-lg border backdrop-blur-md shadow-button transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center ${
+        className={`p-1.5 sm:p-1 min-w-[30px] min-h-[30px] sm:min-w-0 sm:min-h-0 rounded-lg border backdrop-blur-md shadow-button transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center ${
           isOpen
             ? 'bg-surface-elevated text-text-bright border-edge-hover shadow-card'
             : 'bg-surface-raised/95 dark:bg-surface-elevated/95 text-text-muted hover:text-text-primary hover:bg-surface-hover border-edge-raised hover:border-edge-hover'
         }`}
         title="Message options"
       >
-        <MoreHorizontal className="w-3.5 h-3.5" />
+        <MoreHorizontal className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
       </button>
 
       {/* Dropdown Menu */}

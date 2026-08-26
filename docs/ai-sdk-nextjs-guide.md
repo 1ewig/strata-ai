@@ -152,8 +152,8 @@ This repo's exact `package.json` scripts (bun only — never `npm`/`yarn`/`npx`)
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "node .next/standalone/server.js",
-    "lint": "eslint .",
+    "start": "next start",
+    "lint": "oxlint",
     "clean": "next clean",
     "db:migrate": "bun run scripts/migrate-better-auth-schema.ts",
     "db:test": "bun run scripts/test-db.ts"
