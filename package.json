@@ -12,7 +12,8 @@
     "test:watch": "bun test --isolate --watch",
     "clean": "next clean",
     "db:migrate": "bun run scripts/migrate-better-auth-schema.ts",
-    "db:test": "bun run scripts/test-db.ts"
+    "db:test": "bun run scripts/test-db.ts",
+    "test:langfuse": "bun run scripts/test-langfuse.ts"
   },
   "dependencies": {
     "@ai-sdk/fireworks": "^3.0.22",
