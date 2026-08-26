@@ -18,7 +18,7 @@ interface LandingHeaderProps {
 }
 
 /**
- * Clean, distraction-free top navigation for the Strata AI landing page.
+ * Centered floating pill navbar inspired by modern Swiss editorial design.
  */
 export function LandingHeader({ userId }: LandingHeaderProps) {
   const { isDark, toggle: toggleTheme } = useTheme();
@@ -46,58 +46,61 @@ export function LandingHeader({ userId }: LandingHeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-edge-default bg-surface-base/80 backdrop-blur-md transition-colors duration-200">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <header className="fixed top-4 sm:top-6 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
+      <div className="pointer-events-auto flex items-center justify-between gap-3 sm:gap-6 px-3.5 sm:px-5 py-2 rounded-full bg-surface-raised/85 dark:bg-surface-elevated/85 backdrop-blur-xl border border-edge-raised shadow-card hover:border-edge-hover transition-all duration-200 max-w-2xl w-full">
         {/* Brand mark & title */}
         <Link
           href="/"
-          className="flex items-center gap-2 text-text-bright hover:opacity-90 transition-opacity"
+          className="flex items-center gap-1.5 text-text-bright hover:opacity-80 transition-opacity shrink-0"
         >
-          <StrataIcon className="w-5 h-5" />
-          <span className="font-display font-bold text-label tracking-tight text-text-bright">
-            Strata
-          </span>
-          <span className="text-micro px-2 py-0.5 rounded-full bg-surface-elevated text-text-muted font-medium border border-edge-default">
-            Studio
+          <StrataIcon className="w-4 h-4" />
+          <span className="font-display font-extrabold text-label tracking-tight text-text-bright">
+            strata<span className="text-micro align-super font-mono text-text-muted">®</span>
           </span>
         </Link>
 
-        {/* Minimalist navigation */}
-        <nav className="hidden md:flex items-center gap-7 text-label text-text-secondary">
+        {/* Navigation links (Desktop) */}
+        <nav className="hidden md:flex items-center gap-5 text-caption font-medium text-text-secondary">
           <a
-            href="#artifacts"
+            href="#mission"
             className="hover:text-text-bright transition-colors"
           >
-            The Artifacts
+            Mission
           </a>
           <a
-            href="#philosophy"
+            href="#numbers"
             className="hover:text-text-bright transition-colors"
           >
-            The Tenets
+            Numbers
           </a>
           <a
-            href="#specimens"
+            href="#process"
             className="hover:text-text-bright transition-colors"
           >
-            The Specimens
+            Process
+          </a>
+          <a
+            href="#engines"
+            className="hover:text-text-bright transition-colors"
+          >
+            Engines
           </a>
         </nav>
 
-        {/* Right side actions: theme toggle & auth button */}
-        <div className="flex items-center gap-3">
+        {/* Right side actions */}
+        <div className="flex items-center gap-2 shrink-0">
           <motion.button
             type="button"
             whileTap={{ scale: 0.92 }}
             onClick={toggleTheme}
             aria-label={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
             title={isDark ? 'Switch to light theme' : 'Switch to dark theme'}
-            className="p-2 rounded-xl text-text-muted hover:text-text-primary hover:bg-surface-elevated border border-edge-default transition-colors cursor-pointer"
+            className="p-1.5 rounded-full text-text-muted hover:text-text-primary hover:bg-surface-elevated border border-edge-default transition-colors cursor-pointer"
           >
             {isDark ? (
-              <Sun className="w-4 h-4 text-secondary" />
+              <Sun className="w-3.5 h-3.5 text-secondary" />
             ) : (
-              <Moon className="w-4 h-4 text-text-muted" />
+              <Moon className="w-3.5 h-3.5 text-text-muted" />
             )}
           </motion.button>
 
@@ -106,18 +109,19 @@ export function LandingHeader({ userId }: LandingHeaderProps) {
               type="button"
               {...buttonHoverProps}
               onClick={handleOpenStudio}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-primary hover:bg-primary-hover text-surface text-label font-semibold shadow-button hover:shadow-glow-primary transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-text-bright text-surface-base dark:text-surface-base hover:opacity-90 text-caption font-semibold shadow-button transition-all cursor-pointer"
             >
-              <span>Open Studio</span>
-              <ArrowRight className="w-3.5 h-3.5" />
+              <span>Studio</span>
+              <ArrowRight className="w-3 h-3" />
             </motion.button>
           ) : (
             <motion.div {...buttonHoverProps}>
               <Link
                 href="/auth/signin"
-                className="inline-flex items-center px-3.5 py-1.5 rounded-xl bg-surface-raised hover:bg-surface-elevated text-text-primary border border-edge-raised text-label font-medium shadow-button transition-colors"
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-text-bright text-surface-base hover:opacity-90 text-caption font-semibold shadow-button transition-opacity"
               >
-                Sign In
+                <span>Studio</span>
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </motion.div>
           )}

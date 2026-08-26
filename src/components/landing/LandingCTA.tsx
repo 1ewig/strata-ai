@@ -3,8 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'motion/react';
-import { ArrowRight, CornerDownLeft } from 'lucide-react';
-import { StrataIcon } from '@/components/ui/strata-icon';
+import { ArrowRight } from 'lucide-react';
 import {
   staggerContainerVariants,
   fadeUpVariants,
@@ -19,71 +18,65 @@ interface LandingCTAProps {
 
 export function LandingCTA({ userId, onOpenStudio }: LandingCTAProps) {
   return (
-    <section className="py-20 sm:py-28 border-t border-edge-default relative overflow-hidden">
-      {/* Subtle Studio Ambient Background Light */}
-      <div className="absolute inset-0 pointer-events-none -z-10 flex items-center justify-center">
-        <div className="w-[500px] h-[300px] rounded-full bg-gradient-to-tr from-primary/10 via-secondary/10 to-transparent blur-3xl opacity-60" />
-      </div>
-
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+    <section className="py-24 sm:py-36 border-t border-edge-default relative px-4 sm:px-8 lg:px-12 bg-surface-raised/40 dark:bg-surface-elevated/30">
+      <div className="max-w-7xl mx-auto w-full">
         <motion.div
           variants={staggerContainerVariants}
           initial="hidden"
           whileInView="visible"
           viewport={viewportOnce}
-          className="flex flex-col items-center space-y-6"
+          className="space-y-10 sm:space-y-12"
         >
-          {/* Glowing Brand Mark */}
-          <motion.div variants={fadeUpVariants} className="relative group">
-            <StrataIcon className="w-14 h-14 transition-transform duration-300 group-hover:scale-105" />
-            <div className="absolute -inset-2 rounded-full bg-primary/20 blur-md -z-10 animate-pulse" />
-          </motion.div>
+          <div className="max-w-4xl space-y-6">
+            <motion.h2
+              variants={fadeUpVariants}
+              className="font-display font-extrabold text-5xl sm:text-7xl lg:text-8xl tracking-tight text-text-bright leading-[0.95] uppercase"
+            >
+              Pull up a chair <br />
+              and start <br />
+              creating<span className="text-primary">.</span>
+            </motion.h2>
 
-          <motion.div variants={fadeUpVariants} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-surface-elevated border border-edge-raised text-micro font-mono uppercase tracking-widest text-text-secondary">
-            <span>+ 05 / The Invitation</span>
-          </motion.div>
+            <motion.p
+              variants={fadeUpVariants}
+              className="text-body sm:text-subheading text-text-secondary max-w-xl font-sans leading-relaxed"
+            >
+              Start with a clean page or bring in your existing notes. Everything is saved directly to your browser—private, instant, and completely yours.
+            </motion.p>
+          </div>
 
-          <motion.h2
-            variants={fadeUpVariants}
-            className="text-display sm:text-[2.75rem] font-bold text-text-bright font-display tracking-tight max-w-xl"
-          >
-            Pull up a chair to the studio desk.
-          </motion.h2>
-
-          <motion.p
-            variants={fadeUpVariants}
-            className="text-body text-text-secondary max-w-lg leading-relaxed font-sans"
-          >
-            Begin with an empty workspace or paste an existing markdown document. No credit card required.
-          </motion.p>
-
+          {/* Action Row */}
           <motion.div
             variants={fadeUpVariants}
-            className="flex flex-col sm:flex-row items-center gap-3 pt-4 w-full sm:w-auto"
+            className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-4"
           >
             <motion.button
               type="button"
               onClick={onOpenStudio}
               {...buttonHoverProps}
-              className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-primary hover:bg-primary-hover active:scale-[0.98] text-surface font-semibold text-label shadow-button flex items-center justify-center gap-2 transition-colors cursor-pointer group"
+              className="px-8 py-4 rounded-full bg-text-bright text-surface-base font-semibold text-label shadow-button flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer group"
             >
               <span>{userId ? 'Return to Workspace' : 'Open the Studio'}</span>
               <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
             </motion.button>
 
             {!userId && (
-              <Link
-                href="/auth/signup"
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl border border-edge-raised hover:border-edge-hover bg-surface-raised/80 dark:bg-surface-elevated/80 hover:bg-surface-hover text-text-primary font-semibold text-label shadow-button transition-colors text-center"
-              >
-                Create Account
-              </Link>
+              <motion.div {...buttonHoverProps}>
+                <Link
+                  href="/auth/signup"
+                  className="px-7 py-4 rounded-full border border-edge-raised hover:border-edge-hover bg-surface-raised dark:bg-surface-elevated text-text-primary font-semibold text-label shadow-button transition-colors inline-block"
+                >
+                  Create Free Account
+                </Link>
+              </motion.div>
             )}
           </motion.div>
 
-          <motion.div variants={fadeUpVariants} className="pt-2 flex items-center gap-2 text-micro font-mono text-text-muted">
-            <CornerDownLeft className="w-3.5 h-3.5 text-text-muted" />
-            <span>Instant local-first session in your browser</span>
+          <motion.div
+            variants={fadeUpVariants}
+            className="pt-6 text-micro font-mono text-text-muted uppercase tracking-widest"
+          >
+            // Free to explore · No credit card needed · Stays on your device
           </motion.div>
         </motion.div>
       </div>

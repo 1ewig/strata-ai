@@ -1,18 +1,18 @@
 import type { Variants, Transition } from 'motion/react';
 
 /**
- * Gentle, organic spring and ease curves for a quiet, human atmosphere.
+ * Clean, tactile spring and ease curves for a Swiss minimalist aesthetic.
  */
 export const softSpring: Transition = {
   type: 'spring',
-  damping: 30,
-  stiffness: 140,
+  damping: 32,
+  stiffness: 160,
 };
 
 export const gentleSpring: Transition = {
   type: 'spring',
-  damping: 34,
-  stiffness: 120,
+  damping: 28,
+  stiffness: 140,
 };
 
 export const tactileSpring: Transition = {
@@ -22,29 +22,29 @@ export const tactileSpring: Transition = {
 };
 
 /**
- * Viewport configuration to ensure scroll animations only trigger once.
+ * Viewport configuration to ensure scroll animations trigger smoothly.
  */
 export const viewportOnce = {
   once: true,
-  amount: 0.2,
+  amount: 0.15,
 };
 
 /**
- * Stagger container for animating items with calm, unhurried pacing.
+ * Stagger container for animating items in structured sequences.
  */
 export const staggerContainerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.04,
+      staggerChildren: 0.08,
+      delayChildren: 0.02,
     },
   },
 };
 
 /**
- * Natural fade-up animation for text and cards.
+ * Natural fade-up animation for text and blocks.
  */
 export const fadeUpVariants: Variants = {
   hidden: { opacity: 0, y: 16 },
@@ -68,25 +68,6 @@ export const cardVariants: Variants = {
 };
 
 /**
- * Marginalia annotation bubble reveal animation.
- */
-export const marginaliaVariants: Variants = {
-  hidden: { opacity: 0, scale: 0.94, y: 4 },
-  visible: {
-    opacity: 1,
-    scale: 1,
-    y: 0,
-    transition: { type: 'spring', damping: 22, stiffness: 320 },
-  },
-  exit: {
-    opacity: 0,
-    scale: 0.96,
-    y: 2,
-    transition: { duration: 0.12, ease: 'easeIn' },
-  },
-};
-
-/**
  * Subtle interactive hover feedback presets.
  */
 export const buttonHoverProps = {
@@ -95,12 +76,7 @@ export const buttonHoverProps = {
   transition: { duration: 0.12 } as Transition,
 };
 
-export const artifactHoverProps = {
-  whileHover: { y: -4 },
-  transition: { duration: 0.2, ease: 'easeOut' as const } as Transition,
-};
-
-export const specimenHoverProps = {
+export const cardHoverProps = {
   whileHover: { y: -3 },
   transition: { duration: 0.2, ease: 'easeOut' as const } as Transition,
 };

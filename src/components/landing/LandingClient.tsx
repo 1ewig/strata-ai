@@ -6,9 +6,9 @@ import { db } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { LandingHero } from '@/components/landing/LandingHero';
-import { LandingArtifacts } from '@/components/landing/LandingArtifacts';
-import { LandingPhilosophy } from '@/components/landing/LandingPhilosophy';
-import { LandingSpecimens } from '@/components/landing/LandingSpecimens';
+import { LandingNumbers } from '@/components/landing/LandingNumbers';
+import { LandingProcess } from '@/components/landing/LandingProcess';
+import { LandingEngines } from '@/components/landing/LandingEngines';
 import { LandingCTA } from '@/components/landing/LandingCTA';
 import { LandingFooter } from '@/components/landing/LandingFooter';
 
@@ -19,7 +19,7 @@ interface LandingClientProps {
 }
 
 /**
- * Client component orchestrating the editorial atelier Strata AI landing page.
+ * Client component orchestrating the Swiss minimalist Strata AI landing page.
  */
 export function LandingClient({ userId }: LandingClientProps) {
   const router = useRouter();
@@ -51,14 +51,14 @@ export function LandingClient({ userId }: LandingClientProps) {
   };
 
   return (
-    <div className="min-h-dvh bg-surface-base text-text-primary flex flex-col selection:bg-primary-soft selection:text-text-bright transition-colors duration-200">
+    <div className="min-h-dvh bg-surface-base text-text-primary flex flex-col selection:bg-primary selection:text-surface transition-colors duration-200">
       <LandingHeader userId={userId} />
 
       <main className="flex-1">
         <LandingHero userId={userId} onOpenStudio={handleOpenStudio} />
-        <LandingArtifacts />
-        <LandingPhilosophy />
-        <LandingSpecimens />
+        <LandingNumbers />
+        <LandingProcess />
+        <LandingEngines />
         <LandingCTA userId={userId} onOpenStudio={handleOpenStudio} />
       </main>
 

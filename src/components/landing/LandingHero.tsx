@@ -2,17 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { motion, type TargetAndTransition } from 'motion/react';
-import {
-  ArrowRight,
-  FilePlus2,
-  FileEdit,
-  FileSearch,
-  Globe,
-  Link2,
-  Layers,
-} from 'lucide-react';
-import { StrataIcon } from '@/components/ui/strata-icon';
+import { motion } from 'motion/react';
+import { ArrowRight } from 'lucide-react';
 import {
   staggerContainerVariants,
   fadeUpVariants,
@@ -24,198 +15,126 @@ interface LandingHeroProps {
   onOpenStudio: () => void;
 }
 
-interface ToolBadgeConfig {
-  icon: typeof FilePlus2;
-  label: string;
-  badge: string;
-  position: string;
-  accent: string;
-  floatAnimation: TargetAndTransition;
-}
-
-const SURROUNDING_TOOLS: ToolBadgeConfig[] = [
-  {
-    icon: FilePlus2,
-    label: 'writeFile',
-    badge: 'CREATE',
-    position: 'top-6 left-2 lg:left-10',
-    accent: 'text-primary',
-    floatAnimation: { y: [0, -6, 0], transition: { duration: 4.2, repeat: Infinity, ease: 'easeInOut' } },
-  },
-  {
-    icon: Globe,
-    label: 'webSearch',
-    badge: 'REALTIME',
-    position: 'top-8 right-2 lg:right-10',
-    accent: 'text-info',
-    floatAnimation: { y: [0, 7, 0], transition: { duration: 4.8, repeat: Infinity, ease: 'easeInOut', delay: 0.5 } },
-  },
-  {
-    icon: FileEdit,
-    label: 'editFile',
-    badge: 'DIFFS',
-    position: 'bottom-10 left-4 lg:left-14',
-    accent: 'text-secondary',
-    floatAnimation: { y: [0, -7, 0], transition: { duration: 5.1, repeat: Infinity, ease: 'easeInOut', delay: 1 } },
-  },
-  {
-    icon: Link2,
-    label: 'extractUrl',
-    badge: 'CITATIONS',
-    position: 'bottom-10 right-4 lg:right-14',
-    accent: 'text-accent-olive',
-    floatAnimation: { y: [0, 6, 0], transition: { duration: 4.5, repeat: Infinity, ease: 'easeInOut', delay: 1.5 } },
-  },
-  {
-    icon: Layers,
-    label: 'compactContext',
-    badge: 'MEMORY',
-    position: 'top-1/2 -translate-y-1/2 left-0 lg:left-4 hidden md:flex',
-    accent: 'text-primary',
-    floatAnimation: { y: [0, -5, 0], transition: { duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 0.8 } },
-  },
-  {
-    icon: FileSearch,
-    label: 'readFile',
-    badge: 'INSPECT',
-    position: 'top-1/2 -translate-y-1/2 right-0 lg:right-4 hidden md:flex',
-    accent: 'text-info',
-    floatAnimation: { y: [0, 5, 0], transition: { duration: 5.0, repeat: Infinity, ease: 'easeInOut', delay: 1.2 } },
-  },
-];
-
 export function LandingHero({ userId, onOpenStudio }: LandingHeroProps) {
   return (
-    <section className="relative pt-24 pb-20 sm:pt-32 sm:pb-28 overflow-hidden">
-      {/* Architectural Background Grid & Registration Marks */}
-      <div className="absolute inset-0 pointer-events-none -z-10 select-none overflow-hidden">
-        {/* Subtle coordinate crosshairs */}
-        <span className="absolute top-12 left-8 text-micro font-mono text-text-faint/60 tracking-widest">+ 01 / ATELIER</span>
-        <span className="absolute top-12 right-8 text-micro font-mono text-text-faint/60 tracking-widest">37.7749° N, 122.4194° W</span>
-        <span className="absolute bottom-10 left-8 text-micro font-mono text-text-faint/60 tracking-widest">EDITION 2026.08</span>
-        <span className="absolute bottom-10 right-8 text-micro font-mono text-text-faint/60 tracking-widest">+ + +</span>
+    <section
+      id="mission"
+      className="relative min-h-[92dvh] pt-28 sm:pt-36 pb-16 sm:pb-24 px-4 sm:px-8 lg:px-12 flex flex-col justify-between overflow-hidden"
+    >
+      {/* Giant Ghost Background Watermark */}
+      <div className="absolute inset-0 pointer-events-none -z-10 flex items-center justify-center select-none overflow-hidden">
+        <span className="text-[22vw] font-display font-extrabold text-text-bright/[0.03] dark:text-text-bright/[0.04] tracking-tighter uppercase translate-y-12">
+          strata
+        </span>
+      </div>
 
-        {/* Stratum contour grid pattern */}
-        <svg
-          className="absolute w-full h-full inset-0 opacity-[0.035] dark:opacity-[0.06] text-text-primary"
-          xmlns="http://www.w3.org/2000/svg"
+      {/* Main Grid Content */}
+      <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch my-auto">
+        {/* Left Column: High-Voltage Signature Accent Card */}
+        <motion.div
+          variants={fadeUpVariants}
+          initial="hidden"
+          animate="visible"
+          className="lg:col-span-4 flex flex-col justify-between p-7 sm:p-9 rounded-2xl sm:rounded-3xl bg-primary text-surface shadow-card hover:shadow-card-lg transition-all duration-300 relative overflow-hidden group"
         >
-          <defs>
-            <pattern id="strata-grid" width="64" height="64" patternUnits="userSpaceOnUse">
-              <path d="M 64 0 L 0 0 0 64" fill="none" stroke="currentColor" strokeWidth="1" />
-            </pattern>
-          </defs>
-          <rect width="100%" height="100%" fill="url(#strata-grid)" />
-        </svg>
-      </div>
+          {/* Subtle glow highlight inside accent card */}
+          <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-surface/15 blur-2xl pointer-events-none" />
 
-      {/* Floating Surrounding Tool Badges (Desktop & Tablet Orbital Toolbelt) */}
-      <div className="absolute inset-0 max-w-6xl mx-auto pointer-events-none -z-0 hidden md:block">
-        {SURROUNDING_TOOLS.map((tool) => {
-          const Icon = tool.icon;
-          return (
-            <motion.div
-              key={tool.label}
-              animate={tool.floatAnimation}
-              className={`absolute ${tool.position} pointer-events-auto select-none`}
+          <div className="space-y-6 relative z-10">
+            <div className="flex items-center justify-between">
+              <span className="font-display font-extrabold text-subheading tracking-tight text-surface">
+                strata<span className="text-micro align-super font-mono opacity-80">®</span>
+              </span>
+              <span className="text-micro font-mono uppercase tracking-wider px-2 py-0.5 rounded-full bg-surface/20 text-surface border border-surface/30">
+                WRITING STUDIO
+              </span>
+            </div>
+
+            <p className="text-label text-surface/90 leading-relaxed font-sans font-medium">
+              Most AI chats feel disposable. Strata gives your ideas a real home—where you and AI write, edit, and organize living documents side by side.
+            </p>
+
+            <div className="pt-2 border-t border-surface/20">
+              <p className="text-label font-bold text-surface">
+                From a rough outline to finished work in minutes.
+              </p>
+            </div>
+          </div>
+
+          <div className="pt-10 relative z-10">
+            <a
+              href="#numbers"
+              className="inline-flex items-center gap-1.5 text-caption font-mono uppercase tracking-wider text-surface font-semibold hover:translate-x-1 transition-transform cursor-pointer"
             >
-              <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-surface-raised/90 dark:bg-surface-elevated/85 backdrop-blur-md border border-edge-raised shadow-button hover:shadow-card hover:border-edge-hover transition-all duration-200 cursor-default group">
-                <Icon className={`w-3.5 h-3.5 ${tool.accent} shrink-0 transition-transform duration-200 group-hover:scale-110`} />
-                <span className="text-caption font-mono font-semibold text-text-primary group-hover:text-text-bright">
-                  {tool.label}
-                </span>
-                <span className="text-micro font-mono text-text-muted px-1.5 py-0.2 rounded bg-surface-base border border-edge-default uppercase">
-                  {tool.badge}
-                </span>
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+              <span>See how it works</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </motion.div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center relative z-10">
+        {/* Right Column: Giant Display Headline & CTA */}
         <motion.div
           variants={staggerContainerVariants}
           initial="hidden"
           animate="visible"
-          className="flex flex-col items-center space-y-8"
+          className="lg:col-span-8 flex flex-col justify-between pl-0 lg:pl-6"
         >
-          {/* Eyebrow badge with glowing brand emblem */}
-          <motion.div variants={fadeUpVariants} className="flex items-center gap-2">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-edge-raised bg-surface-raised/80 dark:bg-surface-elevated/70 backdrop-blur-md shadow-button">
-              <StrataIcon className="w-4 h-4" />
-              <span className="text-micro font-mono tracking-wider uppercase text-text-secondary font-semibold">
-                An Atelier for Human & Machine Craft
-              </span>
-            </div>
+          <motion.div variants={fadeUpVariants} className="space-y-4">
+            <h1 className="font-display font-extrabold text-5xl sm:text-7xl md:text-8xl lg:text-[5.75rem] xl:text-[6.5rem] tracking-tighter text-text-bright leading-[0.92] uppercase">
+              Turning <br />
+              passing <br />
+              ideas into <br />
+              real work<span className="text-primary">.</span>
+            </h1>
           </motion.div>
 
-          {/* Main Editorial Headline */}
-          <motion.h1
-            variants={fadeUpVariants}
-            className="text-display sm:text-[3.25rem] sm:leading-[1.12] font-bold text-text-bright font-display tracking-tight max-w-3xl"
-          >
-            The workshop for thought that outlasts the chat.
-          </motion.h1>
-
-          {/* Editorial Sub-copy */}
-          <motion.p
-            variants={fadeUpVariants}
-            className="text-body sm:text-subheading text-text-secondary max-w-2xl leading-relaxed font-sans"
-          >
-            Most AI tools treat thinking like a slot machine—disposable prompts lost in endless chat streams.
-            Strata is a tactile studio where intelligence shapes living, durable Markdown documents alongside you.
-          </motion.p>
-
-          {/* Primary Action Buttons */}
+          {/* Action Row */}
           <motion.div
             variants={fadeUpVariants}
-            className="flex flex-col sm:flex-row items-center gap-3 pt-2 w-full sm:w-auto"
+            className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pt-10 sm:pt-14"
           >
-            <motion.button
-              type="button"
-              onClick={onOpenStudio}
-              {...buttonHoverProps}
-              className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-primary hover:bg-primary-hover active:scale-[0.98] text-surface font-semibold text-label shadow-button flex items-center justify-center gap-2 transition-colors cursor-pointer group"
-            >
-              <span>{userId ? 'Enter Workspace' : 'Open the Atelier'}</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-            </motion.button>
+            <div className="flex items-center gap-4">
+              <motion.button
+                type="button"
+                onClick={onOpenStudio}
+                {...buttonHoverProps}
+                className="w-14 h-14 rounded-full bg-text-bright text-surface-base flex items-center justify-center shadow-button hover:opacity-90 transition-all cursor-pointer group shrink-0"
+                aria-label="Open Studio"
+              >
+                <ArrowRight className="w-6 h-6 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-rotate-45" />
+              </motion.button>
+              <button
+                type="button"
+                onClick={onOpenStudio}
+                className="text-label font-bold text-text-bright hover:text-primary transition-colors cursor-pointer text-left"
+              >
+                {userId ? 'Enter your workspace' : 'Open the Studio'}
+              </button>
+            </div>
 
             {!userId && (
               <Link
                 href="/auth/signin"
-                className="w-full sm:w-auto px-5 py-3.5 rounded-xl border border-edge-raised hover:border-edge-hover bg-surface-raised/80 dark:bg-surface-elevated/80 hover:bg-surface-hover text-text-primary font-semibold text-label shadow-button transition-colors text-center"
+                className="text-caption font-mono uppercase tracking-wider text-text-muted hover:text-text-bright transition-colors"
               >
-                Sign In
+                // Existing account? Sign in →
               </Link>
             )}
           </motion.div>
-
-          {/* Mobile Tools Strip (Visible on mobile where orbital badges are hidden) */}
-          <motion.div
-            variants={fadeUpVariants}
-            className="md:hidden pt-4 flex flex-col items-center gap-2 w-full"
-          >
-            <span className="text-micro font-mono uppercase tracking-widest text-text-muted">
-              Integrated Workspace Tools
-            </span>
-            <div className="flex flex-wrap items-center justify-center gap-1.5 max-w-sm">
-              {SURROUNDING_TOOLS.map((t) => {
-                const Icon = t.icon;
-                return (
-                  <div
-                    key={t.label}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-surface-raised/90 dark:bg-surface-elevated/80 border border-edge-raised text-micro font-mono text-text-secondary shadow-button"
-                  >
-                    <Icon className={`w-3 h-3 ${t.accent} shrink-0`} />
-                    <span className="font-semibold">{t.label}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </motion.div>
         </motion.div>
+      </div>
+
+      {/* Bottom Metadata Bar */}
+      <div className="max-w-7xl mx-auto w-full flex items-end justify-between gap-6 pt-12 sm:pt-16 text-micro font-mono text-text-muted uppercase tracking-widest">
+        <div className="flex items-center gap-4">
+          <div>
+            <span className="text-text-faint">Est.</span> <span className="text-text-primary font-semibold">2026</span>
+          </div>
+          <span className="text-text-faint">// strata®</span>
+        </div>
+        <div className="text-right text-text-secondary">
+          A quiet studio for deep thinking & writing
+        </div>
       </div>
     </section>
   );
