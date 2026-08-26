@@ -5,39 +5,50 @@ import Link from 'next/link';
 import { StrataIcon } from '@/components/ui/strata-icon';
 
 /**
- * Minimalist, quiet footer for the Strata AI landing page.
+ * Minimalist, Swiss-style footer for the Strata AI landing page.
  */
 export function LandingFooter() {
   return (
-    <footer className="border-t border-edge-default bg-surface-base py-10">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-6">
-        {/* Brand */}
-        <div className="flex items-center gap-2.5">
-          <StrataIcon className="w-5 h-5" />
-          <span className="font-display font-semibold text-label text-text-bright">
-            Strata Studio
+    <footer className="border-t border-edge-default bg-surface-base py-12 px-4 sm:px-8 lg:px-12">
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+        {/* Brand & copyright */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-6">
+          <div className="flex items-center gap-2">
+            <StrataIcon className="w-4 h-4" />
+            <span className="font-display font-extrabold text-label text-text-bright tracking-tight">
+              strata<span className="text-micro align-super font-mono opacity-80">®</span>
+            </span>
+          </div>
+          <span className="text-micro font-mono text-text-muted">
+            © 2026 Strata AI Studio · All rights reserved.
           </span>
         </div>
 
-        {/* Links */}
-        <div className="flex flex-wrap items-center justify-center gap-6 text-caption text-text-secondary">
+        {/* Anchor Links */}
+        <div className="flex flex-wrap items-center gap-6 text-caption font-medium text-text-secondary">
           <a
-            href="#artifacts"
+            href="#mission"
             className="hover:text-text-bright transition-colors"
           >
-            The Artifacts
+            Mission
           </a>
           <a
-            href="#philosophy"
+            href="#numbers"
             className="hover:text-text-bright transition-colors"
           >
-            The Tenets
+            Numbers
           </a>
           <a
-            href="#specimens"
+            href="#process"
             className="hover:text-text-bright transition-colors"
           >
-            The Specimens
+            Process
+          </a>
+          <a
+            href="#engines"
+            className="hover:text-text-bright transition-colors"
+          >
+            Engines
           </a>
           <Link
             href="/auth/signin"
@@ -56,8 +67,8 @@ export function LandingFooter() {
         </div>
 
         {/* Status */}
-        <div className="text-micro text-text-muted flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-accent-olive" />
+        <div className="text-micro font-mono text-text-muted flex items-center gap-1.5 shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-accent-olive animate-pulse" />
           <span>Local-first & private</span>
         </div>
       </div>
