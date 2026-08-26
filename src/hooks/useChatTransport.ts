@@ -9,6 +9,7 @@ interface UseChatTransportParams {
   filesRef: React.RefObject<any>;
   modelRef: React.RefObject<string>;
   thinkingLevelRef: React.RefObject<string>;
+  chatIdRef?: React.RefObject<string>;
   chatRef: React.RefObject<any>;
   updateRateLimitData: (data: any) => void;
   setQuotaError: (data: any) => void;
@@ -24,6 +25,7 @@ export function useChatTransport({
   filesRef,
   modelRef,
   thinkingLevelRef,
+  chatIdRef,
   chatRef,
   updateRateLimitData,
   setQuotaError,
@@ -38,6 +40,7 @@ export function useChatTransport({
           model: modelRef.current,
           thinkingLevel: thinkingLevelRef.current,
           files: filesRef.current,
+          chatId: chatIdRef?.current,
         }),
         fetch: async (url, options) => {
           // History pruning to the latest compaction summary is handled server-side
@@ -93,7 +96,7 @@ export function useChatTransport({
           return res;
         },
       }),
-    [updateRateLimitData, setQuotaError, checkQuotaStatus, chatRef, filesRef, modelRef, thinkingLevelRef],
+    [updateRateLimitData, setQuotaError, checkQuotaStatus, chatRef, filesRef, modelRef, thinkingLevelRef, chatIdRef],
   );
   /* eslint-enable react-hooks/refs */
 }

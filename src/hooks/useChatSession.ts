@@ -96,12 +96,18 @@ export function useChatSession(chatId: string) {
   const continuationCountRef = useRef<number>(0);
   const sendMessageRef = useRef<((msg: { text: string }) => void) | null>(null);
   const chatRef = useRef<any>(null);
+  const chatIdRef = useRef(chatId);
+
+  useEffect(() => {
+    chatIdRef.current = chatId;
+  }, [chatId]);
 
   // Modular transport creation hook
   const transport = useChatTransport({
     filesRef,
     modelRef,
     thinkingLevelRef,
+    chatIdRef,
     chatRef,
     updateRateLimitData,
     setQuotaError,

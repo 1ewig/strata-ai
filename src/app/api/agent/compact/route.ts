@@ -11,13 +11,15 @@ import { withAgentRouteGuards, safeAsyncRefundRateLimit } from "@/lib/ai/route-g
  * @returns A streaming text/plain response or a JSON error response
  */
 export async function POST(req: Request) {
-  return withAgentRouteGuards(req, async ({ body, messages, rateLimit, signal }) => {
+  return withAgentRouteGuards(req, async ({ session, body, messages, rateLimit, signal }) => {
     return runCompactionResponse({
       files: body.files || [],
       messages,
       signal,
       remaining5h: rateLimit.remaining5h,
       remainingWeek: rateLimit.remainingWeek,
+      userId: session.user.id,
+      sessionId: body.chatId || session.session?.id,
       onInferenceError: async () => {
         safeAsyncRefundRateLimit(rateLimit.messageLogId);
       },

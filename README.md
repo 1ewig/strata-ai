@@ -45,7 +45,7 @@ Create a `.env.local` file in the project root (see `.env.example` for the autho
 GOOGLE_GENERATIVE_AI_API_KEY="AIzaSy..."
 # Fireworks API Key (Required for DeepSeek models)
 FIREWORKS_API_KEY="fw_..."
-# Tavily API Key (Required for web search & extraction)
+# Tavily API Key (Optional - for web search & extraction)
 TAVILY_API_KEY="tvly-..."
 # Supabase Postgres Database (Required for Better Auth + rate limiting)
 DATABASE_URL="postgresql://postgres.user:password@aws-0-region.pooler.supabase.com:6543/postgres"
@@ -261,8 +261,8 @@ All scripts run through Bun.
 |--------|---------|--------|
 | `bun run dev` | `next dev` | Start the Next.js dev server |
 | `bun run build` | `next build` | Create a production build with type checking |
-| `bun run start` | `node .next/standalone/server.js` | Serve the standalone production build |
-| `bun run lint` | `eslint .` | Run ESLint across the codebase |
+| `bun run start` | `next start` | Start the production server |
+| `bun run lint` | `oxlint` | Run Oxlint across the codebase |
 | `bun run test` | `bun test --isolate` | Run the unit & integration test suite (15 suites in `__tests__/`) |
 | `bun run test:watch` | `bun test --isolate --watch` | Re-run tests on file changes |
 | `bun run clean` | `next clean` | Clear the `.next` cache and build artifacts |
