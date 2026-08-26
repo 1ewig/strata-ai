@@ -12,7 +12,7 @@
 
 Server-side state is deliberately minimal: chat history and workspace files live in the browser's IndexedDB, and the only server-side persistence is the auth identity and message-quota log. File state survives reloads without a server round trip.
 
-An "editorial atelier" public landing page at `/` introduces the product — a contour-grid hero with floating tool badges, an artifact showcase (compaction index card, living manuscript, field ledger), three design tenets, and engine-specimen calibration plates — while the workspace itself lives behind auth at `/chat-id/<id>`.
+A Swiss minimalist editorial landing page at `/` introduces the product — a centered floating pill navbar, a bold typographic hero with high-voltage signature manifesto panel and ghost watermark, a 4-pillar metric and architectural breakdown grid, a numbered interactive process workflow with 0→1 acceleration banner, and typographic engine specimen cards — while the workspace itself lives behind auth at `/chat-id/<id>`.
 
 - **Live demo:** [strata-ai-five.vercel.app](https://strata-ai-five.vercel.app) · **Repository:** [github.com/1ewig/strata-ai](https://github.com/1ewig/strata-ai)
 
@@ -127,7 +127,7 @@ A custom design system defined in `@theme` in `src/app/globals.css`: a warm stud
 
 ### 10. Public landing page
 
-The root route is a public marketing page (the proxy skips it), styled as an editorial atelier: a contour-grid hero with six floating tool badges (writeFile, webSearch, editFile, extractUrl, compactContext, readFile) that drift in infinite loops, a three-card artifact showcase — the `/compact` Context Index Card, a Living Manuscript with interactive margin-note annotations, and a Tavily Field Ledger — plus three design tenets (atelier over slot machine, durable files, surgical compaction) and engine-specimen calibration plates for Gemini, DeepSeek, and Tavily. The session is resolved server-side, so the header shows either "Sign In" or "Open Studio" — the latter drops signed-in users straight into their latest conversation or a fresh chat.
+The root route is a public marketing page (the proxy skips it), styled with a Swiss minimalist editorial layout: a centered floating pill navbar with section anchors, a bold display typography hero with high-voltage accent manifesto card, subtle background watermark, 4 massive metric callouts (8 tools, 128k context, 0ms cloud latency, -84% compaction delta) and architectural breakdown columns, a 4-step interactive process workflow (Inspect, Mutate, Verify, Compact) with a 0→1 acceleration banner, typographic engine specimen cards for Gemini 3.5, DeepSeek V4, Tavily, and the Context Compactor, and a closing invitation section. The session is resolved server-side, so the header dynamically offers "Sign In" or "Studio" — the latter drops signed-in users straight into their latest conversation or a fresh chat.
 
 ### 11. LLM observability (Langfuse, optional)
 

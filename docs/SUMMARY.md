@@ -14,7 +14,7 @@
   - Live streaming UX: word-paced tokens (`smoothStream` 25ms), `SmoothStreamText` markdown rendering, reasoning/thought accordions, tool-execution cards with status badges, animated typing dots, "scroll to bottom" affordance.
   - Per-conversation model + thinking-level selection with localStorage memory and conversation-row override.
   - Image attachments with vision input: up to 4 images (JPEG/PNG/WebP/GIF) validated and client-side compressed into compact data URLs, gated by per-model vision support, rendered as thumbnails in the bubble.
-  - Public marketing landing page: an "editorial atelier" RSC (session resolved server-side) — contour-grid hero with six floating tool badges, a three-card artifact showcase (compaction index card, living manuscript with marginalia, field ledger), three design tenets, and engine-specimen calibration plates; the proxy bypasses `/` entirely.
+  - Public marketing landing page: a Swiss minimalist editorial studio RSC (session resolved server-side) — centered floating pill navigation, bold typographic hero with high-voltage accent manifesto card and ghost watermark, 4-pillar metric and architectural breakdown grid, numbered interactive process workflow with 0→1 acceleration banner, and typographic engine specimen cards; the proxy bypasses `/` entirely.
   - Full conversation history in IndexedDB; sidebar switcher with pin/rename/delete; per-user conversation cap (5).
   - Context compaction via `/compact` (dedicated Flash Lite model, high reasoning, 3,500-token output cap).
   - Quota-aware usage: server-enforced caps mirrored live (rate ring, countdown error cards).
@@ -268,16 +268,14 @@ Strata Ai/
     │   │   └── tools/         — resolver.tsx (toolMeta table: normalize → config/icon/badge/
     │   │                        summary) + summaries.tsx (summary builders + SummaryLine).
     │   ├── landing/          — Public landing page (all 'use client', under LandingClient):
-    │   │                        LandingHeader (sticky nav w/ #artifacts/#philosophy/#specimens
-    │   │                        anchors, theme toggle), LandingHero (contour-grid background,
-    │   │                        registration marks, 6 floating tool badges, mobile tools strip),
-    │   │                        LandingArtifacts (#artifacts: 3 artifact cards — compaction
-    │   │                        index card, living manuscript w/ interactive marginalia, field
-    │   │                        ledger), LandingPhilosophy (#philosophy: 3 tenets),
-    │   │                        LandingSpecimens (#specimens: engine calibration plates),
-    │   │                        LandingCTA (+05 invitation, no prompt chips), LandingFooter,
-    │   │                        animations.ts (fadeUp/card/stagger + marginalia + artifact/
-    │   │                        specimen hover variants, viewportOnce scroll reveals).
+    │   │                        LandingHeader (centered floating pill navbar w/ #mission/#numbers/#process/#engines
+    │   │                        anchors, theme toggle), LandingHero (Swiss editorial hero w/ high-voltage
+    │   │                        accent manifesto panel, bold display type, ghost watermark, and studio CTA),
+    │   │                        LandingNumbers (#numbers: 4 massive metric callouts + 4 architectural pillars +
+    │   │                        3-step pipeline footer), LandingProcess (#process: 4 numbered interactive rows +
+    │   │                        0→1 high-voltage banner), LandingEngines (#engines: 4 typographic initial cards
+    │   │                        w/ model specifications), LandingCTA (minimalist invitation), LandingFooter,
+    │   │                        animations.ts (softSpring/gentleSpring/tactileSpring, fadeUp, card, cardHoverProps).
     │   ├── workspace/         — WorkspaceDrawer (file selector, editor with header char count,
     │   │                        code viewer, empty state, footer), WorkspaceFileSelector,
     │   │                        WorkspaceEditor, CodeViewer (line numbers + Prism),
@@ -411,7 +409,7 @@ Strata Ai/
 
 | Path / Route Group | Rendering Type (RSC / Client / Static) | Runtime (Node / Edge) | Auth level (Public / Protected / Admin) | Purpose & key child components |
 |--------------------|-----------|---------|-----------|--------------------------------|
-| `/` | RSC (dynamic) | Node | Public (proxy bypass) | Public landing page: session resolved server-side → `LandingClient` (sticky `LandingHeader` with theme toggle + Sign In / Open Studio, `LandingHero` with contour grid + floating tool badges, `LandingArtifacts` #artifacts, `LandingPhilosophy` #philosophy, `LandingSpecimens` #specimens, `LandingCTA`, `LandingFooter`). "Open Studio" routes authenticated users to the latest Dexie conversation or a fresh `/chat-id/<uuid>` |
+| `/` | RSC (dynamic) | Node | Public (proxy bypass) | Public landing page: session resolved server-side → `LandingClient` (floating pill `LandingHeader` with theme toggle + Sign In / Open Studio, `LandingHero` with high-voltage accent panel + ghost watermark, `LandingNumbers` #numbers, `LandingProcess` #process, `LandingEngines` #engines, `LandingCTA`, `LandingFooter`). "Open Studio" routes authenticated users to the latest Dexie conversation or a fresh `/chat-id/<uuid>` |
 | `/auth` | RSC (dynamic) | Node | Public | Pure redirect to `/auth/signin`, preserving `callbackUrl` query param (awaits `searchParams`) |
 | `/auth/signin` | Client (dynamic, Suspense-wrapped) | Node | Public | Email/password sign-in: `AuthShell` + `SignInForm`, `useSignIn`, bounces signed-in users to callbackUrl |
 | `/auth/signup` | Client (dynamic, Suspense-wrapped) | Node | Public | Registration: `AuthShell` + `SignUpForm`, `useSignUp`, redirects on success |
@@ -462,15 +460,15 @@ Strata Ai/
 
 | Component | Responsibility | Key conventions |
 |-----------|---------------|-----------------|
-| `LandingClient` | Landing orchestrator: Header → Hero → Artifacts → Philosophy → Specimens → CTA → Footer | Props `userId?` (server-resolved); `handleOpenStudio` Dexie-queries latest conversation → `router.push` or fresh `generateId()` chat |
-| `LandingHeader` | Sticky top nav: brand, anchor links (`#artifacts` / `#philosophy` / `#specimens`), theme toggle, Sign In link / Open Studio button | Uses `useTheme`; `buttonHoverProps`; brand "Studio" chip |
-| `LandingHero` | Editorial atelier hero: architectural contour-grid background + coordinate registration marks, headline "The workshop for thought that outlasts the chat.", 6 floating orbital tool badges (writeFile / webSearch / editFile / extractUrl / compactContext / readFile) with infinite float loops, mobile tools strip, CTA "Open the Atelier" / "Enter Workspace" | `SURROUNDING_TOOLS` config array (`TargetAndTransition` float animations); `staggerContainerVariants` / `fadeUpVariants`; badges hidden on mobile in favor of the strip |
-| `LandingArtifacts` | "+ 02 / The Material Output" (#artifacts): 3 artifact cards — The Context Index Card (`/compact`, -84% tokens), The Living Manuscript (hover-triggered marginalia annotation bubble), The Field Ledger (Tavily realtime) | `marginaliaVariants` popup via `AnimatePresence`; `artifactHoverProps`; mono typewriter styling throughout |
-| `LandingPhilosophy` | "+ 03 / The Three Tenets" (#philosophy): Atelier Not Slot Machine / Durable Files Not Disposable Bubbles / Surgical Compaction Not Context Rot | `TENETS` array; `cardVariants` |
-| `LandingSpecimens` | "+ 04 / The Engine Specimens" (#specimens): calibration plates for Google Gemini 3.5, DeepSeek V4, Tavily with spec rows | `SPECIMENS` array; `specimenHoverProps`; per-spec accent tokens |
-| `LandingCTA` | "+ 05 / The Invitation" — "Pull up a chair to the studio desk."; "Return to Workspace" / "Open the Studio" buttons + Create Account link (no starter-prompt chips) | Ambient `primary/10`→`secondary/10` glow; `buttonHoverProps` |
-| `LandingFooter` | Minimal footer: brand + anchor links (#artifacts/#philosophy/#specimens) | Presentational |
-| `animations.ts` | Landing-specific motion presets: softSpring/gentleSpring/tactileSpring, fadeUp, card, staggerContainer, `marginaliaVariants` (annotation bubble pop), `artifactHoverProps`/`specimenHoverProps`, `viewportOnce` | Types from `motion/react` only |
+| `LandingClient` | Landing orchestrator: Header → Hero → Numbers → Process → Engines → CTA → Footer | Props `userId?` (server-resolved); `handleOpenStudio` Dexie-queries latest conversation → `router.push` or fresh `generateId()` chat |
+| `LandingHeader` | Centered floating pill navbar: brand, anchor links (`#mission` / `#numbers` / `#process` / `#engines`), theme toggle, Sign In link / Open Studio button | Uses `useTheme`; `buttonHoverProps`; floating capsule backdrop blur |
+| `LandingHero` | Swiss editorial hero: high-voltage signature accent manifesto card, massive display typography "FORGING DURABLE DOCUMENTS THAT SCALE.", subtle background ghost watermark "strata", and circular arrow CTA button | `fadeUpVariants` / `staggerContainerVariants`; bottom metadata bar (`Est. 2026`, `// strata®`, studio label) |
+| `LandingNumbers` | "#numbers": 4 massive metric pillars (8 tools, 128k context, 0ms cloud latency, -84% compaction delta), 4 architectural breakdown columns (workspace engine, live streaming, observability, local-first), and 3-step pipeline footer | `fadeUpVariants` / `staggerContainerVariants`; dividing rules and high-density technical cards |
+| `LandingProcess` | "#process": 2-column layout with "How we forge." headline, 4 numbered interactive rows (Inspect, Mutate, Verify, Compact) with hover transitions and arrow glyphs, and high-voltage 0→1 acceleration banner | `fadeUpVariants`; 3 sub-step pillars (Prompt, Agentic Loop, Durable File) |
+| `LandingEngines` | "#engines": 4 large square typographic initial cards (G Gemini 3.5, D DeepSeek V4, T Tavily, C Compactor) with badges and technical specification breakdowns | `cardHoverProps`; 1 high-voltage accent card + 3 high-contrast dark cards |
+| `LandingCTA` | "Enter the workshop." closing invitation with primary/secondary actions and local-first privacy assurance | Ambient card styling; `buttonHoverProps` |
+| `LandingFooter` | Minimal Swiss footer: brand mark, copyright, anchor links (#mission/#numbers/#process/#engines), and live status indicator | Presentational |
+| `animations.ts` | Landing-specific motion presets: softSpring/gentleSpring/tactileSpring, fadeUp, card, cardHoverProps, buttonHoverProps, viewportOnce | Types from `motion/react` only |
 
 ## 7. Data Flow, Server Actions & Integration Map
 
