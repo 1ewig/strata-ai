@@ -14,7 +14,8 @@ import { SignUpForm } from "@/components/auth/sign-up-form";
  */
 function SignUpPage() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const rawCallbackUrl = searchParams.get("callbackUrl");
+  const callbackUrl = rawCallbackUrl && !rawCallbackUrl.startsWith("/chat-id/") ? rawCallbackUrl : "/";
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const { error, successMsg, isPending: isAuthPending, handleSubmit } = useSignUp(callbackUrl);

@@ -16,9 +16,13 @@ export function useSignOut() {
 
   const handleSignOut = useCallback(async () => {
     setIsPending(true);
-    await signOut();
-    router.push('/auth/signin');
-    router.refresh();
+    try {
+      await signOut();
+      router.replace('/auth/signin');
+      router.refresh();
+    } finally {
+      setIsPending(false);
+    }
   }, [router]);
 
   return { isPending, handleSignOut };

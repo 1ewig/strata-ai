@@ -83,9 +83,13 @@ export function useChatSession(chatId: string) {
     thinkingLevelRef.current = modelSettings.thinkingLevel;
   }, [modelSettings.thinkingLevel]);
 
+  const isUnauthorized = Boolean(
+    userId && currentConv && currentConv.userId && currentConv.userId !== userId
+  );
+
   // Ensure conversation exists in DB
   useEffect(() => {
-    if (!chatId) return;
+    if (!chatId || !userId) return;
     db.conversations.get(chatId).then((existing) => {
       if (!existing) {
         createConversation(chatId, 'New Chat', modelSettings.model, modelSettings.thinkingLevel, userId);
@@ -215,11 +219,16 @@ export function useChatSession(chatId: string) {
       loadedChatIdRef.current = null;
     }
 
+    if (isUnauthorized) {
+      chat.setMessages([]);
+      return;
+    }
+
     if (dexieMessages !== undefined && loadedChatIdRef.current === null) {
       loadedChatIdRef.current = chatId;
       chat.setMessages(dexieMessages as any);
     }
-  }, [chatId, dexieMessages, chat]);
+  }, [chatId, dexieMessages, chat, isUnauthorized]);
 
   const currentConvTitle = currentConv?.title;
 

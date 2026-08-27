@@ -34,10 +34,14 @@ export async function proxy(request: NextRequest) {
         { status: 401 },
       );
     }
-    // Remember where the user was headed so we can return them after sign-in
+    // Remember where the user was headed so we can return them after sign-in.
+    // For private conversation routes (/chat-id/...), do not set callbackUrl to the private chat ID
+    // so subsequent logins on the same browser will not inherit another account's conversation.
     const authUrl = request.nextUrl.clone();
     authUrl.pathname = "/auth";
-    authUrl.searchParams.set("callbackUrl", pathname);
+    if (!pathname.startsWith("/chat-id/")) {
+      authUrl.searchParams.set("callbackUrl", pathname);
+    }
     return NextResponse.redirect(authUrl);
   }
 

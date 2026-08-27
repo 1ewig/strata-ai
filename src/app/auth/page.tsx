@@ -12,7 +12,7 @@ export default async function AuthPage({ searchParams }: AuthPageProps) {
   const resolvedParams = await searchParams;
   const callbackUrl = resolvedParams?.callbackUrl;
 
-  if (typeof callbackUrl === "string" && callbackUrl) {
+  if (typeof callbackUrl === "string" && callbackUrl && !callbackUrl.startsWith("/chat-id/")) {
     redirect(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
   }
 
