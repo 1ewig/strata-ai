@@ -16,6 +16,8 @@ export const QUOTA_WEEK_LIMIT = 50;
 export const NEAR_LIMIT_PERCENT = 80;
 /** Maximum number of images a single user message may attach. */
 export const MAX_IMAGES_PER_MESSAGE = 4;
+/** Maximum combined attachments (images + documents) allowed in a single user message. */
+export const MAX_ATTACHMENTS_PER_MESSAGE = 4;
 /** Maximum raw file size (bytes) accepted for an image attachment before compression. */
 export const MAX_IMAGE_INPUT_BYTES = 5_000_000;
 /** Maximum compressed size (bytes) a processed attachment may reach (base64 data URL ≈ 4/3 bytes per char). */
@@ -29,6 +31,61 @@ export const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'im
 
 /** Type of the MIME whitelist entries in ALLOWED_IMAGE_TYPES. */
 export type AllowedImageType = (typeof ALLOWED_IMAGE_TYPES)[number];
+
+/** Maximum raw file size (bytes) accepted for a document attachment. */
+export const MAX_DOCUMENT_INPUT_BYTES = 5_000_000;
+/** Maximum character length extracted from a document before truncation. */
+export const MAX_DOCUMENT_TEXT_CHARS = 25_000;
+/** Server-side gate for document data URL length (chars). */
+export const MAX_DOCUMENT_DATA_URL_CHARS = 7_000_000;
+
+/** MIME types accepted for document attachments. */
+export const ALLOWED_DOCUMENT_TYPES = [
+  'application/pdf',
+  'text/plain',
+  'text/markdown',
+  'text/csv',
+  'text/tab-separated-values',
+  'text/html',
+  'text/css',
+  'text/javascript',
+  'application/json',
+  'application/x-yaml',
+  'text/yaml',
+  'text/x-python',
+  'application/sql',
+  'text/x-sql',
+] as const;
+
+/** Type of the MIME whitelist entries in ALLOWED_DOCUMENT_TYPES. */
+export type AllowedDocumentType = (typeof ALLOWED_DOCUMENT_TYPES)[number];
+
+/** Common file extensions accepted for document attachments. */
+export const ALLOWED_DOCUMENT_EXTENSIONS = [
+  '.pdf',
+  '.txt',
+  '.md',
+  '.markdown',
+  '.csv',
+  '.tsv',
+  '.json',
+  '.yaml',
+  '.yml',
+  '.html',
+  '.css',
+  '.js',
+  '.ts',
+  '.jsx',
+  '.tsx',
+  '.py',
+  '.sql',
+  '.rs',
+  '.go',
+  '.java',
+  '.c',
+  '.cpp',
+  '.sh',
+] as const;
 
 /**
  * Builds a quota error message and retry hint when a window is exhausted.

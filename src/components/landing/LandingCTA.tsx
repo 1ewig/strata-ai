@@ -50,25 +50,37 @@ export function LandingCTA({ userId, onOpenStudio }: LandingCTAProps) {
             variants={fadeUpVariants}
             className="flex flex-col sm:flex-row items-start sm:items-center gap-4 pt-4"
           >
-            <motion.button
-              type="button"
-              onClick={onOpenStudio}
-              {...buttonHoverProps}
-              className="px-8 py-4 rounded-full bg-text-bright text-surface-base font-semibold text-label shadow-button flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer group"
-            >
-              <span>{userId ? 'Return to Workspace' : 'Open the Studio'}</span>
-              <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
-            </motion.button>
+            {userId ? (
+              <motion.button
+                type="button"
+                onClick={onOpenStudio}
+                {...buttonHoverProps}
+                className="px-8 py-4 rounded-full bg-text-bright text-surface-base font-semibold text-label shadow-button flex items-center gap-2 hover:opacity-90 transition-opacity cursor-pointer group"
+              >
+                <span>Open the Studio</span>
+                <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+              </motion.button>
+            ) : (
+              <>
+                <motion.div {...buttonHoverProps}>
+                  <Link
+                    href="/auth/signin"
+                    className="px-8 py-4 rounded-full bg-text-bright text-surface-base font-semibold text-label shadow-button flex items-center gap-2 hover:opacity-90 transition-opacity group inline-block"
+                  >
+                    <span>Sign In</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1 inline-block" />
+                  </Link>
+                </motion.div>
 
-            {!userId && (
-              <motion.div {...buttonHoverProps}>
-                <Link
-                  href="/auth/signup"
-                  className="px-7 py-4 rounded-full border border-edge-raised hover:border-edge-hover bg-surface-raised dark:bg-surface-elevated text-text-primary font-semibold text-label shadow-button transition-colors inline-block"
-                >
-                  Create Free Account
-                </Link>
-              </motion.div>
+                <motion.div {...buttonHoverProps}>
+                  <Link
+                    href="/auth/signup"
+                    className="px-7 py-4 rounded-full border border-edge-raised hover:border-edge-hover bg-surface-raised dark:bg-surface-elevated text-text-primary font-semibold text-label shadow-button transition-colors inline-block"
+                  >
+                    Create Free Account
+                  </Link>
+                </motion.div>
+              </>
             )}
           </motion.div>
 

@@ -14,7 +14,8 @@ import { SignInForm } from "@/components/auth/sign-in-form";
  */
 function SignInPage() {
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const rawCallbackUrl = searchParams.get("callbackUrl");
+  const callbackUrl = rawCallbackUrl && !rawCallbackUrl.startsWith("/chat-id/") ? rawCallbackUrl : "/";
   const { data: session, isPending } = useSession();
   const router = useRouter();
   const { error, successMsg, isPending: isAuthPending, handleSubmit } = useSignIn(callbackUrl);

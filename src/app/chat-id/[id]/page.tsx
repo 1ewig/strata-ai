@@ -11,6 +11,8 @@ import ChatInput from '@/components/chat/ChatInput';
 import ChatHeader from '@/components/chat/ChatHeader';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/lib/db/db';
 import { useChatSession } from '@/hooks/useChatSession';
 import { useConversations } from '@/hooks/useConversations';
 import { useSignOut } from '@/hooks/useSignOut';
@@ -29,6 +31,18 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const { id: chatId } = use(params);
   const router = useRouter();
   const { data: session, isPending: isSessionPending } = useSession();
+  const userId = session?.user?.id;
+
+  // Check ownership of the conversation in Dexie to enforce client-side RLS isolation
+  const currentConv = useLiveQuery(() => db.conversations.get(chatId), [chatId]);
+  const isUnauthorized = Boolean(
+    !isSessionPending &&
+    userId &&
+    currentConv &&
+    currentConv.userId &&
+    currentConv.userId !== userId
+  );
+
   // Conversations for the signed-in user; guards are below so the sidebar
   // only renders after the session has resolved.
   const {
@@ -39,7 +53,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     handleDeleteConversation,
     handleRenameConversation,
     handleTogglePinConversation,
-  } = useConversations(session?.user?.id, chatId);
+  } = useConversations(userId, chatId);
   const { isPending: isSigningOut, handleSignOut } = useSignOut();
   const { isDark, toggle: toggleTheme } = useTheme();
   // Anchor div passed to ChatPanel for the message list scroll position.
@@ -71,12 +85,19 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     return () => observer.disconnect();
   });
 
-  // Redirect unauthenticated visitors to auth, preserving the return URL.
+  // Redirect unauthenticated visitors to auth without leaking the private chat ID.
   React.useEffect(() => {
     if (!isSessionPending && !session?.user) {
-      router.replace(`/auth?callbackUrl=/chat-id/${chatId}`);
+      router.replace('/auth/signin');
     }
-  }, [session, isSessionPending, chatId, router]);
+  }, [session, isSessionPending, router]);
+
+  // Redirect unauthorized users (trying to access another user's conversation) to the home redirector.
+  React.useEffect(() => {
+    if (isUnauthorized) {
+      router.replace('/');
+    }
+  }, [isUnauthorized, router]);
 
   const {
     model,
@@ -137,13 +158,13 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     };
   }, [setIsWorkspaceDrawerOpen]);
 
-  // Show a spinner while the session is still being verified.
-  if (isSessionPending || !session?.user) {
+  // Show a spinner while the session is still being verified or redirecting from an unauthorized chat.
+  if (isSessionPending || !session?.user || isUnauthorized) {
     return (
       <main className="h-dvh bg-surface-base flex items-center justify-center text-text-muted text-label">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          Verifying session...
+          {isUnauthorized ? 'Redirecting...' : 'Verifying session...'}
         </div>
       </main>
     );

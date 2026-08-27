@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, mock } from "bun:test";
-import { MAX_MESSAGE_CHARS, MAX_IMAGES_PER_MESSAGE } from "@/lib/limits";
+import { MAX_MESSAGE_CHARS, MAX_ATTACHMENTS_PER_MESSAGE } from "@/lib/limits";
 
 /**
  * POST /api/agent guard-and-delegation tests. All heavyweight dependencies
@@ -180,20 +180,20 @@ describe("POST /api/agent", () => {
     expect(runAgentResponseMock.mock.calls[0][0].maxSteps).toBe(25);
   });
 
-  it("rejects a latest user message exceeding the per-message image cap", async () => {
+  it("rejects a latest user message exceeding the per-message attachment cap", async () => {
     withSession();
     const imagePart = { type: "file", mediaType: "image/png", filename: "a.png", url: "data:image/png;base64,x" };
     const res = await post({
       messages: [
         {
           role: "user",
-          parts: Array.from({ length: MAX_IMAGES_PER_MESSAGE + 1 }, () => imagePart),
+          parts: Array.from({ length: MAX_ATTACHMENTS_PER_MESSAGE + 1 }, () => imagePart),
         },
       ],
     });
     expect(res.status).toBe(400);
     const body = await res.json();
-    expect(body.error).toContain(`maximum of ${MAX_IMAGES_PER_MESSAGE} images`);
+    expect(body.error).toContain(`maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} attachments`);
     expect(runAgentResponseMock).not.toHaveBeenCalled();
   });
 
@@ -213,7 +213,23 @@ describe("POST /api/agent", () => {
     expect(runAgentResponseMock).not.toHaveBeenCalled();
   });
 
-  it("accepts valid image parts and forwards them to the runner", async () => {
+  it("rejects document parts with disallowed format", async () => {
+    withSession();
+    const res = await post({
+      messages: [
+        {
+          role: "user",
+          parts: [{ type: "file", mediaType: "application/x-msdownload", filename: "a.exe", url: "data:..." }],
+        },
+      ],
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toContain("Unsupported document format");
+    expect(runAgentResponseMock).not.toHaveBeenCalled();
+  });
+
+  it("accepts valid image and document parts and forwards them to the runner", async () => {
     withSession();
     const res = await post({
       messages: [
@@ -221,7 +237,8 @@ describe("POST /api/agent", () => {
           role: "user",
           parts: [
             { type: "file", mediaType: "image/png", filename: "a.png", url: "data:image/png;base64,x" },
-            { type: "text", text: "describe this" },
+            { type: "file", mediaType: "application/pdf", filename: "doc.pdf", url: "data:application/pdf;base64,y" },
+            { type: "text", text: "describe these" },
           ],
         },
       ],
@@ -231,9 +248,11 @@ describe("POST /api/agent", () => {
     const args = runAgentResponseMock.mock.calls[0][0];
     expect(args.messages[0].parts[0].type).toBe("file");
     expect(args.messages[0].parts[0].mediaType).toBe("image/png");
+    expect(args.messages[0].parts[1].type).toBe("file");
+    expect(args.messages[0].parts[1].mediaType).toBe("application/pdf");
   });
 
-  it("ignores image validation for messages without a parts array", async () => {
+  it("ignores attachment validation for messages without a parts array", async () => {
     withSession();
     const res = await post({ messages: [{ role: "user", content: "plain text" }] });
     expect(res.status).toBe(200);

@@ -189,7 +189,7 @@ describe("flattenMessageSegments", () => {
     ]);
   });
 
-  it("ignores non-image file parts in user messages", () => {
+  it("collects document file parts into a user-documents segment", () => {
     const segments = flattenMessageSegments({
       role: "user",
       parts: [
@@ -197,7 +197,14 @@ describe("flattenMessageSegments", () => {
         { type: "text", text: "hi" },
       ],
     });
-    expect(segments).toEqual([{ type: "user-text", content: "hi", key: "user-text" }]);
+    expect(segments).toEqual([
+      {
+        type: "user-documents",
+        key: "user-documents",
+        documents: [{ url: "data:application/pdf;base64,z", filename: "doc.pdf", mediaType: "application/pdf", size: undefined }],
+      },
+      { type: "user-text", content: "hi", key: "user-text" },
+    ]);
   });
 
   it("uses a filename fallback for image parts without one", () => {

@@ -94,32 +94,45 @@ export function LandingHero({ userId, onOpenStudio }: LandingHeroProps) {
             variants={fadeUpVariants}
             className="flex flex-col sm:flex-row items-start sm:items-center gap-6 pt-10 sm:pt-14"
           >
-            <div className="flex items-center gap-4">
-              <motion.button
-                type="button"
-                onClick={onOpenStudio}
-                {...buttonHoverProps}
-                className="w-14 h-14 rounded-full bg-text-bright text-surface-base flex items-center justify-center shadow-button hover:opacity-90 transition-all cursor-pointer group shrink-0"
-                aria-label="Open Studio"
-              >
-                <ArrowRight className="w-6 h-6 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-rotate-45" />
-              </motion.button>
-              <button
-                type="button"
-                onClick={onOpenStudio}
-                className="text-label font-bold text-text-bright hover:text-primary transition-colors cursor-pointer text-left"
-              >
-                {userId ? 'Enter your workspace' : 'Open the Studio'}
-              </button>
-            </div>
-
-            {!userId && (
-              <Link
-                href="/auth/signin"
-                className="text-caption font-mono uppercase tracking-wider text-text-muted hover:text-text-bright transition-colors"
-              >
-                // Existing account? Sign in →
-              </Link>
+            {userId ? (
+              <div className="flex items-center gap-4">
+                <motion.button
+                  type="button"
+                  onClick={onOpenStudio}
+                  {...buttonHoverProps}
+                  className="w-14 h-14 rounded-full bg-text-bright text-surface-base flex items-center justify-center shadow-button hover:opacity-90 transition-all cursor-pointer group shrink-0"
+                  aria-label="Enter your workspace"
+                >
+                  <ArrowRight className="w-6 h-6 transition-transform duration-200 group-hover:translate-x-0.5 group-hover:-rotate-45" />
+                </motion.button>
+                <button
+                  type="button"
+                  onClick={onOpenStudio}
+                  className="text-label font-bold text-text-bright hover:text-primary transition-colors cursor-pointer text-left"
+                >
+                  Enter your workspace
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <motion.div {...buttonHoverProps}>
+                  <Link
+                    href="/auth/signin"
+                    className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full bg-text-bright text-surface-base hover:opacity-90 text-label font-semibold shadow-button transition-opacity group"
+                  >
+                    <span>Sign In</span>
+                    <ArrowRight className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" />
+                  </Link>
+                </motion.div>
+                <motion.div {...buttonHoverProps}>
+                  <Link
+                    href="/auth/signup"
+                    className="inline-flex items-center gap-2 px-6 py-3.5 rounded-full border border-edge-raised hover:border-edge-hover bg-surface-raised dark:bg-surface-elevated text-text-primary text-label font-semibold shadow-button transition-colors"
+                  >
+                    <span>Create Free Account</span>
+                  </Link>
+                </motion.div>
+              </div>
             )}
           </motion.div>
         </motion.div>

@@ -120,6 +120,10 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
             return <UserMessageAttachments key={seg.key} images={seg.images} />;
           }
 
+          if (seg.type === 'user-documents' && seg.documents && seg.documents.length > 0) {
+            return <UserMessageAttachments key={seg.key} documents={seg.documents} />;
+          }
+
           if (seg.type === 'user-text') {
             const userContent = seg.content || '';
             return (

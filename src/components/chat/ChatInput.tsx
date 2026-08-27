@@ -1,11 +1,16 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { MAX_MESSAGE_CHARS, MAX_IMAGES_PER_MESSAGE, buildQuotaError } from '@/lib/limits';
+import { MAX_MESSAGE_CHARS, MAX_ATTACHMENTS_PER_MESSAGE, buildQuotaError } from '@/lib/limits';
 import { getModelSupportsVision } from '@/lib/models';
 import {
   processImageFile,
   validateImageFile,
   type ProcessedImage,
 } from '@/lib/image-utils';
+import {
+  processDocumentFile,
+  validateDocumentFile,
+  type ProcessedDocument,
+} from '@/lib/document-utils';
 import AttachmentPreviews from './composer/AttachmentPreviews';
 import ComposerStatusRow from './composer/ComposerStatusRow';
 import ComposerToolbar from './composer/ComposerToolbar';
@@ -16,7 +21,7 @@ import { useComposerFileDrop } from './composer/useComposerFileDrop';
 /** Props for the ChatInput composer. */
 interface ChatInputProps {
   chatId?: string;
-  onSendMessage: (text: string, images?: ProcessedImage[]) => void;
+  onSendMessage: (text: string, images?: ProcessedImage[], documents?: ProcessedDocument[]) => void;
   onTriggerCompaction?: () => void;
   onStop?: () => void;
   isLoading: boolean;
@@ -61,8 +66,8 @@ function getRandomPlaceholderIndex(excludeIndex?: number): number {
 /**
  * Renders the message composer orchestrator: owns all input state and handlers,
  * and composes the slash command popup, status row (compacting/blocked/textarea),
- * pending image attachment previews, and the bottom toolbar (attach, model
- * selector, send/stop) with floating island aesthetics.
+ * pending image & document attachment previews, and the bottom toolbar (attach,
+ * model selector, send/stop) with floating island aesthetics.
  */
 export default React.memo(function ChatInput({
   chatId,
@@ -82,6 +87,7 @@ export default React.memo(function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [inputValue, setInputValue] = useState('');
   const [attachedImages, setAttachedImages] = useState<ProcessedImage[]>([]);
+  const [attachedDocuments, setAttachedDocuments] = useState<ProcessedDocument[]>([]);
   const [attachError, setAttachError] = useState<string | null>(null);
   const [placeholderIndex, setPlaceholderIndex] = useState(() => getRandomPlaceholderIndex());
   const prevChatIdRef = useRef(chatId);
@@ -104,9 +110,10 @@ export default React.memo(function ChatInput({
 
   // The active model must be vision-capable for image attachments.
   const supportsVision = getModelSupportsVision(model);
-  const isImageCapReached = attachedImages.length >= MAX_IMAGES_PER_MESSAGE;
+  const totalAttachedCount = attachedImages.length + attachedDocuments.length;
+  const isAttachmentCapReached = totalAttachedCount >= MAX_ATTACHMENTS_PER_MESSAGE;
   const isAttachDisabled =
-    !supportsVision || isLoading || isBlocked || isImageCapReached || isCompacting;
+    isLoading || isBlocked || isAttachmentCapReached || isCompacting;
 
   // Canonical quota-exhausted copy (from buildQuotaError) with a retry hint.
   const blockedQuotaCopy = React.useMemo(() => {
@@ -139,25 +146,30 @@ export default React.memo(function ChatInput({
     setInputValue(e.target.value);
   };
 
-  /** Appends newly validated and processed image attachments up to the message cap. */
+  /** Appends newly validated and processed image attachments up to the cap. */
   const handleImagesAttached = (newImages: ProcessedImage[]) => {
-    setAttachedImages((prev) => [...prev, ...newImages].slice(0, MAX_IMAGES_PER_MESSAGE));
+    setAttachedImages((prev) => [...prev, ...newImages].slice(0, MAX_ATTACHMENTS_PER_MESSAGE));
   };
 
-  // Drag-and-drop & clipboard paste hook for seamless image attachment
+  /** Appends newly validated and processed document attachments up to the cap. */
+  const handleDocumentsAttached = (newDocs: ProcessedDocument[]) => {
+    setAttachedDocuments((prev) => [...prev, ...newDocs].slice(0, MAX_ATTACHMENTS_PER_MESSAGE));
+  };
+
+  // Drag-and-drop & clipboard paste hook for images and documents
   const { isDraggingOver, dragHandlers } = useComposerFileDrop({
     supportsVision,
     isAttachDisabled,
-    attachedCount: attachedImages.length,
-    maxImages: MAX_IMAGES_PER_MESSAGE,
+    attachedCount: totalAttachedCount,
+    maxAttachments: MAX_ATTACHMENTS_PER_MESSAGE,
     onImagesAttached: handleImagesAttached,
+    onDocumentsAttached: handleDocumentsAttached,
     onError: setAttachError,
   });
 
   /**
-   * Validates and compresses selected image files, appending them to the
-   * pending-attachment queue up to the per-message cap. Invalid or oversized
-   * files surface an inline error without disturbing existing attachments.
+   * Validates and processes selected files (images and documents), appending
+   * them to the pending-attachment queue up to the per-message cap.
    */
   const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
@@ -165,40 +177,69 @@ export default React.memo(function ChatInput({
     if (files.length === 0) return;
 
     setAttachError(null);
-    const availableSlots = MAX_IMAGES_PER_MESSAGE - attachedImages.length;
+    const availableSlots = MAX_ATTACHMENTS_PER_MESSAGE - totalAttachedCount;
     if (availableSlots <= 0) {
-      setAttachError(`Maximum of ${MAX_IMAGES_PER_MESSAGE} images per message reached.`);
+      setAttachError(`Maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} attachments per message reached.`);
       return;
     }
 
     const filesToProcess = files.slice(0, availableSlots);
     if (files.length > availableSlots) {
       setAttachError(
-        `Only ${availableSlots} image${availableSlots === 1 ? '' : 's'} could be attached (limit: ${MAX_IMAGES_PER_MESSAGE}).`
+        `Only ${availableSlots} file${availableSlots === 1 ? '' : 's'} could be attached (limit: ${MAX_ATTACHMENTS_PER_MESSAGE}).`
       );
     }
 
-    const next: ProcessedImage[] = [];
+    const nextImages: ProcessedImage[] = [];
+    const nextDocs: ProcessedDocument[] = [];
+
     for (const file of filesToProcess) {
-      const validationError = validateImageFile(file);
-      if (validationError) {
-        setAttachError(validationError);
-        continue;
-      }
-      try {
-        next.push(await processImageFile(file));
-      } catch {
-        setAttachError(`Could not process "${file.name}".`);
+      if (file.type.startsWith('image/')) {
+        if (!supportsVision) {
+          setAttachError(`Model does not support images. Could not attach "${file.name}".`);
+          continue;
+        }
+        const validationError = validateImageFile(file);
+        if (validationError) {
+          setAttachError(validationError);
+          continue;
+        }
+        try {
+          nextImages.push(await processImageFile(file));
+        } catch {
+          setAttachError(`Could not process "${file.name}".`);
+        }
+      } else {
+        const docValidationError = validateDocumentFile(file);
+        if (docValidationError) {
+          setAttachError(docValidationError);
+          continue;
+        }
+        try {
+          nextDocs.push(await processDocumentFile(file));
+        } catch {
+          setAttachError(`Could not process document "${file.name}".`);
+        }
       }
     }
-    if (next.length > 0) {
-      handleImagesAttached(next);
+
+    if (nextImages.length > 0) {
+      handleImagesAttached(nextImages);
+    }
+    if (nextDocs.length > 0) {
+      handleDocumentsAttached(nextDocs);
     }
   };
 
-  /** Removes a pending attachment by index. */
+  /** Removes a pending image attachment by index. */
   const handleRemoveImage = (index: number) => {
     setAttachedImages((prev) => prev.filter((_, i) => i !== index));
+    setAttachError(null);
+  };
+
+  /** Removes a pending document attachment by index. */
+  const handleRemoveDocument = (index: number) => {
+    setAttachedDocuments((prev) => prev.filter((_, i) => i !== index));
     setAttachError(null);
   };
 
@@ -248,7 +289,7 @@ export default React.memo(function ChatInput({
   /**
    * Validates the trimmed input against the loading/quota/limit guards,
    * submits the message or command, and clears the composer on success.
-   * Image-only messages are allowed (text may be empty when images are attached).
+   * Attachment-only messages are allowed (text may be empty when files are attached).
    */
   const handleSend = () => {
     const text = inputValue.trim();
@@ -259,10 +300,16 @@ export default React.memo(function ChatInput({
     }
 
     const hasImages = attachedImages.length > 0;
-    if ((text || hasImages) && !isLoading && !isBlocked && !isCharOverLimit) {
-      onSendMessage(text, hasImages ? attachedImages : undefined);
+    const hasDocs = attachedDocuments.length > 0;
+    if ((text || hasImages || hasDocs) && !isLoading && !isBlocked && !isCharOverLimit) {
+      onSendMessage(
+        text,
+        hasImages ? attachedImages : undefined,
+        hasDocs ? attachedDocuments : undefined,
+      );
       setInputValue('');
       setAttachedImages([]);
+      setAttachedDocuments([]);
       setAttachError(null);
     }
   };
@@ -298,7 +345,7 @@ export default React.memo(function ChatInput({
     }
   };
 
-  const hasContent = inputValue.trim().length > 0 || attachedImages.length > 0;
+  const hasContent = inputValue.trim().length > 0 || attachedImages.length > 0 || attachedDocuments.length > 0;
 
   return (
     <form
@@ -337,29 +384,29 @@ export default React.memo(function ChatInput({
           isVisible={isDraggingOver}
           isAttachDisabled={isAttachDisabled}
           disabledReason={
-            !supportsVision
-              ? 'Selected model does not support images'
-              : isImageCapReached
-                ? `Maximum of ${MAX_IMAGES_PER_MESSAGE} images reached`
-                : 'Image attachment unavailable'
+            isAttachmentCapReached
+              ? `Maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} attachments reached`
+              : 'Attachment unavailable'
           }
         />
-        {/* Hidden file picker: multi-image selection, surfaced via the attach button */}
+        {/* Hidden file picker: multi-file selection, surfaced via the attach button */}
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp,image/gif"
+          accept="image/jpeg,image/png,image/webp,image/gif,application/pdf,text/*,.md,.markdown,.csv,.tsv,.json,.yaml,.yml,.ts,.js,.jsx,.tsx,.py,.sql,.rs,.go,.html,.css,.sh,.java,.c,.cpp"
           multiple
           hidden
           onChange={handleFilesSelected}
         />
 
-        {/* Pending image attachments: removable thumbnails awaiting send */}
-        {(attachedImages.length > 0 || attachError) && (
+        {/* Pending attachments: removable thumbnails and document chips awaiting send */}
+        {(attachedImages.length > 0 || attachedDocuments.length > 0 || attachError) && (
           <AttachmentPreviews
             images={attachedImages}
+            documents={attachedDocuments}
             error={attachError}
-            onRemove={handleRemoveImage}
+            onRemoveImage={handleRemoveImage}
+            onRemoveDocument={handleRemoveDocument}
           />
         )}
 
@@ -382,10 +429,9 @@ export default React.memo(function ChatInput({
         {/* Row 2: Bottom Toolbar */}
         <ComposerToolbar
           isAttachDisabled={isAttachDisabled}
-          supportsVision={supportsVision}
-          isImageCapReached={isImageCapReached}
-          attachedCount={attachedImages.length}
-          maxImages={MAX_IMAGES_PER_MESSAGE}
+          isAttachmentCapReached={isAttachmentCapReached}
+          attachedCount={totalAttachedCount}
+          maxAttachments={MAX_ATTACHMENTS_PER_MESSAGE}
           onAttachClick={handleAttachClick}
           model={model}
           thinkingLevel={thinkingLevel}

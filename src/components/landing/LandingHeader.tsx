@@ -109,7 +109,7 @@ export function LandingHeader({ userId }: LandingHeaderProps) {
               type="button"
               {...buttonHoverProps}
               onClick={handleOpenStudio}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-text-bright text-surface-base dark:text-surface-base hover:opacity-90 text-caption font-semibold shadow-button transition-all cursor-pointer"
+              className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-text-bright text-surface-base dark:text-surface-base hover:opacity-90 text-caption font-semibold shadow-button transition-all cursor-pointer"
             >
               <span>Studio</span>
               <ArrowRight className="w-3 h-3" />
@@ -118,9 +118,9 @@ export function LandingHeader({ userId }: LandingHeaderProps) {
             <motion.div {...buttonHoverProps}>
               <Link
                 href="/auth/signin"
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-text-bright text-surface-base hover:opacity-90 text-caption font-semibold shadow-button transition-opacity"
+                className="inline-flex items-center gap-1 px-3.5 py-1.5 rounded-full bg-text-bright text-surface-base hover:opacity-90 text-caption font-semibold shadow-button transition-opacity"
               >
-                <span>Studio</span>
+                <span>Sign In</span>
                 <ArrowRight className="w-3 h-3" />
               </Link>
             </motion.div>
