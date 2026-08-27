@@ -79,10 +79,7 @@ export function LandingNumbers() {
           </motion.div>
 
           {/* 4 Massive Metric Pillars */}
-          <motion.div
-            variants={staggerContainerVariants}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-6 pt-4"
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-6 pt-4">
             {METRICS.map((metric) => (
               <motion.div
                 key={metric.title}
@@ -102,13 +99,10 @@ export function LandingNumbers() {
                 </div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
 
           {/* 4 Architectural Columns */}
-          <motion.div
-            variants={staggerContainerVariants}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pt-8 border-t border-edge-default"
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pt-8 border-t border-edge-default">
             {PILLARS.map((pillar) => (
               <motion.div
                 key={pillar.tag}
@@ -123,7 +117,7 @@ export function LandingNumbers() {
                 </p>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </motion.div>
       </div>
     </section>
