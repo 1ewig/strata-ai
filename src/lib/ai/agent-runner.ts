@@ -88,8 +88,12 @@ export async function runAgentResponse({
   // Token budget: active model's context window + active context occupancy from the
   // latest assistant message (metadata.usage round-trips through the request body).
   const contextWindow = getModelContextWindow(modelId || DEFAULT_AGENT_MODEL);
+  const sanitizedForMetrics = await sanitizeMessagesForProvider(
+    messages,
+    getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+  );
   const tokenMetrics = calculateTokenMetrics(
-    sanitizeMessagesForProvider(messages, getModelProvider(modelId || DEFAULT_AGENT_MODEL)) as Array<{
+    sanitizedForMetrics as Array<{
       role?: string;
       metadata?: ChatMetadata;
     }>,
@@ -203,7 +207,7 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
     // Prune provider metadata belonging to other providers before the message
     // converters run, so stale Gemini thought signatures (or any other
     // cross-provider leftovers) never leak into a Fireworks/DeepSeek payload.
-    const sanitizedMessages = sanitizeMessagesForProvider(
+    const sanitizedMessages = await sanitizeMessagesForProvider(
       config.messages,
       getModelProvider(modelId || DEFAULT_AGENT_MODEL),
     );

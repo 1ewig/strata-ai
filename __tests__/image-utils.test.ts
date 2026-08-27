@@ -122,7 +122,7 @@ describe("sanitizeMessagesForProvider & stripImageContentForTextOnlyProviders", 
     stripImageContentForTextOnlyProviders,
   } = require("@/lib/ai/agent-runner");
 
-  it("annotates UI image file parts with filename labels for google and strips binary for fireworks", () => {
+  it("annotates UI image file parts with filename labels for google and strips binary for fireworks", async () => {
     const input = [
       {
         role: "user",
@@ -133,19 +133,19 @@ describe("sanitizeMessagesForProvider & stripImageContentForTextOnlyProviders", 
       },
     ];
 
-    const googleOutput = sanitizeMessagesForProvider(input, "google");
+    const googleOutput = await sanitizeMessagesForProvider(input, "google");
     expect(googleOutput[0].parts).toHaveLength(3);
     expect(googleOutput[0].parts[0]).toEqual({ type: "text", text: "[Attached image: diagram.png]" });
     expect(googleOutput[0].parts[1].type).toBe("file");
     expect(googleOutput[0].parts[2]).toEqual({ type: "text", text: "Explain this diagram" });
 
-    const fireworksOutput = sanitizeMessagesForProvider(input, "fireworks");
+    const fireworksOutput = await sanitizeMessagesForProvider(input, "fireworks");
     expect(fireworksOutput[0].parts).toHaveLength(2);
     expect(fireworksOutput[0].parts[0]).toEqual({ type: "text", text: "[Attached image: diagram.png]" });
     expect(fireworksOutput[0].parts[1]).toEqual({ type: "text", text: "Explain this diagram" });
   });
 
-  it("provides a filename-labeled text placeholder when an image-only user message is stripped", () => {
+  it("provides a filename-labeled text placeholder when an image-only user message is stripped", async () => {
     const input = [
       {
         role: "user",
@@ -153,12 +153,12 @@ describe("sanitizeMessagesForProvider & stripImageContentForTextOnlyProviders", 
       },
     ];
 
-    const fireworksOutput = sanitizeMessagesForProvider(input, "fireworks");
+    const fireworksOutput = await sanitizeMessagesForProvider(input, "fireworks");
     expect(fireworksOutput[0].parts).toHaveLength(1);
     expect(fireworksOutput[0].parts[0]).toEqual({ type: "text", text: "[Attached image: photo.jpg]" });
   });
 
-  it("decodes text attachments into named text blocks for all providers", () => {
+  it("decodes text attachments into named text blocks for all providers", async () => {
     const textDataUrl = `data:text/plain;base64,${Buffer.from("Hello world").toString("base64")}`;
     const input = [
       {
@@ -167,17 +167,40 @@ describe("sanitizeMessagesForProvider & stripImageContentForTextOnlyProviders", 
       },
     ];
 
-    const googleOutput = sanitizeMessagesForProvider(input, "google");
+    const googleOutput = await sanitizeMessagesForProvider(input, "google");
     expect(googleOutput[0].parts[0]).toEqual({
       type: "text",
       text: "[Attached file: notes.txt]\nHello world\n[/Attached file: notes.txt]",
     });
 
-    const fireworksOutput = sanitizeMessagesForProvider(input, "fireworks");
+    const fireworksOutput = await sanitizeMessagesForProvider(input, "fireworks");
     expect(fireworksOutput[0].parts[0]).toEqual({
       type: "text",
       text: "[Attached file: notes.txt]\nHello world\n[/Attached file: notes.txt]",
     });
+  });
+
+  it("extracts and injects PDF text for Fireworks / DeepSeek and passes binary to Google / Gemini", async () => {
+    const samplePdfBase64 =
+      "JVBERi0xLjQKJcOkw7zDtsOfCjEgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovS2lkcyBbMyAwIFJdCi9Db3VudCAxCj4+CmVuZG9iagozIDAgb2JqCjw8Ci9UeXBlIC9QYWdlCi9QYXJlbnQgMiAwIFIKL01lZGlhQm94IFswIDAgNjEyIDc5Ml0KL0NvbnRlbnRzIDQgMCBSCi9SZXNvdXJjZXMgPDwKL0ZvbnQgPDwKL0YxIDUgMCBSCj4+Cj4+Cj4+CmVuZG9iago0IDAgb2JqCjw8Ci9MZW5ndGggNTIKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoxMDAgNzAwIFRkCihIZWxsbyBEZWVwU2VlayBQREYpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PAovVHlwZSAvRm9udAovU3VidHlwZSAvVHlwZTEKL0Jhc2VGb250IC9IZWx2ZXRpY2EKPj4KZW5kb2JqCnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAxNSAwMDAwMCBuIAowMDAwMDAwMDY4IDAwMDAwIG4gCjAwMDAwMDAxMjUgMDAwMDAgbiAKMDAwMDAwMDI1OCAwMDAwMCBuIAowMDAwMDAwMzYwIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNgovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKNDQxCiUlRU9GCg==";
+    const pdfDataUrl = `data:application/pdf;base64,${samplePdfBase64}`;
+
+    const input = [
+      {
+        role: "user",
+        parts: [{ type: "file", mediaType: "application/pdf", filename: "resume.pdf", url: pdfDataUrl }],
+      },
+    ];
+
+    const fireworksOutput = await sanitizeMessagesForProvider(input, "fireworks");
+    expect(fireworksOutput[0].parts).toHaveLength(1);
+    expect((fireworksOutput[0].parts[0] as any).text).toContain("[Attached document: resume.pdf (PDF)]");
+    expect((fireworksOutput[0].parts[0] as any).text).toContain("Hello DeepSeek PDF");
+
+    const googleOutput = await sanitizeMessagesForProvider(input, "google");
+    expect(googleOutput[0].parts).toHaveLength(2);
+    expect(googleOutput[0].parts[0]).toEqual({ type: "text", text: "[Attached document: resume.pdf (PDF)]" });
+    expect(googleOutput[0].parts[1].type).toBe("file");
   });
 
   it("strips model-converted file and image parts for Fireworks provider", () => {

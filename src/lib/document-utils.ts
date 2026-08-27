@@ -5,6 +5,7 @@ import {
   MAX_DOCUMENT_INPUT_BYTES,
   MAX_DOCUMENT_TEXT_CHARS,
 } from '@/lib/limits';
+import { extractText } from 'unpdf';
 
 /** A processed, wire-ready document attachment. */
 export interface ProcessedDocument {
@@ -112,11 +113,39 @@ export async function processDocumentFile(file: File): Promise<ProcessedDocument
 
   if (isPdf) {
     const dataUrl = await readFileAsDataUrl(file);
+    let textContent: string | undefined;
+    let isTruncated = false;
+
+    try {
+      if (typeof file.arrayBuffer === 'function') {
+        const buffer = await file.arrayBuffer();
+        const res = await extractText(new Uint8Array(buffer), { mergePages: true });
+        const textVal = res.text as unknown;
+        const rawText = typeof textVal === 'string'
+          ? textVal.trim()
+          : (Array.isArray(textVal) ? (textVal as string[]).join('\n\n').trim() : '');
+
+        if (rawText) {
+          if (rawText.length > MAX_DOCUMENT_TEXT_CHARS) {
+            textContent = rawText.slice(0, MAX_DOCUMENT_TEXT_CHARS) +
+              `\n\n[... Document "${file.name}" truncated at ${MAX_DOCUMENT_TEXT_CHARS.toLocaleString()} characters ...]`;
+            isTruncated = true;
+          } else {
+            textContent = rawText;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn(`[document-utils] PDF text extraction failed for "${file.name}":`, err);
+    }
+
     return {
       filename: file.name,
       mediaType: 'application/pdf',
       size: file.size,
       dataUrl,
+      textContent,
+      isTruncated,
     };
   }
 
