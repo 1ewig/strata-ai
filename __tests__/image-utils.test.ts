@@ -122,36 +122,62 @@ describe("sanitizeMessagesForProvider & stripImageContentForTextOnlyProviders", 
     stripImageContentForTextOnlyProviders,
   } = require("@/lib/ai/agent-runner");
 
-  it("strips UI image file parts for fireworks while leaving Google unchanged", () => {
+  it("annotates UI image file parts with filename labels for google and strips binary for fireworks", () => {
     const input = [
       {
         role: "user",
         parts: [
-          { type: "file", mediaType: "image/png", url: "data:image/png;base64,123" },
+          { type: "file", mediaType: "image/png", filename: "diagram.png", url: "data:image/png;base64,123" },
           { type: "text", text: "Explain this diagram" },
         ],
       },
     ];
 
     const googleOutput = sanitizeMessagesForProvider(input, "google");
-    expect(googleOutput[0].parts).toHaveLength(2);
+    expect(googleOutput[0].parts).toHaveLength(3);
+    expect(googleOutput[0].parts[0]).toEqual({ type: "text", text: "[Attached image: diagram.png]" });
+    expect(googleOutput[0].parts[1].type).toBe("file");
+    expect(googleOutput[0].parts[2]).toEqual({ type: "text", text: "Explain this diagram" });
 
     const fireworksOutput = sanitizeMessagesForProvider(input, "fireworks");
-    expect(fireworksOutput[0].parts).toHaveLength(1);
-    expect(fireworksOutput[0].parts[0]).toEqual({ type: "text", text: "Explain this diagram" });
+    expect(fireworksOutput[0].parts).toHaveLength(2);
+    expect(fireworksOutput[0].parts[0]).toEqual({ type: "text", text: "[Attached image: diagram.png]" });
+    expect(fireworksOutput[0].parts[1]).toEqual({ type: "text", text: "Explain this diagram" });
   });
 
-  it("provides a fallback text placeholder when an image-only user message is stripped", () => {
+  it("provides a filename-labeled text placeholder when an image-only user message is stripped", () => {
     const input = [
       {
         role: "user",
-        parts: [{ type: "file", mediaType: "image/jpeg", url: "data:image/jpeg;base64,123" }],
+        parts: [{ type: "file", mediaType: "image/jpeg", filename: "photo.jpg", url: "data:image/jpeg;base64,123" }],
       },
     ];
 
     const fireworksOutput = sanitizeMessagesForProvider(input, "fireworks");
     expect(fireworksOutput[0].parts).toHaveLength(1);
-    expect(fireworksOutput[0].parts[0]).toEqual({ type: "text", text: "[Attached media]" });
+    expect(fireworksOutput[0].parts[0]).toEqual({ type: "text", text: "[Attached image: photo.jpg]" });
+  });
+
+  it("decodes text attachments into named text blocks for all providers", () => {
+    const textDataUrl = `data:text/plain;base64,${Buffer.from("Hello world").toString("base64")}`;
+    const input = [
+      {
+        role: "user",
+        parts: [{ type: "file", mediaType: "text/plain", filename: "notes.txt", url: textDataUrl }],
+      },
+    ];
+
+    const googleOutput = sanitizeMessagesForProvider(input, "google");
+    expect(googleOutput[0].parts[0]).toEqual({
+      type: "text",
+      text: "[Attached file: notes.txt]\nHello world\n[/Attached file: notes.txt]",
+    });
+
+    const fireworksOutput = sanitizeMessagesForProvider(input, "fireworks");
+    expect(fireworksOutput[0].parts[0]).toEqual({
+      type: "text",
+      text: "[Attached file: notes.txt]\nHello world\n[/Attached file: notes.txt]",
+    });
   });
 
   it("strips model-converted file and image parts for Fireworks provider", () => {

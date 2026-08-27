@@ -1,26 +1,67 @@
 import { convertToModelMessages, type ModelMessage } from "ai";
 
 /**
+ * Attempts to decode a data URL containing text-based content into a UTF-8 string.
+ */
+function decodeTextDataUrl(url?: string): string | null {
+  if (!url || typeof url !== "string" || !url.startsWith("data:")) return null;
+  try {
+    const commaIdx = url.indexOf(",");
+    if (commaIdx === -1) return null;
+    const meta = url.slice(5, commaIdx);
+    const data = url.slice(commaIdx + 1);
+    if (meta.includes(";base64")) {
+      return Buffer.from(data, "base64").toString("utf-8");
+    }
+    return decodeURIComponent(data);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns a human-readable attachment descriptor label including the filename.
+ */
+function formatAttachmentLabel(part: any): string {
+  const filename = part?.filename || "file";
+  const mediaType = String(part?.mediaType || part?.mimeType || "").toLowerCase();
+  if (mediaType.startsWith("image/")) {
+    return `[Attached image: ${filename}]`;
+  }
+  if (mediaType === "application/pdf") {
+    return `[Attached document: ${filename} (PDF)]`;
+  }
+  return `[Attached file: ${filename}]`;
+}
+
+/**
+ * Checks if a UI part represents a binary payload (image or PDF).
+ */
+export function isUIBinaryPart(part: any): boolean {
+  if (!part) return false;
+  if (part.type === "image") return true;
+  if (part.type === "file") {
+    const mediaType = String(part.mediaType || part.mimeType || "").toLowerCase();
+    return mediaType.startsWith("image/") || mediaType === "application/pdf";
+  }
+  return false;
+}
+
+/**
  * Strips provider-specific metadata from conversation messages that belongs to a
  * provider other than the one serving the current request.
  *
- * Prevents cross-provider metadata leaks that break strict-schema providers.
- * The classic failure: a Gemini (Google) tool-call part carries a stored thought
- * signature (UI `callProviderMetadata.google.thoughtSignature`); when that
- * history is later replayed into a Fireworks/DeepSeek request,
- * `convertToModelMessages` re-emits it as `providerOptions` on the tool-call
- * part and the openai-compatible converter turns it into `extra_content`, which
- * Fireworks rejects with:
- * "Extra inputs are not permitted, field: 'messages[N].tool_calls[0].extra_content'".
- * Keeping the active provider's own keys is intentional so Google's thought
- * signatures still round-trip for Gemini requests.
- *
- * All three metadata field shapes are pruned: `providerMetadata` (text/reasoning
- * parts), `callProviderMetadata` / `resultProviderMetadata` (tool parts).
+ * Additionally:
+ * 1. Decodes text-based document attachments into labeled text blocks with explicit
+ *    filenames (`[Attached file: filename]...[/Attached file: filename]`) so all
+ *    models (both Gemini and DeepSeek) can read their filenames and contents.
+ * 2. Injects explicit filename labels (`[Attached document: filename]`, `[Attached image: filename]`)
+ *    so multimodal Gemini is aware of binary file names, while text-only DeepSeek
+ *    receives safe filename placeholders without crashing on binary data URLs.
  *
  * @param messages - The UI message parts arriving in the request body.
  * @param provider - The active backend provider ('google' | 'fireworks').
- * @returns A shallow-copied message array with non-active provider metadata pruned.
+ * @returns A shallow-copied message array with sanitized parts and filename context.
  */
 export function sanitizeMessagesForProvider(
   messages: Parameters<typeof convertToModelMessages>[0],
@@ -36,31 +77,22 @@ export function sanitizeMessagesForProvider(
     return Object.keys(pruned).length > 0 ? pruned : undefined;
   };
 
-  const isUIBinaryPart = (part: any) => {
-    if (!part) return false;
-    if (part.type === "image") return true;
-    if (part.type === "file") {
-      const mediaType = part.mediaType || part.mimeType;
-      if (typeof mediaType === "string" && (mediaType.startsWith("image/") || mediaType === "application/pdf")) {
-        return true;
-      }
-    }
-    return false;
-  };
-
   return messages.map((message) => {
     const parts = message.parts;
     if (!Array.isArray(parts)) {
       return message;
     }
 
-    let nextParts = parts.map((part) => {
+    const nextParts: any[] = [];
+
+    for (const part of parts) {
       const typedPart = part as {
         providerMetadata?: Record<string, unknown>;
         callProviderMetadata?: Record<string, unknown>;
         resultProviderMetadata?: Record<string, unknown>;
       };
-      return {
+
+      const sanitizedPart = {
         ...part,
         ...(typedPart.providerMetadata !== undefined
           ? { providerMetadata: prune(typedPart.providerMetadata) }
@@ -72,14 +104,28 @@ export function sanitizeMessagesForProvider(
           ? { resultProviderMetadata: prune(typedPart.resultProviderMetadata) }
           : {}),
       };
-    });
 
-    if (provider === "fireworks" && message.role === "user") {
-      const nonBinaryParts = nextParts.filter((part) => !isUIBinaryPart(part));
-      if (nonBinaryParts.length !== nextParts.length) {
-        nextParts = nonBinaryParts.length > 0
-          ? nonBinaryParts
-          : [{ type: "text", text: "[Attached media]" }];
+      if (message.role === "user" && sanitizedPart.type === "file") {
+        const filename = (sanitizedPart as any).filename || "file";
+        const isBinary = isUIBinaryPart(sanitizedPart);
+
+        if (!isBinary) {
+          // Text-based attachment: decode and present as a named text file block
+          const decoded = decodeTextDataUrl((sanitizedPart as any).url);
+          const fileText = decoded !== null
+            ? `[Attached file: ${filename}]\n${decoded}\n[/Attached file: ${filename}]`
+            : `[Attached file: ${filename}]`;
+          nextParts.push({ type: "text", text: fileText });
+        } else if (provider === "fireworks") {
+          // Text-only provider: replace binary part with explicit filename placeholder
+          nextParts.push({ type: "text", text: formatAttachmentLabel(sanitizedPart) });
+        } else {
+          // Multimodal provider (Gemini): include filename label annotation and binary part
+          nextParts.push({ type: "text", text: formatAttachmentLabel(sanitizedPart) });
+          nextParts.push(sanitizedPart);
+        }
+      } else {
+        nextParts.push(sanitizedPart);
       }
     }
 
