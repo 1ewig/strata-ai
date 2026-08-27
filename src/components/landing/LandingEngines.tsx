@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import {
   staggerContainerVariants,
   fadeUpVariants,
+  cardVariants,
   cardHoverProps,
   viewportOnce,
 } from '@/components/landing/animations';
@@ -98,9 +99,9 @@ export function LandingEngines() {
             {ENGINES.map((engine) => (
               <motion.div
                 key={engine.name}
-                variants={fadeUpVariants}
+                variants={cardVariants}
                 {...cardHoverProps}
-                className={`relative aspect-[4/5] rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between overflow-hidden shadow-card transition-all duration-300 ${
+                className={`relative aspect-[4/5] rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between overflow-hidden shadow-card transition-shadow duration-300 ${
                   engine.isAccent
                     ? 'bg-primary text-surface'
                     : 'bg-[#171310] dark:bg-[#1f1a16] text-[#f2ede6] border border-white/10'

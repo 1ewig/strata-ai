@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import {
   staggerContainerVariants,
   fadeUpVariants,
+  cardVariants,
   viewportOnce,
 } from '@/components/landing/animations';
 
@@ -54,24 +55,6 @@ const PILLARS = [
   },
 ];
 
-const PIPELINE_STEPS = [
-  {
-    num: '01 Explore',
-    description:
-      'Share rough thoughts or search the web for fresh facts and reference material.',
-  },
-  {
-    num: '02 Shape',
-    description:
-      'Let the assistant draft sections, clean up phrasing, and organize your files.',
-  },
-  {
-    num: '03 Polish',
-    description:
-      'Review living drafts on your canvas, export clean markdown, and keep creating.',
-  },
-];
-
 export function LandingNumbers() {
   return (
     <section
@@ -103,7 +86,7 @@ export function LandingNumbers() {
             {METRICS.map((metric) => (
               <motion.div
                 key={metric.title}
-                variants={fadeUpVariants}
+                variants={cardVariants}
                 className="pt-6 border-t-2 border-text-bright flex flex-col justify-between space-y-4"
               >
                 <div className="font-display font-black text-6xl sm:text-7xl lg:text-8xl tracking-tighter text-text-bright leading-none">
@@ -129,7 +112,7 @@ export function LandingNumbers() {
             {PILLARS.map((pillar) => (
               <motion.div
                 key={pillar.tag}
-                variants={fadeUpVariants}
+                variants={cardVariants}
                 className="space-y-2"
               >
                 <h4 className="text-micro font-mono font-bold uppercase tracking-wider text-text-bright">
@@ -137,27 +120,6 @@ export function LandingNumbers() {
                 </h4>
                 <p className="text-caption text-text-secondary font-sans leading-relaxed">
                   {pillar.description}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
-
-          {/* 3 Step Sequence at Bottom */}
-          <motion.div
-            variants={staggerContainerVariants}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-8 border-t border-dashed border-edge-raised"
-          >
-            {PIPELINE_STEPS.map((step) => (
-              <motion.div
-                key={step.num}
-                variants={fadeUpVariants}
-                className="space-y-1.5"
-              >
-                <span className="text-micro font-mono font-bold text-primary uppercase">
-                  {step.num}
-                </span>
-                <p className="text-caption text-text-secondary font-sans leading-relaxed">
-                  {step.description}
                 </p>
               </motion.div>
             ))}

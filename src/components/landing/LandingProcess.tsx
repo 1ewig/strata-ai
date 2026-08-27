@@ -6,6 +6,7 @@ import { ArrowUpRight } from 'lucide-react';
 import {
   staggerContainerVariants,
   fadeUpVariants,
+  cardVariants,
   viewportOnce,
 } from '@/components/landing/animations';
 
@@ -113,8 +114,8 @@ export function LandingProcess() {
 
           {/* Bottom High-Voltage Accent Block */}
           <motion.div
-            variants={fadeUpVariants}
-            className="p-8 sm:p-12 rounded-2xl sm:rounded-3xl bg-primary text-surface shadow-card hover:shadow-card-lg transition-all duration-300 relative overflow-hidden"
+            variants={cardVariants}
+            className="p-8 sm:p-12 rounded-2xl sm:rounded-3xl bg-primary text-surface shadow-card hover:shadow-card-lg transition-shadow duration-300 relative overflow-hidden"
           >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
               {/* Left Display Metric */}
