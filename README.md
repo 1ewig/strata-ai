@@ -91,9 +91,13 @@ The assistant runs multi-step agentic loops and can invoke 8 schema-validated to
 - **Surgical edits:** `editFile` routes through a 3-tier string-edit engine (exact → whitespace-normalized → 2-point anchor-bounded matching) so the agent makes precise changes without rewriting whole files.
 - **Multi-language support:** 24+ languages with automatic language detection from the filename (HTML, TypeScript, JavaScript, JSX, TSX, CSS, SCSS, JSON, Python, SQL, Shell, YAML, Markdown, Rust, Go, C/C++, Java, Kotlin, PHP, Ruby, Swift, XML, Dockerfile, plain text).
 
-### 2. Image attachments with vision input
+### 2. Image and document attachments with multimodal vision and universal text ingestion
 
-Attach up to 4 images (JPEG, PNG, WebP, or GIF) to any message on a vision-capable model. Images are validated and compressed entirely in the browser — a canvas pipeline downscales the longest edge to 1,280 px and steps quality down until the image fits a compact budget — so nothing heavy ever reaches the API. Gemini models accept attachments; DeepSeek V4 Flash is text-only, so the attach button is hidden and any image history is gracefully stripped on replay. The server mirrors the client gates (count, MIME whitelist, and size) with a 400 backstop, and attached images render as a thumbnail row in the chat bubble.
+Attach up to 4 files (images or documents) to any message.
+- **Images (vision):** JPEG, PNG, WebP, or GIF files on vision-capable models (Gemini). Images are validated and compressed entirely in the browser (canvas downscale to 1,280 px and quality stepping under 1.5 MB).
+- **Documents & Code:** PDF, Markdown, TXT, CSV, TSV, JSON, YAML, HTML, CSS, JavaScript, TypeScript, Python, SQL, Rust, Go, Java, C/C++, and Shell scripts (up to 5 MB per document).
+- **Universal PDF Ingestion:** Gemini receives native multimodal `application/pdf` binary payloads for layout and visual chart analysis. For text-only models like DeepSeek V4 Flash, text content is automatically extracted via `unpdf` and injected as structured document blocks so DeepSeek can review resumes, code, and reports without crashing.
+- **Multimodal safety:** When switching from Gemini to DeepSeek mid-conversation, foreign provider metadata and raw binary image parts in history are automatically stripped and replaced with explicit labels, preserving context and preventing API errors. The server backstops all attachment limits with 400 validations, and attachments render as preview thumbnails and document chips in the chat bubble.
 
 ### 3. Streaming UX and live workspace updates
 
@@ -157,10 +161,11 @@ The app ships with a fully wired but optional Langfuse integration for LLM traci
 | Animations | `motion` 12 + `framer-motion` 13 | Drawer slides, jitter-free accordion/popover variants, spring micro-interactions (shared presets in `components/chat/animations.ts` and `components/landing/animations.ts`) |
 | Markdown | `react-markdown` 10 + `remark-gfm` 4 | Chat and drawer Markdown rendering |
 | Syntax highlighting | PrismJS 1.30 | Multi-language highlighting in chat and the code viewer |
+| Document parsing | `unpdf` 1.8 | Universal PDF text extraction for client and server |
 | Validation | Zod 4 | API body parsing and every tool input/output schema |
 | Icons | lucide-react | Iconography |
 | Auto-scroll | `use-stick-to-bottom` | Chat scroll behavior (no manual scroll effects) |
-| Testing | `bun test` (17 suites in `__tests__/`) | Unit + route-integration tests | `bun run test` / `bun run test:watch` (`--isolate` flag); shared fixtures in `__tests__/helpers.ts`; constants imported from `@/lib/limits` |
+| Testing | `bun test` (18 suites in `__tests__/`) | Unit + route-integration tests | `bun run test` / `bun run test:watch` (`--isolate` flag); shared fixtures in `__tests__/helpers.ts`; constants imported from `@/lib/limits` |
 | Observability | Langfuse (`@langfuse/otel`, `@langfuse/tracing`, `@langfuse/vercel-ai-sdk`) | Optional LLM trace waterfalls via OpenTelemetry — token costs, session grouping, model metadata | Server-side `LangfuseSpanProcessor` in `src/instrumentation.ts`; per-request attribution (userId, sessionId, tags); force-flush on all exit paths |
 
 ---
@@ -197,7 +202,7 @@ Highlights worth knowing:
 - **Live content via SSE, reconciliation on finish.** File content persists mid-stream through `data-workspace` events; on `onFinish`, `lib/ai/message-extractor.ts` reconciles deletions and metadata-only summaries into the conversation's file list.
 - **Cross-provider sanitization.** Provider metadata from a previous provider (e.g. a stored Gemini thought signature) is pruned before history is replayed into a Fireworks request.
 - **Server-side history pruning.** Both endpoints slice the message list to start at the latest compaction summary, so the model never re-reads pre-summary history.
-- **Multimodal with graceful fallback.** Vision-capable Gemini models consume image attachments (validated + compressed client-side); text-only DeepSeek hides the attach button, and the agent runner strips image parts from replayed history so conversations survive provider switches.
+- **Multimodal with universal document ingestion.** Vision-capable Gemini models consume image attachments (validated + compressed client-side) and native PDF binaries. Text-only DeepSeek receives decoded text files and automatic PDF text extraction (`unpdf`), while raw image parts are cleanly stripped from replayed history so cross-model switches remain resilient.
 
 For a deep dive, read [docs/SUMMARY.md](docs/SUMMARY.md), the canonical system-context and architecture guide.
 
@@ -237,7 +242,7 @@ Notes:
 
 - Context compaction is hardwired to `gemini-3.1-flash-lite` with `high` thinking effort.
 - DeepSeek V4 Flash's reasoning maps to Fireworks' `reasoning_effort` (the model also supports a `max` effort, but the AI SDK's top-level reasoning option cannot express it, so the app exposes only low/high).
-- Vision-capable models accept image attachments (up to 4 per message); DeepSeek is text-only, so the composer hides the attach button and image parts are stripped from replayed history on that provider.
+- Vision-capable models accept image attachments (up to 4 per message); DeepSeek is text-only, so the composer hides the image attach button and image parts are stripped from replayed history on that provider.
 - Model and thinking-level preferences persist in `localStorage`; a conversation's own `model`/`thinkingLevel` values take priority when set.
 
 ---
@@ -249,10 +254,12 @@ Centralized in `src/lib/limits.ts`:
 | Constraint | Limit |
 |------------|-------|
 | Message character limit | 2,000 per user turn |
-| Images per message | 4 (JPEG, PNG, WebP, GIF) |
+| Attachments per message | 4 combined (images + documents) |
 | Image input size | 5 MB per image (rejected at pick time) |
 | Image output size | 1.5 MB per image (client-compressed) |
 | Image dimension | 1,280 px long edge (client-compressed) |
+| Document input size | 5 MB per document (PDF, TXT, MD, CSV, JSON, code) |
+| Document extracted text | 25,000 characters per document |
 | Per-file character limit | 10,000 per workspace document |
 | Total workspace character limit | 50,000 across all files |
 | Max files per workspace | 3 active documents |
@@ -273,7 +280,7 @@ All scripts run through Bun.
 | `bun run start` | `next start` | Start the production server |
 | `bun run typecheck` | `tsc --noEmit` | Run TypeScript type checking |
 | `bun run lint` | `oxlint` | Run Oxlint across the codebase |
-| `bun run test` | `bun test --isolate` | Run the unit & integration test suite (17 suites in `__tests__/`) |
+| `bun run test` | `bun test --isolate` | Run the unit & integration test suite (18 suites in `__tests__/`) |
 | `bun run test:watch` | `bun test --isolate --watch` | Re-run tests on file changes |
 | `bun run test:langfuse` | `bun run scripts/test-langfuse.ts` | Langfuse connectivity smoke test |
 | `bun run clean` | `next clean` | Clear the `.next` cache and build artifacts |
