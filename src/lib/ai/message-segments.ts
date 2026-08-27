@@ -8,17 +8,30 @@ export interface ImageAttachmentInfo {
   mediaType: string;
 }
 
+/** A wire-level document attachment extracted from a user message's `file` parts. */
+export interface DocumentAttachmentInfo {
+  /** Data URL of the document or text. */
+  url: string;
+  /** Original filename. */
+  filename: string;
+  /** IANA media type, e.g. 'application/pdf', 'text/plain'. */
+  mediaType: string;
+  /** Optional byte size if recorded. */
+  size?: number;
+}
+
 /**
  * A flattened, render-ready slice of a message: user text, user images,
- * markdown text, reasoning/thought content, a tool invocation part, or a work
- * group of reasoning + tools.
+ * user documents, markdown text, reasoning/thought content, a tool invocation
+ * part, or a work group of reasoning + tools.
  */
 export interface Segment {
-  type: 'user-text' | 'user-images' | 'text' | 'reasoning' | 'tool' | 'work-group' | string;
+  type: 'user-text' | 'user-images' | 'user-documents' | 'text' | 'reasoning' | 'tool' | 'work-group' | string;
   content?: string;
   part?: any;
   items?: Segment[];
   images?: ImageAttachmentInfo[];
+  documents?: DocumentAttachmentInfo[];
   key: string;
 }
 
@@ -45,18 +58,31 @@ export function flattenMessageSegments(
 
   if (isUser) {
     // User bubbles show a single combined bubble: join every text part and
-    // collect image attachments (file parts with image/* media type) so the
-    // bubble can render thumbnails above the text.
+    // collect image/document attachments so the bubble can render them above the text.
     let userText = '';
     const images: ImageAttachmentInfo[] = [];
+    const documents: DocumentAttachmentInfo[] = [];
     if (Array.isArray(message.parts)) {
       for (const p of message.parts) {
-        if (p?.type === 'file' && typeof p.mediaType === 'string' && p.mediaType.startsWith('image/') && typeof p.url === 'string') {
-          images.push({
-            url: p.url,
-            filename: typeof p.filename === 'string' && p.filename ? p.filename : 'Attached image',
-            mediaType: p.mediaType,
-          });
+        if (p?.type === 'file' && typeof p.url === 'string') {
+          const mediaType = typeof p.mediaType === 'string' ? p.mediaType : 'application/octet-stream';
+          const isImg = mediaType.startsWith('image/');
+          const filename =
+            typeof p.filename === 'string' && p.filename
+              ? p.filename
+              : isImg
+                ? 'Attached image'
+                : 'Attached file';
+          if (isImg) {
+            images.push({ url: p.url, filename, mediaType });
+          } else {
+            documents.push({
+              url: p.url,
+              filename,
+              mediaType,
+              size: typeof p.size === 'number' ? p.size : undefined,
+            });
+          }
         } else if (p?.type === 'text' && typeof p.text === 'string') {
           userText += p.text;
         }
@@ -68,6 +94,9 @@ export function flattenMessageSegments(
     const segments: Segment[] = [];
     if (images.length > 0) {
       segments.push({ type: 'user-images', images, key: 'user-images' });
+    }
+    if (documents.length > 0) {
+      segments.push({ type: 'user-documents', documents, key: 'user-documents' });
     }
     if (userText) {
       segments.push({ type: 'user-text', content: userText, key: 'user-text' });

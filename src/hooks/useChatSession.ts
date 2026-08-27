@@ -18,6 +18,7 @@ import { calculateTokenMetrics, ChatMetadata } from '@/lib/token-usage';
 import { getModelContextWindow } from '@/lib/models';
 import { buildQuotaError } from '@/lib/limits';
 import type { ProcessedImage } from '@/lib/image-utils';
+import type { ProcessedDocument } from '@/lib/document-utils';
 import { useRateLimit } from '@/contexts/RateLimitContext';
 import { useSession } from '@/lib/auth-client';
 
@@ -236,18 +237,19 @@ export function useChatSession(chatId: string) {
 
   /**
    * Sends a user message after validating quota, auto-titling the conversation on its first message.
-   * Image attachments ride along as AI SDK `file` UI parts (data URLs); image-only
-   * messages are allowed, and the auto-title falls back to the first filename.
+   * Image and document attachments ride along as AI SDK `file` UI parts (data URLs).
    * @param text - The raw message text to send.
    * @param images - Optional processed image attachments to include.
+   * @param documents - Optional processed document attachments to include.
    */
   const handleSendMessage = useCallback(
-    (text: string, images?: ProcessedImage[]) => {
+    (text: string, images?: ProcessedImage[], documents?: ProcessedDocument[]) => {
       continuationCountRef.current = 0;
       const trimmed = text.trim();
       const canSend = (chat.status === 'ready' || chat.status === 'error' || chat.status !== 'streaming') && !isCompacting;
       const hasImages = Array.isArray(images) && images.length > 0;
-      if ((trimmed || hasImages) && canSend) {
+      const hasDocs = Array.isArray(documents) && documents.length > 0;
+      if ((trimmed || hasImages || hasDocs) && canSend) {
         if (chat.status !== 'ready' && chat.stop) {
           chat.stop();
         }
@@ -267,20 +269,34 @@ export function useChatSession(chatId: string) {
         }
         setQuotaError(null);
         if (!currentConvTitle || currentConvTitle === 'New Chat') {
-          const titleSource = trimmed || images?.[0]?.filename || 'New Chat';
+          const titleSource = trimmed || images?.[0]?.filename || documents?.[0]?.filename || 'New Chat';
           const autoTitle = titleSource.length > 40 ? `${titleSource.slice(0, 40)}...` : titleSource;
           updateConversationTitle(chatId, autoTitle);
         }
         // Build the UI-message parts: file parts (data URLs) first, then the text.
         // convertToModelMessages turns these into multimodal model content on the server.
-        const parts: any[] = hasImages
-          ? images.map((image) => ({
+        const parts: any[] = [];
+        if (hasImages) {
+          images.forEach((image) => {
+            parts.push({
               type: 'file',
               mediaType: image.mediaType,
               filename: image.filename,
               url: image.dataUrl,
-            }))
-          : [];
+            });
+          });
+        }
+        if (hasDocs) {
+          documents.forEach((doc) => {
+            parts.push({
+              type: 'file',
+              mediaType: doc.mediaType,
+              filename: doc.filename,
+              url: doc.dataUrl,
+              size: doc.size,
+            });
+          });
+        }
         if (trimmed) {
           parts.push({ type: 'text', text: trimmed });
         }

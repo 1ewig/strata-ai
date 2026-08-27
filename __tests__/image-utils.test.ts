@@ -151,7 +151,7 @@ describe("sanitizeMessagesForProvider & stripImageContentForTextOnlyProviders", 
 
     const fireworksOutput = sanitizeMessagesForProvider(input, "fireworks");
     expect(fireworksOutput[0].parts).toHaveLength(1);
-    expect(fireworksOutput[0].parts[0]).toEqual({ type: "text", text: "[Attached image]" });
+    expect(fireworksOutput[0].parts[0]).toEqual({ type: "text", text: "[Attached media]" });
   });
 
   it("strips model-converted file and image parts for Fireworks provider", () => {
@@ -169,6 +169,12 @@ describe("sanitizeMessagesForProvider & stripImageContentForTextOnlyProviders", 
           { type: "image", image: "data:image/jpeg;base64,123" },
         ],
       },
+      {
+        role: "user",
+        content: [
+          { type: "file", mediaType: "application/pdf", data: { type: "url", url: "data:application/pdf;base64,123" } },
+        ],
+      },
     ];
 
     const googleResult = stripImageContentForTextOnlyProviders(modelMessages, "google");
@@ -176,6 +182,7 @@ describe("sanitizeMessagesForProvider & stripImageContentForTextOnlyProviders", 
 
     const fireworksResult = stripImageContentForTextOnlyProviders(modelMessages, "fireworks");
     expect(fireworksResult[0].content).toEqual([{ type: "text", text: "Analyze this image" }]);
-    expect(fireworksResult[1].content).toEqual([{ type: "text", text: "[Attached image]" }]);
+    expect(fireworksResult[1].content).toEqual([{ type: "text", text: "[Attached media]" }]);
+    expect(fireworksResult[2].content).toEqual([{ type: "text", text: "[Attached media]" }]);
   });
 });

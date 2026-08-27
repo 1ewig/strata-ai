@@ -1,10 +1,11 @@
 import { agentRequestBodySchema, AgentRequestBody } from "@/lib/schemas";
 import {
   MAX_MESSAGE_CHARS,
-  MAX_IMAGES_PER_MESSAGE,
+  MAX_ATTACHMENTS_PER_MESSAGE,
   buildRateLimitErrorMessage,
 } from "@/lib/limits";
-import { countImageParts, findImagePartViolations } from "@/lib/image-utils";
+import { findImagePartViolations } from "@/lib/image-utils";
+import { countTotalAttachmentParts, findDocumentPartViolations } from "@/lib/document-utils";
 import { sliceMessagesAfterCompaction } from "@/lib/ai/message-extractor";
 import { auth } from "@/lib/auth";
 import { checkAndIncrementRateLimit, refundRateLimit, RateLimitResult } from "@/lib/rate-limit";
@@ -39,7 +40,7 @@ export function safeAsyncRefundRateLimit(messageLogId?: string): void {
  * 1. Authentication (401)
  * 2. JSON Body Parsing (400)
  * 3. Zod Schema Validation (400)
- * 4. Semantic Bounds (Message length & Image parts) (400)
+ * 4. Semantic Bounds (Message length & Attachment parts) (400)
  * 5. Rate-Limit Quota Reservation (429)
  * 6. Delegated Execution with Automated Refund on Failure
  *
@@ -86,7 +87,7 @@ export async function withAgentRouteGuards(
   // 4. Prune history before the latest successful compaction summary
   const messages = sliceMessagesAfterCompaction(parsed.data.messages);
 
-  // 5. Message length and image part validation
+  // 5. Message length and attachment part validation
   const lastUserMsg = Array.isArray(messages)
     ? [...messages].reverse().find((m: { role?: string; content?: unknown }) => m?.role === "user")
     : null;
@@ -106,20 +107,22 @@ export async function withAgentRouteGuards(
 
   const lastUserParts = (lastUserMsg as { parts?: unknown[] } | null)?.parts;
   if (lastUserMsg && Array.isArray(lastUserParts)) {
-    const imageCount = countImageParts(lastUserParts);
-    if (imageCount > MAX_IMAGES_PER_MESSAGE) {
+    const totalAttachmentCount = countTotalAttachmentParts(lastUserParts);
+    if (totalAttachmentCount > MAX_ATTACHMENTS_PER_MESSAGE) {
       return new Response(
         JSON.stringify({
-          error: `Message exceeds maximum of ${MAX_IMAGES_PER_MESSAGE} images per message.`,
+          error: `Message exceeds maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} attachments per message.`,
         }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );
     }
-    const violations = findImagePartViolations(lastUserParts);
-    if (violations.length > 0) {
+    const imageViolations = findImagePartViolations(lastUserParts);
+    const docViolations = findDocumentPartViolations(lastUserParts);
+    const allViolations = [...imageViolations, ...docViolations];
+    if (allViolations.length > 0) {
       return new Response(
         JSON.stringify({
-          error: violations.map((v) => v.reason).join(" "),
+          error: allViolations.map((v) => v.reason).join(" "),
         }),
         { status: 400, headers: { "Content-Type": "application/json" } },
       );

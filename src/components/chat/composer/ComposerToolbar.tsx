@@ -7,10 +7,9 @@ import ModelSelectorMenu from './ModelSelectorMenu';
 /** Props for the composer bottom toolbar (attach, drawer, send/stop). */
 interface ComposerToolbarProps {
   isAttachDisabled: boolean;
-  supportsVision: boolean;
-  isImageCapReached: boolean;
+  isAttachmentCapReached: boolean;
   attachedCount: number;
-  maxImages: number;
+  maxAttachments: number;
   onAttachClick: () => void;
   model?: string;
   thinkingLevel?: string;
@@ -28,16 +27,15 @@ interface ComposerToolbarProps {
 }
 
 /**
- * Row 2 of the composer: the image attach button (with tooltip chain and
+ * Row 2 of the composer: the attach button (with tooltip chain and
  * pending-count badge), the mobile model selector menu trigger, and the
  * send/stop button with its full disabled-state and title logic.
  */
 function ComposerToolbar({
   isAttachDisabled,
-  supportsVision,
-  isImageCapReached,
+  isAttachmentCapReached,
   attachedCount,
-  maxImages,
+  maxAttachments,
   onAttachClick,
   model,
   thinkingLevel,
@@ -57,7 +55,7 @@ function ComposerToolbar({
 
   return (
     <div className="flex items-center justify-between pt-1 gap-2">
-      {/* Left Side: Image Attach Button & Mobile Model Selector Button */}
+      {/* Left Side: Attach Button & Mobile Model Selector Button */}
       <div className="flex items-center gap-1.5 shrink-0">
         {/* Attach Button */}
         <button
@@ -70,25 +68,23 @@ function ComposerToolbar({
               : 'bg-surface-raised/80 hover:bg-surface-hover text-text-primary hover:border-edge-hover active:scale-95 cursor-pointer border-edge-raised'
             }`}
           title={
-            !supportsVision
-              ? 'The selected model does not support images'
-              : isCompacting
-                ? 'Context compaction in progress'
-                : isLoading
-                  ? 'Wait for the current response'
-                  : isBlocked
-                    ? 'Quota or context limit reached'
-                    : isImageCapReached
-                      ? `Up to ${maxImages} images per message`
-                      : 'Attach images'
+            isCompacting
+              ? 'Context compaction in progress'
+              : isLoading
+                ? 'Wait for the current response'
+                : isBlocked
+                  ? 'Quota or context limit reached'
+                  : isAttachmentCapReached
+                    ? `Up to ${maxAttachments} attachments per message`
+                    : 'Attach files (images, PDF, markdown, code, data)'
           }
-          aria-label="Attach images"
+          aria-label="Attach files"
         >
           <Paperclip className="w-4 h-4 text-text-muted group-hover:text-primary transition-transform duration-150 group-hover:scale-110" />
-          <span className="hidden sm:inline text-caption font-semibold text-text-primary">Attach image</span>
+          <span className="hidden sm:inline text-caption font-semibold text-text-primary">Attach</span>
           {attachedCount > 0 && (
             <span className="text-caption font-bold text-primary">
-              {attachedCount}/{maxImages}
+              {attachedCount}/{maxAttachments}
             </span>
           )}
         </button>

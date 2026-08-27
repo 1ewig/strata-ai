@@ -36,12 +36,12 @@ export function sanitizeMessagesForProvider(
     return Object.keys(pruned).length > 0 ? pruned : undefined;
   };
 
-  const isUIImagePart = (part: any) => {
+  const isUIBinaryPart = (part: any) => {
     if (!part) return false;
     if (part.type === "image") return true;
     if (part.type === "file") {
       const mediaType = part.mediaType || part.mimeType;
-      if (typeof mediaType === "string" && mediaType.startsWith("image/")) {
+      if (typeof mediaType === "string" && (mediaType.startsWith("image/") || mediaType === "application/pdf")) {
         return true;
       }
     }
@@ -75,11 +75,11 @@ export function sanitizeMessagesForProvider(
     });
 
     if (provider === "fireworks" && message.role === "user") {
-      const nonImageParts = nextParts.filter((part) => !isUIImagePart(part));
-      if (nonImageParts.length !== nextParts.length) {
-        nextParts = nonImageParts.length > 0
-          ? nonImageParts
-          : [{ type: "text", text: "[Attached image]" }];
+      const nonBinaryParts = nextParts.filter((part) => !isUIBinaryPart(part));
+      if (nonBinaryParts.length !== nextParts.length) {
+        nextParts = nonBinaryParts.length > 0
+          ? nonBinaryParts
+          : [{ type: "text", text: "[Attached media]" }];
       }
     }
 
@@ -91,14 +91,14 @@ export function sanitizeMessagesForProvider(
 }
 
 /**
- * Checks if a part represents an image inside converted model messages.
+ * Checks if a part represents an image or binary document inside converted model messages.
  */
 export function isImageModelPart(part: any): boolean {
   if (!part) return false;
   if (part.type === "image") return true;
   if (part.type === "file") {
     const mediaType = part.mediaType || part.mimeType;
-    if (typeof mediaType === "string" && mediaType.startsWith("image/")) {
+    if (typeof mediaType === "string" && (mediaType.startsWith("image/") || mediaType === "application/pdf")) {
       return true;
     }
   }
@@ -106,17 +106,17 @@ export function isImageModelPart(part: any): boolean {
 }
 
 /**
- * Removes image content parts from converted model messages when the active
+ * Removes image and binary content parts from converted model messages when the active
  * provider cannot accept multimodal input (Fireworks-hosted DeepSeek).
  *
- * Conversations that once contained image attachments replay that history on
+ * Conversations that once contained image/PDF attachments replay that history on
  * every request, so a text-only model would otherwise hard-fail forever on an
- * old image. The client attach gate prevents new images; this strip keeps
- * existing history usable and logs the drop.
+ * old binary attachment. The client attach gate prevents new attachments on text-only;
+ * this strip keeps existing history usable and logs the drop.
  *
  * @param modelMessages - Messages converted by `convertToModelMessages`.
  * @param provider - The active backend provider.
- * @returns Messages with image content removed (unchanged for Google).
+ * @returns Messages with binary content removed (unchanged for Google).
  */
 export function stripImageContentForTextOnlyProviders(
   modelMessages: ModelMessage[],
@@ -134,11 +134,11 @@ export function stripImageContentForTextOnlyProviders(
       return message;
     }
     console.log(
-      `[agent] Stripped ${message.content.length - filtered.length} image part(s) for text-only provider.`
+      `[agent] Stripped ${message.content.length - filtered.length} binary part(s) for text-only provider.`
     );
     return {
       ...message,
-      content: filtered.length > 0 ? filtered : [{ type: "text" as const, text: "[Attached image]" }],
+      content: filtered.length > 0 ? filtered : [{ type: "text" as const, text: "[Attached media]" }],
     };
   });
 }
