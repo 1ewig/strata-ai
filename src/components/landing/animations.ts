@@ -1,24 +1,17 @@
 import type { Variants, Transition } from 'motion/react';
 
 /**
- * Clean, tactile spring and ease curves for a Swiss minimalist aesthetic.
+ * Synchronized transition curves for parallel opacity and translation motion.
+ * Uses a tailored cubic-bezier curve so both opacity and y decrescendo in unison.
  */
-export const softSpring: Transition = {
-  type: 'spring',
-  damping: 32,
-  stiffness: 160,
+export const smoothParallelEase: Transition = {
+  duration: 0.42,
+  ease: [0.16, 1, 0.3, 1],
 };
 
-export const gentleSpring: Transition = {
-  type: 'spring',
-  damping: 28,
-  stiffness: 140,
-};
-
-export const tactileSpring: Transition = {
-  type: 'spring',
-  damping: 24,
-  stiffness: 280,
+export const cardParallelEase: Transition = {
+  duration: 0.46,
+  ease: [0.16, 1, 0.3, 1],
 };
 
 /**
@@ -37,33 +30,33 @@ export const staggerContainerVariants: Variants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08,
+      staggerChildren: 0.07,
       delayChildren: 0.02,
     },
   },
 };
 
 /**
- * Natural fade-up animation for text and blocks.
+ * Natural parallel fade-up animation for text and blocks.
  */
 export const fadeUpVariants: Variants = {
-  hidden: { opacity: 0, y: 16 },
+  hidden: { opacity: 0, y: 12 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: softSpring,
+    transition: smoothParallelEase,
   },
 };
 
 /**
- * Card reveal animation.
+ * Card reveal animation with synchronized parallel opacity + slide-up motion.
  */
 export const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 14 },
   visible: {
     opacity: 1,
     y: 0,
-    transition: gentleSpring,
+    transition: cardParallelEase,
   },
 };
 

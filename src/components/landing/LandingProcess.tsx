@@ -6,6 +6,7 @@ import { ArrowUpRight } from 'lucide-react';
 import {
   staggerContainerVariants,
   fadeUpVariants,
+  cardVariants,
   viewportOnce,
 } from '@/components/landing/animations';
 
@@ -81,15 +82,12 @@ export function LandingProcess() {
             </motion.div>
 
             {/* Right Numbered Interactive List */}
-            <motion.div
-              variants={staggerContainerVariants}
-              className="lg:col-span-7 divide-y divide-edge-raised border-y border-edge-raised"
-            >
+            <div className="lg:col-span-7 divide-y divide-edge-raised border-y border-edge-raised">
               {PROCESS_STEPS.map((step) => (
                 <motion.div
                   key={step.num}
                   variants={fadeUpVariants}
-                  className="py-6 sm:py-8 group flex items-start justify-between gap-6 hover:pl-2 transition-all duration-200 cursor-default"
+                  className="py-6 sm:py-8 group flex items-start justify-between gap-6 hover:pl-2 transition-[padding-left] duration-200 ease-out cursor-default"
                 >
                   <div className="flex items-start gap-6 sm:gap-10">
                     <span className="text-micro font-mono font-bold text-text-muted group-hover:text-primary transition-colors pt-1">
@@ -105,16 +103,16 @@ export function LandingProcess() {
                     </div>
                   </div>
 
-                  <ArrowUpRight className="w-5 h-5 text-text-muted group-hover:text-primary group-hover:translate-x-1 group-hover:-translate-y-1 transition-all shrink-0 mt-1" />
+                  <ArrowUpRight className="w-5 h-5 text-text-muted group-hover:text-primary group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform duration-200 shrink-0 mt-1" />
                 </motion.div>
               ))}
-            </motion.div>
+            </div>
           </div>
 
           {/* Bottom High-Voltage Accent Block */}
           <motion.div
-            variants={fadeUpVariants}
-            className="p-8 sm:p-12 rounded-2xl sm:rounded-3xl bg-primary text-surface shadow-card hover:shadow-card-lg transition-all duration-300 relative overflow-hidden"
+            variants={cardVariants}
+            className="p-8 sm:p-12 rounded-2xl sm:rounded-3xl bg-primary text-surface shadow-card hover:shadow-card-lg transition-shadow duration-300 relative overflow-hidden"
           >
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
               {/* Left Display Metric */}

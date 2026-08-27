@@ -5,6 +5,7 @@ import { motion } from 'motion/react';
 import {
   staggerContainerVariants,
   fadeUpVariants,
+  cardVariants,
   cardHoverProps,
   viewportOnce,
 } from '@/components/landing/animations';
@@ -91,16 +92,13 @@ export function LandingEngines() {
           </motion.div>
 
           {/* 4 Big Typographic Cards */}
-          <motion.div
-            variants={staggerContainerVariants}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {ENGINES.map((engine) => (
               <motion.div
                 key={engine.name}
-                variants={fadeUpVariants}
+                variants={cardVariants}
                 {...cardHoverProps}
-                className={`relative aspect-[4/5] rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between overflow-hidden shadow-card transition-all duration-300 ${
+                className={`relative aspect-[4/5] rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between overflow-hidden shadow-card transition-shadow duration-300 ${
                   engine.isAccent
                     ? 'bg-primary text-surface'
                     : 'bg-[#171310] dark:bg-[#1f1a16] text-[#f2ede6] border border-white/10'
@@ -152,13 +150,10 @@ export function LandingEngines() {
                 </div>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
 
           {/* 4 Description Blocks Underneath */}
-          <motion.div
-            variants={staggerContainerVariants}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pt-6 border-t border-edge-default"
-          >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 pt-6 border-t border-edge-default">
             {ENGINES.map((engine) => (
               <motion.div
                 key={engine.name + '-desc'}
@@ -173,7 +168,7 @@ export function LandingEngines() {
                 </p>
               </motion.div>
             ))}
-          </motion.div>
+          </div>
         </motion.div>
       </div>
     </section>

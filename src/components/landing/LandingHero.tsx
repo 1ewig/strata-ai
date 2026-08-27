@@ -7,6 +7,7 @@ import { ArrowRight } from 'lucide-react';
 import {
   staggerContainerVariants,
   fadeUpVariants,
+  cardVariants,
   buttonHoverProps,
 } from '@/components/landing/animations';
 
@@ -32,10 +33,10 @@ export function LandingHero({ userId, onOpenStudio }: LandingHeroProps) {
       <div className="max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-stretch my-auto">
         {/* Left Column: High-Voltage Signature Accent Card */}
         <motion.div
-          variants={fadeUpVariants}
+          variants={cardVariants}
           initial="hidden"
           animate="visible"
-          className="lg:col-span-4 flex flex-col justify-between p-7 sm:p-9 rounded-2xl sm:rounded-3xl bg-primary text-surface shadow-card hover:shadow-card-lg transition-all duration-300 relative overflow-hidden group"
+          className="lg:col-span-4 flex flex-col justify-between p-7 sm:p-9 rounded-2xl sm:rounded-3xl bg-primary text-surface shadow-card hover:shadow-card-lg transition-shadow duration-300 relative overflow-hidden group"
         >
           {/* Subtle glow highlight inside accent card */}
           <div className="absolute -top-24 -right-24 w-48 h-48 rounded-full bg-surface/15 blur-2xl pointer-events-none" />
