@@ -29,7 +29,7 @@ function SignInPage() {
   if (isPending || session?.user) return <LoadingScreen />;
 
   return (
-    <AuthShell mode="signin">
+    <AuthShell mode="signin" callbackUrl={callbackUrl}>
       <SignInForm
         onSubmit={handleSubmit}
         error={error}
