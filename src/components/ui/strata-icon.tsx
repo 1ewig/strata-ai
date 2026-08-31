@@ -3,17 +3,18 @@ import React, { useId } from 'react';
 /** Props for the StrataIcon brand icon. */
 export interface StrataIconProps extends React.SVGProps<SVGSVGElement> {
   className?: string;
-  /** Primary orange brand color (defaults to #E27828) */
+  /** Primary fiery orange brand color (defaults to #FF5520) */
   color?: string;
 }
 
 /**
  * Premium brand icon depicting the Strata tactile mark with an ambient outer glow,
- * a top-lit polished disc with subtle specular edge, and a soft recessed tactile dimple.
+ * a top-lit polished disc with subtle specular edge, and a soft recessed tactile dimple,
+ * colored with the signature fiery orange (#FF5520) to radiant amber (#FFAA1D) brand gradient.
  */
 export function StrataIcon({
   className = 'w-6 h-6',
-  color = '#E27828',
+  color = '#FF5520',
   ...props
 }: StrataIconProps) {
   const id = useId();
@@ -41,9 +42,9 @@ export function StrataIcon({
           fx="50%"
           fy="50%"
         >
-          <stop offset="60%" stopColor="#FFA438" stopOpacity="0.38" />
-          <stop offset="85%" stopColor={color} stopOpacity="0.15" />
-          <stop offset="100%" stopColor="#CC5424" stopOpacity="0" />
+          <stop offset="60%" stopColor="#FFAA1D" stopOpacity="0.4" />
+          <stop offset="85%" stopColor={color} stopOpacity="0.18" />
+          <stop offset="100%" stopColor="#FF5520" stopOpacity="0" />
         </radialGradient>
 
         {/* Specular rim gradient: delicate polished top light */}
@@ -55,26 +56,26 @@ export function StrataIcon({
           y2="21"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0%" stopColor="#FFE0B2" stopOpacity="0.65" />
-          <stop offset="40%" stopColor="#FFAE52" stopOpacity="0.2" />
+          <stop offset="0%" stopColor="#FFEACC" stopOpacity="0.7" />
+          <stop offset="40%" stopColor="#FFAA1D" stopOpacity="0.25" />
           <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
         </linearGradient>
 
-        {/* Outer disc gradient: Soft warm amber highlight -> muted terracotta bottom */}
+        {/* Outer disc gradient: Matching icon.svg fiery orange -> warm amber */}
         <linearGradient
           id={outerGradId}
-          x1="12"
+          x1="3"
           y1="3"
-          x2="12"
+          x2="21"
           y2="21"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0%" stopColor="#ECA248" />
+          <stop offset="0%" stopColor="#FF6B38" />
           <stop offset="45%" stopColor={color} />
-          <stop offset="100%" stopColor="#CC5424" />
+          <stop offset="100%" stopColor="#FFAA1D" />
         </linearGradient>
 
-        {/* Inner dimple gradient: Softened upper shadow -> warm reflective floor */}
+        {/* Inner dimple gradient: Soft top shadow -> warm reflective floor */}
         <linearGradient
           id={innerGradId}
           x1="12"
@@ -83,9 +84,9 @@ export function StrataIcon({
           y2="16"
           gradientUnits="userSpaceOnUse"
         >
-          <stop offset="0%" stopColor="#CB622C" />
-          <stop offset="45%" stopColor="#DC7A2E" />
-          <stop offset="100%" stopColor="#EFA546" />
+          <stop offset="0%" stopColor="#D94010" />
+          <stop offset="50%" stopColor="#FF5520" />
+          <stop offset="100%" stopColor="#FFAA1D" />
         </linearGradient>
       </defs>
 
