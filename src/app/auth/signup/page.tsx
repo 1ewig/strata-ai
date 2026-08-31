@@ -29,7 +29,7 @@ function SignUpPage() {
   if (isPending || session?.user) return <LoadingScreen />;
 
   return (
-    <AuthShell mode="signup">
+    <AuthShell mode="signup" callbackUrl={callbackUrl}>
       <SignUpForm
         onSubmit={handleSubmit}
         error={error}

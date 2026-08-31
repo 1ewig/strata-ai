@@ -1,39 +1,30 @@
 # AGENTS.md
 
-Quick reference for AI agents working in this repo.
+Operating guidelines and critical rules for AI agents in this repository. For comprehensive architecture, data flows, and playbooks, refer to [docs/SUMMARY.md](docs/SUMMARY.md).
 
 ## Runtime & Commands
 
-This project uses **bun** as its runtime and package manager. Never use `npm`/`yarn`/`npx`.
+Always use **bun**. Never run `npm`, `yarn`, or `npx`.
 
 | Command | Action |
 |---------|--------|
 | `bun run dev` | Start Next.js dev server |
 | `bun run lint` | Run Oxlint (`oxlint`) |
-| `bun run typecheck` | Run TypeScript type checking (`tsc --noEmit`) |
-| `bun run test` | Run unit & integration test suite (`bun test`) |
+| `bun run typecheck` | Run TypeScript checking (`tsc --noEmit`) |
+| `bun run test` | Run unit & integration test suite (`bun test --isolate`) |
 | `bun run build` | Production build (`next build`) |
 | `bun run start` | Start production server |
-| `bun run db:migrate` | Run Better Auth `better_auth` schema PostgreSQL migration |
+| `bun run db:migrate` | Run Better Auth PostgreSQL schema migration |
 | `bun run db:test` | DB connection + schema healthcheck |
 
-Always run `bun run lint` and `bun run build` after making changes — both must pass before finishing.
+> **Always run `bun run lint` and `bun run build` after making changes — both must pass before finishing.**
 
 ## Styling — Milo Design System (CRITICAL)
 
-The app ships light + dark themes (light default; dark via `theme-toggle.tsx` toggling the `.dark` class **and** the `html[data-theme="dark"]` attribute with `color-scheme: dark`), built on the "Milo" EdTech palette defined in the `@theme` block in `src/app/globals.css` — a warm studio linen light theme and a warm espresso dark theme.
+The app ships light + dark themes (light default; dark via `.dark` class + `html[data-theme="dark"]`).
 
-- **NEVER hardcode colors, hex values, arbitrary shadows, or Tailwind color names (e.g. `emerald`, `rose`, `red-*`, `amber`, `cyan`, `violet`, `slate`) in components.** Use semantic tokens only.
-- **Tokens** (see `globals.css` for full list):
-  - `primary` (electric fiery orange `#FF5520` / `#FF5C28` dark) — CTAs, active states, avatars, streaming indicators, spinners
-  - `secondary` (high-contrast amber `#D98200` light / `#FFAA1D` dark) — highlights, playful accents
-  - `danger` / `warning` / `info` — errors, alerts, informational accents
-  - `surface` (white) — on-brand fills (`text-surface` for white-on-orange buttons/icons)
-  - `scrim` — overlay backdrops (not `bg-black/60`)
-  - `primary-soft` / `danger-soft` / `accent-*` — tinted background fills
-- **Shadows:** use `shadow-button` (soft modern elevation `0 1px 3px rgba(44, 38, 33, 0.10), 0 1px 2px rgba(44, 38, 33, 0.06)` light / `0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04)` dark), `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`, `shadow-glow-secondary`. Never arbitrary `shadow-[...]`.
-- **Radius remap:** `rounded-lg` = 12px (badges/chips), `rounded-xl` = 20px (buttons/inputs), `rounded-2xl` = 32px (cards).
-- **Type scale remap:** use semantic size tokens only — NEVER raw Tailwind size names (`text-xs`/`text-sm`/`text-base`/`text-lg`/`text-xl`/`text-2xl`) or arbitrary `text-[10px]`/`text-[11px]` in components:
+- **Zero Hardcoded Colors:** Never hardcode hex values or use Tailwind color names (`emerald`, `rose`, `slate`, `zinc`, `red-*`, `amber`, etc.). Use semantic tokens: `primary`, `secondary`, `surface-*`, `text-*`, `edge-*`, `danger`, `warning`, `info`, `scrim`.
+- **Type Scale Tokens Only:** Never use raw Tailwind size names (`text-xs`/`text-sm`/`text-base`/`text-lg`/`text-xl`/`text-2xl`) or arbitrary pixel sizes. Use semantic tokens:
   - `text-micro` (11px) — eyebrows, inline code, status badges
   - `text-caption` (12px) — meta lines, tool cards, sidebar items
   - `text-label` (14px) — buttons, form labels/inputs, nav
@@ -42,36 +33,24 @@ The app ships light + dark themes (light default; dark via `theme-toggle.tsx` to
   - `text-heading` (20px) — h2, empty-state titles
   - `text-title` (24px) — h1
   - `text-display` (32px) — auth hero, 404
-- **Markdown hierarchy convention** (mirrors the `MarkdownRenderer` component map in `components/ui/`): `h1`→`text-title font-display`, `h2`→`text-heading font-display`, `h3`→`text-subheading`, `p`/`li`→`text-body`, `code`→`text-micro font-mono`, `table`/`blockquote`→`text-caption`. Never attach `prose` classes (no typography plugin is installed). **All markdown rendering goes through `components/ui/MarkdownRenderer.tsx`** (variants `assistant`/`user`/`thought`/`canvas`; `isStreaming` delegates to `SmoothStreamText`; snippet-copy state is internal, `enableSnippetCopy` is canvas-only) — never add new `ReactMarkdown`/`remark-gfm` sites.
-- **Fonts:** `font-display` and `font-sans` (Plus Jakarta Sans). Keep token names (`surface-*`, `text-*`, `edge-*`); add new colors only as `@theme` vars in `globals.css`.
+- **Elevation & Radius:** Use `shadow-button`, `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`. Radius: `rounded-lg` (12px), `rounded-xl` (20px), `rounded-2xl` (32px).
+- **Markdown Rendering:** All markdown MUST render through `components/ui/MarkdownRenderer.tsx`. Never add direct `ReactMarkdown` or `remark-gfm` imports.
 
-## Architecture
+## Core Architectural Invariants
 
-Read `docs/SUMMARY.md` (the canonical system-context & architecture guide) before touching core flow. Key rules:
-- **Route guards & quota pipeline:** `lib/ai/route-guards.ts` (`withAgentRouteGuards`) wraps `/api/agent` and `/api/agent/compact` with a standardized pipeline: auth (401) -> JSON body parse (400) -> Zod validation (400) -> compaction history pruning -> message/image limit guards (400) -> sliding-window rate limit (429) -> execution delegate with auto-refund on failure. On inference/upstream errors, `safeAsyncRefundRateLimit` (`lib/rate-limit.ts`: `refundRateLimit`) automatically deletes the message log entry so users are never charged for failed provider calls.
-- **Error classification & resilience:** `lib/ai/error-classifier.ts` (`classifyProviderError`) standardizes upstream provider errors (Google, Fireworks, network timeouts, auth) into typed `ClassifiedError` shapes (`code`, `message`, `isRetryable`). The client resyncs quota state immediately via `/api/user/rate-limit` on stream or compaction failures.
-- **Adding an agent tool:** define the factory in `lib/ai/tools/` (workspace tools in `workspace-tools.ts`, web tools in `tavily-tools.ts`) with `tool()` + explicit schemas, use the `WorkspaceToolsContext` closure pattern (if accessing workspace files), register in `createWorkspaceTools()` in the `lib/ai/tools.ts` barrel, add a directive in `lib/ai/prompts.ts`, and add a config entry in `components/chat/tools/resolver.tsx`. **`ToolCallCard.tsx` requires zero modifications.** The agent route builds the workspace closures via `createMutableWorkspace` in `lib/ai/workspace.ts`, and session-side persistence reuses its `upsertFileIntoWorkspace` / `removeFileFromWorkspace` helpers from `chat-reconciler.ts` and `db.ts`.
-- **Agent stream assembly:** `lib/ai/agent-runner.ts` owns all `streamText` configuration and collapses it into a single shared internal `createUIStreamResponder` function (not exported) used by **`runAgentResponse`** (`/api/agent`) and **`runCompactionResponse`** (`/api/agent/compact`). It handles model resolution, cross-provider metadata sanitization (`sanitizeMessagesForProvider` from `lib/ai/sanitization.ts`), system-prompt re-injection, tool wiring, streaming transforms (`smoothStream` from the `ai` SDK + `coalesceToolInputDeltas` from `lib/ai/stream-transforms.ts` to prevent AI SDK partial JSON re-parsing freezes on tool args), `stopWhen` step cap, lifecycle logging, and SSE wrapping + quota headers. Both routes are thin HTTP/auth/validation shells delegating to `withAgentRouteGuards`.
-- **Context compaction:** a `/compact` slash command that streams a dense, structured summary of the conversation + workspace into a new `metadata.isCompactedSummary` message. `useCompaction.triggerCompaction` POSTs to `/api/agent/compact` (auth + rate-limited, consumes 1 quota message); `runCompactionResponse` streams via dedicated `gemini-3.1-flash-lite` with high reasoning effort and `buildCompactionInstruction(files)` (from `lib/ai/prompts.ts`) with `maxOutputTokens: 3500` and finish metadata `{ isCompactedSummary: true }`. Both endpoints prune history server-side with `sliceMessagesAfterCompaction` (the client transport never mutates the outgoing payload). New files: the compact route, `components/chat/message/CompactionDivider.tsx` (in-progress/success/failed states with token delta badge and retry), `components/chat/composer/SlashCommandMenu.tsx`, `hooks/useCompaction.ts`, and `lib/ai/message-segments.ts`; `token-usage.ts` resets the active context meter after a compaction summary.
-- **Model providers:** models declare `provider: 'google' | 'fireworks'` in `lib/models.ts`; server-side provider wiring (model factory, reasoning mapping, `providerOptions`) lives ONLY in `lib/ai/providers.ts` (`resolveAgentModel`), consumed by the agent stream in `lib/ai/agent-runner.ts`. Never import `@ai-sdk/google`/`@ai-sdk/fireworks` into client code.
-- **Image attachments (vision input):** the client validates (MIME whitelist + 5 MB) and re-encodes images via `lib/image-utils.ts` (canvas downscale to a 1280 px long edge, quality stepping to fit a 1.5 MB budget) into AI SDK `file` UI parts, capped at `MAX_IMAGES_PER_MESSAGE` (4) from `lib/limits.ts`; `/api/agent` backstops with `countImageParts` + `findImagePartViolations` (400) so the server gate mirrors the UI. Models declare `supportsVision` in `lib/models.ts` (`getModelSupportsVision` gates the composer attach button), and `stripImageContentForTextOnlyProviders` (in `lib/ai/sanitization.ts`) removes image parts from replayed history for text-only providers (DeepSeek).
-- **File persistence:** workspace tool outputs return compact metadata (`fileSummarySchema`) to keep message parts lightweight, while live content updates stream via `data-workspace` SSE events. Tool results returning `{ file }`, `{ files }`, or `{ deleted: true }` are auto-discovered by `lib/ai/message-extractor.ts`.
-- **Chat architecture hooks:** `useChatSession.ts` is a modular orchestrator delegating to `useChatTransport.ts` (network/header layer only — history pruning is server-side), `lib/ai/chat-error-handler.ts` (friendly error message mapping), `lib/ai/chat-reconciler.ts` (message & file delta persistence via `persistMessages`), `useModelSettings.ts`, `useWorkspaceFiles.ts`, and `useCompaction.ts`.
-- **Dexie Database:** IndexedDB v5 schema (`lib/db/db.ts`) with indexed `userId` fields on `conversations` and `messages` for per-user session isolation.
-- **Component & Hook Separation (mandatory):** Keep UI components purely presentational — no Dexie queries, session fetching, auth calls, or navigation logic inside them. Pages call the hooks (`useConversations.ts`, `useLatestConversationRedirect.ts`, `useSignIn.ts`/`useSignUp.ts` (which share `useAuthForm.ts`), `useSignOut.ts`, `useTheme.ts`) and pass data + callbacks down as props.
-- **Auto-scroll:** handled by `<StickToBottom>` in `app/chat-id/[id]/page.tsx`. Do not write manual `useEffect` + `scrollIntoView` loops.
-- **Auth:** Better Auth 1.6 on Supabase Postgres pooler; proxy (`proxy.ts`) uses `getSessionCookie(request)` for a cheap cookie-presence check; route handlers verify sessions with `auth.api.getSession({ headers })`.
-
-## General Conventions
-
-- Write files with clear, helpful code comments.
-- No emojis in code or files.
-- Follow existing patterns and file conventions; check neighboring files before writing new code.
+- **No Server Actions:** Zero `"use server"` directives. State mutations use (1) Route Handlers for streaming/quota, (2) Dexie (`lib/db/db.ts`) for local entities, or (3) Better Auth client methods.
+- **Unified Stream Assembly:** All model streaming must flow through `createUIStreamResponder` (`lib/ai/agent-runner.ts`) with `smoothStream` and `coalesceToolInputDeltas`.
+- **Route Guards & Quota:** Wrap agent routes with `withAgentRouteGuards` (`lib/ai/route-guards.ts`). Auto-refund rate limits on upstream inference failure.
+- **Tool Card Isolation:** Do not edit `ToolCallCard.tsx` when adding tools; register display configs and summaries in `components/chat/tools/resolver.tsx`.
+- **Presentational Purity:** Keep UI components presentational. Fetching, Dexie queries, auth calls, and router logic live in page hooks and pass down as props.
+- **Auto-scroll:** Handled exclusively by `<StickToBottom>` in `app/chat-id/[id]/page.tsx`. No manual scroll loops.
+- **Async Next.js 16 APIs:** Unwrap dynamic route `params` with `use(params)` in client components, `await searchParams`/`headers()` in RSCs.
+- **Parallel Tool Execution:** Always batch independent file reads, searches, and inspections in parallel within a single turn to minimize round trips.
+- **General Rules:** No emojis in code or files. Follow neighboring patterns. Preserve existing comments.
 
 ## Testing Conventions
 
-- `bun test` runs with `--isolate` (each file gets a fresh module registry) — this is required because `mock.module` leaks between files otherwise. Keep that flag in the `test`/`test:watch` scripts.
-- Shared fixtures live in `__tests__/helpers.ts` (`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`); import them instead of re-declaring local copies.
-- Import limit constants from `@/lib/limits` in tests — never hardcode magic numbers (e.g. `10000`, `3` files, `12000` chars).
-- Route tests (`api-agent-route.test.ts`, `api-agent-compact-route.test.ts`) mock `@/lib/auth`, `@/lib/rate-limit`, and `@/lib/ai/agent-runner` with `mock.module` before a dynamic `await import()` of the route. Use `mockImplementation` + `mockClear` in `afterEach` (not `mockReset`, which wipes implementations).
-- `rate-limit.test.ts` mocks the `pg` module with a scriptable fake pool/client; keep the SQL-shape dispatch (`BEGIN`/`COUNT(*)`/`ORDER BY`/`INSERT`) in sync with `lib/rate-limit.ts`.
+- Run tests with `--isolate` (`bun test`).
+- Import shared fixtures from `__tests__/helpers.ts` (`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`).
+- Import limit constants from `@/lib/limits` (never hardcode magic numbers).
+- Mock `@/lib/auth`, `@/lib/rate-limit`, and `@/lib/ai/agent-runner` with `mock.module` before dynamic route imports in route tests.
