@@ -1,13 +1,12 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import SmoothStreamText from './SmoothStreamText';
-import { createMarkdownComponents, MarkdownVariant } from './createMarkdownComponents';
-import { useCopyClipboard } from '@/hooks/useCopyClipboard';
+import { getMarkdownComponents, MarkdownVariant } from './createMarkdownComponents';
 
-const REMARK_PLUGINS = [remarkGfm];
+export const REMARK_PLUGINS = [remarkGfm];
 
 interface MarkdownRendererProps {
   /** The raw Markdown source to render. */
@@ -26,8 +25,8 @@ interface MarkdownRendererProps {
  * Single reusable Markdown renderer for every surface in the app (chat bubbles,
  * workspace canvas preview, reasoning accordions, work-group narration).
  *
- * Owns the code-snippet copy state internally so copying a snippet only re-renders
- * this component, never its parent bubble or drawer.
+ * Uses statically cached component dictionaries per variant to avoid React DOM
+ * node reconstruction during streaming.
  */
 export function MarkdownRenderer({
   content,
@@ -36,17 +35,7 @@ export function MarkdownRenderer({
   className = '',
   enableSnippetCopy = false,
 }: MarkdownRendererProps) {
-  const { copiedId, copy } = useCopyClipboard();
-
-  const components = useMemo(
-    () =>
-      createMarkdownComponents(
-        variant,
-        enableSnippetCopy ? copiedId : null,
-        enableSnippetCopy ? (code, id) => copy(code, id) : undefined,
-      ),
-    [variant, copiedId, enableSnippetCopy, copy],
-  );
+  const components = getMarkdownComponents(variant, enableSnippetCopy);
 
   if (isStreaming) {
     return (

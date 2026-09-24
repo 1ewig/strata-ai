@@ -1,7 +1,7 @@
 import { google } from "@ai-sdk/google";
 import { fireworks } from "@ai-sdk/fireworks";
 import { streamText, type LanguageModel } from "ai";
-import { MODELS } from "@/lib/models";
+import { MODELS, MODEL_THINKING_LEVELS } from "@/lib/models";
 
 /** Default model used when the client omits or sends an unknown model id. */
 export const DEFAULT_AGENT_MODEL = "gemini-3.5-flash-lite";
@@ -70,16 +70,21 @@ export function resolveAgentModel(modelId: string, thinkingLevel?: string): Reso
     };
   }
 
-  // Google provider: current behavior unchanged (Gemini reasoning thoughts + Gemma defaults).
+  // Google provider: only attach thinkingConfig and reasoning for models that support it.
+  const hasThinking = Boolean(MODEL_THINKING_LEVELS[modelId || DEFAULT_AGENT_MODEL]);
   return {
     model: google(modelId || DEFAULT_AGENT_MODEL),
-    reasoning: thinkingLevel ? (thinkingLevel as string) : "provider-default",
-    providerOptions: {
-      google: {
-        thinkingConfig: {
-          includeThoughts: true,
-        },
-      },
-    },
+    ...(hasThinking
+      ? {
+          reasoning: thinkingLevel ? (thinkingLevel as string) : "provider-default",
+          providerOptions: {
+            google: {
+              thinkingConfig: {
+                includeThoughts: true,
+              },
+            },
+          },
+        }
+      : {}),
   };
 }

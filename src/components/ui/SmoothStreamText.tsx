@@ -4,6 +4,8 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 
+const REMARK_PLUGINS = [remarkGfm];
+
 interface SmoothStreamTextProps {
   /** The full accumulated text of the message segment so far. */
   text: string;
@@ -19,7 +21,7 @@ interface SmoothStreamTextProps {
 export function SmoothStreamText({ text, isStreaming, components }: SmoothStreamTextProps) {
   return (
     <div className="relative">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
+      <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
         {text}
       </ReactMarkdown>
       {isStreaming && (
