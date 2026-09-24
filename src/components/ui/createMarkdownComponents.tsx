@@ -181,17 +181,67 @@ const TOKENS: Record<MarkdownVariant, TokenSet> = {
   },
 };
 
-/**
- * Builds a ReactMarkdown component dictionary for a given bubble or canvas variant.
- * - `assistant`: dark-on-light theme for assistant bubbles.
- * - `user`: light-on-primary theme for user bubbles.
- * - `thought`: compact typography for reasoning accordions and intermediate work groups.
- * - `canvas`: rich document typography for the workspace file preview drawer.
- */
-export function createMarkdownComponents(
+import { useCopyClipboard } from '@/hooks/useCopyClipboard';
+
+interface CodeSnippetBlockProps {
+  rawCode: string;
+  rawLang: string;
+  className?: string;
+  borderClass: string;
+  extraClass: string;
+  snippetPrefix: string;
+  enableCopy?: boolean;
+}
+
+const CodeSnippetBlock = React.memo(function CodeSnippetBlock({
+  rawCode,
+  rawLang,
+  className,
+  borderClass,
+  extraClass,
+  enableCopy = false,
+}: CodeSnippetBlockProps) {
+  const { copied, copy } = useCopyClipboard(2000);
+  const displayLabel = rawLang ? getLanguageLabel(rawLang) : 'Code';
+  const highlightedHtml = React.useMemo(() => highlightCode(rawCode, rawLang), [rawCode, rawLang]);
+
+  return (
+    <div className={`my-2.5 rounded-xl bg-surface-base border ${borderClass} overflow-hidden font-mono text-micro shadow-card ${extraClass}`}>
+      <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-micro text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
+        <span className="text-text-muted font-mono">{displayLabel}</span>
+        {enableCopy && (
+          <button
+            type="button"
+            onClick={() => copy(rawCode)}
+            className="flex items-center gap-1 text-micro text-text-muted hover:text-primary active:scale-90 hover:scale-105 transition-all duration-150 cursor-pointer"
+          >
+            {copied ? (
+              <>
+                <Check className="w-3 h-3 text-primary animate-in zoom-in-75 duration-100" />
+                <span className="text-primary font-medium">Copied</span>
+              </>
+            ) : (
+              <>
+                <Code2 className="w-3 h-3" />
+                <span>Copy</span>
+              </>
+            )}
+          </button>
+        )}
+      </div>
+      <pre className="p-3 overflow-x-auto text-text-primary leading-relaxed">
+        <code
+          className={className}
+          dangerouslySetInnerHTML={{ __html: highlightedHtml }}
+        />
+      </pre>
+    </div>
+  );
+});
+
+function buildMarkdownComponents(
   variant: MarkdownVariant = 'assistant',
-  copiedCodeId?: string | null,
-  onCopy?: (code: string, id: string) => void,
+  enableSnippetCopy = false,
 ) {
   const T = TOKENS[variant];
 
@@ -226,9 +276,6 @@ export function createMarkdownComponents(
     ),
     code: ({ className, children, ...props }: any) => {
       const isInline = !className;
-      const rawCode = String(children).replace(/\n$/, '');
-      const snippetId = `${T.snippetPrefix}${rawCode.slice(0, 15)}`;
-
       if (isInline) {
         return (
           <code className={T.codeInline} {...props}>
@@ -237,41 +284,20 @@ export function createMarkdownComponents(
         );
       }
 
+      const rawCode = String(children).replace(/\n$/, '');
       const match = /language-(\w+)/.exec(className || '');
       const rawLang = match ? match[1] : '';
-      const displayLabel = rawLang ? getLanguageLabel(rawLang) : 'Code';
-      const highlightedHtml = highlightCode(rawCode, rawLang);
 
       return (
-        <div className={`my-2.5 rounded-xl bg-surface-base border ${T.codeBlockBorder} overflow-hidden font-mono text-micro shadow-card ${T.codeBlockExtra}`}>
-          <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-micro text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
-            <span className="text-text-muted font-mono">{displayLabel}</span>
-            {onCopy && (
-              <button
-                onClick={() => onCopy(rawCode, snippetId)}
-                className="flex items-center gap-1 text-micro text-text-muted hover:text-primary active:scale-90 hover:scale-105 transition-all duration-150 cursor-pointer"
-              >
-                {copiedCodeId === snippetId ? (
-                  <>
-                    <Check className="w-3 h-3 text-primary animate-in zoom-in-75 duration-100" />
-                    <span className="text-primary font-medium">Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Code2 className="w-3 h-3" />
-                    <span>Copy</span>
-                  </>
-                )}
-              </button>
-            )}
-          </div>
-          <pre className="p-3 overflow-x-auto text-text-primary leading-relaxed">
-            <code
-              className={className}
-              dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-            />
-          </pre>
-        </div>
+        <CodeSnippetBlock
+          rawCode={rawCode}
+          rawLang={rawLang}
+          className={className}
+          borderClass={T.codeBlockBorder}
+          extraClass={T.codeBlockExtra}
+          snippetPrefix={T.snippetPrefix}
+          enableCopy={enableSnippetCopy}
+        />
       );
     },
     table: ({ children }: any) => (
@@ -313,4 +339,32 @@ export function createMarkdownComponents(
   }
 
   return components;
+}
+
+const COMPONENTS_CACHE = new Map<string, Record<string, (props: any) => React.ReactNode>>();
+
+/**
+ * Returns a statically cached, immutable ReactMarkdown components dictionary.
+ * Reuses stable object references per variant to avoid DOM node thrashing during streaming.
+ */
+export function getMarkdownComponents(
+  variant: MarkdownVariant = 'assistant',
+  enableSnippetCopy = false,
+) {
+  const cacheKey = `${variant}:${enableSnippetCopy}`;
+  let cached = COMPONENTS_CACHE.get(cacheKey);
+  if (!cached) {
+    cached = buildMarkdownComponents(variant, enableSnippetCopy);
+    COMPONENTS_CACHE.set(cacheKey, cached);
+  }
+  return cached;
+}
+
+/** Backwards-compatible alias for existing callers. */
+export function createMarkdownComponents(
+  variant: MarkdownVariant = 'assistant',
+  _copiedCodeId?: string | null,
+  _onCopy?: (code: string, id: string) => void,
+) {
+  return getMarkdownComponents(variant, Boolean(_onCopy));
 }

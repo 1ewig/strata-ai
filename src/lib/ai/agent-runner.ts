@@ -266,7 +266,7 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
                 },
                 experimental_transform: [
                   smoothStream({
-                    delayInMs: 25,
+                    delayInMs: 15,
                     chunking: "word",
                   }),
                   coalesceToolInputDeltas() as any,
