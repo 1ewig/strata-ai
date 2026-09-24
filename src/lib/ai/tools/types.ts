@@ -34,19 +34,5 @@ export const fileSummarySchema = z.object({
   updatedAt: z.string().optional(),
 });
 
-/**
- * Case-insensitive comparison of two filenames.
- */
-export function isSameFilename(a: string, b: string): boolean {
-  return a.trim().toLowerCase() === b.trim().toLowerCase();
-}
-
-/**
- * Finds a workspace file by ID or case-insensitive name match.
- */
-export function findWorkspaceFile(
-  files: WorkspaceFile[],
-  nameOrId: string,
-): WorkspaceFile | undefined {
-  return files.find((f) => f.id === nameOrId || isSameFilename(f.name, nameOrId));
-}
+// Re-export shared filename and workspace file search utilities from workspace.ts
+export { isSameFilename, findWorkspaceFile } from "../workspace";
