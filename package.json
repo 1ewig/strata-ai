@@ -14,7 +14,8 @@
     "db:migrate": "bun run scripts/migrate-better-auth-schema.ts",
     "db:test": "bun run scripts/test-db.ts",
     "test:langfuse": "bun run scripts/test-langfuse.ts",
-    "test:tavily": "bun run scripts/test-tavily-tools.ts"
+    "test:tavily": "bun run scripts/test-tavily-tools.ts",
+    "test:latency": "bun run scripts/test-gemini-latency.ts"
   },
   "dependencies": {
     "@ai-sdk/fireworks": "^3.0.22",
