@@ -83,7 +83,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
     observer.observe(el);
     return () => observer.disconnect();
-  });
+  }, []);
 
   // Redirect unauthenticated visitors to auth without leaking the private chat ID.
   React.useEffect(() => {
@@ -232,7 +232,7 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
           );
         })()}
 
-        <StickToBottom className="flex-1 min-h-0" resize="auto" initial="instant">
+        <StickToBottom className="flex-1 min-h-0 overscroll-y-contain [overflow-anchor:auto] [will-change:scroll-position] [transform:translateZ(0)]" resize="auto" initial="instant">
           {(context) => (
             <>
               <StickToBottom.Content

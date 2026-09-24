@@ -120,7 +120,7 @@ describe("sanitizeMessagesForProvider & stripImageContentForTextOnlyProviders", 
   const {
     sanitizeMessagesForProvider,
     stripImageContentForTextOnlyProviders,
-  } = require("@/lib/ai/agent-runner");
+  } = require("@/lib/ai/sanitization");
 
   it("annotates UI image file parts with filename labels for google and strips binary for fireworks", async () => {
     const input = [

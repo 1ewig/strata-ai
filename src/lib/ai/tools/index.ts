@@ -1,4 +1,4 @@
-import { WorkspaceToolsContext } from "./tools/types";
+import { WorkspaceToolsContext } from "./types";
 import {
   createListFilesTool,
   createReadFileTool,
@@ -6,12 +6,12 @@ import {
   createEditFileTool,
   createRenameFileTool,
   createDeleteFileTool,
-} from "./tools/workspace-tools";
-import { createWebSearchTool, createExtractUrlTool } from "./tools/tavily-tools";
+} from "./workspace-tools";
+import { createWebSearchTool, createExtractUrlTool } from "./tavily-tools";
 
-export * from "./tools/types";
-export * from "./tools/workspace-tools";
-export * from "./tools/tavily-tools";
+export * from "./types";
+export * from "./workspace-tools";
+export * from "./tavily-tools";
 
 /**
  * Builds the full set of AI SDK tools exposed to the agent, bound to a workspace context.

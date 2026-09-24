@@ -50,6 +50,21 @@ function programQueries(opts: {
 }) {
   const { fiveHourCount = 0, weekCount = 0, oldest5h, oldestWeek, failInsert = false } = opts;
   client.query.mockImplementation((sql: string) => {
+    if (sql.includes("window_stats")) {
+      if (failInsert) throw new Error("insert failed");
+      const allowed = fiveHourCount < 10 && weekCount < 50;
+      return {
+        rows: [
+          {
+            count_5h: fiveHourCount,
+            count_week: weekCount,
+            oldest_5h: oldest5h ?? null,
+            oldest_week: oldestWeek ?? null,
+            inserted_id: allowed ? "mock-log-id-123" : null,
+          },
+        ],
+      };
+    }
     if (sql === "BEGIN" || sql === "COMMIT" || sql === "ROLLBACK") return OK;
     if (sql.startsWith("DELETE FROM")) return { rowCount: 1, rows: [] };
     if (sql.includes("COUNT(*)") && sql.includes("5 hours")) return countRows(fiveHourCount);
@@ -74,7 +89,7 @@ afterEach(() => {
 });
 
 describe("checkAndIncrementRateLimit", () => {
-  it("records a message and reports remaining budget when both windows have room", async () => {
+  it("records a message and reports remaining budget when both windows have room in a single atomic CTE", async () => {
     programQueries({ fiveHourCount: 4, weekCount: 30 });
 
     const result = await checkAndIncrementRateLimit("user-1");
@@ -85,9 +100,8 @@ describe("checkAndIncrementRateLimit", () => {
       messageLogId: "mock-log-id-123",
     });
 
-    const inserts = client.query.mock.calls.filter(([sql]) => String(sql).startsWith("INSERT INTO"));
-    expect(inserts).toHaveLength(1);
-    expect(client.query.mock.calls.some(([sql]) => sql === "COMMIT")).toBe(true);
+    const cteQueries = client.query.mock.calls.filter(([sql]) => String(sql).includes("window_stats"));
+    expect(cteQueries).toHaveLength(1);
     expect(client.release).toHaveBeenCalledTimes(1);
   });
 
@@ -103,9 +117,7 @@ describe("checkAndIncrementRateLimit", () => {
 
     const expected = Math.ceil((new Date(oldest).getTime() + FIVE_HOURS_MS - Date.now()) / 1000);
     expect(Math.abs(result.retryAfter! - expected)).toBeLessThanOrEqual(2);
-
-    const inserts = client.query.mock.calls.filter(([sql]) => String(sql).startsWith("INSERT INTO"));
-    expect(inserts).toHaveLength(0);
+    expect(client.release).toHaveBeenCalledTimes(1);
   });
 
   it("returns a weekly denial when only the week window is exhausted", async () => {
@@ -119,13 +131,13 @@ describe("checkAndIncrementRateLimit", () => {
 
     const expected = Math.ceil((new Date(oldest).getTime() + SEVEN_DAYS_MS - Date.now()) / 1000);
     expect(Math.abs(result.retryAfter! - expected)).toBeLessThanOrEqual(2);
+    expect(client.release).toHaveBeenCalledTimes(1);
   });
 
-  it("rolls back and rethrows when the insert fails", async () => {
+  it("rethrows and releases client when the query fails", async () => {
     programQueries({ fiveHourCount: 2, weekCount: 5, failInsert: true });
 
     await expect(checkAndIncrementRateLimit("user-1")).rejects.toThrow("insert failed");
-    expect(client.query.mock.calls.some(([sql]) => sql === "ROLLBACK")).toBe(true);
     expect(client.release).toHaveBeenCalledTimes(1);
   });
 });

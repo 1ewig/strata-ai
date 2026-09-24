@@ -42,7 +42,7 @@ export function useChatTransport({
           files: filesRef.current,
           chatId: chatIdRef?.current,
         }),
-        fetch: async (url, options) => {
+        fetch: (async (url, options) => {
           // History pruning to the latest compaction summary is handled server-side
           // in /api/agent (shared sliceMessagesAfterCompaction), so this transport
           // stays a pure network/header layer.
@@ -94,7 +94,7 @@ export function useChatTransport({
             throw new Error(`[API Error ${res.status}] ${detailMsg}`);
           }
           return res;
-        },
+        }) as typeof fetch,
       }),
     [updateRateLimitData, setQuotaError, checkQuotaStatus, chatRef, filesRef, modelRef, thinkingLevelRef, chatIdRef],
   );
