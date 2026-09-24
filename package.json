@@ -15,7 +15,9 @@
     "db:test": "bun run scripts/test-db.ts",
     "test:langfuse": "bun run scripts/test-langfuse.ts",
     "test:tavily": "bun run scripts/test-tavily-tools.ts",
-    "test:latency": "bun run scripts/test-gemini-latency.ts"
+    "test:latency": "bun run scripts/test-gemini-latency.ts",
+    "test:api": "bun run scripts/test-api-route-latency.ts",
+    "stream:thinking": "bun run scripts/stream-gemini-thinking.ts"
   },
   "dependencies": {
     "@ai-sdk/fireworks": "^3.0.22",

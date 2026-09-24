@@ -33,76 +33,89 @@ const MAX_WEEK = 50;
 export async function checkAndIncrementRateLimit(userId: string): Promise<RateLimitResult> {
   const client = await pool.connect();
   try {
-    await client.query("BEGIN");
-
-    // Purge log entries older than the retention window so counts stay accurate
-    await client.query(
-      `DELETE FROM better_auth.message_log
-       WHERE user_id = $1 AND created_at < NOW() - INTERVAL '7 days'`,
-      [userId],
+    const res = await client.query(
+      `WITH
+        purged AS (
+          DELETE FROM better_auth.message_log
+          WHERE user_id = $1 AND created_at < NOW() - INTERVAL '7 days'
+          RETURNING 1
+        ),
+        window_stats AS (
+          SELECT
+            COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '5 hours')::int AS count_5h,
+            COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')::int AS count_week,
+            MIN(created_at) FILTER (WHERE created_at > NOW() - INTERVAL '5 hours') AS oldest_5h,
+            MIN(created_at) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') AS oldest_week
+          FROM better_auth.message_log
+          WHERE user_id = $1
+        ),
+        inserted AS (
+          INSERT INTO better_auth.message_log (user_id)
+          SELECT $1
+          FROM window_stats
+          WHERE count_5h < $2 AND count_week < $3
+          RETURNING id
+        )
+      SELECT
+        w.count_5h,
+        w.count_week,
+        w.oldest_5h,
+        w.oldest_week,
+        i.id AS inserted_id
+      FROM window_stats w
+      LEFT JOIN inserted i ON true;`,
+      [userId, MAX_5H, MAX_WEEK],
     );
 
-    const fiveHourResult = await client.query(
-      `SELECT COUNT(*) AS cnt FROM better_auth.message_log
-       WHERE user_id = $1 AND created_at > NOW() - INTERVAL '5 hours'`,
-      [userId],
-    );
-    const fiveHourCount = parseInt(fiveHourResult.rows[0].cnt, 10);
+    const row = res.rows[0];
+    const fiveHourCount = Number(row?.count_5h ?? 0);
+    const weekCount = Number(row?.count_week ?? 0);
+    const oldest5h = row?.oldest_5h;
+    const oldestWeek = row?.oldest_week;
+    const messageLogId = row?.inserted_id as string | undefined;
 
     if (fiveHourCount >= MAX_5H) {
       // 5-hour window exhausted; report seconds until the oldest entry expires
-      const oldest = await client.query(
-        `SELECT created_at FROM better_auth.message_log
-         WHERE user_id = $1 AND created_at > NOW() - INTERVAL '5 hours'
-         ORDER BY created_at ASC LIMIT 1`,
-        [userId],
-      );
-      const retryAfter = Math.ceil(
-        (new Date(oldest.rows[0].created_at).getTime() + FIVE_HOURS_MS - Date.now()) / 1000,
-      );
-      await client.query("COMMIT");
-      return { allowed: false, remaining5h: 0, remainingWeek: MAX_WEEK - fiveHourCount, retryAfter };
+      const retryAfter = oldest5h
+        ? Math.max(
+            1,
+            Math.ceil(
+              (new Date(oldest5h).getTime() + FIVE_HOURS_MS - Date.now()) / 1000,
+            ),
+          )
+        : undefined;
+      return {
+        allowed: false,
+        remaining5h: 0,
+        remainingWeek: MAX_WEEK - fiveHourCount,
+        retryAfter,
+      };
     }
-
-    const weekResult = await client.query(
-      `SELECT COUNT(*) AS cnt FROM better_auth.message_log
-       WHERE user_id = $1 AND created_at > NOW() - INTERVAL '7 days'`,
-      [userId],
-    );
-    const weekCount = parseInt(weekResult.rows[0].cnt, 10);
 
     if (weekCount >= MAX_WEEK) {
       // Weekly window exhausted; report seconds until the oldest entry expires
-      const oldest = await client.query(
-        `SELECT created_at FROM better_auth.message_log
-         WHERE user_id = $1 AND created_at > NOW() - INTERVAL '7 days'
-         ORDER BY created_at ASC LIMIT 1`,
-        [userId],
-      );
-      const retryAfter = Math.ceil(
-        (new Date(oldest.rows[0].created_at).getTime() + SEVEN_DAYS_MS - Date.now()) / 1000,
-      );
-      await client.query("COMMIT");
-      return { allowed: false, remaining5h: MAX_5H - fiveHourCount, remainingWeek: 0, retryAfter };
+      const retryAfter = oldestWeek
+        ? Math.max(
+            1,
+            Math.ceil(
+              (new Date(oldestWeek).getTime() + SEVEN_DAYS_MS - Date.now()) / 1000,
+            ),
+          )
+        : undefined;
+      return {
+        allowed: false,
+        remaining5h: MAX_5H - fiveHourCount,
+        remainingWeek: 0,
+        retryAfter,
+      };
     }
 
-    // Both windows have room: record the message and retrieve the generated log id
-    const insertRes = await client.query(
-      `INSERT INTO better_auth.message_log (user_id) VALUES ($1) RETURNING id`,
-      [userId],
-    );
-    const messageLogId = insertRes.rows[0]?.id as string | undefined;
-
-    await client.query("COMMIT");
     return {
       allowed: true,
       remaining5h: MAX_5H - fiveHourCount - 1,
       remainingWeek: MAX_WEEK - weekCount - 1,
-      messageLogId,
+      messageLogId: messageLogId || undefined,
     };
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
   } finally {
     client.release();
   }
