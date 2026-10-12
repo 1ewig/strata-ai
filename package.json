@@ -4,20 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "bun check && next build",
     "start": "next start",
     "lint": "oxlint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "bun check",
     "test": "bun test --isolate",
     "test:watch": "bun test --isolate --watch",
     "clean": "next clean",
     "db:migrate": "bun run scripts/migrate-better-auth-schema.ts",
     "db:test": "bun run scripts/test-db.ts",
-    "test:langfuse": "bun run scripts/test-langfuse.ts",
-    "test:tavily": "bun run scripts/test-tavily-tools.ts",
-    "test:latency": "bun run scripts/test-gemini-latency.ts",
-    "test:api": "bun run scripts/test-api-route-latency.ts",
-    "stream:thinking": "bun run scripts/stream-gemini-thinking.ts"
+    "test:langfuse": "bun run scripts/test-langfuse.ts"
   },
   "dependencies": {
     "@ai-sdk/fireworks": "^3.0.22",
@@ -37,7 +33,7 @@
     "framer-motion": "^13.1.1",
     "lucide-react": "^0.553.0",
     "motion": "^12.23.24",
-    "next": "16.2.10",
+    "next": "16.4.0",
     "pg": "^8.22.0",
     "postcss": "^8.5.6",
     "prismjs": "^1.30.0",
@@ -60,8 +56,9 @@
     "eslint": "^9.0.0",
     "eslint-config-next": "16.2.10",
     "oxlint": "^1.80.0",
+    "sharp": "^0.35.5",
     "tailwindcss": "4.1.11",
-    "typescript": "6.0.3"
+    "typescript": "7.0.2"
   },
   "overrides": {
     "@types/react": "19.2.17",
