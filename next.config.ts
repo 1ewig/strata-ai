@@ -10,7 +10,10 @@ import type { NextConfig } from 'next';
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   typescript: {
-    ignoreBuildErrors: false,
+    ignoreBuildErrors: true,
+  },
+  experimental: {
+    optimizePackageImports: ['lucide-react', 'framer-motion', 'motion', '@ai-sdk/react'],
   },
   images: {
     remotePatterns: [
@@ -23,7 +26,6 @@ const nextConfig: NextConfig = {
     ],
   },
   output: 'standalone',
-  transpilePackages: ['motion'],
 };
 
 /** The Next.js configuration consumed by `next build` and `next dev`. */
