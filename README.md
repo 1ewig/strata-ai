@@ -291,8 +291,7 @@ All scripts run through Bun.
 
 ## Documentation
 
-- **[docs/SUMMARY.md](docs/SUMMARY.md):** canonical system-context and architecture guide — data flow, stream assembly, domain models, and extension recipes.
-- **[docs/ai-sdk-nextjs-guide.md](docs/ai-sdk-nextjs-guide.md):** in-depth walkthrough of building agentic apps with Vercel AI SDK 7, Turbopack, and Next.js 16, grounded in this codebase.
+- **[docs/SUMMARY.md](docs/SUMMARY.md):** canonical system-context and architecture guide — data flow, stream assembly, domain models, and agent invariants.
 
 ---
 
