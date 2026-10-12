@@ -5,7 +5,7 @@
 [![Vercel AI SDK 7](https://img.shields.io/badge/Vercel%20AI%20SDK-v7.0-000000?style=for-the-badge&logo=vercel)](https://sdk.vercel.ai/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0.2-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind-v4.1.11-38BDF8?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
-[![Runtime](https://img.shields.io/badge/Runtime-Bun-f472b6?style=for-the-badge&logo=bun)](https://bun.sh/)
+[![Runtime](https://img.shields.io/badge/Runtime-Bun%201.4-f472b6?style=for-the-badge&logo=bun)](https://bun.sh/)
 
 **Strata AI** is a conversational workspace studio where AI does not just reply—it builds. 
 
@@ -51,7 +51,7 @@ Once an agent turn completes, intermediate thoughts and tool executions neatly f
 ## Quickstart
 
 ### Prerequisites
-- **[Bun](https://bun.sh/)** installed (`curl -fsSL https://bun.sh/install | bash` or `npm install -g bun`)
+- **[Bun](https://bun.sh/)** (v1.4+) installed (`curl -fsSL https://bun.sh/install | bash` or `npm install -g bun`)
 - A **Google Gemini** API key
 - A **Supabase** PostgreSQL database connection string
 

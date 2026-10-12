@@ -10,9 +10,9 @@ Always use **bun**. Never run `npm`, `yarn`, or `npx`.
 |---------|--------|
 | `bun run dev` | Start Next.js dev server |
 | `bun run lint` | Run Oxlint (`oxlint`) |
-| `bun run typecheck` | Run TypeScript checking (`tsc --noEmit`) |
+| `bun run typecheck` | Run TypeScript checking (`bun check`) |
 | `bun run test` | Run unit & integration test suite (`bun test --isolate`) |
-| `bun run build` | Production build (`next build`) |
+| `bun run build` | Production build (`bun check && next build`) |
 | `bun run start` | Start production server |
 | `bun run db:migrate` | Run Better Auth PostgreSQL schema migration |
 | `bun run db:test` | DB connection + schema healthcheck |

@@ -8,7 +8,7 @@ Strata AI is a local-first conversational workspace studio. Users prompt an AI a
 - **Compaction:** `/compact` slash command summarizes chat history and workspace state into an anchor message, pruning pre-compaction history server-side on subsequent turns.
 
 ## 2. Tech Stack & Environment
-- **Framework & Runtime:** Next.js 16.4.0 (App Router, Node.js runtime, standalone), React 19.2.7, TypeScript 7.0.2. Strict Bun package manager (`bun`, never npm/yarn/npx).
+- **Framework & Runtime:** Next.js 16.4.0 (App Router, Node.js runtime, standalone), React 19.2.7, TypeScript 7.0.2. Strict Bun package manager (Bun 1.4+, never npm/yarn/npx).
 - **AI Engine:** Vercel AI SDK 7 (`ai`), `@ai-sdk/google` (Gemini 3.5/3.1 Flash Lite, Gemini 3 Flash, Gemma 4), `@ai-sdk/fireworks` (DeepSeek V4 Flash).
 - **Web Research:** Tavily REST API (`webSearch`, `extractUrl`).
 - **Databases:** Client Dexie 4.4 (`StrataAIChatDB` v5); Server Supabase PostgreSQL (`better_auth` schema via `pg` Pool).
