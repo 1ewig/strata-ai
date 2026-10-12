@@ -100,7 +100,7 @@ For comprehensive architectural specifications, data schemas, streaming protocol
 | Command | Action |
 |---|---|
 | `bun run dev` | Start the Next.js development server |
-| `bun run build` | Validate types (`bun check`) and build for production |
+| `bun run build` | Build the Next.js application for production (`next build`) |
 | `bun run typecheck` | Fast multi-core type checking via `bun check` |
 | `bun run lint` | Run Oxlint across the codebase |
 | `bun run test` | Run the full test suite with module isolation (`bun test --isolate`) |

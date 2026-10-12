@@ -106,4 +106,4 @@ src/
 6. **Tool Card Decoupling:** Never edit `ToolCallCard.tsx` when adding tools. Register display configurations and summaries in `components/chat/tools/resolver.tsx`.
 7. **Presentational Purity:** UI components are purely presentational. Queries, auth calls, and router logic live in page hooks and pass down as props.
 8. **Auto-Scroll Exclusivity:** All chat auto-scrolling is owned by `<StickToBottom>` in `src/app/chat-id/[id]/page.tsx`. No manual scroll loops.
-9. **Runtime & Commands:** Always use `bun`. Run `bun run lint` (`oxlint`) and `bun run build` (`bun check && next build`).
+9. **Runtime & Commands:** Always use `bun`. Run `bun run lint` (`oxlint`), `bun run typecheck` (`bun check`), and `bun run build` (`next build`).

@@ -9,9 +9,6 @@ import type { NextConfig } from 'next';
  */
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  typescript: {
-    ignoreBuildErrors: true,
-  },
   experimental: {
     optimizePackageImports: ['lucide-react', 'framer-motion', 'motion', '@ai-sdk/react'],
   },
