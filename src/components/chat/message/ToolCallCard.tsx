@@ -71,13 +71,9 @@ function ToolCallCard({
           <ExplicitIcon className={`w-3.5 h-3.5 ${accentText} shrink-0`} />
         ) : null}
         <span className="font-semibold text-text-secondary group-hover:text-text-primary truncate">{label}</span>
-        {isLoading ? (
+        {isLoading && (
           <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
-        ) : isError ? (
-          <span className="text-micro font-mono shrink-0 px-1.5 py-0.5 rounded-lg capitalize bg-danger-soft text-danger font-medium">
-            fail
-          </span>
-        ) : null}
+        )}
         <div className="flex items-center gap-1 text-text-muted group-hover:text-text-primary transition-colors">
           <ChevronDown
             className={`w-3.5 h-3.5 transition-transform duration-200 ease-out ${
