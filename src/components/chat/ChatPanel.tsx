@@ -160,7 +160,7 @@ export default React.memo(function ChatPanel({
           <span className="uppercase tracking-widest text-micro text-text-muted">Supported Engines</span>
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="px-2.5 py-1 rounded-lg bg-surface-raised/80 dark:bg-surface-elevated/70 border border-edge-raised text-text-secondary font-semibold text-micro hover:border-primary/30 transition-colors">Google Gemini 3.5</span>
-            <span className="px-2.5 py-1 rounded-lg bg-surface-raised/80 dark:bg-surface-elevated/70 border border-edge-raised text-text-secondary font-semibold text-micro hover:border-primary/30 transition-colors">DeepSeek V4 Flash</span>
+            <span className="px-2.5 py-1 rounded-lg bg-surface-raised/80 dark:bg-surface-elevated/70 border border-edge-raised text-text-secondary font-semibold text-micro hover:border-primary/30 transition-colors">GLM 5.3 Flash</span>
             <span className="px-2.5 py-1 rounded-lg bg-surface-raised/80 dark:bg-surface-elevated/70 border border-edge-raised text-text-secondary font-semibold text-micro hover:border-primary/30 transition-colors">Tavily Realtime Web</span>
           </div>
         </motion.div>

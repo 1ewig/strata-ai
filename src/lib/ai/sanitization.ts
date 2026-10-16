@@ -85,20 +85,24 @@ export function isUIBinaryPart(part: any): boolean {
  * Additionally:
  * 1. Decodes text-based document attachments into labeled text blocks with explicit
  *    filenames (`[Attached file: filename]...[/Attached file: filename]`) so all
- *    models (both Gemini and DeepSeek) can read their filenames and contents.
- * 2. Extracts and injects text from PDF attachments for text-only providers (DeepSeek)
- *    so DeepSeek can process resumes, documents, and reports from PDFs.
+ *    models can read their filenames and contents.
+ * 2. Extracts and injects text from PDF attachments for Fireworks-hosted providers
+ *    (the Fireworks API does not accept PDF binary parts) so they can process
+ *    resumes, documents, and reports from PDFs.
  * 3. Injects explicit filename labels (`[Attached document: filename]`, `[Attached image: filename]`)
- *    so multimodal Gemini is aware of binary file names, while text-only DeepSeek
- *    receives safe filename placeholders without crashing on binary image data URLs.
+ *    so vision-capable models are aware of binary file names, while text-only models
+ *    receive safe filename placeholders without crashing on binary image data URLs.
  *
  * @param messages - The UI message parts arriving in the request body.
  * @param provider - The active backend provider ('google' | 'fireworks').
+ * @param supportsVision - Whether the active model accepts image input. Image parts
+ *   are forwarded for vision models and replaced with filename placeholders otherwise.
  * @returns A shallow-copied message array with sanitized parts and filename context.
  */
 export async function sanitizeMessagesForProvider(
   messages: Parameters<typeof convertToModelMessages>[0],
   provider: "google" | "fireworks",
+  supportsVision: boolean,
 ): Promise<Parameters<typeof convertToModelMessages>[0]> {
   const prune = (metadata?: Record<string, unknown>) => {
     if (!metadata) {
@@ -147,7 +151,7 @@ export async function sanitizeMessagesForProvider(
 
           if (isPdf) {
             if (provider === "fireworks") {
-              // DeepSeek / text-only provider: extract PDF text and inject as document content block
+              // Fireworks-hosted model: extract PDF text and inject as document content block
               const rawText = (sanitizedPart as any).textContent || (await extractPdfTextFromDataUrl((sanitizedPart as any).url));
               if (rawText && rawText.trim()) {
                 const docText = `[Attached document: ${filename} (PDF)]\n--- Document Text Content ---\n${rawText.trim()}\n--- End Document Content ---\n[/Attached document: ${filename} (PDF)]`;
@@ -155,7 +159,7 @@ export async function sanitizeMessagesForProvider(
               } else {
                 nextParts.push({
                   type: "text",
-                  text: `[Attached document: ${filename} (PDF - Scanned document with no selectable text. DeepSeek is text-only; please switch to a Gemini vision model to analyze scanned documents)]`,
+                  text: `[Attached document: ${filename} (PDF - Scanned document with no selectable text. Fireworks does not accept PDF binaries; please switch to a Gemini vision model to analyze scanned documents)]`,
                 });
               }
             } else {
@@ -170,19 +174,19 @@ export async function sanitizeMessagesForProvider(
               ? `[Attached file: ${filename}]\n${decoded}\n[/Attached file: ${filename}]`
               : `[Attached file: ${filename}]`;
             nextParts.push({ type: "text", text: fileText });
-          } else if (provider === "fireworks") {
-            // Text-only provider with image: replace binary part with explicit filename placeholder
-            nextParts.push({ type: "text", text: formatAttachmentLabel(sanitizedPart) });
-          } else {
-            // Multimodal provider (Gemini) with image: include filename label annotation and binary part
+          } else if (supportsVision) {
+            // Vision-capable model with image: include filename label annotation and binary part
             nextParts.push({ type: "text", text: formatAttachmentLabel(sanitizedPart) });
             nextParts.push(sanitizedPart);
+          } else {
+            // Text-only model with image: replace binary part with explicit filename placeholder
+            nextParts.push({ type: "text", text: formatAttachmentLabel(sanitizedPart) });
           }
         } else if (message.role === "user" && (sanitizedPart as any).type === "image") {
-          if (provider === "fireworks") {
-            nextParts.push({ type: "text", text: formatAttachmentLabel(sanitizedPart) });
-          } else {
+          if (supportsVision) {
             nextParts.push(sanitizedPart);
+          } else {
+            nextParts.push({ type: "text", text: formatAttachmentLabel(sanitizedPart) });
           }
         } else {
           nextParts.push(sanitizedPart);
@@ -216,22 +220,22 @@ export function isImageModelPart(part: any): boolean {
 
 /**
  * Removes image and binary content parts from converted model messages when the active
- * provider cannot accept multimodal input (Fireworks-hosted DeepSeek).
+ * model cannot accept multimodal input.
  *
  * Conversations that once contained image/PDF attachments replay that history on
  * every request, so a text-only model would otherwise hard-fail forever on an
- * old binary attachment. The client attach gate prevents new attachments on text-only;
- * this strip keeps existing history usable and logs the drop.
+ * old binary attachment. The client attach gate prevents new attachments on text-only
+ * models; this strip keeps existing history usable and logs the drop.
  *
  * @param modelMessages - Messages converted by `convertToModelMessages`.
- * @param provider - The active backend provider.
- * @returns Messages with binary content removed (unchanged for Google).
+ * @param supportsVision - Whether the active model accepts image input.
+ * @returns Messages with binary content removed (unchanged for vision models).
  */
-export function stripImageContentForTextOnlyProviders(
+export function stripImageContentForUnsupportedModels(
   modelMessages: ModelMessage[],
-  provider: "google" | "fireworks",
+  supportsVision: boolean,
 ): ModelMessage[] {
-  if (provider !== "fireworks") {
+  if (supportsVision) {
     return modelMessages;
   }
   return modelMessages.map((message) => {
@@ -243,7 +247,7 @@ export function stripImageContentForTextOnlyProviders(
       return message;
     }
     console.log(
-      `[agent] Stripped ${message.content.length - filtered.length} binary part(s) for text-only provider.`
+      `[agent] Stripped ${message.content.length - filtered.length} binary part(s) for text-only model.`
     );
     return {
       ...message,

@@ -24,19 +24,18 @@ export function getModelProvider(modelId: string): ModelProvider {
 }
 
 /**
- * Maps app thinking levels to DeepSeek V4 Flash reasoning effort. The model
- * exposes low/high/max, but the AI SDK's top-level reasoning option cannot
- * express 'max', so the app levels collapse onto low/high.
+ * Maps app thinking levels to Fireworks reasoning effort. GLM 5.3 Flash
+ * exposes low/medium/high, so the four app levels collapse onto those.
  */
-const DEEPSEEK_EFFORT: Record<string, "low" | "high"> = {
+const FIREWORKS_EFFORT: Record<string, "low" | "medium" | "high"> = {
   minimal: "low",
   low: "low",
-  medium: "high",
+  medium: "medium",
   high: "high",
 };
 
-/** Fireworks-hosted DeepSeek V4 Flash model id. */
-export const DEEPSEEK_V4_FLASH_MODEL = "accounts/fireworks/models/deepseek-v4-flash-0731";
+/** Fireworks-hosted GLM 5.3 Flash model id. */
+export const FIREWORKS_MODEL_ID = "accounts/fireworks/models/glm-5p3-flash";
 
 /** The resolved model configuration passed into streamText. */
 export interface ResolvedAgentModel {
@@ -55,9 +54,9 @@ export interface ResolvedAgentModel {
  */
 export function resolveAgentModel(modelId: string, thinkingLevel?: string): ResolvedAgentModel {
   if (getModelProvider(modelId) === "fireworks") {
-    const effort = DEEPSEEK_EFFORT[thinkingLevel || ""];
+    const effort = FIREWORKS_EFFORT[thinkingLevel || ""];
     return {
-      model: fireworks(DEEPSEEK_V4_FLASH_MODEL),
+      model: fireworks(modelId || FIREWORKS_MODEL_ID),
       // Top-level reasoning maps to Fireworks' reasoning_effort param.
       ...(effort ? { reasoning: effort } : {}),
       // Enable thinking output and keep reasoning across tool calls in agent loops.

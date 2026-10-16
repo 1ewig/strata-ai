@@ -26,7 +26,7 @@ Read the rest top-down: what a request does end-to-end (§4-5), then the subsyst
 | Framework | Next.js 16.4.0 (App Router, Node runtime), React 19.2.7, TypeScript 7.0.2 |
 | Package manager | Bun 1.4.3 (pinned via `packageManager`). Never npm/yarn/npx. |
 | AI engine | Vercel AI SDK 7 (`ai`), `@ai-sdk/google`, `@ai-sdk/fireworks` |
-| Models | Gemini 3.5 Flash Lite (default), Gemini 3.1 Flash Lite, Gemini 3 Flash Preview, Gemma 4 31B/26B, DeepSeek V4 Flash (`src/lib/models.ts`) |
+| Models | Gemini 3.5 Flash Lite (default), Gemini 3.1 Flash Lite, Gemini 3 Flash Preview, Gemma 4 31B/26B, GLM 5.3 Flash (`src/lib/models.ts`) |
 | Web research | Tavily REST API (`webSearch`, `extractUrl`) |
 | Client DB | Dexie 4.4 — `StrataAIChatDB` schema v5 |
 | Server DB | Supabase PostgreSQL, `better_auth` schema, `pg` Pool |
@@ -80,7 +80,7 @@ This is the spine of the system. Everything below happens for one user message.
 5. **Stream assembly.** `runAgentResponse` (`src/lib/ai/agent-runner.ts`) computes the active token
    budget, then delegates to the private `createUIStreamResponder` — the single choke point for all
    model execution. It sanitizes cross-provider metadata, converts messages once, strips image parts
-   for text-only providers, applies
+   for text-only models, applies
    `experimental_transform: [smoothStream({ delayInMs: 15, chunking: 'word' }), coalesceToolInputDeltas()]`,
    re-injects `buildSystemInstruction` per step via `prepareStep`, and caps the loop with
    `stopWhen: isStepCount(maxSteps)`.

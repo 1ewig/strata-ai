@@ -137,8 +137,8 @@ describe("getModelSupportsVision", () => {
     expect(getModelSupportsVision("gemma-4-26b-a4b-it")).toBe(true);
   });
 
-  it("flags the Fireworks DeepSeek model as text-only", () => {
-    expect(getModelSupportsVision("accounts/fireworks/models/deepseek-v4-flash-0731")).toBe(false);
+  it("flags the Fireworks GLM model as vision-capable", () => {
+    expect(getModelSupportsVision("accounts/fireworks/models/glm-5p3-flash")).toBe(true);
   });
 
   it("defaults unknown model ids to vision-capable", () => {

@@ -22,7 +22,7 @@ All your conversations and files stay completely private, persisting locally ins
 ## The Strata Experience
 
 ### 1. Flexible Model Selection & Controllable Thinking
-Switch seamlessly between flagship frontier models like **Google Gemini 3.5 Flash** and open-weight powerhouses like **DeepSeek V4 Flash**. Dial reasoning effort up or down—from rapid responses for quick iterations to deep, multi-step deliberation on intricate architectural challenges.
+Switch seamlessly between flagship frontier models like **Google Gemini 3.5 Flash** and open-weight powerhouses like **GLM 5.3 Flash**. Dial reasoning effort up or down—from rapid responses for quick iterations to deep, multi-step deliberation on intricate architectural challenges.
 
 ![Model and Thinking Effort Selector](public/images/model-selector-menu.webp)
 

@@ -1,6 +1,6 @@
 /**
  * Granular classification of upstream LLM provider and network errors.
- * Normalizes vendor-specific error messages (Google, Fireworks, DeepSeek, network timeouts)
+ * Normalizes vendor-specific error messages (Google, Fireworks, GLM, network timeouts)
  * into safe, structured categories and client-friendly copy without leaking secrets or raw stack traces.
  */
 

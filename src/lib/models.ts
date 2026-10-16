@@ -94,17 +94,17 @@ export const MODELS: ModelOption[] = [
     },
   },
   {
-    id: 'accounts/fireworks/models/deepseek-v4-flash-0731',
-    label: 'DeepSeek V4 Flash 0731',
-    family: 'DeepSeek',
+    id: 'accounts/fireworks/models/glm-5p3-flash',
+    label: 'GLM 5.3 Flash',
+    family: 'GLM',
     provider: 'fireworks',
-    supportsVision: false,
+    supportsVision: true,
     contextWindow: 131072,
-    maxOutput: 65536,
+    maxOutput: 131072,
     pricing: {
-      inputPerMillion: 0.14,
-      outputPerMillion: 0.28,
-      cachedInputPerMillion: 0.028,
+      inputPerMillion: 0.15,
+      outputPerMillion: 0.50,
+      cachedInputPerMillion: 0.03,
       currency: 'USD',
     },
   },
@@ -130,7 +130,7 @@ export const MODEL_DESCRIPTIONS: Record<string, string> = {
   'gemini-3-flash-preview': 'Preview of latest Gemini 3',
   'gemma-4-31b-it': 'Open-weight, fully private',
   'gemma-4-26b-a4b-it': 'Efficient open model',
-  'accounts/fireworks/models/deepseek-v4-flash-0731': 'Fast open-weight reasoning model',
+  'accounts/fireworks/models/glm-5p3-flash': 'Multimodal open-weight reasoning model',
 };
 
 /** Unique family names derived from MODELS, preserving insertion order. */
@@ -177,9 +177,8 @@ export const MODEL_THINKING_LEVELS: Record<string, ModelThinkingConfig> = {
   'gemini-3.5-flash-lite': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'low' },
   'gemini-3.1-flash-lite': { levels: ['minimal', 'high'], defaultLevel: 'minimal' },
   'gemini-3-flash-preview': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'high' },
-  // DeepSeek V4 Flash supports low/high/max reasoning effort; the app maps to low/high
-  // because the AI SDK's top-level reasoning option cannot express 'max'.
-  'accounts/fireworks/models/deepseek-v4-flash-0731': { levels: ['low', 'high'], defaultLevel: 'high' },
+  // GLM 5.3 Flash supports reasoning effort; the app exposes low/medium/high.
+  'accounts/fireworks/models/glm-5p3-flash': { levels: ['low', 'medium', 'high'], defaultLevel: 'high' },
 };
 
 /** Dedicated high-speed model configured for context compaction runs. */

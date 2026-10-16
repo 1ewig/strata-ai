@@ -41,7 +41,7 @@ export const metadata: Metadata = {
     'markdown editor',
     'context compaction',
     'Google Gemini 3.5',
-    'DeepSeek V4',
+    'GLM 5.3',
     'Tavily web search',
     'local-first AI',
     'AI pair programmer',

@@ -34,10 +34,10 @@ const ENGINES: EngineCardData[] = [
       'Your go-to assistant for brainstorming, drafting long articles, reviewing attached images, and organizing multi-file workspaces.',
   },
   {
-    initial: 'D',
+    initial: 'Z',
     badgeLeft: 'Deep Thinker',
     badgeRight: 'High focus',
-    name: 'DeepSeek V4',
+    name: 'GLM 5.3',
     category: 'Logic & Code',
     isAccent: false,
     summary: 'Focused reasoning engine for problem solving and code.',

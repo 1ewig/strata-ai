@@ -16,11 +16,11 @@ import {
 import { resolveAgentModel, getModelProvider, DEFAULT_AGENT_MODEL } from "@/lib/ai/providers";
 import { WorkspaceToolsContext } from "@/lib/ai/tools/types";
 import { WorkspaceFile } from "@/lib/schemas";
-import { getModelContextWindow, COMPACTION_MODEL_ID, COMPACTION_THINKING_LEVEL } from "@/lib/models";
+import { getModelContextWindow, getModelSupportsVision, COMPACTION_MODEL_ID, COMPACTION_THINKING_LEVEL } from "@/lib/models";
 import { calculateTokenMetrics, ChatMetadata } from "@/lib/token-usage";
 import {
   sanitizeMessagesForProvider,
-  stripImageContentForTextOnlyProviders,
+  stripImageContentForUnsupportedModels,
 } from "./sanitization";
 import { coalesceToolInputDeltas } from "./stream-transforms";
 import { classifyProviderError } from "./error-classifier";
@@ -30,7 +30,7 @@ import { langfuseSpanProcessor } from "@/instrumentation";
 // Re-export sanitization helpers for backwards compatibility
 export {
   sanitizeMessagesForProvider,
-  stripImageContentForTextOnlyProviders,
+  stripImageContentForUnsupportedModels,
 } from "./sanitization";
 
 /**
@@ -88,9 +88,12 @@ export async function runAgentResponse({
   // Token budget: active model's context window + active context occupancy from the
   // latest assistant message (metadata.usage round-trips through the request body).
   const contextWindow = getModelContextWindow(modelId || DEFAULT_AGENT_MODEL);
+  const activeModelId = modelId || DEFAULT_AGENT_MODEL;
+  const supportsVision = getModelSupportsVision(activeModelId);
   const sanitizedForMetrics = await sanitizeMessagesForProvider(
     messages,
-    getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+    getModelProvider(activeModelId),
+    supportsVision,
   );
   const tokenMetrics = calculateTokenMetrics(
     sanitizedForMetrics as Array<{
@@ -201,33 +204,32 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
   };
 
   try {
+    const activeModelId = modelId || DEFAULT_AGENT_MODEL;
+    const provider = getModelProvider(activeModelId);
+    const supportsVision = getModelSupportsVision(activeModelId);
+
     // Resolve the requested model to its provider-specific config (Google or Fireworks).
-    const resolvedModel = resolveAgentModel(modelId || DEFAULT_AGENT_MODEL, thinkingLevel);
+    const resolvedModel = resolveAgentModel(activeModelId, thinkingLevel);
 
     // Prune provider metadata belonging to other providers before the message
     // converters run, so stale Gemini thought signatures (or any other
-    // cross-provider leftovers) never leak into a Fireworks/DeepSeek payload.
+    // cross-provider leftovers) never leak into a Fireworks payload.
     const sanitizedMessages = await sanitizeMessagesForProvider(
       config.messages,
-      getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+      provider,
+      supportsVision,
     );
 
     // Convert once up front (optional trailing user turn appended for compaction).
     const convertedMessages = await convertToModelMessages(sanitizedMessages);
-    // Text-only providers (Fireworks/DeepSeek) cannot consume image content; strip
-    // it from replayed history so old image conversations stay usable.
+    // Text-only models cannot consume image content; strip it from replayed
+    // history so old image conversations stay usable.
     const modelMessages = config.appendUserMessage
       ? [
-          ...stripImageContentForTextOnlyProviders(
-            convertedMessages,
-            getModelProvider(modelId || DEFAULT_AGENT_MODEL),
-          ),
+          ...stripImageContentForUnsupportedModels(convertedMessages, supportsVision),
           { role: "user" as const, content: config.appendUserMessage },
         ]
-      : stripImageContentForTextOnlyProviders(
-          convertedMessages,
-          getModelProvider(modelId || DEFAULT_AGENT_MODEL),
-        );
+      : stripImageContentForUnsupportedModels(convertedMessages, supportsVision);
 
     const stream = createUIMessageStream({
       execute: async ({ writer }) => {
@@ -240,10 +242,10 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
               tags: [
                 "strata-ai",
                 config.prefix === "[compaction]" ? "compaction" : "agent",
-                getModelProvider(modelId || DEFAULT_AGENT_MODEL),
+                provider,
               ],
               metadata: {
-                modelId: modelId || DEFAULT_AGENT_MODEL,
+                modelId: activeModelId,
                 thinkingLevel: thinkingLevel || "default",
               },
             },
