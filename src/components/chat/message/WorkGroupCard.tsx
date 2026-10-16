@@ -12,7 +12,6 @@ import { accordionVariants } from '@/components/chat/animations';
 interface WorkGroupCardProps {
   items: Segment[];
   isStreaming?: boolean;
-  onOpenDrawer?: () => void;
 }
 
 /**
@@ -20,7 +19,7 @@ interface WorkGroupCardProps {
  * Displays a unified "Worked for X s" header trigger on the chat background,
  * and expands to reveal individual thought accordions and tool call cards.
  */
-function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps) {
+function WorkGroupCard({ items, isStreaming }: WorkGroupCardProps) {
   const [isOpen, setIsOpen] = useState(() => Boolean(isStreaming));
   const startTimeRef = useRef<number | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(1);
@@ -119,7 +118,6 @@ function WorkGroupCard({ items, isStreaming, onOpenDrawer }: WorkGroupCardProps)
                     <ToolCallCard
                       key={item.key}
                       part={item.part}
-                      onOpenDrawer={onOpenDrawer}
                     />
                   );
                 }

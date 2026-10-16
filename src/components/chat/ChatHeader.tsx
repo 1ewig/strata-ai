@@ -12,6 +12,7 @@ import {
   ConversationTokenMetrics,
 } from '@/lib/token-usage';
 import TokenUsagePopover from './TokenUsagePopover';
+import { useChatUI } from '@/contexts/ChatUIContext';
 
 /** Props for the ChatHeader component. */
 interface ChatHeaderProps {
@@ -23,11 +24,6 @@ interface ChatHeaderProps {
   tokenUsage?: ConversationTokenMetrics | null;
   onOpenFile?: (fileId: string) => void;
   onOpenDrawer?: () => void;
-  onOpenSidebar?: () => void;
-  /** Whether the desktop sidebar is collapsed, showing the expand button. */
-  isSidebarCollapsed?: boolean;
-  /** Callback invoked to expand the collapsed desktop sidebar. */
-  onExpandSidebar?: () => void;
   onNewChat: () => void;
   /** Whether the active conversation is already an unstarted/new chat. */
   isNewChat?: boolean;
@@ -44,12 +40,10 @@ export default React.memo(function ChatHeader({
   model,
   tokenUsage,
   onOpenDrawer,
-  onOpenSidebar,
-  isSidebarCollapsed,
-  onExpandSidebar,
   onNewChat,
   isNewChat = false,
 }: ChatHeaderProps) {
+  const { openSidebar, isSidebarCollapsed, expandSidebar } = useChatUI();
   // Context window popover state (desktop click/hover & mobile tap)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -77,25 +71,21 @@ export default React.memo(function ChatHeader({
   return (
     <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40 relative">
       <div className="flex items-center gap-2 min-w-0">
-        {onOpenSidebar && (
-          <button
-            onClick={onOpenSidebar}
-            className="md:hidden p-2 -ml-1 text-text-muted hover:text-text-primary hover:bg-surface-hover/60 active:scale-90 rounded-lg transition-all duration-150 cursor-pointer shrink-0"
-            aria-label="Open sidebar"
-          >
-            <Menu className="w-4 h-4" />
-          </button>
-        )}
+        <button
+          onClick={openSidebar}
+          className="md:hidden p-2 -ml-1 text-text-muted hover:text-text-primary hover:bg-surface-hover/60 active:scale-90 rounded-lg transition-all duration-150 cursor-pointer shrink-0"
+          aria-label="Open sidebar"
+        >
+          <Menu className="w-4 h-4" />
+        </button>
 
-        {onExpandSidebar && (
-          <button
-            onClick={onExpandSidebar}
-            className={`${isSidebarCollapsed ? 'md:flex' : ''} hidden p-2 -ml-1 text-text-muted hover:text-text-primary hover:bg-surface-hover/60 active:scale-90 rounded-lg transition-all duration-150 cursor-pointer shrink-0`}
-            aria-label="Expand sidebar"
-          >
-            <PanelLeftOpen className="w-4 h-4" />
-          </button>
-        )}
+        <button
+          onClick={expandSidebar}
+          className={`${isSidebarCollapsed ? 'md:flex' : ''} hidden p-2 -ml-1 text-text-muted hover:text-text-primary hover:bg-surface-hover/60 active:scale-90 rounded-lg transition-all duration-150 cursor-pointer shrink-0`}
+          aria-label="Expand sidebar"
+        >
+          <PanelLeftOpen className="w-4 h-4" />
+        </button>
 
         {/* Conversation title & active context window indicator */}
         <div className="flex flex-col min-w-0">

@@ -19,11 +19,9 @@ import { accordionVariants } from '@/components/chat/animations';
  * @param summary - Pre-built ReactNode describing the invocation outcome, shown in the expanded body.
  * @param rawArgs - Original tool arguments, pretty-printed in the details block.
  * @param rawResult - Original tool result, pretty-printed in the details block.
- * @param onOpenDrawer - Optional callback that opens the full details drawer for successful calls.
  */
 interface ToolCallCardProps {
   part?: ToolInvocationLike;
-  onOpenDrawer?: () => void;
   label?: string;
   icon?: LucideIcon;
   accentText?: string;
@@ -33,7 +31,6 @@ interface ToolCallCardProps {
 
 function ToolCallCard({
   part,
-  onOpenDrawer,
   label: explicitLabel,
   icon: ExplicitIcon,
   accentText: explicitAccentText,
@@ -42,10 +39,10 @@ function ToolCallCard({
 }: ToolCallCardProps) {
   const resolved = React.useMemo(() => {
     if (part) {
-      return resolveToolDisplay(part, onOpenDrawer);
+      return resolveToolDisplay(part);
     }
     return null;
-  }, [part, onOpenDrawer]);
+  }, [part]);
 
   const label = resolved?.label || explicitLabel || 'Tool Call';
   const Icon = resolved?.icon;
@@ -110,7 +107,6 @@ function ToolCallCard({
  * while multi-kilobyte file argument strings (e.g. writeFile / editFile content) stream in.
  */
 function areToolCallCardPropsEqual(prevProps: ToolCallCardProps, nextProps: ToolCallCardProps): boolean {
-  if (prevProps.onOpenDrawer !== nextProps.onOpenDrawer) return false;
   if (prevProps.label !== nextProps.label || prevProps.status !== nextProps.status) return false;
 
   const prevPart = prevProps.part;

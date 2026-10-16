@@ -6,6 +6,7 @@ import { motion } from 'motion/react';
 import ChatBubble from '@/components/chat/message/ChatBubble';
 import CompactionDivider from '@/components/chat/message/CompactionDivider';
 import { StrataIcon } from '@/components/ui/strata-icon';
+import { useComposer } from '@/contexts/ComposerContext';
 import {
   heroStaggerVariants,
   heroItemVariants,
@@ -48,7 +49,6 @@ interface ChatPanelProps {
   messages: ChatMessage[];
   isLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
-  onOpenDrawer?: () => void;
   chatId?: string;
   isNewChat?: boolean;
   chatInputNode?: React.ReactNode;
@@ -61,7 +61,6 @@ interface ChatPanelProps {
  * @param messages - Conversation messages rendered as ChatBubble rows.
  * @param isLoading - Shows the typing indicator while the assistant responds.
  * @param messagesEndRef - Scroll anchor appended after the last message.
- * @param onOpenDrawer - Passed through to bubbles for tool card drawer actions.
  * @param chatId - Active conversation ID used to pick a stable welcome greeting.
  * @param isNewChat - True when no messages exist, centering the composer in the hero.
  * @param chatInputNode - The ChatInput node rendered in the centered hero.
@@ -70,11 +69,11 @@ export default React.memo(function ChatPanel({
   messages,
   isLoading,
   messagesEndRef,
-  onOpenDrawer,
   chatId,
   isNewChat,
   chatInputNode,
 }: ChatPanelProps) {
+  const { insertPrompt } = useComposer();
   // Pick a stable welcome message from the pool based on the conversation ID
   const welcomeMessage = React.useMemo(() => {
     if (!chatId) return WELCOME_MESSAGES[0];
@@ -88,9 +87,7 @@ export default React.memo(function ChatPanel({
   }, [chatId]);
 
   const handleChipClick = (promptText: string) => {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('insert-chat-prompt', { detail: promptText }));
-    }
+    insertPrompt(promptText);
   };
 
   if (isNewChat) {
@@ -197,7 +194,6 @@ export default React.memo(function ChatPanel({
             <ChatBubble
               message={message}
               isStreaming={isLastAssistant}
-              onOpenDrawer={onOpenDrawer}
             />
             {isCompacted && !isLastAssistant && (
               <CompactionDivider

@@ -40,7 +40,6 @@ export interface ToolCardProps {
   summary: ReactNode;
   rawArgs: unknown;
   rawResult: unknown;
-  onOpenDrawer?: () => void;
 }
 
 /**
@@ -299,10 +298,9 @@ function extractToolInfo(toolCall: ToolInvocationLike | unknown) {
  * Resolves the config, derives the status, picks the summary builder, and, for write tools,
  * upgrades the badge to "Created"/"Replaced" when the result reports that action.
  * @param toolCall - The tool call object from the assistant message.
- * @param onOpenDrawer - Optional callback forwarded to the card for opening the details drawer.
  * @returns ToolCardProps describing how to render this invocation.
  */
-export function resolveToolDisplay(toolCall: ToolInvocationLike | unknown, onOpenDrawer?: () => void): ToolCardProps {
+export function resolveToolDisplay(toolCall: ToolInvocationLike | unknown): ToolCardProps {
   const { name, rawName, args, result, status, isCustom } = extractToolInfo(toolCall);
 
   const meta = toolMeta[name];
@@ -332,6 +330,5 @@ export function resolveToolDisplay(toolCall: ToolInvocationLike | unknown, onOpe
     summary,
     rawArgs: args,
     rawResult: result,
-    onOpenDrawer,
   };
 }

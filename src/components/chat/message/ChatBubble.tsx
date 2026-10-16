@@ -38,10 +38,9 @@ const InferenceTimer = React.memo(function InferenceTimer() {
 interface ChatBubbleProps {
   message: ChatMessage;
   isStreaming?: boolean;
-  onOpenDrawer?: () => void;
 }
 
-function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
+function ChatBubble({ message, isStreaming }: ChatBubbleProps) {
   const isUser = message.role === 'user';
   const [activeBubbleKey, setActiveBubbleKey] = useState<string | null>(null);
   const [openMenuKey, setOpenMenuKey] = useState<string | null>(null);
@@ -171,7 +170,6 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                 key={seg.key}
                 items={seg.items}
                 isStreaming={isStreaming}
-                onOpenDrawer={onOpenDrawer}
               />
             );
           }
@@ -181,7 +179,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           }
 
           if (seg.type === 'tool') {
-            return <ToolCallCard key={seg.key} part={seg.part} onOpenDrawer={onOpenDrawer} />;
+            return <ToolCallCard key={seg.key} part={seg.part} />;
           }
 
           if (seg.type === 'text') {

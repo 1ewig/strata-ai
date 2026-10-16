@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react';
 import type { Conversation } from '@/lib/db/db';
 import type { authClient } from '@/lib/auth-client';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
+import { useChatUI } from '@/contexts/ChatUIContext';
 import SidebarHeader from './SidebarHeader';
 import NewChatButton from './NewChatButton';
 import ConversationList from './ConversationList';
@@ -20,14 +21,6 @@ export interface SidebarProps {
   isMaxConversationsReached: boolean;
   /** The id of the conversation currently open, used to highlight it. */
   activeConversationId: string;
-  /** Whether the mobile drawer is expanded. */
-  isOpen?: boolean;
-  /** Callback invoked when the drawer should close. */
-  onClose?: () => void;
-  /** Whether the desktop sidebar is collapsed (hidden). */
-  isCollapsed?: boolean;
-  /** Callback invoked when the desktop sidebar should collapse. */
-  onCollapse?: () => void;
   /** Creates a new conversation and navigates to it. */
   onNewChat: () => void;
   /** Whether the active conversation is already an unstarted/new chat. */
@@ -66,10 +59,6 @@ function Sidebar({
   conversationCount,
   isMaxConversationsReached,
   activeConversationId,
-  isOpen = false,
-  onClose,
-  isCollapsed = false,
-  onCollapse,
   onNewChat,
   isCurrentChatEmpty = false,
   onDelete,
@@ -82,6 +71,7 @@ function Sidebar({
   onToggleTheme,
   rateLimitData: rateLimitDataProp,
 }: SidebarProps) {
+  const { isSidebarOpen, closeSidebar, isSidebarCollapsed } = useChatUI();
   const [chatToDelete, setChatToDelete] = useState<Conversation | null>(null);
 
   const rateLimitData = rateLimitDataProp ?? null;
@@ -90,8 +80,8 @@ function Sidebar({
 
   const handleNewChat = useCallback(() => {
     onNewChat();
-    onClose?.();
-  }, [onNewChat, onClose]);
+    closeSidebar();
+  }, [onNewChat, closeSidebar]);
 
   const handleRequestDelete = useCallback((e: React.MouseEvent, conv: Conversation) => {
     e.preventDefault();
@@ -112,19 +102,19 @@ function Sidebar({
   return (
     <>
       {/* Mobile scrim backdrop that closes the drawer on tap */}
-      {isOpen && (
+      {isSidebarOpen && (
         <div
           className="fixed inset-0 z-50 bg-scrim backdrop-blur-sm md:hidden"
-          onClick={onClose}
+          onClick={closeSidebar}
         />
       )}
 
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface-raised border-r border-edge-raised flex flex-col h-dvh shrink-0 select-none shadow-card-lg transition-transform duration-300 md:static md:translate-x-0 md:shadow-none ${
-          isOpen ? 'translate-x-0' : '-translate-x-full'
-        } ${isCollapsed ? 'md:hidden' : ''}`}
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${isSidebarCollapsed ? 'md:hidden' : ''}`}
       >
-        <SidebarHeader onClose={onClose} onCollapse={onCollapse} />
+        <SidebarHeader />
 
         <NewChatButton
           onNewChat={handleNewChat}
@@ -137,7 +127,7 @@ function Sidebar({
           conversationCount={conversationCount}
           isMaxConversationsReached={isMaxConversationsReached}
           activeConversationId={activeConversationId}
-          onCloseSidebar={onClose}
+          onCloseSidebar={closeSidebar}
           onRename={onRename}
           onTogglePin={onTogglePin}
           onRequestDelete={handleRequestDelete}

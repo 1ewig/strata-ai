@@ -17,6 +17,7 @@ import ComposerToolbar from './composer/ComposerToolbar';
 import DropZoneOverlay from './composer/DropZoneOverlay';
 import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './composer/SlashCommandMenu';
 import { useComposerFileDrop } from './composer/useComposerFileDrop';
+import { useComposer } from '@/contexts/ComposerContext';
 
 /** Props for the ChatInput composer. */
 interface ChatInputProps {
@@ -92,6 +93,7 @@ export default React.memo(function ChatInput({
   const [placeholderIndex, setPlaceholderIndex] = useState(() => getRandomPlaceholderIndex());
   const prevChatIdRef = useRef(chatId);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
+  const { registerPromptTarget } = useComposer();
 
   // Update placeholder when switching to a different or fresh chat conversation.
   useEffect(() => {
@@ -249,22 +251,14 @@ export default React.memo(function ChatInput({
     fileInputRef.current.click();
   };
 
-  // Listen for suggestion chip clicks from the empty state
+  // Register as the prompt injection target for the empty-state suggestion chips.
   useEffect(() => {
-    const handleInsertPrompt = (e: Event) => {
-      const customEvent = e as CustomEvent<string>;
-      if (customEvent.detail) {
-        setInputValue(customEvent.detail);
-        if (textareaRef.current) {
-          textareaRef.current.focus();
-        }
-      }
-    };
-    window.addEventListener('insert-chat-prompt', handleInsertPrompt);
-    return () => {
-      window.removeEventListener('insert-chat-prompt', handleInsertPrompt);
-    };
-  }, []);
+    registerPromptTarget((text) => {
+      setInputValue(text);
+      textareaRef.current?.focus();
+    });
+    return () => registerPromptTarget(null);
+  }, [registerPromptTarget]);
 
   // Auto-grow the textarea up to a 160px cap as the user types.
   useEffect(() => {

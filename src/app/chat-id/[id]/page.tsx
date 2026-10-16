@@ -17,6 +17,8 @@ import { useChatSession } from '@/hooks/useChatSession';
 import { useConversations } from '@/hooks/useConversations';
 import { useSignOut } from '@/hooks/useSignOut';
 import { useTheme } from '@/hooks/useTheme';
+import { ChatUIProvider } from '@/contexts/ChatUIContext';
+import { ComposerProvider } from '@/contexts/ComposerContext';
 import { pillFloatVariants } from '@/components/chat/animations';
 
 /**
@@ -49,18 +51,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const composerContainerRef = useRef<HTMLDivElement>(null);
   const [composerHeight, setComposerHeight] = useState(176);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('strata_sidebar_open') === 'true';
-    }
-    return false;
-  });
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return sessionStorage.getItem('strata_sidebar_collapsed') === 'true';
-    }
-    return false;
-  });
 
   // Dynamically sync bottom padding of the chat content with floating composer height changes
   React.useEffect(() => {
@@ -134,34 +124,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
   const handleCloseDrawer = React.useCallback(() => setIsWorkspaceDrawerOpen(false), [setIsWorkspaceDrawerOpen]);
 
-  const handleOpenSidebar = React.useCallback(() => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('strata_sidebar_open', 'true');
-    }
-    setIsSidebarOpen(true);
-  }, []);
-
-  const handleCloseSidebar = React.useCallback(() => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('strata_sidebar_open');
-    }
-    setIsSidebarOpen(false);
-  }, []);
-
-  const handleCollapseSidebar = React.useCallback(() => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.setItem('strata_sidebar_collapsed', 'true');
-    }
-    setIsSidebarCollapsed(true);
-  }, []);
-
-  const handleExpandSidebar = React.useCallback(() => {
-    if (typeof window !== 'undefined') {
-      sessionStorage.removeItem('strata_sidebar_collapsed');
-    }
-    setIsSidebarCollapsed(false);
-  }, []);
-
   const handleOpenFile = React.useCallback(
     (fileId: string) => {
       handleSelectFile(fileId);
@@ -169,15 +131,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     },
     [handleSelectFile, setIsWorkspaceDrawerOpen],
   );
-
-  // Open the workspace drawer when other components dispatch this custom event.
-  React.useEffect(() => {
-    const handleCustomOpen = () => setIsWorkspaceDrawerOpen(true);
-    window.addEventListener('open-workspace-drawer', handleCustomOpen);
-    return () => {
-      window.removeEventListener('open-workspace-drawer', handleCustomOpen);
-    };
-  }, [setIsWorkspaceDrawerOpen]);
 
   // Show a spinner while the session is still being verified or redirecting from an unauthorized chat.
   if (isSessionPending || !session?.user || isUnauthorized) {
@@ -209,122 +162,118 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   );
 
   return (
-    <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={handleCloseSidebar}
-        isCollapsed={isSidebarCollapsed}
-        onCollapse={handleCollapseSidebar}
-        conversations={conversations}
-        conversationCount={conversationCount}
-        isMaxConversationsReached={isMaxConversationsReached}
-        activeConversationId={chatId}
-        onNewChat={handleNewChat}
-        isCurrentChatEmpty={isNewChat}
-        onDelete={handleDeleteConversation}
-        onRename={handleRenameConversation}
-        onTogglePin={handleTogglePinConversation}
-        session={session}
-        isSigningOut={isSigningOut}
-        onSignOut={handleSignOut}
-        isDark={isDark}
-        onToggleTheme={toggleTheme}
-        rateLimitData={rateLimitData}
-      />
+    <ChatUIProvider>
+      <ComposerProvider>
+        <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
+          <Sidebar
+            conversations={conversations}
+            conversationCount={conversationCount}
+            isMaxConversationsReached={isMaxConversationsReached}
+            activeConversationId={chatId}
+            onNewChat={handleNewChat}
+            isCurrentChatEmpty={isNewChat}
+            onDelete={handleDeleteConversation}
+            onRename={handleRenameConversation}
+            onTogglePin={handleTogglePinConversation}
+            session={session}
+            isSigningOut={isSigningOut}
+            onSignOut={handleSignOut}
+            isDark={isDark}
+            onToggleTheme={toggleTheme}
+            rateLimitData={rateLimitData}
+          />
 
-      <div className="flex-1 flex flex-col h-dvh overflow-hidden min-w-0 relative">
-        {(() => {
-          const activeConversation = conversations?.find(c => c.id === chatId);
-          const headerTitle = displayMessages.length > 0
-            ? activeConversation?.title || 'Chat Workspace'
-            : 'Chat Workspace';
+          <div className="flex-1 flex flex-col h-dvh overflow-hidden min-w-0 relative">
+            {(() => {
+              const activeConversation = conversations?.find(c => c.id === chatId);
+              const headerTitle = displayMessages.length > 0
+                ? activeConversation?.title || 'Chat Workspace'
+                : 'Chat Workspace';
 
-          return (
-            <ChatHeader
-              title={headerTitle}
-              files={files}
-              activeFileId={activeFileId}
-              model={model}
-              tokenUsage={tokenUsage}
-              onOpenFile={handleOpenFile}
-              onOpenDrawer={handleOpenDrawer}
-              onOpenSidebar={handleOpenSidebar}
-              isSidebarCollapsed={isSidebarCollapsed}
-              onExpandSidebar={handleExpandSidebar}
-              onNewChat={handleNewChat}
-              isNewChat={isNewChat}
-            />
-          );
-        })()}
-
-        <StickToBottom className="flex-1 min-h-0 overscroll-y-contain [overflow-anchor:auto] [will-change:scroll-position] [transform:translateZ(0)]" resize="auto" initial="instant">
-          {(context) => (
-            <>
-              <StickToBottom.Content
-                className={`max-w-4xl w-full mx-auto px-4 ${isNewChat ? 'min-h-full flex flex-col justify-center py-6' : ''}`}
-                style={!isNewChat ? { paddingBottom: `${composerHeight}px` } : undefined}
-              >
-                <ChatPanel
-                  messages={displayMessages}
-                  isLoading={isLoading}
-                  messagesEndRef={messagesEndRef}
+              return (
+                <ChatHeader
+                  title={headerTitle}
+                  files={files}
+                  activeFileId={activeFileId}
+                  model={model}
+                  tokenUsage={tokenUsage}
+                  onOpenFile={handleOpenFile}
                   onOpenDrawer={handleOpenDrawer}
-                  chatId={chatId}
+                  onNewChat={handleNewChat}
                   isNewChat={isNewChat}
-                  chatInputNode={chatInputNode}
                 />
-              </StickToBottom.Content>
+              );
+            })()}
 
-              {!isNewChat && (
-                <div
-                  ref={composerContainerRef}
-                  className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-12 pb-4 px-4 pointer-events-none z-30 animate-slide-up"
-                >
-                  <div className="relative max-w-4xl mx-auto pointer-events-auto">
-                    {/* Floating button appears when scrolled up - anchored cleanly above ChatInput */}
-                    <AnimatePresence>
-                      {!context.isAtBottom && (
-                        <motion.div
-                          key="scroll-to-bottom"
-                          variants={pillFloatVariants}
-                          initial="hidden"
-                          animate="visible"
-                          exit="exit"
-                          className="absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 z-10 pointer-events-auto"
-                        >
-                          <motion.button
-                            type="button"
-                            whileHover={{ scale: 1.04 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => context.scrollToBottom()}
-                            className="flex items-center gap-1.5 rounded-full border border-edge-raised bg-surface-raised/95 dark:bg-surface-raised/90 px-3.5 py-1.5 text-caption font-semibold text-text-primary hover:text-text-bright shadow-card-lg backdrop-blur-md transition-colors cursor-pointer select-none"
-                          >
-                            <ArrowDown className="w-3.5 h-3.5 text-primary" />
-                            <span>Scroll to bottom</span>
-                          </motion.button>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                    {chatInputNode}
-                  </div>
-                </div>
+            <StickToBottom className="flex-1 min-h-0 overscroll-y-contain [overflow-anchor:auto] [will-change:scroll-position] [transform:translateZ(0)]" resize="auto" initial="instant">
+              {(context) => (
+                <>
+                  <StickToBottom.Content
+                    className={`max-w-4xl w-full mx-auto px-4 ${isNewChat ? 'min-h-full flex flex-col justify-center py-6' : ''}`}
+                    style={!isNewChat ? { paddingBottom: `${composerHeight}px` } : undefined}
+                  >
+                    <ChatPanel
+                      messages={displayMessages}
+                      isLoading={isLoading}
+                      messagesEndRef={messagesEndRef}
+                      chatId={chatId}
+                      isNewChat={isNewChat}
+                      chatInputNode={chatInputNode}
+                    />
+                  </StickToBottom.Content>
+
+                  {!isNewChat && (
+                    <div
+                      ref={composerContainerRef}
+                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-12 pb-4 px-4 pointer-events-none z-30 animate-slide-up"
+                    >
+                      <div className="relative max-w-4xl mx-auto pointer-events-auto">
+                        {/* Floating button appears when scrolled up - anchored cleanly above ChatInput */}
+                        <AnimatePresence>
+                          {!context.isAtBottom && (
+                            <motion.div
+                              key="scroll-to-bottom"
+                              variants={pillFloatVariants}
+                              initial="hidden"
+                              animate="visible"
+                              exit="exit"
+                              className="absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 z-10 pointer-events-auto"
+                            >
+                              <motion.button
+                                type="button"
+                                whileHover={{ scale: 1.04 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => context.scrollToBottom()}
+                                className="flex items-center gap-1.5 rounded-full border border-edge-raised bg-surface-raised/95 dark:bg-surface-raised/90 px-3.5 py-1.5 text-caption font-semibold text-text-primary hover:text-text-bright shadow-card-lg backdrop-blur-md transition-colors cursor-pointer select-none"
+                              >
+                                <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                                <span>Scroll to bottom</span>
+                              </motion.button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                        {chatInputNode}
+                      </div>
+                    </div>
+                  )}
+                </>
               )}
-            </>
-          )}
-        </StickToBottom>
-      </div>
+            </StickToBottom>
+          </div>
 
-      <WorkspaceDrawer
-        isOpen={isWorkspaceDrawerOpen}
-        onClose={handleCloseDrawer}
-        files={files}
-        activeFileId={activeFileId}
-        onSelectFile={handleSelectFile}
-        onUpdateFile={handleUpdateFile}
-        onCreateFile={handleCreateFile}
-        onDeleteFile={handleDeleteFile}
-        isLoading={isLoading}
-      />
-    </main>
+          <WorkspaceDrawer
+            isOpen={isWorkspaceDrawerOpen}
+            onClose={handleCloseDrawer}
+            files={files}
+            activeFileId={activeFileId}
+            onSelectFile={handleSelectFile}
+            onUpdateFile={handleUpdateFile}
+            onCreateFile={handleCreateFile}
+            onDeleteFile={handleDeleteFile}
+            isLoading={isLoading}
+          />
+        </main>
+      </ComposerProvider>
+    </ChatUIProvider>
   );
 }
