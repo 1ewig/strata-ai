@@ -4,6 +4,7 @@ import React, { useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Loader2, XCircle, type LucideIcon } from 'lucide-react';
 import { resolveToolDisplay } from '../tools/resolver';
+import type { ToolInvocationLike } from '@/lib/ai/message-segments';
 import { accordionVariants } from '@/components/chat/animations';
 
 /**
@@ -21,7 +22,7 @@ import { accordionVariants } from '@/components/chat/animations';
  * @param onOpenDrawer - Optional callback that opens the full details drawer for successful calls.
  */
 interface ToolCallCardProps {
-  part?: any;
+  part?: ToolInvocationLike;
   onOpenDrawer?: () => void;
   label?: string;
   icon?: LucideIcon;
@@ -118,8 +119,12 @@ function areToolCallCardPropsEqual(prevProps: ToolCallCardProps, nextProps: Tool
   if (!prevPart && !nextPart) return true;
   if (!prevPart || !nextPart) return false;
 
-  const prevInv = prevPart.toolInvocation || prevPart;
-  const nextInv = nextPart.toolInvocation || nextPart;
+  const prevInv = (prevPart.toolInvocation && typeof prevPart.toolInvocation === 'object'
+    ? prevPart.toolInvocation
+    : prevPart) as ToolInvocationLike;
+  const nextInv = (nextPart.toolInvocation && typeof nextPart.toolInvocation === 'object'
+    ? nextPart.toolInvocation
+    : nextPart) as ToolInvocationLike;
 
   const prevId = prevInv.toolCallId || prevInv.id || prevPart.id;
   const nextId = nextInv.toolCallId || nextInv.id || nextPart.id;
@@ -135,8 +140,8 @@ function areToolCallCardPropsEqual(prevProps: ToolCallCardProps, nextProps: Tool
 
   // On terminal states (output-available or result), re-render if success or error output changes.
   if (nextState === 'output-available' || nextState === 'result') {
-    const prevRes = prevInv.result || prevInv.output;
-    const nextRes = nextInv.result || nextInv.output;
+    const prevRes = (prevInv.result || prevInv.output) as Record<string, unknown> | undefined;
+    const nextRes = (nextInv.result || nextInv.output) as Record<string, unknown> | undefined;
     if (prevRes?.success !== nextRes?.success || prevRes?.error !== nextRes?.error) return false;
   }
 

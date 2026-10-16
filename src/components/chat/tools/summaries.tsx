@@ -66,10 +66,59 @@ function SummaryLine({ label, value, valueClass = 'text-text-primary font-medium
   );
 }
 
+// Structural tool payloads for type-safe summary generation
+export interface ListFilesResult {
+  files?: Array<{ name: string; id?: string }>;
+}
+
+export interface FileToolArgs {
+  nameOrId?: string;
+  name?: string;
+  newName?: string;
+  section?: string;
+  content?: string;
+  searchString?: string;
+  replacementString?: string;
+}
+
+export interface FileToolResult {
+  name?: string;
+  oldName?: string;
+  newName?: string;
+  action?: string;
+  file?: { name?: string; id?: string };
+}
+
+export interface WebSearchArgs {
+  query?: string;
+  maxResults?: number;
+}
+
+export interface WebSearchResult {
+  query?: string;
+  results?: Array<{ title?: string; url: string; publishedDate?: string }>;
+  error?: string;
+}
+
+export interface ExtractUrlArgs {
+  urls?: string[];
+  url?: string;
+}
+
+export interface ExtractUrlResult {
+  extracted?: Array<{ url: string; title?: string }>;
+  failed?: Array<{ url: string; error: string }>;
+  error?: string;
+}
+
 /**
  * Summary for listFiles: files found in workspace.
  */
-export function buildListFilesSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
+export function buildListFilesSummary(
+  _args: Record<string, unknown> | unknown,
+  result: Record<string, unknown> | unknown,
+  status: 'loading' | 'success' | 'error',
+): ReactNode {
   if (status === 'loading') {
     return (
       <InFlightSummary
@@ -80,7 +129,8 @@ export function buildListFilesSummary(args: any, result: any, status: 'loading' 
     );
   }
 
-  const filesList: Array<{ name: string }> = result?.files || [];
+  const res = (result && typeof result === 'object' ? result : {}) as ListFilesResult;
+  const filesList = res.files || [];
   return (
     <div className="py-1 space-y-1 font-mono text-caption">
       <div className="text-text-muted font-medium text-caption">Files Found:</div>
@@ -100,8 +150,14 @@ export function buildListFilesSummary(args: any, result: any, status: 'loading' 
 /**
  * Summary for readFile: the file read.
  */
-export function buildReadFileSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
-  const fileName = args?.nameOrId || result?.name || 'File';
+export function buildReadFileSummary(
+  args: Record<string, unknown> | unknown,
+  result: Record<string, unknown> | unknown,
+  status: 'loading' | 'success' | 'error',
+): ReactNode {
+  const a = (args && typeof args === 'object' ? args : {}) as FileToolArgs;
+  const r = (result && typeof result === 'object' ? result : {}) as FileToolResult;
+  const fileName = a.nameOrId || r.name || 'File';
   if (status === 'loading') {
     return (
       <InFlightSummary
@@ -118,8 +174,14 @@ export function buildReadFileSummary(args: any, result: any, status: 'loading' |
 /**
  * Summary for writeFile: the file created or updated.
  */
-export function buildWriteFileSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
-  const name = args?.name || result?.file?.name || 'File';
+export function buildWriteFileSummary(
+  args: Record<string, unknown> | unknown,
+  result: Record<string, unknown> | unknown,
+  status: 'loading' | 'success' | 'error',
+): ReactNode {
+  const a = (args && typeof args === 'object' ? args : {}) as FileToolArgs;
+  const r = (result && typeof result === 'object' ? result : {}) as FileToolResult;
+  const name = a.name || r.file?.name || 'File';
   if (status === 'loading') {
     return (
       <InFlightSummary
@@ -130,15 +192,21 @@ export function buildWriteFileSummary(args: any, result: any, status: 'loading' 
     );
   }
 
-  const isCreated = result?.action === 'created';
+  const isCreated = r.action === 'created';
   return <SummaryLine label={isCreated ? 'File Created:' : 'File Updated:'} value={name} valueClass="text-primary font-medium" />;
 }
 
 /**
  * Summary for editFile: the file edited.
  */
-export function buildEditFileSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
-  const name = args?.nameOrId || result?.file?.name || 'File';
+export function buildEditFileSummary(
+  args: Record<string, unknown> | unknown,
+  result: Record<string, unknown> | unknown,
+  status: 'loading' | 'success' | 'error',
+): ReactNode {
+  const a = (args && typeof args === 'object' ? args : {}) as FileToolArgs;
+  const r = (result && typeof result === 'object' ? result : {}) as FileToolResult;
+  const name = a.nameOrId || r.file?.name || 'File';
   if (status === 'loading') {
     return (
       <InFlightSummary
@@ -155,9 +223,15 @@ export function buildEditFileSummary(args: any, result: any, status: 'loading' |
 /**
  * Summary for renameFile: the old name and new name.
  */
-export function buildRenameFileSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
-  const oldName = args?.nameOrId || result?.oldName || 'File';
-  const newName = result?.newName || args?.newName || '';
+export function buildRenameFileSummary(
+  args: Record<string, unknown> | unknown,
+  result: Record<string, unknown> | unknown,
+  status: 'loading' | 'success' | 'error',
+): ReactNode {
+  const a = (args && typeof args === 'object' ? args : {}) as FileToolArgs;
+  const r = (result && typeof result === 'object' ? result : {}) as FileToolResult;
+  const oldName = a.nameOrId || r.oldName || 'File';
+  const newName = r.newName || a.newName || '';
   if (status === 'loading') {
     return (
       <InFlightSummary
@@ -185,8 +259,14 @@ export function buildRenameFileSummary(args: any, result: any, status: 'loading'
 /**
  * Summary for deleteFile: the file deleted.
  */
-export function buildDeleteFileSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
-  const name = args?.nameOrId || result?.name || 'File';
+export function buildDeleteFileSummary(
+  args: Record<string, unknown> | unknown,
+  result: Record<string, unknown> | unknown,
+  status: 'loading' | 'success' | 'error',
+): ReactNode {
+  const a = (args && typeof args === 'object' ? args : {}) as FileToolArgs;
+  const r = (result && typeof result === 'object' ? result : {}) as FileToolResult;
+  const name = a.nameOrId || r.name || 'File';
   if (status === 'loading') {
     return (
       <InFlightSummary
@@ -203,8 +283,14 @@ export function buildDeleteFileSummary(args: any, result: any, status: 'loading'
 /**
  * Summary for webSearch: search query and URLs found.
  */
-export function buildWebSearchSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
-  const query = args?.query || result?.query || '';
+export function buildWebSearchSummary(
+  args: Record<string, unknown> | unknown,
+  result: Record<string, unknown> | unknown,
+  status: 'loading' | 'success' | 'error',
+): ReactNode {
+  const a = (args && typeof args === 'object' ? args : {}) as WebSearchArgs;
+  const r = (result && typeof result === 'object' ? result : {}) as WebSearchResult;
+  const query = a.query || r.query || '';
   if (status === 'loading') {
     return (
       <InFlightSummary
@@ -215,7 +301,7 @@ export function buildWebSearchSummary(args: any, result: any, status: 'loading' 
     );
   }
 
-  const resultsList: Array<{ title?: string; url: string; publishedDate?: string }> = result?.results || [];
+  const resultsList = r.results || [];
 
   return (
     <div className="py-1 space-y-0.5 font-mono text-caption">
@@ -226,8 +312,8 @@ export function buildWebSearchSummary(args: any, result: any, status: 'loading' 
         valueClass="text-info font-medium"
       />
 
-      {result?.error && (
-        <p className="text-caption text-danger truncate">Error: {result.error}</p>
+      {r.error && (
+        <p className="text-caption text-danger truncate">Error: {r.error}</p>
       )}
     </div>
   );
@@ -236,8 +322,14 @@ export function buildWebSearchSummary(args: any, result: any, status: 'loading' 
 /**
  * Summary for extractUrl: target URLs extracted and partial failures.
  */
-export function buildExtractUrlSummary(args: any, result: any, status: 'loading' | 'success' | 'error'): ReactNode {
-  const urls: string[] = args?.urls || [];
+export function buildExtractUrlSummary(
+  args: Record<string, unknown> | unknown,
+  result: Record<string, unknown> | unknown,
+  status: 'loading' | 'success' | 'error',
+): ReactNode {
+  const a = (args && typeof args === 'object' ? args : {}) as ExtractUrlArgs;
+  const r = (result && typeof result === 'object' ? result : {}) as ExtractUrlResult;
+  const urls: string[] = a.urls || (a.url ? [a.url] : []);
   if (status === 'loading') {
     return (
       <InFlightSummary
@@ -248,8 +340,8 @@ export function buildExtractUrlSummary(args: any, result: any, status: 'loading'
     );
   }
 
-  const extracted: Array<{ url: string; title?: string }> = result?.extracted || [];
-  const failed: Array<{ url: string; error: string }> = result?.failed || [];
+  const extracted = r.extracted || [];
+  const failed = r.failed || [];
 
   return (
     <div className="py-1 space-y-0.5 font-mono text-caption">
@@ -262,8 +354,8 @@ export function buildExtractUrlSummary(args: any, result: any, status: 'loading'
         <SummaryLine label="Failed:" value={String(failed.length)} valueClass="text-danger font-medium" />
       )}
 
-      {result?.error && (
-        <p className="text-caption text-danger truncate">Error: {result.error}</p>
+      {r.error && (
+        <p className="text-caption text-danger truncate">Error: {r.error}</p>
       )}
     </div>
   );
@@ -272,7 +364,10 @@ export function buildExtractUrlSummary(args: any, result: any, status: 'loading'
 /**
  * Fallback summary for tools without a dedicated builder
  */
-export function buildGenericSummary(args: any, rawName: string): ReactNode {
+export function buildGenericSummary(
+  _args: Record<string, unknown> | unknown,
+  rawName: string,
+): ReactNode {
   return (
     <div className="py-1 text-caption">
       <p className="font-medium text-text-primary truncate">{rawName || 'Tool Execution'}</p>

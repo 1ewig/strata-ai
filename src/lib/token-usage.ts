@@ -1,4 +1,4 @@
-import { LanguageModelUsage } from 'ai';
+import { LanguageModelUsage, type UIMessage } from 'ai';
 
 /**
  * Metadata attached to assistant messages via the AI SDK `messageMetadata`
@@ -16,6 +16,9 @@ export interface ChatMetadata {
   /** True when context compaction attempted to run but failed. */
   isCompactionFailed?: boolean;
 }
+
+/** Complete UI chat message with attached Strata metadata. */
+export type ChatMessage = UIMessage<unknown>;
 
 /** Active context window usage for the current conversation state. */
 export interface ActiveContextUsage {

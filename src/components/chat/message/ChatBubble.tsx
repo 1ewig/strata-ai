@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { UIMessage } from 'ai';
 import { User, Loader2 } from 'lucide-react';
+import type { ChatMessage, ChatMetadata } from '@/lib/token-usage';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import ToolCallCard from './ToolCallCard';
 import ThoughtAccordion from './ThoughtAccordion';
@@ -36,7 +36,7 @@ const InferenceTimer = React.memo(function InferenceTimer() {
 });
 
 interface ChatBubbleProps {
-  message: UIMessage | { id: string; role: string; content?: string; parts?: any[] };
+  message: ChatMessage;
   isStreaming?: boolean;
   onOpenDrawer?: () => void;
 }
@@ -155,7 +155,6 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                     >
                       <MessageActionsMenu
                         textContent={userContent}
-                        isUser={true}
                         isOpen={isMenuOpen}
                         onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
                       />
@@ -188,7 +187,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
           if (seg.type === 'text') {
             const isStreamingActiveSegment = isStreaming && isLastSegment;
             const textContent = seg.content || '';
-            const isCompacted = (message as any).metadata?.isCompactedSummary === true;
+            const isCompacted = (message.metadata as ChatMetadata | undefined)?.isCompactedSummary === true;
             if (!textContent && !isStreamingActiveSegment && !isCompacted) {
               return null;
             }
@@ -222,7 +221,6 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
                     >
                       <MessageActionsMenu
                         textContent={textContent}
-                        isUser={false}
                         isOpen={isMenuOpen}
                         onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
                       />

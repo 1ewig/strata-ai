@@ -11,6 +11,7 @@ import {
   Link2,
   Wrench,
 } from 'lucide-react';
+import type { ToolInvocationLike } from '@/lib/ai/message-segments';
 import {
   buildListFilesSummary,
   buildReadFileSummary,
@@ -56,7 +57,11 @@ type ToolConfig = {
 };
 
 /** Signature of a per-tool summary builder. */
-type SummaryBuilder = (args: any, result: any, status: 'loading' | 'success' | 'error') => ReactNode;
+type SummaryBuilder = (
+  args: Record<string, unknown> | unknown,
+  result: Record<string, unknown> | unknown,
+  status: 'loading' | 'success' | 'error',
+) => ReactNode;
 
 /**
  * Shared "info" accent set, spread by every tool config that uses it.
@@ -235,19 +240,23 @@ function extractToolStatus(inv: any, result: any, state: string): 'loading' | 's
 /**
  * Extracts name, args, result, and status from a tool call object.
  */
-function extractToolInfo(toolCall: any) {
-  if (!toolCall) return { name: '', rawName: '', args: {}, result: {}, state: 'input-available', status: 'error' as const, isCustom: true };
+function extractToolInfo(toolCall: ToolInvocationLike | unknown) {
+  if (!toolCall || typeof toolCall !== 'object') {
+    return { name: '', rawName: '', args: {}, result: {}, state: 'input-available', status: 'error' as const, isCustom: true };
+  }
 
-  const inv = toolCall.toolInvocation || toolCall.toolCall || toolCall.toolResult || toolCall;
+  const callObj = toolCall as Record<string, unknown>;
+  const rawInv = callObj.toolInvocation || callObj.toolCall || callObj.toolResult || callObj;
+  const inv = (rawInv && typeof rawInv === 'object' ? rawInv : {}) as Record<string, unknown>;
 
   // Prefer explicit toolName/name field
   const rawName =
-    inv?.toolName ||
-    inv?.name ||
-    inv?.function?.name ||
-    toolCall?.toolName ||
-    toolCall?.name ||
-    (typeof inv?.type === 'string' && inv.type.startsWith('tool-') && inv.type !== 'tool-invocation'
+    (typeof inv.toolName === 'string' && inv.toolName) ||
+    (typeof inv.name === 'string' && inv.name) ||
+    (typeof (inv.function as { name?: string } | undefined)?.name === 'string' && (inv.function as { name?: string }).name) ||
+    (typeof callObj.toolName === 'string' && callObj.toolName) ||
+    (typeof callObj.name === 'string' && callObj.name) ||
+    (typeof inv.type === 'string' && inv.type.startsWith('tool-') && inv.type !== 'tool-invocation'
       ? inv.type.replace(/^tool-/, '')
       : '') ||
     '';
@@ -255,19 +264,19 @@ function extractToolInfo(toolCall: any) {
   const { normalized: name, isCustom } = normalizeToolName(rawName);
 
   let args =
-    inv?.args ||
-    inv?.input ||
-    inv?.parameters ||
-    toolCall?.args ||
-    toolCall?.input ||
+    inv.args ||
+    inv.input ||
+    inv.parameters ||
+    callObj.args ||
+    callObj.input ||
     {};
 
   let result =
-    inv?.result ||
-    inv?.output ||
-    inv?.response ||
-    toolCall?.result ||
-    toolCall?.output;
+    inv.result ||
+    inv.output ||
+    inv.response ||
+    callObj.result ||
+    callObj.output;
 
   if (typeof args === 'string') {
     try { args = JSON.parse(args); } catch {}
@@ -276,7 +285,10 @@ function extractToolInfo(toolCall: any) {
     try { result = JSON.parse(result); } catch {}
   }
 
-  const rawState = inv?.state || toolCall?.state || (result && hasMeaningfulResult(result) ? 'output-available' : 'input-available');
+  const rawState =
+    (typeof inv.state === 'string' && inv.state) ||
+    (typeof callObj.state === 'string' && callObj.state) ||
+    (result && hasMeaningfulResult(result) ? 'output-available' : 'input-available');
   const status = extractToolStatus(inv, result, rawState);
 
   return { name, rawName, args, result: result || {}, state: rawState, status, isCustom };
@@ -290,7 +302,7 @@ function extractToolInfo(toolCall: any) {
  * @param onOpenDrawer - Optional callback forwarded to the card for opening the details drawer.
  * @returns ToolCardProps describing how to render this invocation.
  */
-export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): ToolCardProps {
+export function resolveToolDisplay(toolCall: ToolInvocationLike | unknown, onOpenDrawer?: () => void): ToolCardProps {
   const { name, rawName, args, result, status, isCustom } = extractToolInfo(toolCall);
 
   const meta = toolMeta[name];
@@ -298,7 +310,9 @@ export function resolveToolDisplay(toolCall: any, onOpenDrawer?: () => void): To
   // Custom tools have no config label, so surface their raw name instead.
   let label = !isCustom ? cfg.label : (rawName || cfg.label);
 
-  const action = (result as any)?.action;
+  const action = (result && typeof result === 'object' && 'action' in result)
+    ? (result as { action?: string }).action
+    : undefined;
   if (name === 'writeFile' && (action === 'created' || action === 'replaced')) {
     cfg = { ...cfg, badge: action === 'created' ? 'Created' : 'Replaced' };
     label = action === 'created' ? 'File Created' : 'File Replaced';

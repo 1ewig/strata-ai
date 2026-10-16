@@ -20,6 +20,28 @@ export interface DocumentAttachmentInfo {
   size?: number;
 }
 
+/** Structural tool invocation representation from assistant message parts. */
+export interface ToolInvocationLike {
+  id?: string;
+  toolCallId?: string;
+  toolName?: string;
+  name?: string;
+  type?: string;
+  args?: Record<string, unknown> | unknown;
+  input?: Record<string, unknown> | unknown;
+  parameters?: Record<string, unknown> | unknown;
+  result?: Record<string, unknown> | unknown;
+  output?: Record<string, unknown> | unknown;
+  response?: Record<string, unknown> | unknown;
+  state?: string;
+  step?: number;
+  toolInvocation?: ToolInvocationLike | unknown;
+  toolCall?: ToolInvocationLike | unknown;
+  toolResult?: ToolInvocationLike | unknown;
+  function?: { name?: string; arguments?: string };
+  [key: string]: unknown;
+}
+
 /**
  * A flattened, render-ready slice of a message: user text, user images,
  * user documents, markdown text, reasoning/thought content, a tool invocation
@@ -28,7 +50,7 @@ export interface DocumentAttachmentInfo {
 export interface Segment {
   type: 'user-text' | 'user-images' | 'user-documents' | 'text' | 'reasoning' | 'tool' | 'work-group' | string;
   content?: string;
-  part?: any;
+  part?: ToolInvocationLike;
   items?: Segment[];
   images?: ImageAttachmentInfo[];
   documents?: DocumentAttachmentInfo[];

@@ -12,6 +12,7 @@ import {
   emblemPopVariants,
   chipHoverProps,
 } from '@/components/chat/animations';
+import type { ChatMessage, ChatMetadata } from '@/lib/token-usage';
 
 /** Quick-action suggestion chips for the Dribbble-style hero empty state. */
 const SUGGESTION_CHIPS = [
@@ -44,7 +45,7 @@ export const WELCOME_MESSAGES = [
 
 /** Props for the ChatPanel message list orchestrator. */
 interface ChatPanelProps {
-  messages: any[];
+  messages: ChatMessage[];
   isLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
   onOpenDrawer?: () => void;
@@ -186,8 +187,9 @@ export default React.memo(function ChatPanel({
       {/* Messages rendering with compaction dividers */}
       {messages.map((message, idx) => {
         const isLastAssistant = isLoading && message.role === 'assistant' && idx === messages.length - 1;
-        const isCompacted = message.metadata?.isCompactedSummary === true;
-        const isCompactionFailed = message.metadata?.isCompactionFailed === true;
+        const meta = message.metadata as ChatMetadata | undefined;
+        const isCompacted = meta?.isCompactedSummary === true;
+        const isCompactionFailed = meta?.isCompactionFailed === true;
 
         return (
           <React.Fragment key={message.id}>

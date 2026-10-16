@@ -6,7 +6,6 @@ import { copyToClipboard, stripMarkdown } from '@/lib/clipboard';
 
 interface MessageActionsMenuProps {
   textContent: string;
-  isUser?: boolean;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   className?: string;
@@ -14,7 +13,6 @@ interface MessageActionsMenuProps {
 
 export default function MessageActionsMenu({
   textContent,
-  isUser: _isUser = false,
   isOpen: controlledIsOpen,
   onOpenChange,
   className = '',
