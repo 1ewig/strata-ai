@@ -56,13 +56,6 @@ function ToolCallCard({
   const isLoading = status === 'loading';
   const isError = status === 'error';
 
-  const statusText = isLoading ? 'loading' : isError ? 'fail' : 'success';
-  const statusBadgeStyle = isLoading
-    ? 'bg-surface-elevated text-text-muted'
-    : isError
-    ? 'bg-danger-soft text-danger font-medium'
-    : 'bg-primary-soft text-primary font-medium';
-
   return (
     <div className="my-1 w-full text-caption relative">
       <button
@@ -80,11 +73,11 @@ function ToolCallCard({
         <span className="font-semibold text-text-secondary group-hover:text-text-primary truncate">{label}</span>
         {isLoading ? (
           <Loader2 className="w-3.5 h-3.5 text-info animate-spin shrink-0" />
-        ) : (
-          <span className={`text-micro font-mono shrink-0 px-1.5 py-0.5 rounded-lg capitalize ${statusBadgeStyle}`}>
-            {statusText}
+        ) : isError ? (
+          <span className="text-micro font-mono shrink-0 px-1.5 py-0.5 rounded-lg capitalize bg-danger-soft text-danger font-medium">
+            fail
           </span>
-        )}
+        ) : null}
         <div className="flex items-center gap-1 text-text-muted group-hover:text-text-primary transition-colors">
           <ChevronDown
             className={`w-3.5 h-3.5 transition-transform duration-200 ease-out ${
