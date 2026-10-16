@@ -22,7 +22,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  output: 'standalone',
+  // Standalone output requires symlinks which fail with EPERM on Windows without Developer Mode.
+  output: process.platform === 'win32' && !process.env.CI ? undefined : 'standalone',
 };
 
 /** The Next.js configuration consumed by `next build` and `next dev`. */

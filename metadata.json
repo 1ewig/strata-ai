@@ -29,37 +29,6 @@
       }
     },
     {
-      "id": "gemini-3-flash-preview",
-      "contextWindow": 131072,
-      "maxOutput": 65536,
-      "pricing": {
-        "inputPerMillion": 0.50,
-        "outputPerMillion": 3.00,
-        "cachedInputPerMillion": 0.125,
-        "currency": "USD"
-      }
-    },
-    {
-      "id": "gemma-4-31b-it",
-      "contextWindow": 131072,
-      "maxOutput": 65536,
-      "pricing": {
-        "inputPerMillion": 0.14,
-        "outputPerMillion": 0.35,
-        "currency": "USD"
-      }
-    },
-    {
-      "id": "gemma-4-26b-a4b-it",
-      "contextWindow": 131072,
-      "maxOutput": 65536,
-      "pricing": {
-        "inputPerMillion": 0.07,
-        "outputPerMillion": 0.34,
-        "currency": "USD"
-      }
-    },
-    {
       "id": "accounts/fireworks/models/glm-5p3-flash",
       "contextWindow": 131072,
       "maxOutput": 131072,

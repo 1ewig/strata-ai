@@ -161,12 +161,12 @@ describe("calculateTokenMetrics", () => {
       },
       {
         role: "assistant",
-        metadata: { usage: { inputTokens: 500, outputTokens: 100, totalTokens: 600 }, modelId: "gemini-3-flash-preview" },
+        metadata: { usage: { inputTokens: 500, outputTokens: 100, totalTokens: 600 }, modelId: "gemini-3.1-flash-lite" },
       },
     ];
     const metrics = calculateTokenMetrics(messages);
 
-    expect(metrics!.modelsUsed).toEqual(["Gemini 3.5 Flash Lite", "Gemini 3 Flash Preview"]);
+    expect(metrics!.modelsUsed).toEqual(["Gemini 3.5 Flash Lite", "Gemini 3.1 Flash Lite"]);
     expect(metrics!.modelBreakdowns).toHaveLength(2);
     expect(metrics!.modelBreakdowns[0].modelId).toBe("gemini-3.5-flash-lite");
     expect(metrics!.modelBreakdowns[0].modelLabel).toBe("Gemini 3.5 Flash Lite");

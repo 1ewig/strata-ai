@@ -157,7 +157,7 @@ describe("POST /api/agent", () => {
     const res = await post({
       messages: [{ role: "user", content: "hi" }],
       files: [{ id: "f1", name: "a.md", content: "x", createdAt: "2024-01-01T00:00:00.000Z", updatedAt: "2024-01-01T00:00:00.000Z" }],
-      model: "gemma-4-31b-it",
+      model: "gemini-3.1-flash-lite",
       thinkingLevel: "high",
       maxSteps: 99,
     });
@@ -165,7 +165,7 @@ describe("POST /api/agent", () => {
 
     const args = runAgentResponseMock.mock.calls[0][0];
     expect(args.maxSteps).toBe(30);
-    expect(args.modelId).toBe("gemma-4-31b-it");
+    expect(args.modelId).toBe("gemini-3.1-flash-lite");
     expect(args.thinkingLevel).toBe("high");
     expect(args.remaining5h).toBe(3);
     expect(args.remainingWeek).toBe(41);

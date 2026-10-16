@@ -63,21 +63,21 @@ describe("getValidThinkingLevelForModel", () => {
   });
 
   it("returns an empty string for models without a thinking config", () => {
-    expect(getValidThinkingLevelForModel("gemma-4-31b-it", "high")).toBe("");
+    expect(getValidThinkingLevelForModel("unconfigured-model", "high")).toBe("");
     expect(getValidThinkingLevelForModel("unknown-model", "high")).toBe("");
   });
 });
 
 describe("getStoredThinkingLevel", () => {
   it("returns the model default when no window/localStorage is available", () => {
-    expect(getStoredThinkingLevel("gemini-3-flash-preview")).toBe("high");
-    expect(getStoredThinkingLevel("gemma-4-31b-it")).toBe("");
+    expect(getStoredThinkingLevel("gemini-3.5-flash-lite")).toBe("low");
+    expect(getStoredThinkingLevel("unconfigured-model")).toBe("");
   });
 
   it("prefers a stored thinking level when localStorage is available", () => {
     mockBrowserStorage({ selectedThinkingLevel: "medium" });
     try {
-      expect(getStoredThinkingLevel("gemini-3-flash-preview")).toBe("medium");
+      expect(getStoredThinkingLevel("gemini-3.5-flash-lite")).toBe("medium");
     } finally {
       restoreBrowserGlobals();
     }
@@ -111,20 +111,20 @@ describe("getInitialModel", () => {
   });
 
   it("prefers the NEXT_PUBLIC_GEMINI_MODEL env var when set", () => {
-    process.env.NEXT_PUBLIC_GEMINI_MODEL = "gemini-3-flash-preview";
-    expect(getInitialModel()).toBe("gemini-3-flash-preview");
+    process.env.NEXT_PUBLIC_GEMINI_MODEL = "gemini-3.1-flash-lite";
+    expect(getInitialModel()).toBe("gemini-3.1-flash-lite");
   });
 
   it("prefers a stored valid model id over the env var", () => {
-    mockBrowserStorage({ selectedModel: "gemma-4-31b-it" });
-    process.env.NEXT_PUBLIC_GEMINI_MODEL = "gemini-3-flash-preview";
-    expect(getInitialModel()).toBe("gemma-4-31b-it");
+    mockBrowserStorage({ selectedModel: "accounts/fireworks/models/glm-5p3-flash" });
+    process.env.NEXT_PUBLIC_GEMINI_MODEL = "gemini-3.1-flash-lite";
+    expect(getInitialModel()).toBe("accounts/fireworks/models/glm-5p3-flash");
   });
 
   it("ignores a stored model id that is not in the catalog", () => {
     mockBrowserStorage({ selectedModel: "not-a-real-model" });
-    process.env.NEXT_PUBLIC_GEMINI_MODEL = "gemini-3-flash-preview";
-    expect(getInitialModel()).toBe("gemini-3-flash-preview");
+    process.env.NEXT_PUBLIC_GEMINI_MODEL = "gemini-3.1-flash-lite";
+    expect(getInitialModel()).toBe("gemini-3.1-flash-lite");
   });
 });
 
@@ -132,9 +132,6 @@ describe("getModelSupportsVision", () => {
   it("flags Google-hosted models as vision-capable", () => {
     expect(getModelSupportsVision("gemini-3.5-flash-lite")).toBe(true);
     expect(getModelSupportsVision("gemini-3.1-flash-lite")).toBe(true);
-    expect(getModelSupportsVision("gemini-3-flash-preview")).toBe(true);
-    expect(getModelSupportsVision("gemma-4-31b-it")).toBe(true);
-    expect(getModelSupportsVision("gemma-4-26b-a4b-it")).toBe(true);
   });
 
   it("flags the Fireworks GLM model as vision-capable", () => {

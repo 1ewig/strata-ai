@@ -54,46 +54,6 @@ export const MODELS: ModelOption[] = [
     },
   },
   {
-    id: 'gemini-3-flash-preview',
-    label: 'Gemini 3 Flash Preview',
-    family: 'Gemini 3',
-    supportsVision: true,
-    contextWindow: 131072,
-    maxOutput: 65536,
-    pricing: {
-      inputPerMillion: 0.50,
-      outputPerMillion: 3.00,
-      cachedInputPerMillion: 0.125,
-      currency: 'USD',
-    },
-  },
-  {
-    id: 'gemma-4-31b-it',
-    label: 'Gemma 4 31B IT',
-    family: 'Gemma 4',
-    supportsVision: true,
-    contextWindow: 131072,
-    maxOutput: 65536,
-    pricing: {
-      inputPerMillion: 0.14,
-      outputPerMillion: 0.35,
-      currency: 'USD',
-    },
-  },
-  {
-    id: 'gemma-4-26b-a4b-it',
-    label: 'Gemma 4 26B A4B IT',
-    family: 'Gemma 4',
-    supportsVision: true,
-    contextWindow: 131072,
-    maxOutput: 65536,
-    pricing: {
-      inputPerMillion: 0.07,
-      outputPerMillion: 0.34,
-      currency: 'USD',
-    },
-  },
-  {
     id: 'accounts/fireworks/models/glm-5p3-flash',
     label: 'GLM 5.3 Flash',
     family: 'GLM',
@@ -127,9 +87,6 @@ export function getModelPricing(modelId?: string): ModelPricing {
 export const MODEL_DESCRIPTIONS: Record<string, string> = {
   'gemini-3.5-flash-lite': 'Ultra-fast lightweight variant',
   'gemini-3.1-flash-lite': 'Fastest responses, simple tasks',
-  'gemini-3-flash-preview': 'Preview of latest Gemini 3',
-  'gemma-4-31b-it': 'Open-weight, fully private',
-  'gemma-4-26b-a4b-it': 'Efficient open model',
   'accounts/fireworks/models/glm-5p3-flash': 'Multimodal open-weight reasoning model',
 };
 
@@ -176,7 +133,6 @@ export interface ModelThinkingConfig {
 export const MODEL_THINKING_LEVELS: Record<string, ModelThinkingConfig> = {
   'gemini-3.5-flash-lite': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'low' },
   'gemini-3.1-flash-lite': { levels: ['minimal', 'high'], defaultLevel: 'minimal' },
-  'gemini-3-flash-preview': { levels: ['minimal', 'low', 'medium', 'high'], defaultLevel: 'high' },
   // GLM 5.3 Flash supports reasoning effort; the app exposes low/medium/high.
   'accounts/fireworks/models/glm-5p3-flash': { levels: ['low', 'medium', 'high'], defaultLevel: 'high' },
 };
