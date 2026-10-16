@@ -87,7 +87,7 @@ function ChatBubble({ message, isStreaming, onOpenDrawer }: ChatBubbleProps) {
   return (
     <div
       ref={bubbleContainerRef}
-      className={`group relative flex items-start gap-3.5 ${isUser ? 'flex-row-reverse animate-slide-up' : 'fade-in'
+      className={`relative flex items-start gap-3.5 ${isUser ? 'flex-row-reverse animate-slide-up' : 'fade-in'
         } ${openMenuKey ? 'z-30' : ''}`}
     >
       {/* Avatar */}

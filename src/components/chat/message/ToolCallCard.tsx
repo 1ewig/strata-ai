@@ -67,7 +67,7 @@ function ToolCallCard({
     <div className="my-1 w-full text-caption relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left font-mono text-caption cursor-pointer group"
+        className="w-fit flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left font-mono text-caption cursor-pointer group"
       >
         {/* Tool icon stays visible on the left at all times */}
         {isError ? (
