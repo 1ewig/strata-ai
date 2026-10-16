@@ -63,10 +63,11 @@ function ComposerToolbar({
           type="button"
           onClick={onAttachClick}
           disabled={isAttachDisabled}
-          className={`group p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border shadow-button ${isAttachDisabled
-              ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none'
-              : 'bg-surface-raised/80 hover:bg-surface-hover text-text-primary hover:border-edge-hover active:scale-95 cursor-pointer border-edge-raised'
-            }`}
+          className={`p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center gap-1.5 border ${
+            isAttachDisabled
+              ? 'bg-surface-elevated text-text-muted cursor-not-allowed border-edge-raised shadow-none opacity-40'
+              : 'group bg-surface-raised/80 hover:bg-surface-hover text-text-primary hover:border-edge-hover active:scale-95 cursor-pointer border-edge-raised shadow-button'
+          }`}
           title={
             isCompacting
               ? 'Context compaction in progress'
@@ -80,10 +81,24 @@ function ComposerToolbar({
           }
           aria-label="Attach files"
         >
-          <Paperclip className="w-4 h-4 text-text-muted group-hover:text-primary transition-transform duration-150 group-hover:scale-110" />
-          <span className="hidden sm:inline text-caption font-semibold text-text-primary">Attach</span>
+          <Paperclip
+            className={`w-4 h-4 text-text-muted transition-transform duration-150 ${
+              isAttachDisabled ? '' : 'group-hover:text-primary group-hover:scale-110'
+            }`}
+          />
+          <span
+            className={`hidden sm:inline text-caption font-semibold ${
+              isAttachDisabled ? 'text-text-muted' : 'text-text-primary'
+            }`}
+          >
+            Attach
+          </span>
           {attachedCount > 0 && (
-            <span className="text-caption font-bold text-primary">
+            <span
+              className={`text-caption font-bold ${
+                isAttachDisabled ? 'text-text-muted' : 'text-primary'
+              }`}
+            >
               {attachedCount}/{maxAttachments}
             </span>
           )}
@@ -99,6 +114,7 @@ function ComposerToolbar({
             dropDirection="up"
             align="left"
             id="chat-model-selector-btn"
+            disabled={isLoading || isCompacting}
           />
         )}
       </div>

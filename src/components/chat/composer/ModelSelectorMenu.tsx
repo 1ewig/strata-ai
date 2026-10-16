@@ -19,6 +19,7 @@ interface ModelSelectorMenuProps {
   align?: 'left' | 'right';
   id?: string;
   className?: string;
+  disabled?: boolean;
 }
 
 export default function ModelSelectorMenu({
@@ -30,6 +31,7 @@ export default function ModelSelectorMenu({
   align = 'right',
   id,
   className = '',
+  disabled = false,
 }: ModelSelectorMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<'main' | 'effort' | 'more-models'>('main');
@@ -128,44 +130,70 @@ export default function ModelSelectorMenu({
       <button
         type="button"
         id={id || 'chat-model-selector-btn'}
+        disabled={disabled}
         aria-expanded={isOpen}
         aria-label={`Select model (current: ${currentModel?.label || 'Model'})`}
-        title={`Model: ${currentModel?.label || 'Model'}${effortLabel ? ` (${effortLabel} effort)` : ''}`}
+        title={
+          disabled
+            ? 'Model selection unavailable while responding'
+            : `Model: ${currentModel?.label || 'Model'}${effortLabel ? ` (${effortLabel} effort)` : ''}`
+        }
         onClick={() => {
+          if (disabled) return;
           if (isOpen) {
             closeMenu();
           } else {
             setIsOpen(true);
           }
         }}
-        className={`group p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center justify-center sm:justify-start gap-1.5 border shadow-button cursor-pointer select-none ${
-          isOpen
-            ? 'bg-surface-hover border-edge-hover text-text-bright ring-2 ring-primary/20'
-            : 'bg-surface-raised/80 hover:bg-surface-hover text-text-primary hover:border-edge-hover active:scale-95 border-edge-raised'
+        className={`p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center justify-center sm:justify-start gap-1.5 border select-none ${
+          disabled
+            ? 'bg-surface-elevated text-text-muted border-edge-raised shadow-none opacity-40 cursor-not-allowed'
+            : isOpen
+              ? 'group bg-surface-hover border-edge-hover text-text-bright ring-2 ring-primary/20 shadow-button cursor-pointer'
+              : 'group bg-surface-raised/80 hover:bg-surface-hover text-text-primary hover:border-edge-hover active:scale-95 border-edge-raised shadow-button cursor-pointer'
         }`}
       >
         {/* Mobile View: Gear Icon */}
         <div className="sm:hidden flex items-center justify-center">
           <Settings
             className={`w-4 h-4 transition-transform duration-200 ${
-              isOpen ? 'rotate-45 text-primary' : 'text-text-muted group-hover:text-primary'
+              disabled
+                ? 'text-text-muted'
+                : isOpen
+                  ? 'rotate-45 text-primary'
+                  : 'text-text-muted group-hover:text-primary'
             }`}
           />
         </div>
 
         {/* Desktop/Tablet View: Model Name + Effort Badge + Chevron */}
         <div className="hidden sm:flex items-center gap-1.5">
-          <span className="text-caption font-semibold text-text-primary truncate max-w-[120px] md:max-w-[180px] lg:max-w-[240px]">
+          <span
+            className={`text-caption font-semibold truncate max-w-[120px] md:max-w-[180px] lg:max-w-[240px] ${
+              disabled ? 'text-text-muted' : 'text-text-primary'
+            }`}
+          >
             {currentModel?.label || 'Model'}
           </span>
           {effortLabel && (
-            <span className="text-micro px-1.5 py-0.5 rounded-md bg-surface-base border border-edge-default text-text-muted font-medium capitalize shrink-0">
+            <span
+              className={`text-micro px-1.5 py-0.5 rounded-md border text-text-muted font-medium capitalize shrink-0 ${
+                disabled
+                  ? 'bg-surface-elevated border-edge-raised'
+                  : 'bg-surface-base border-edge-default'
+              }`}
+            >
               {effortLabel}
             </span>
           )}
           <ChevronDown
             className={`w-3.5 h-3.5 text-text-muted shrink-0 transition-transform duration-200 ${
-              isOpen ? 'rotate-180 text-text-primary' : 'group-hover:text-text-primary'
+              disabled
+                ? ''
+                : isOpen
+                  ? 'rotate-180 text-text-primary'
+                  : 'group-hover:text-text-primary'
             }`}
           />
         </div>
