@@ -43,17 +43,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     currentConv.userId !== userId
   );
 
-  // Conversations for the signed-in user; guards are below so the sidebar
-  // only renders after the session has resolved.
-  const {
-    conversations,
-    conversationCount,
-    isMaxConversationsReached,
-    handleNewChat,
-    handleDeleteConversation,
-    handleRenameConversation,
-    handleTogglePinConversation,
-  } = useConversations(userId, chatId);
   const { isPending: isSigningOut, handleSignOut } = useSignOut();
   const { isDark, toggle: toggleTheme } = useTheme();
   // Anchor div passed to ChatPanel for the message list scroll position.
@@ -63,6 +52,12 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem('strata_sidebar_open') === 'true';
+    }
+    return false;
+  });
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('strata_sidebar_collapsed') === 'true';
     }
     return false;
   });
@@ -123,6 +118,18 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     handleThinkingLevelChange,
   } = useChatSession(chatId);
 
+  const isNewChat = displayMessages.length === 0 && !isLoading;
+
+  const {
+    conversations,
+    conversationCount,
+    isMaxConversationsReached,
+    handleNewChat,
+    handleDeleteConversation,
+    handleRenameConversation,
+    handleTogglePinConversation,
+  } = useConversations(userId, chatId, isNewChat);
+
   const handleOpenDrawer = React.useCallback(() => setIsWorkspaceDrawerOpen(true), [setIsWorkspaceDrawerOpen]);
 
   const handleCloseDrawer = React.useCallback(() => setIsWorkspaceDrawerOpen(false), [setIsWorkspaceDrawerOpen]);
@@ -139,6 +146,20 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
       sessionStorage.removeItem('strata_sidebar_open');
     }
     setIsSidebarOpen(false);
+  }, []);
+
+  const handleCollapseSidebar = React.useCallback(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('strata_sidebar_collapsed', 'true');
+    }
+    setIsSidebarCollapsed(true);
+  }, []);
+
+  const handleExpandSidebar = React.useCallback(() => {
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('strata_sidebar_collapsed');
+    }
+    setIsSidebarCollapsed(false);
   }, []);
 
   const handleOpenFile = React.useCallback(
@@ -187,18 +208,19 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     />
   );
 
-  const isNewChat = displayMessages.length === 0 && !isLoading;
-
   return (
     <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={handleCloseSidebar}
+        isCollapsed={isSidebarCollapsed}
+        onCollapse={handleCollapseSidebar}
         conversations={conversations}
         conversationCount={conversationCount}
         isMaxConversationsReached={isMaxConversationsReached}
         activeConversationId={chatId}
         onNewChat={handleNewChat}
+        isCurrentChatEmpty={isNewChat}
         onDelete={handleDeleteConversation}
         onRename={handleRenameConversation}
         onTogglePin={handleTogglePinConversation}
@@ -227,7 +249,10 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
               onOpenFile={handleOpenFile}
               onOpenDrawer={handleOpenDrawer}
               onOpenSidebar={handleOpenSidebar}
+              isSidebarCollapsed={isSidebarCollapsed}
+              onExpandSidebar={handleExpandSidebar}
               onNewChat={handleNewChat}
+              isNewChat={isNewChat}
             />
           );
         })()}

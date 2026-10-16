@@ -24,8 +24,14 @@ export interface SidebarProps {
   isOpen?: boolean;
   /** Callback invoked when the drawer should close. */
   onClose?: () => void;
+  /** Whether the desktop sidebar is collapsed (hidden). */
+  isCollapsed?: boolean;
+  /** Callback invoked when the desktop sidebar should collapse. */
+  onCollapse?: () => void;
   /** Creates a new conversation and navigates to it. */
   onNewChat: () => void;
+  /** Whether the active conversation is already an unstarted/new chat. */
+  isCurrentChatEmpty?: boolean;
   /** Deletes a conversation, navigating away if it was the open one. */
   onDelete: (id: string) => Promise<void>;
   /** Renames a conversation. */
@@ -62,7 +68,10 @@ function Sidebar({
   activeConversationId,
   isOpen = false,
   onClose,
+  isCollapsed = false,
+  onCollapse,
   onNewChat,
+  isCurrentChatEmpty = false,
   onDelete,
   onRename,
   onTogglePin,
@@ -113,13 +122,14 @@ function Sidebar({
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-64 bg-surface-raised border-r border-edge-raised flex flex-col h-dvh shrink-0 select-none shadow-card-lg transition-transform duration-300 md:static md:translate-x-0 md:shadow-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        } ${isCollapsed ? 'md:hidden' : ''}`}
       >
-        <SidebarHeader onClose={onClose} />
+        <SidebarHeader onClose={onClose} onCollapse={onCollapse} />
 
         <NewChatButton
           onNewChat={handleNewChat}
           isMaxConversationsReached={isMaxConversationsReached}
+          isCurrentChatEmpty={isCurrentChatEmpty}
         />
 
         <ConversationList

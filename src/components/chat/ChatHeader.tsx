@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { Menu, Plus, Folder } from 'lucide-react';
+import { Menu, Plus, Folder, PanelLeftOpen } from 'lucide-react';
 import { motion } from 'motion/react';
 import { WorkspaceFile } from '@/lib/schemas';
 import { MODELS } from '@/lib/models';
@@ -24,7 +24,13 @@ interface ChatHeaderProps {
   onOpenFile?: (fileId: string) => void;
   onOpenDrawer?: () => void;
   onOpenSidebar?: () => void;
+  /** Whether the desktop sidebar is collapsed, showing the expand button. */
+  isSidebarCollapsed?: boolean;
+  /** Callback invoked to expand the collapsed desktop sidebar. */
+  onExpandSidebar?: () => void;
   onNewChat: () => void;
+  /** Whether the active conversation is already an unstarted/new chat. */
+  isNewChat?: boolean;
 }
 
 /**
@@ -39,7 +45,10 @@ export default React.memo(function ChatHeader({
   tokenUsage,
   onOpenDrawer,
   onOpenSidebar,
+  isSidebarCollapsed,
+  onExpandSidebar,
   onNewChat,
+  isNewChat = false,
 }: ChatHeaderProps) {
   // Context window popover state (desktop click/hover & mobile tap)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
@@ -75,6 +84,16 @@ export default React.memo(function ChatHeader({
             aria-label="Open sidebar"
           >
             <Menu className="w-4 h-4" />
+          </button>
+        )}
+
+        {onExpandSidebar && (
+          <button
+            onClick={onExpandSidebar}
+            className={`${isSidebarCollapsed ? 'md:flex' : ''} hidden p-2 -ml-1 text-text-muted hover:text-text-primary hover:bg-surface-hover/60 active:scale-90 rounded-lg transition-all duration-150 cursor-pointer shrink-0`}
+            aria-label="Expand sidebar"
+          >
+            <PanelLeftOpen className="w-4 h-4" />
           </button>
         )}
 
@@ -118,18 +137,27 @@ export default React.memo(function ChatHeader({
 
       {/* Right Side Buttons */}
       <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
-        {/* Mobile New Chat Button (Creates a fresh conversation) */}
+        {/* Mobile New Chat Button */}
         <motion.button
           type="button"
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.92 }}
+          disabled={isNewChat}
+          whileHover={isNewChat ? undefined : { scale: 1.05 }}
+          whileTap={isNewChat ? undefined : { scale: 0.92 }}
           transition={{ type: 'spring', stiffness: 450, damping: 25 }}
           onClick={onNewChat}
-          className="group md:hidden flex items-center justify-center p-2 rounded-xl border border-edge-raised hover:border-edge-hover bg-surface-raised/80 hover:bg-surface-hover text-text-primary shadow-button transition-all duration-150 cursor-pointer shrink-0 select-none"
-          title="New chat"
-          aria-label="New chat"
+          className={`group md:hidden flex items-center justify-center p-2 rounded-xl border transition-all duration-150 shrink-0 select-none ${
+            isNewChat
+              ? 'border-edge-raised bg-surface-raised/40 text-text-muted opacity-50 cursor-default shadow-none'
+              : 'border-edge-raised hover:border-edge-hover bg-surface-raised/80 hover:bg-surface-hover text-text-primary shadow-button cursor-pointer'
+          }`}
+          title={isNewChat ? 'Already in a new chat' : 'New chat'}
+          aria-label={isNewChat ? 'Already in a new chat' : 'New chat'}
         >
-          <Plus className="w-4 h-4 text-text-muted group-hover:text-text-primary transition-transform duration-200 group-hover:rotate-90" />
+          <Plus
+            className={`w-4 h-4 text-text-muted transition-transform duration-200 ${
+              !isNewChat ? 'group-hover:text-text-primary group-hover:rotate-90' : ''
+            }`}
+          />
         </motion.button>
 
         {/* Workspace Files Drawer Button (Visible on all viewports) */}

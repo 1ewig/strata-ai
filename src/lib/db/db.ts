@@ -305,3 +305,75 @@ export async function getChatMessages(chatId: string): Promise<UIMessage[]> {
 export async function clearChatMessages(chatId: string): Promise<void> {
   await db.messages.where('chatId').equals(chatId).delete();
 }
+
+/**
+ * Checks whether a conversation has zero messages and zero workspace files.
+ *
+ * @param chatId - The conversation id to inspect.
+ * @returns True if the conversation does not exist or has no messages and no files.
+ */
+export async function isConversationEmpty(chatId: string): Promise<boolean> {
+  const conv = await db.conversations.get(chatId);
+  if (!conv) return true;
+  if (conv.files && conv.files.length > 0) return false;
+  const count = await db.messages.where('chatId').equals(chatId).count();
+  return count === 0;
+}
+
+/**
+ * Finds an existing empty/unstarted conversation belonging to the user.
+ *
+ * @param userId - The user id to query.
+ * @returns An existing empty Conversation row, or undefined if none exists.
+ */
+export async function findExistingEmptyConversation(userId: string | undefined): Promise<Conversation | undefined> {
+  if (!userId) return undefined;
+  const list = await db.conversations
+    .filter((c) => !c.userId || c.userId === userId)
+    .toArray();
+
+  // Sort descending by updatedAt so we favor the most recently visited empty chat
+  list.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+  for (const conv of list) {
+    if (conv.files && conv.files.length > 0) continue;
+    const msgCount = await db.messages.where('chatId').equals(conv.id).count();
+    if (msgCount === 0) {
+      return conv;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Prunes duplicate or abandoned empty conversations for a user, optionally
+ * sparing an active/current conversation id.
+ *
+ * @param userId - The owner user id.
+ * @param keepChatId - Conversation id to preserve even if currently empty.
+ */
+export async function pruneEmptyConversations(userId: string | undefined, keepChatId?: string): Promise<void> {
+  if (!userId) return;
+  const list = await db.conversations
+    .filter((c) => !c.userId || c.userId === userId)
+    .toArray();
+
+  const emptyIdsToDelete: string[] = [];
+  for (const conv of list) {
+    if (conv.id === keepChatId) continue;
+    if (conv.files && conv.files.length > 0) continue;
+    const count = await db.messages.where('chatId').equals(conv.id).count();
+    if (count === 0) {
+      emptyIdsToDelete.push(conv.id);
+    }
+  }
+
+  if (emptyIdsToDelete.length > 0) {
+    await db.transaction('rw', [db.conversations, db.messages], async () => {
+      for (const id of emptyIdsToDelete) {
+        await db.conversations.delete(id);
+        await db.messages.where('chatId').equals(id).delete();
+      }
+    });
+  }
+}

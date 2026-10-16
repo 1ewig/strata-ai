@@ -1,9 +1,18 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, deleteConversation, updateConversationTitle, toggleConversationPin, type Conversation } from '@/lib/db/db';
+import {
+  db,
+  deleteConversation,
+  updateConversationTitle,
+  toggleConversationPin,
+  isConversationEmpty,
+  findExistingEmptyConversation,
+  pruneEmptyConversations,
+  type Conversation,
+} from '@/lib/db/db';
 import { generateId } from '@/lib/id';
 import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 
@@ -37,11 +46,13 @@ function getUserConversations(userId: string | undefined): Promise<Conversation[
  * @param userId - The signed-in user's id (undefined while the session loads).
  * @param currentConversationId - The conversation currently open, used to
  *   decide where to navigate after a deletion.
+ * @param isCurrentChatEmpty - True when the active view has zero messages.
  * @returns The conversation list, cap state, and create/delete/rename/pin handlers.
  */
 export function useConversations(
   userId: string | undefined,
   currentConversationId: string | undefined,
+  isCurrentChatEmpty: boolean = false,
 ) {
   const router = useRouter();
 
@@ -50,15 +61,44 @@ export function useConversations(
   const conversationCount = conversations?.length || 0;
   // Enforce the per-user conversation cap on the new chat action.
   const isMaxConversationsReached = conversationCount >= MAX_CONVERSATIONS_PER_USER;
+  const isNewChatDisabled = isMaxConversationsReached || isCurrentChatEmpty;
+
+  // Prune any abandoned duplicate empty chats in the background, keeping the current conversation
+  useEffect(() => {
+    if (userId) {
+      pruneEmptyConversations(userId, currentConversationId).catch(() => {});
+    }
+  }, [userId, currentConversationId]);
 
   /**
-   * Creates a fresh conversation and navigates to it.
+   * Navigates to an existing empty conversation if one already exists,
+   * or creates a fresh one. If the active chat is already new, this is a no-op.
    */
-  const handleNewChat = useCallback(() => {
+  const handleNewChat = useCallback(async () => {
     if (isMaxConversationsReached) return;
+
+    // 1. If the current view is already a new/empty chat, do nothing
+    if (isCurrentChatEmpty) return;
+
+    // 2. If the current conversation in DB has 0 messages and 0 files, keep the user here
+    if (currentConversationId) {
+      const isCurrentEmpty = await isConversationEmpty(currentConversationId);
+      if (isCurrentEmpty) return;
+    }
+
+    // 3. If an existing empty conversation already exists in DB for this user, reuse it
+    const existingEmpty = await findExistingEmptyConversation(userId);
+    if (existingEmpty) {
+      if (existingEmpty.id !== currentConversationId) {
+        router.push(`/chat-id/${existingEmpty.id}`);
+      }
+      return;
+    }
+
+    // 4. Otherwise, generate a fresh conversation ID and navigate
     const newId = generateId();
     router.push(`/chat-id/${newId}`);
-  }, [isMaxConversationsReached, router]);
+  }, [isMaxConversationsReached, isCurrentChatEmpty, currentConversationId, userId, router]);
 
   /**
    * Deletes a conversation, then navigates away when the open chat is the one
@@ -107,6 +147,8 @@ export function useConversations(
     conversations,
     conversationCount,
     isMaxConversationsReached,
+    isCurrentChatEmpty,
+    isNewChatDisabled,
     handleNewChat,
     handleDeleteConversation,
     handleRenameConversation,
