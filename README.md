@@ -22,7 +22,7 @@ All your conversations and files stay completely private, persisting locally ins
 ## The Strata Experience
 
 ### 1. Flexible Model Selection & Controllable Thinking
-Switch seamlessly between flagship frontier models like **Google Gemini 3.5 Flash** and open-weight powerhouses like **GLM 5.3 Flash**. Dial reasoning effort up or down—from rapid responses for quick iterations to deep, multi-step deliberation on intricate architectural challenges.
+Switch seamlessly between flagship frontier models like **Gemini 3.5 Flash Lite** and open-weight powerhouses like **GLM 5.3 Flash**. Dial reasoning effort up or down—from rapid responses for quick iterations to deep, multi-step deliberation on intricate architectural challenges.
 
 ![Model and Thinking Effort Selector](public/images/model-selector-menu.webp)
 
@@ -37,7 +37,7 @@ When tasked with complex objectives, Strata AI does not generate guesswork. It r
 ![Autonomous Reasoning and Tool Pipeline](public/images/agent-reasoning-and-tools.webp)
 
 ### 4. Living Workspace Drawer & Code Viewer
-Files drafted by the agent live on a dedicated slide-over canvas drawer. With syntax highlighting across 24+ languages, line numbers, and live character counting, you can inspect, download, or edit files side-by-side with your conversation.
+Files drafted by the agent live on a dedicated slide-over canvas drawer. With syntax highlighting across 25 languages, line numbers, and live character counting, you can inspect, download, or edit files side-by-side with your conversation.
 
 ![Workspace Drawer Code Viewer](public/images/workspace-code-editor.webp)
 

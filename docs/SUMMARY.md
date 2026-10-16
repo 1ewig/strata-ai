@@ -186,7 +186,8 @@ src/
 │   ├── chat-id/[id]/     # Chat workspace; use(params); owns <StickToBottom>
 │   └── api/              # agent, agent/compact, user/rate-limit, auth/[...all]
 ├── components/           # chat/ (composer, message, tools), workspace/, sidebar/, auth/, landing/, ui/
-├── contexts/             # RateLimitContext (global quota state)
+├── contexts/             # RateLimitContext (global quota), ChatUIContext (sidebar shell),
+│                         # ComposerContext (imperative composer handle)
 ├── hooks/                # useChatSession (orchestrator), useChatTransport, useCompaction,
 │                         # useWorkspaceFiles, useConversations, useModelSettings, useTheme, ...
 └── lib/
@@ -217,7 +218,11 @@ __tests__/                # 18 suites, run with bun test --isolate
 
 **Client component boundary:** `src/app/chat-id/[id]/page.tsx` is the only place that composes chat
 state; it calls `useChatSession(chatId)` and passes everything down as props. Dexie queries, auth
-calls, and router navigation live in `src/hooks/*`, never inside `components/*`.
+calls, and router navigation live in `src/hooks/*`, never inside `components/*`. Two ephemeral
+UI concerns that would otherwise be drilled live in page-mounted scoped contexts instead:
+`ChatUIContext` (mobile sidebar drawer + desktop collapse, sessionStorage-persisted) and
+`ComposerContext` (an imperative ref so empty-state suggestion chips inject a prompt with no parent
+re-render). Conversation and workspace data still flow as props from `useChatSession` + Dexie.
 
 ## 9. Limits & Constraints
 
@@ -262,7 +267,9 @@ concise" warning mode at the same threshold.
 6. **Tool Card Decoupling.** Adding a tool means registering config + summary in
    `components/chat/tools/resolver.tsx`. Never edit `ToolCallCard.tsx`.
 7. **Presentational Purity.** Components render props. Queries, auth, and routing live in
-   `src/hooks/*` and page-level composition.
+   `src/hooks/*` and page-level composition. Ephemeral cross-component UI state uses scoped
+   contexts in `src/contexts/` (sidebar shell, composer handle) rather than prop drilling or a
+   state library; global quota state is the only app-wide context.
 8. **Auto-Scroll Exclusivity.** Only `<StickToBottom>` in `src/app/chat-id/[id]/page.tsx` scrolls
    the chat. No manual scroll loops anywhere.
 9. **Async Next.js 16 APIs.** Unwrap dynamic route `params` with `use(params)` in client
