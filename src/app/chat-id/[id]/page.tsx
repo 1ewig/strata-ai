@@ -1,14 +1,9 @@
 'use client';
 
-import React, { use, useRef, useState } from 'react';
-import { StickToBottom } from 'use-stick-to-bottom';
-import { ArrowDown } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import React, { use } from 'react';
 import Sidebar from '@/components/Sidebar';
 import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
 import ChatPanel from '@/components/chat/ChatPanel';
-import ChatInput from '@/components/chat/ChatInput';
-import ChatHeader from '@/components/chat/ChatHeader';
 import { useRouter } from 'next/navigation';
 import { useSession } from '@/lib/auth-client';
 import { useLiveQuery } from 'dexie-react-hooks';
@@ -19,12 +14,10 @@ import { useSignOut } from '@/hooks/useSignOut';
 import { useTheme } from '@/hooks/useTheme';
 import { ChatUIProvider } from '@/contexts/ChatUIContext';
 import { ComposerProvider } from '@/contexts/ComposerContext';
-import { pillFloatVariants } from '@/components/chat/animations';
 
 /**
- * Main chat workspace for a conversation: chat panel, input, header, sidebar,
- * and the file workspace drawer. Auto-scrolling is delegated to
- * <StickToBottom>, which also renders the scroll-to-bottom affordance.
+ * Main chat workspace orchestrator: composes the three-column desktop layout
+ * (Sidebar, ChatPanel, WorkspaceDrawer) and synchronizes user session & Dexie data.
  *
  * @param params - Route params containing the conversation id
  * @returns The chat workspace UI
@@ -47,28 +40,6 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
 
   const { isPending: isSigningOut, handleSignOut } = useSignOut();
   const { isDark, toggle: toggleTheme } = useTheme();
-  // Anchor div passed to ChatPanel for the message list scroll position.
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const composerContainerRef = useRef<HTMLDivElement>(null);
-  const [composerHeight, setComposerHeight] = useState(176);
-
-  // Dynamically sync bottom padding of the chat content with floating composer height changes
-  React.useEffect(() => {
-    const el = composerContainerRef.current;
-    if (!el) return;
-
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const height = entry.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight;
-        if (height > 0) {
-          setComposerHeight(Math.ceil(height));
-        }
-      }
-    });
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   // Redirect unauthenticated visitors to auth without leaking the private chat ID.
   React.useEffect(() => {
@@ -144,22 +115,9 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
     );
   }
 
-  const chatInputNode = (
-    <ChatInput
-      chatId={chatId}
-      onSendMessage={handleSendMessage}
-      onTriggerCompaction={handleTriggerCompaction}
-      onStop={handleStop}
-      isLoading={isLoading}
-      isCompacting={isCompacting}
-      model={model}
-      thinkingLevel={thinkingLevel}
-      onModelSelect={handleModelSelect}
-      onThinkingLevelChange={handleThinkingLevelChange}
-      rateLimitData={rateLimitData}
-      isContextWindowExhausted={isContextWindowExhausted}
-    />
-  );
+  const activeConversation = conversations?.find((c) => c.id === chatId);
+  const headerTitle =
+    displayMessages.length > 0 ? activeConversation?.title || 'Chat Workspace' : 'Chat Workspace';
 
   return (
     <ChatUIProvider>
@@ -183,83 +141,29 @@ export default function ChatIdPage({ params }: { params: Promise<{ id: string }>
             rateLimitData={rateLimitData}
           />
 
-          <div className="flex-1 flex flex-col h-dvh overflow-hidden min-w-0 relative">
-            {(() => {
-              const activeConversation = conversations?.find(c => c.id === chatId);
-              const headerTitle = displayMessages.length > 0
-                ? activeConversation?.title || 'Chat Workspace'
-                : 'Chat Workspace';
-
-              return (
-                <ChatHeader
-                  title={headerTitle}
-                  files={files}
-                  activeFileId={activeFileId}
-                  model={model}
-                  tokenUsage={tokenUsage}
-                  onOpenFile={handleOpenFile}
-                  onOpenDrawer={handleOpenDrawer}
-                  onNewChat={handleNewChat}
-                  isNewChat={isNewChat}
-                />
-              );
-            })()}
-
-            <StickToBottom className="flex-1 min-h-0 overscroll-y-contain [overflow-anchor:auto] [will-change:scroll-position] [transform:translateZ(0)]" resize="auto" initial="instant">
-              {(context) => (
-                <>
-                  <StickToBottom.Content
-                    className={`max-w-4xl w-full mx-auto px-4 ${isNewChat ? 'min-h-full flex flex-col justify-center py-6' : ''}`}
-                    style={!isNewChat ? { paddingBottom: `${composerHeight}px` } : undefined}
-                  >
-                    <ChatPanel
-                      messages={displayMessages}
-                      isLoading={isLoading}
-                      messagesEndRef={messagesEndRef}
-                      chatId={chatId}
-                      isNewChat={isNewChat}
-                      chatInputNode={chatInputNode}
-                    />
-                  </StickToBottom.Content>
-
-                  {!isNewChat && (
-                    <div
-                      ref={composerContainerRef}
-                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-12 pb-4 px-4 pointer-events-none z-30 animate-slide-up"
-                    >
-                      <div className="relative max-w-4xl mx-auto pointer-events-auto">
-                        {/* Floating button appears when scrolled up - anchored cleanly above ChatInput */}
-                        <AnimatePresence>
-                          {!context.isAtBottom && (
-                            <motion.div
-                              key="scroll-to-bottom"
-                              variants={pillFloatVariants}
-                              initial="hidden"
-                              animate="visible"
-                              exit="exit"
-                              className="absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 z-10 pointer-events-auto"
-                            >
-                              <motion.button
-                                type="button"
-                                whileHover={{ scale: 1.04 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => context.scrollToBottom()}
-                                className="flex items-center gap-1.5 rounded-full border border-edge-raised bg-surface-raised/95 dark:bg-surface-raised/90 px-3.5 py-1.5 text-caption font-semibold text-text-primary hover:text-text-bright shadow-card-lg backdrop-blur-md transition-colors cursor-pointer select-none"
-                              >
-                                <ArrowDown className="w-3.5 h-3.5 text-primary" />
-                                <span>Scroll to bottom</span>
-                              </motion.button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                        {chatInputNode}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </StickToBottom>
-          </div>
+          <ChatPanel
+            chatId={chatId}
+            title={headerTitle}
+            isNewChat={isNewChat}
+            files={files}
+            activeFileId={activeFileId}
+            onOpenFile={handleOpenFile}
+            onOpenDrawer={handleOpenDrawer}
+            onNewChat={handleNewChat}
+            model={model}
+            thinkingLevel={thinkingLevel}
+            tokenUsage={tokenUsage}
+            onModelSelect={handleModelSelect}
+            onThinkingLevelChange={handleThinkingLevelChange}
+            messages={displayMessages}
+            isLoading={isLoading}
+            isCompacting={isCompacting}
+            isContextWindowExhausted={isContextWindowExhausted}
+            rateLimitData={rateLimitData}
+            onSendMessage={handleSendMessage}
+            onTriggerCompaction={handleTriggerCompaction}
+            onStop={handleStop}
+          />
 
           <WorkspaceDrawer
             isOpen={isWorkspaceDrawerOpen}
