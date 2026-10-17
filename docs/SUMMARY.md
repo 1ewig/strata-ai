@@ -167,7 +167,7 @@ inference failure. `getRateLimitStatus` powers the read-only `GET /api/user/rate
 - `isConversationEmpty(chatId)` detects conversations with zero messages and zero workspace files.
 - `findExistingEmptyConversation(userId)` retrieves an existing unstarted chat for the active user.
 - `pruneEmptyConversations(userId, keepChatId)` keeps a single empty conversation — the currently open chat when empty, otherwise the most recently updated empty chat — and deletes the rest in a Dexie transaction, so a new chat the user just left stays visible in the sidebar.
-- `useConversations` enforces that users can have at most one unstarted chat: clicking "New Chat" while in an empty conversation is an inert no-op (the UI button dims with an informative tooltip), and clicking "New Chat" from an existing chat navigates to the existing empty chat if one already exists rather than allocating a new ID and row. The sidebar renders pinned chats in a separate `Pinned` section above the remaining `Conversations` list (empty sections are hidden).
+- `useConversations` enforces that users can have at most one unstarted chat: clicking "New Chat" while in an empty conversation is an inert no-op (the UI button dims with an informative tooltip), and clicking "New Chat" from an existing chat navigates to the existing empty chat if one already exists rather than allocating a new ID and row. The sidebar renders pinned chats in a separate `Pinned` section above the remaining `Conversations` list (empty sections are hidden), showing a plain conversation count with no per-user cap; pinned status is conveyed by the section alone, so rows carry no inline pin icon.
 
 **Server — PostgreSQL `better_auth` schema:** standard Better Auth `user`, `session`, `account`,
 `verification` tables, plus `message_log(id UUID PK, user_id FK, created_at TIMESTAMPTZ)` indexed on
@@ -192,9 +192,11 @@ src/
 │   ├── layout.tsx        # RSC shell: fonts, anti-flash script, RateLimitProvider
 │   ├── page.tsx          # Landing (public)
 │   ├── auth/             # signin / signup / redirector
-│   ├── chat-id/[id]/     # Thin route unwrap: use(params); delegates to ChatPageClient
+│   ├── chat-id/[id]/     # Thin route unwrap: use(params), mounts ChatUIProvider; delegates to ChatPageClient
 │   └── api/              # agent, agent/compact, user/rate-limit, auth/[...all]
 ├── components/           # ChatPageClient (workspace orchestrator), chat/ (header/, input/, message/, tools/), workspace/, sidebar/ (ConversationSection), auth/, landing/, ui/
+├── constants/            # animations.ts (motion presets), landing-animations.ts (hero curves),
+│                         # prompts.ts (landing suggestion chips)
 ├── contexts/             # RateLimitContext (global quota), ChatUIContext (sidebar & drawer shell),
 │                         # ChatInputContext (imperative chat input handle)
 ├── hooks/                # Domain folders: common/ (useTheme, useCopyClipboard, useClickOutside, ...),
@@ -213,6 +215,7 @@ src/
     ├── id.ts             # generateId
     └── timing.ts         # thought/work-group duration estimates
 __tests__/                # 19 suites, run with bun test --isolate
+scripts/                  # migrate-better-auth-schema.ts (+ .sql), test-db.ts, test-langfuse.ts
 ```
 
 **Route handlers:**
