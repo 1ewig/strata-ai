@@ -87,46 +87,40 @@ function AssistantMessageItem({
               return null;
             }
             return (
-              <div
-                key={seg.key}
-                onClick={(e) => !isStreamingActiveSegment && handleBubbleClick(e, seg.key)}
-                className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-overlay/90 border text-text-primary rounded-tl-xs backdrop-blur-sm w-fit max-w-full cursor-default select-none ${
-                  isActionActive
-                    ? 'border-primary/60 shadow-card-lg'
-                    : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
-                } ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''} ${isMenuOpen ? 'z-30' : ''}`}
-              >
-                <div className="text-body text-text-primary leading-relaxed relative select-text cursor-text w-fit max-w-full">
-                  <MarkdownRenderer
-                    content={textContent}
-                    variant="assistant"
-                    isStreaming={isStreamingActiveSegment}
-                    className="text-body text-text-primary leading-relaxed relative select-text cursor-text"
-                  />
+              <div key={seg.key} className="flex flex-col items-start gap-1 w-fit max-w-full">
+                <div
+                  onClick={(e) => !isStreamingActiveSegment && handleBubbleClick(e, seg.key)}
+                  className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-overlay/90 border text-text-primary rounded-tl-xs backdrop-blur-sm w-fit max-w-full cursor-default select-none ${
+                    isActionActive
+                      ? 'border-primary/60 shadow-card-lg'
+                      : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
+                  } ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''}`}
+                >
+                  <div className="text-body text-text-primary leading-relaxed relative select-text cursor-text w-fit max-w-full">
+                    <MarkdownRenderer
+                      content={textContent}
+                      variant="assistant"
+                      isStreaming={isStreamingActiveSegment}
+                      className="text-body text-text-primary leading-relaxed relative select-text cursor-text"
+                    />
+                  </div>
+
+                  {isStreamingActiveSegment && (
+                    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+                      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-primary/8 to-transparent" />
+                    </div>
+                  )}
                 </div>
 
                 {!isStreamingActiveSegment && textContent && (
-                  <div className="absolute inset-y-0 right-2 sm:right-3 pointer-events-none w-8 sm:w-7 flex flex-col justify-start">
-                    <div
-                      onClick={(e) => e.stopPropagation()}
-                      className={`sticky top-2 sm:top-3 -mt-2 sm:-mt-3 pointer-events-auto transition-all duration-150 ${
-                        isActionActive
-                          ? 'opacity-100 scale-100 z-30'
-                          : 'opacity-0 scale-95 pointer-events-none group-hover/bubble:opacity-100 group-hover/bubble:scale-100 group-hover/bubble:pointer-events-auto focus-within:opacity-100 focus-within:scale-100 focus-within:pointer-events-auto z-10'
-                      }`}
-                    >
-                      <MessageActionsMenu
-                        textContent={textContent}
-                        isOpen={isMenuOpen}
-                        onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {isStreamingActiveSegment && (
-                  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
-                    <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-primary/8 to-transparent" />
+                  <div className="flex items-center justify-start px-1">
+                    <MessageActionsMenu
+                      textContent={textContent}
+                      isOpen={isMenuOpen}
+                      onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
+                      align="left"
+                      direction="up"
+                    />
                   </div>
                 )}
               </div>

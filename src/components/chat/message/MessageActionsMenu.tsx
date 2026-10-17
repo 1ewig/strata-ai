@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
-import { MoreHorizontal, Copy, FileText, Check } from 'lucide-react';
+import { Copy, FileText, Check } from 'lucide-react';
 import { copyToClipboard, stripMarkdown } from '@/lib/clipboard';
 import { useClickOutside } from '@/hooks/common/useClickOutside';
 
-interface MessageActionsMenuProps {
+export interface MessageActionsMenuProps {
   textContent: string;
   isOpen?: boolean;
   onOpenChange?: (open: boolean) => void;
   className?: string;
+  align?: 'left' | 'right';
+  direction?: 'up' | 'down';
 }
 
 export default function MessageActionsMenu({
@@ -17,6 +19,8 @@ export default function MessageActionsMenu({
   isOpen: controlledIsOpen,
   onOpenChange,
   className = '',
+  align = 'right',
+  direction = 'up',
 }: MessageActionsMenuProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isControlled = controlledIsOpen !== undefined;
@@ -42,13 +46,17 @@ export default function MessageActionsMenu({
   // Close menu on clicks/taps outside or on Escape
   useClickOutside(menuRef, () => setIsOpen(false), { enabled: isOpen });
 
-  const triggerCopyFeedback = useCallback((type: 'markdown' | 'text') => {
-    if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-    setCopiedType(type);
-    resetTimerRef.current = setTimeout(() => {
-      setCopiedType(null);
-    }, 1500);
-  }, []);
+  const triggerCopyFeedback = useCallback(
+    (type: 'markdown' | 'text') => {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+      setCopiedType(type);
+      resetTimerRef.current = setTimeout(() => {
+        setCopiedType(null);
+        setIsOpen(false);
+      }, 700);
+    },
+    [setIsOpen],
+  );
 
   const handleCopyMarkdown = useCallback(async () => {
     const ok = await copyToClipboard(textContent);
@@ -65,23 +73,27 @@ export default function MessageActionsMenu({
 
   return (
     <div ref={menuRef} className={`relative inline-block ${isOpen ? 'z-40' : 'z-20'} ${className}`}>
-      {/* Floating Pill Trigger Button */}
+      {/* Copy Trigger Button */}
       <button
         type="button"
-        aria-label="Message options"
+        aria-label="Copy message"
         aria-expanded={isOpen}
         onClick={(e) => {
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        className={`p-1.5 sm:p-1 min-w-[30px] min-h-[30px] sm:min-w-0 sm:min-h-0 rounded-lg border backdrop-blur-md shadow-button transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center ${
+        className={`p-1.5 rounded-lg transition-all duration-150 cursor-pointer active:scale-95 flex items-center justify-center border ${
           isOpen
-            ? 'bg-surface-elevated text-text-bright border-edge-hover shadow-card'
-            : 'bg-surface-raised/95 dark:bg-surface-elevated/95 text-text-muted hover:text-text-primary hover:bg-surface-hover border-edge-raised hover:border-edge-hover'
+            ? 'bg-surface-elevated text-text-bright border-edge-hover shadow-button'
+            : 'border-transparent text-text-muted hover:text-text-primary hover:bg-surface-hover/80 active:bg-surface-hover'
         }`}
-        title="Message options"
+        title="Copy message"
       >
-        <MoreHorizontal className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
+        {copiedType ? (
+          <Check className="w-3.5 h-3.5 text-accent-olive" />
+        ) : (
+          <Copy className="w-3.5 h-3.5" />
+        )}
       </button>
 
       {/* Dropdown Menu */}
@@ -89,7 +101,9 @@ export default function MessageActionsMenu({
         <div
           role="menu"
           aria-orientation="vertical"
-          className="absolute right-0 top-full mt-1.5 z-50 min-w-[170px] max-w-[calc(100vw-32px)] p-1 rounded-xl bg-surface-elevated/95 backdrop-blur-md border border-edge-raised shadow-card-lg flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100"
+          className={`absolute ${direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} ${
+            align === 'left' ? 'left-0' : 'right-0'
+          } z-50 min-w-[170px] max-w-[calc(100vw-32px)] p-1 rounded-xl bg-surface-elevated/95 backdrop-blur-md border border-edge-raised shadow-card-lg flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100`}
         >
           {/* Copy as Markdown */}
           <button
