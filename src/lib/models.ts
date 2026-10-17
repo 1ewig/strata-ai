@@ -68,6 +68,21 @@ export const MODELS: ModelOption[] = [
       currency: 'USD',
     },
   },
+  {
+    id: 'accounts/fireworks/models/deepseek-v4p1-flash',
+    label: 'DeepSeek V4.1 Flash',
+    family: 'DeepSeek',
+    provider: 'fireworks',
+    supportsVision: true,
+    contextWindow: 131072,
+    maxOutput: 131072,
+    pricing: {
+      inputPerMillion: 0.30,
+      outputPerMillion: 1.20,
+      cachedInputPerMillion: 0.075,
+      currency: 'USD',
+    },
+  },
 ];
 
 /** Resolves model pricing per 1M tokens, falling back to default lite rates. */
@@ -88,6 +103,7 @@ export const MODEL_DESCRIPTIONS: Record<string, string> = {
   'gemini-3.5-flash-lite': 'Ultra-fast lightweight variant',
   'gemini-3.1-flash-lite': 'Fastest responses, simple tasks',
   'accounts/fireworks/models/glm-5p3-flash': 'Multimodal open-weight reasoning model',
+  'accounts/fireworks/models/deepseek-v4p1-flash': 'Multimodal MoE reasoning and agent model',
 };
 
 /** Unique family names derived from MODELS, preserving insertion order. */
@@ -135,6 +151,8 @@ export const MODEL_THINKING_LEVELS: Record<string, ModelThinkingConfig> = {
   'gemini-3.1-flash-lite': { levels: ['minimal', 'high'], defaultLevel: 'minimal' },
   // GLM 5.3 Flash supports reasoning effort; the app exposes low/medium/high.
   'accounts/fireworks/models/glm-5p3-flash': { levels: ['low', 'medium', 'high'], defaultLevel: 'high' },
+  // DeepSeek V4.1 Flash supports reasoning effort; the app exposes low/medium/high.
+  'accounts/fireworks/models/deepseek-v4p1-flash': { levels: ['low', 'medium', 'high'], defaultLevel: 'medium' },
 };
 
 /** Dedicated high-speed model configured for context compaction runs. */

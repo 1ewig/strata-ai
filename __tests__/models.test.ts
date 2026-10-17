@@ -138,6 +138,10 @@ describe("getModelSupportsVision", () => {
     expect(getModelSupportsVision("accounts/fireworks/models/glm-5p3-flash")).toBe(true);
   });
 
+  it("flags the Fireworks DeepSeek model as vision-capable", () => {
+    expect(getModelSupportsVision("accounts/fireworks/models/deepseek-v4p1-flash")).toBe(true);
+  });
+
   it("defaults unknown model ids to vision-capable", () => {
     expect(getModelSupportsVision("not-in-catalog")).toBe(true);
   });
