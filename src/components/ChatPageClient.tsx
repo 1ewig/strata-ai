@@ -10,7 +10,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db/db';
 import { useChatSession } from '@/hooks/useChatSession';
 import { useConversations } from '@/hooks/useConversations';
-import { useSignOut } from '@/hooks/useSignOut';
+import { useSignOut } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { ChatUIProvider } from '@/contexts/ChatUIContext';
 import { ComposerProvider } from '@/contexts/ComposerContext';
