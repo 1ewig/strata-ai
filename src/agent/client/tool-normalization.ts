@@ -51,6 +51,17 @@ export function normalizeToolPart(part: unknown, fallbackIndex = 0): NormalizedT
 
   const isCustom = !inv.toolName && !inv.name && (callObj.type === 'custom' || p.type === 'custom');
 
+  // AI SDK 7 encodes the tool name of statically-typed tools in `type` (e.g.
+  // "tool-writeFile") with no separate toolName field, so recover it from there.
+  const typeName =
+    typeof inv.type === 'string'
+      ? inv.type
+      : typeof callObj.type === 'string'
+        ? callObj.type
+        : typeof p.type === 'string'
+          ? p.type
+          : '';
+
   const rawName =
     (typeof inv.toolName === 'string' && inv.toolName) ||
     (typeof inv.name === 'string' && inv.name) ||
@@ -59,6 +70,9 @@ export function normalizeToolPart(part: unknown, fallbackIndex = 0): NormalizedT
     (typeof callObj.title === 'string' && callObj.title) ||
     (typeof p.toolName === 'string' && p.toolName) ||
     (typeof p.name === 'string' && p.name) ||
+    (typeName.startsWith('tool-') && typeName !== 'tool-invocation' && typeName !== 'dynamic-tool'
+      ? typeName.slice('tool-'.length)
+      : '') ||
     (isCustom ? 'Custom Action' : 'Tool');
 
   const name = isCustom ? 'custom' : rawName;
