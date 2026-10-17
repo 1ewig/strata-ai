@@ -69,14 +69,10 @@ function Sidebar({
   onSignOut,
   isDark,
   onToggleTheme,
-  rateLimitData: rateLimitDataProp,
+  rateLimitData,
 }: SidebarProps) {
   const { isSidebarOpen, closeSidebar, isSidebarCollapsed } = useChatUI();
   const [chatToDelete, setChatToDelete] = useState<Conversation | null>(null);
-
-  const rateLimitData = rateLimitDataProp ?? null;
-  const isQuotaExhausted =
-    rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
 
   const handleNewChat = useCallback(() => {
     onNewChat();
@@ -140,7 +136,6 @@ function Sidebar({
           isDark={isDark}
           onToggleTheme={onToggleTheme}
           rateLimitData={rateLimitData}
-          isQuotaExhausted={isQuotaExhausted}
         />
       </aside>
 

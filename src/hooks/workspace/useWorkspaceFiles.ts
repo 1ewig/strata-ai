@@ -14,11 +14,9 @@ import { detectLanguage } from '@/lib/code/languages';
 
 /**
  * Owns the workspace files (markdown/text scratch files) for a chat session.
- * Tracks drawer visibility and the active file, and exposes CRUD handlers that
- * persist to the conversation row via Dexie.
+ * Tracks the active file and exposes CRUD handlers that persist to the conversation row via Dexie.
  */
 export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
-  const [isWorkspaceDrawerOpen, setIsWorkspaceDrawerOpen] = useState(false);
   const [activeFileId, setActiveFileId] = useState<string | null>(null);
 
   const files = useMemo(() => getWorkspaceFiles(currentConv), [currentConv]);
@@ -34,14 +32,12 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
     setActiveFileId(currentConv?.activeFileId || (files.length > 0 ? files[0].id : null));
   }
 
-
   /**
-   * Marks a file as active and opens the drawer.
+   * Marks a file as active.
    * @param fileId - The id of the file to select.
    */
   const handleSelectFile = useCallback((fileId: string) => {
     setActiveFileId(fileId);
-    setIsWorkspaceDrawerOpen(true);
   }, []);
 
   /**
@@ -67,7 +63,6 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
     };
     await saveWorkspaceFile(chatId, newFile);
     setActiveFileId(newFile.id);
-    setIsWorkspaceDrawerOpen(true);
   }, [chatId, files.length]);
 
   const pendingUpdatesRef = useRef<Map<string, WorkspaceFile>>(new Map());
@@ -113,8 +108,6 @@ export function useWorkspaceFiles(chatId: string, currentConv?: Conversation) {
   return {
     files,
     activeFileId,
-    isWorkspaceDrawerOpen,
-    setIsWorkspaceDrawerOpen,
     setActiveFileId,
     handleSelectFile,
     handleCreateFile,

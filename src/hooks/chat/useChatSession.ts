@@ -330,8 +330,6 @@ export function useChatSession(chatId: string) {
   return {
     model: modelSettings.model,
     thinkingLevel: modelSettings.thinkingLevel,
-    isWorkspaceDrawerOpen: workspace.isWorkspaceDrawerOpen,
-    setIsWorkspaceDrawerOpen: workspace.setIsWorkspaceDrawerOpen,
     files: workspace.files,
     activeFileId: workspace.activeFileId,
     displayMessages: chat.messages,

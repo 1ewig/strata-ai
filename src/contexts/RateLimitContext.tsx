@@ -21,6 +21,7 @@ export interface QuotaError {
 interface RateLimitContextType {
   rateLimitData: RateLimitData | null;
   quotaError: QuotaError | null;
+  isQuotaExhausted: boolean;
   updateRateLimitData: (data: Partial<RateLimitData>) => void;
   setQuotaError: React.Dispatch<React.SetStateAction<QuotaError | null>>;
   clearQuotaError: () => void;
@@ -170,11 +171,16 @@ export function RateLimitProvider({ children, initialData }: RateLimitProviderPr
     setQuotaError(null);
   }, []);
 
+  const isQuotaExhausted = useMemo(() => {
+    return rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
+  }, [rateLimitData]);
+
   return (
     <RateLimitContext.Provider
       value={{
         rateLimitData,
         quotaError,
+        isQuotaExhausted,
         updateRateLimitData,
         setQuotaError,
         clearQuotaError,

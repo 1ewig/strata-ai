@@ -10,6 +10,7 @@ import { useChatInput } from '@/contexts/ChatInputContext';
 import { getRandomPlaceholderIndex, PLACEHOLDER_PROMPTS } from '@/constants/prompts';
 import { useSlashCommands } from './useSlashCommands';
 import type { SlashCommand } from '@/components/chat/input/SlashCommandMenu';
+import { useRateLimit } from '@/contexts/RateLimitContext';
 
 export interface UseChatInputControllerOptions {
   chatId?: string;
@@ -59,9 +60,11 @@ export function useChatInputController({
     }
   }, [chatId]);
 
-  // Coerce rate limit data to null for safe checks
-  const rateLimitData = rateLimitDataProp ?? null;
-  const isQuotaExhausted = rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
+  const { rateLimitData: contextRateLimitData, isQuotaExhausted: contextIsQuotaExhausted } = useRateLimit();
+  const rateLimitData = rateLimitDataProp !== undefined ? rateLimitDataProp : contextRateLimitData;
+  const isQuotaExhausted = rateLimitDataProp !== undefined
+    ? (rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0))
+    : contextIsQuotaExhausted;
   const isBlocked = isQuotaExhausted || isContextWindowExhausted || isCompacting;
 
   const supportsVision = getModelSupportsVision(model);

@@ -12,7 +12,7 @@ import { useChatSession } from '@/hooks/chat/useChatSession';
 import { useConversations } from '@/hooks/conversations/useConversations';
 import { useSignOut } from '@/hooks/auth/useAuth';
 import { useTheme } from '@/hooks/common/useTheme';
-import { ChatUIProvider } from '@/contexts/ChatUIContext';
+import { useChatUI } from '@/contexts/ChatUIContext';
 import { ChatInputProvider } from '@/contexts/ChatInputContext';
 import Sidebar from '@/components/sidebar/Sidebar';
 import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
@@ -63,11 +63,11 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
     }
   }, [isUnauthorized, router]);
 
+  const { openWorkspaceDrawer } = useChatUI();
+
   const {
     model,
     thinkingLevel,
-    isWorkspaceDrawerOpen,
-    setIsWorkspaceDrawerOpen,
     files,
     activeFileId,
     displayMessages,
@@ -75,7 +75,6 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
     isContextWindowExhausted,
     isLoading,
     isCompacting,
-    rateLimitData,
     handleSendMessage,
     handleTriggerCompaction,
     handleStop,
@@ -99,16 +98,12 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
     handleTogglePinConversation,
   } = useConversations(userId, chatId, isNewChat);
 
-  const handleOpenDrawer = React.useCallback(() => setIsWorkspaceDrawerOpen(true), [setIsWorkspaceDrawerOpen]);
-
-  const handleCloseDrawer = React.useCallback(() => setIsWorkspaceDrawerOpen(false), [setIsWorkspaceDrawerOpen]);
-
   const handleOpenFile = React.useCallback(
     (fileId: string) => {
       handleSelectFile(fileId);
-      setIsWorkspaceDrawerOpen(true);
+      openWorkspaceDrawer();
     },
-    [handleSelectFile, setIsWorkspaceDrawerOpen],
+    [handleSelectFile, openWorkspaceDrawer],
   );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -161,46 +156,42 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
       thinkingLevel={thinkingLevel}
       onModelSelect={handleModelSelect}
       onThinkingLevelChange={handleThinkingLevelChange}
-      rateLimitData={rateLimitData}
       isContextWindowExhausted={isContextWindowExhausted}
     />
   );
 
   return (
-    <ChatUIProvider>
-      <ChatInputProvider>
-        <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
-          <Sidebar
-            conversations={conversations}
-            conversationCount={conversationCount}
-            isMaxConversationsReached={isMaxConversationsReached}
-            activeConversationId={chatId}
-            onNewChat={handleNewChat}
-            isCurrentChatEmpty={isNewChat}
-            onDelete={handleDeleteConversation}
-            onRename={handleRenameConversation}
-            onTogglePin={handleTogglePinConversation}
-            session={session}
-            isSigningOut={isSigningOut}
-            onSignOut={handleSignOut}
-            isDark={isDark}
-            onToggleTheme={toggleTheme}
-            rateLimitData={rateLimitData}
-          />
+    <ChatInputProvider>
+      <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
+        <Sidebar
+          conversations={conversations}
+          conversationCount={conversationCount}
+          isMaxConversationsReached={isMaxConversationsReached}
+          activeConversationId={chatId}
+          onNewChat={handleNewChat}
+          isCurrentChatEmpty={isNewChat}
+          onDelete={handleDeleteConversation}
+          onRename={handleRenameConversation}
+          onTogglePin={handleTogglePinConversation}
+          session={session}
+          isSigningOut={isSigningOut}
+          onSignOut={handleSignOut}
+          isDark={isDark}
+          onToggleTheme={toggleTheme}
+        />
 
-          <div className="flex-1 flex flex-col h-dvh overflow-hidden min-w-0 relative">
-            <ChatHeader
-              title={headerTitle}
-              files={files}
-              activeFileId={activeFileId}
-              model={model}
-              thinkingLevel={thinkingLevel}
-              tokenUsage={tokenUsage}
-              onOpenFile={handleOpenFile}
-              onOpenDrawer={handleOpenDrawer}
-              onNewChat={handleNewChat}
-              isNewChat={isNewChat}
-            />
+        <div className="flex-1 flex flex-col h-dvh overflow-hidden min-w-0 relative">
+          <ChatHeader
+            title={headerTitle}
+            files={files}
+            activeFileId={activeFileId}
+            model={model}
+            thinkingLevel={thinkingLevel}
+            tokenUsage={tokenUsage}
+            onOpenFile={handleOpenFile}
+            onNewChat={handleNewChat}
+            isNewChat={isNewChat}
+          />
 
             <StickToBottom
               className="flex-1 min-h-0 overscroll-y-contain [overflow-anchor:auto] [will-change:scroll-position] [transform:translateZ(0)]"
@@ -266,8 +257,6 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
           </div>
 
           <WorkspaceDrawer
-            isOpen={isWorkspaceDrawerOpen}
-            onClose={handleCloseDrawer}
             files={files}
             activeFileId={activeFileId}
             onSelectFile={handleSelectFile}
@@ -277,7 +266,6 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
             isLoading={isLoading}
           />
         </main>
-      </ChatInputProvider>
-    </ChatUIProvider>
+    </ChatInputProvider>
   );
 }

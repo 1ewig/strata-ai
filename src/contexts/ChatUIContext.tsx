@@ -16,6 +16,14 @@ interface ChatUIContextType {
   collapseSidebar: () => void;
   /** Expands the collapsed desktop sidebar. */
   expandSidebar: () => void;
+  /** Whether the workspace drawer is open. */
+  isWorkspaceDrawerOpen: boolean;
+  /** Opens the workspace drawer. */
+  openWorkspaceDrawer: () => void;
+  /** Closes the workspace drawer. */
+  closeWorkspaceDrawer: () => void;
+  /** Toggles the workspace drawer. */
+  toggleWorkspaceDrawer: () => void;
 }
 
 /** The context itself, undefined until a provider mounts so consumers can detect missing scope. */
@@ -77,6 +85,23 @@ export function ChatUIProvider({ children }: { children: React.ReactNode }) {
     setIsSidebarCollapsed(false);
   }, []);
 
+  const [isWorkspaceDrawerOpen, setIsWorkspaceDrawerOpen] = useState(false);
+
+  /** Opens the workspace drawer. */
+  const openWorkspaceDrawer = useCallback(() => {
+    setIsWorkspaceDrawerOpen(true);
+  }, []);
+
+  /** Closes the workspace drawer. */
+  const closeWorkspaceDrawer = useCallback(() => {
+    setIsWorkspaceDrawerOpen(false);
+  }, []);
+
+  /** Toggles the workspace drawer open or closed. */
+  const toggleWorkspaceDrawer = useCallback(() => {
+    setIsWorkspaceDrawerOpen((prev) => !prev);
+  }, []);
+
   const value = useMemo<ChatUIContextType>(
     () => ({
       isSidebarOpen,
@@ -85,8 +110,23 @@ export function ChatUIProvider({ children }: { children: React.ReactNode }) {
       isSidebarCollapsed,
       collapseSidebar,
       expandSidebar,
+      isWorkspaceDrawerOpen,
+      openWorkspaceDrawer,
+      closeWorkspaceDrawer,
+      toggleWorkspaceDrawer,
     }),
-    [isSidebarOpen, openSidebar, closeSidebar, isSidebarCollapsed, collapseSidebar, expandSidebar],
+    [
+      isSidebarOpen,
+      openSidebar,
+      closeSidebar,
+      isSidebarCollapsed,
+      collapseSidebar,
+      expandSidebar,
+      isWorkspaceDrawerOpen,
+      openWorkspaceDrawer,
+      closeWorkspaceDrawer,
+      toggleWorkspaceDrawer,
+    ],
   );
 
   return <ChatUIContext.Provider value={value}>{children}</ChatUIContext.Provider>;

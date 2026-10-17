@@ -39,7 +39,8 @@ export default React.memo(function ChatHeader({
   onNewChat,
   isNewChat = false,
 }: ChatHeaderProps) {
-  const { openSidebar, isSidebarCollapsed, expandSidebar } = useChatUI();
+  const { openSidebar, isSidebarCollapsed, expandSidebar, openWorkspaceDrawer } = useChatUI();
+  const handleOpenDrawer = onOpenDrawer ?? openWorkspaceDrawer;
 
   return (
     <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40 relative">
@@ -57,7 +58,7 @@ export default React.memo(function ChatHeader({
         <NewChatButton onNewChat={onNewChat} isNewChat={isNewChat} />
 
         {/* Workspace Files Drawer Button (Visible on all viewports) */}
-        {onOpenDrawer && <FilesButton files={files} onOpenDrawer={onOpenDrawer} />}
+        <FilesButton files={files} onOpenDrawer={handleOpenDrawer} />
       </div>
     </header>
   );

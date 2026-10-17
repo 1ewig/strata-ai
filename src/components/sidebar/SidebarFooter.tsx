@@ -24,7 +24,7 @@ interface SidebarFooterProps {
     retryAfter?: number;
   } | null;
   /** Whether quota is completely exhausted. */
-  isQuotaExhausted: boolean;
+  isQuotaExhausted?: boolean;
 }
 
 /**
