@@ -6,7 +6,7 @@ import type { Segment } from '@/agent/client/segments';
 import UserMessageAttachments from './UserMessageAttachments';
 import MessageActionsMenu from './MessageActionsMenu';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
-import { useBubbleActionMenu } from '@/hooks/useBubbleActionMenu';
+import { useBubbleActionMenu } from '@/hooks';
 
 export interface UserMessageItemProps {
   segments: Segment[];

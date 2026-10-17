@@ -3,7 +3,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { MoreHorizontal, Copy, FileText, Check } from 'lucide-react';
 import { copyToClipboard, stripMarkdown } from '@/lib/clipboard';
-import { useClickOutside } from '@/hooks/useClickOutside';
+import { useClickOutside } from '@/hooks';
 
 interface MessageActionsMenuProps {
   textContent: string;

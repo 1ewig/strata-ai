@@ -9,7 +9,7 @@ import {
   updateConversationTitle,
 } from '@/lib/db/db';
 import { useModelSettings } from './useModelSettings';
-import { useWorkspaceFiles } from './useWorkspaceFiles';
+import { useWorkspaceFiles } from '../workspace/useWorkspaceFiles';
 import { useChatTransport } from './useChatTransport';
 import { useCompaction } from './useCompaction';
 import { handleChatError } from '@/agent/client/error-handler';

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Loader2 } from 'lucide-react';
-import { useElapsedTimer } from '@/hooks/useElapsedTimer';
+import { useElapsedTimer } from '@/hooks';
 
 /**
  * Elapsed inference duration timer displayed during active model generation.

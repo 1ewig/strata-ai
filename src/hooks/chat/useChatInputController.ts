@@ -5,10 +5,10 @@ import { MAX_MESSAGE_CHARS, MAX_ATTACHMENTS_PER_MESSAGE, buildQuotaError } from 
 import { getModelSupportsVision } from '@/lib/models';
 import type { ProcessedImage } from '@/lib/image-utils';
 import type { ProcessedDocument } from '@/lib/document-utils';
-import { useChatInputFileDrop } from '@/hooks/useChatInputFileDrop';
+import { useChatInputFileDrop } from './useChatInputFileDrop';
 import { useChatInput } from '@/contexts/ChatInputContext';
 import { getRandomPlaceholderIndex, PLACEHOLDER_PROMPTS } from '@/constants/prompts';
-import { useSlashCommands } from '@/hooks/useSlashCommands';
+import { useSlashCommands } from './useSlashCommands';
 import type { SlashCommand } from '@/components/chat/input/SlashCommandMenu';
 
 export interface UseChatInputControllerOptions {

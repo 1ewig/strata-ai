@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { ArrowRight, Moon, Sun } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
-import { useTheme } from '@/hooks/useTheme';
+import { useTheme } from '@/hooks';
 import { db } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
 import { buttonHoverProps } from '@/constants/landing-animations';

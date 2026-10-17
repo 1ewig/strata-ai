@@ -7,7 +7,7 @@ import {
   type ConversationTokenMetrics,
 } from '@/lib/token-usage';
 import TokenUsagePopover from './TokenUsagePopover';
-import { useContextWindowMetrics } from '@/hooks/useContextWindowMetrics';
+import { useContextWindowMetrics } from '@/hooks';
 
 /** Props for the ContextWindowIndicator component. */
 export interface ContextWindowIndicatorProps {

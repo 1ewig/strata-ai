@@ -3,7 +3,7 @@
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "@/lib/auth-client";
-import { useSignIn } from "@/hooks/useAuth";
+import { useSignIn } from "@/hooks";
 import { LoadingScreen } from "@/components/auth/loading-screen";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { SignInForm } from "@/components/auth/sign-in-form";

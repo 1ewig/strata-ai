@@ -9,7 +9,7 @@ import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import type { Segment } from '@/agent/client/segments';
 import { accordionVariants } from '@/constants/animations';
 import { estimateWorkGroupDuration } from '@/lib/timing';
-import { useElapsedTimer } from '@/hooks/useElapsedTimer';
+import { useElapsedTimer } from '@/hooks';
 
 interface WorkGroupCardProps {
   items: Segment[];

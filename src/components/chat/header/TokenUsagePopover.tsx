@@ -7,7 +7,7 @@ import {
   formatCost,
   type ConversationTokenMetrics,
 } from '@/lib/token-usage';
-import { useClickOutside } from '@/hooks/useClickOutside';
+import { useClickOutside } from '@/hooks';
 
 export interface TokenUsagePopoverProps {
   modelOption: ModelOption;

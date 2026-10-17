@@ -8,10 +8,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useSession } from '@/lib/auth-client';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db/db';
-import { useChatSession } from '@/hooks/useChatSession';
-import { useConversations } from '@/hooks/useConversations';
-import { useSignOut } from '@/hooks/useAuth';
-import { useTheme } from '@/hooks/useTheme';
+import {
+  useChatSession,
+  useConversations,
+  useSignOut,
+  useTheme,
+} from '@/hooks';
 import { ChatUIProvider } from '@/contexts/ChatUIContext';
 import { ChatInputProvider } from '@/contexts/ChatInputContext';
 import Sidebar from '@/components/sidebar/Sidebar';

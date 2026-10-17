@@ -181,7 +181,7 @@ const TOKENS: Record<MarkdownVariant, TokenSet> = {
   },
 };
 
-import { useCopyClipboard } from '@/hooks/useCopyClipboard';
+import { useCopyClipboard } from '@/hooks';
 
 interface CodeSnippetBlockProps {
   rawCode: string;

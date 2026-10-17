@@ -10,7 +10,7 @@ import MessageActionsMenu from './MessageActionsMenu';
 import InferenceTimer from './InferenceTimer';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import type { Segment } from '@/agent/client/segments';
-import { useBubbleActionMenu } from '@/hooks/useBubbleActionMenu';
+import { useBubbleActionMenu } from '@/hooks';
 
 export interface AssistantMessageItemProps {
   message: ChatMessage;

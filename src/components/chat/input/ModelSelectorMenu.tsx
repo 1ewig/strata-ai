@@ -7,7 +7,7 @@ import {
   MODEL_DESCRIPTIONS,
   THINKING_LEVEL_LABELS,
 } from '@/lib/models';
-import { useModelSelectorMenu } from '@/hooks/useModelSelectorMenu';
+import { useModelSelectorMenu } from '@/hooks';
 
 /** Props for the ModelSelectorMenu dropdown. */
 interface ModelSelectorMenuProps {
