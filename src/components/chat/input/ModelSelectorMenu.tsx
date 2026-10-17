@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React from 'react';
 import { ChevronDown, ChevronRight, ChevronLeft, Settings } from 'lucide-react';
 import {
   MODELS,
   MODEL_DESCRIPTIONS,
-  MODEL_THINKING_LEVELS,
   THINKING_LEVEL_LABELS,
 } from '@/lib/models';
+import { useModelSelectorMenu } from '@/hooks/useModelSelectorMenu';
 
 /** Props for the ModelSelectorMenu dropdown. */
 interface ModelSelectorMenuProps {
@@ -22,6 +22,10 @@ interface ModelSelectorMenuProps {
   disabled?: boolean;
 }
 
+/**
+ * Model selector menu dropdown component.
+ * Uses useModelSelectorMenu to manage subview transitions and click-outside dismissal.
+ */
 export default function ModelSelectorMenu({
   model,
   thinkingLevel,
@@ -33,58 +37,23 @@ export default function ModelSelectorMenu({
   className = '',
   disabled = false,
 }: ModelSelectorMenuProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [view, setView] = useState<'main' | 'effort' | 'more-models'>('main');
-
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  const currentModel = MODELS.find((m) => m.id === model);
-  const currentModelThinkingConfig = MODEL_THINKING_LEVELS[model];
-
-  // Primary models shown on main view; remaining live in "More models"
-  const primaryModels = MODELS.slice(0, 3);
-  const overflowModels = MODELS.slice(3);
-
-  // Derive effective view so invalid subviews fall back to 'main' without cascading state effects
-  const activeView =
-    (view === 'effort' && !currentModelThinkingConfig) ||
-    (view === 'more-models' && overflowModels.length === 0)
-      ? 'main'
-      : view;
-
-  const effortLabel =
-    thinkingLevel && currentModelThinkingConfig
-      ? THINKING_LEVEL_LABELS[thinkingLevel as keyof typeof THINKING_LEVEL_LABELS] || thinkingLevel
-      : null;
-
-  const closeMenu = useCallback(() => {
-    setIsOpen(false);
-    setView('main');
-  }, []);
-
-  // Handle click outside & escape key (attached ONLY when menu is open)
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        closeMenu();
-      }
-    };
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        closeMenu();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, closeMenu]);
+  const {
+    isOpen,
+    view,
+    setView,
+    menuRef,
+    currentModel,
+    currentModelThinkingConfig,
+    primaryModels,
+    overflowModels,
+    effortLabel,
+    closeMenu,
+    toggleMenu,
+  } = useModelSelectorMenu({
+    model,
+    thinkingLevel,
+    disabled,
+  });
 
   const renderModelItem = (m: (typeof MODELS)[number]) => {
     const isSelected = m.id === model;
@@ -138,14 +107,7 @@ export default function ModelSelectorMenu({
             ? 'Model selection unavailable while responding'
             : `Model: ${currentModel?.label || 'Model'}${effortLabel ? ` (${effortLabel} effort)` : ''}`
         }
-        onClick={() => {
-          if (disabled) return;
-          if (isOpen) {
-            closeMenu();
-          } else {
-            setIsOpen(true);
-          }
-        }}
+        onClick={toggleMenu}
         className={`p-2 sm:px-3 sm:py-2 rounded-xl shrink-0 transition-all duration-150 focus:outline-none flex items-center justify-center sm:justify-start gap-1.5 border select-none ${
           disabled
             ? 'bg-surface-elevated text-text-muted border-edge-raised shadow-none opacity-40 cursor-not-allowed'
@@ -209,7 +171,7 @@ export default function ModelSelectorMenu({
           } w-72 max-w-[calc(100vw-1.5rem)] bg-surface-elevated border border-edge-raised rounded-2xl shadow-card-lg p-1.5 text-label z-50 animate-in fade-in zoom-in-95 duration-100`}
         >
           {/* SUBMENU HEADER */}
-          {activeView !== 'main' && (
+          {view !== 'main' && (
             <div className="flex items-center justify-between pb-1.5 mb-1 border-b border-edge-default">
               <button
                 type="button"
@@ -220,13 +182,13 @@ export default function ModelSelectorMenu({
                 <span>Back</span>
               </button>
               <span className="text-caption font-semibold text-text-primary uppercase tracking-wider pr-2">
-                {activeView === 'effort' ? 'Thinking Effort' : 'More Models'}
+                {view === 'effort' ? 'Thinking Effort' : 'More Models'}
               </span>
             </div>
           )}
 
           {/* MAIN MENU VIEW */}
-          {activeView === 'main' && (
+          {view === 'main' && (
             <>
               <div className="space-y-0.5">
                 {primaryModels.map(renderModelItem)}
@@ -270,7 +232,7 @@ export default function ModelSelectorMenu({
           )}
 
           {/* EFFORT OPTIONS SUBVIEW */}
-          {activeView === 'effort' && currentModelThinkingConfig && (
+          {view === 'effort' && currentModelThinkingConfig && (
             <div className="space-y-0.5">
               {currentModelThinkingConfig.levels.map((level) => {
                 const label =
@@ -298,7 +260,7 @@ export default function ModelSelectorMenu({
           )}
 
           {/* MORE MODELS LIST SUBVIEW */}
-          {activeView === 'more-models' && overflowModels.length > 0 && (
+          {view === 'more-models' && overflowModels.length > 0 && (
             <div className="space-y-0.5 max-h-60 overflow-y-auto">
               {overflowModels.map(renderModelItem)}
             </div>

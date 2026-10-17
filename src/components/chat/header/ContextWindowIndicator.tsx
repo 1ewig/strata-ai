@@ -1,14 +1,13 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
-import { MODELS } from '@/lib/models';
-import { NEAR_LIMIT_PERCENT } from '@/lib/limits';
 import {
   formatContextWindow,
   formatTokens,
-  ConversationTokenMetrics,
+  type ConversationTokenMetrics,
 } from '@/lib/token-usage';
 import TokenUsagePopover from './TokenUsagePopover';
+import { useContextWindowMetrics } from '@/hooks/useContextWindowMetrics';
 
 /** Props for the ContextWindowIndicator component. */
 export interface ContextWindowIndicatorProps {
@@ -26,25 +25,11 @@ export default function ContextWindowIndicator({
   model,
   tokenUsage,
 }: ContextWindowIndicatorProps) {
-  // Context window popover state (desktop click/hover & mobile tap)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  const modelOption = React.useMemo(() => {
-    return MODELS.find((m) => m.id === model) || MODELS[0];
-  }, [model]);
-
-  const { contextWindow } = modelOption;
-
-  // Resolve active context window tokens
-  const activeTokens = tokenUsage?.active.totalTokens ?? 0;
-
-  const pct =
-    contextWindow > 0
-      ? Math.min(100, Math.round((activeTokens / contextWindow) * 100))
-      : 0;
-
-  const isNearLimit = pct >= NEAR_LIMIT_PERCENT;
+  const metrics = useContextWindowMetrics(model, tokenUsage);
+  const { modelOption, contextWindow, activeTokens, pct, isNearLimit } = metrics;
 
   const togglePopover = () => {
     setIsPopoverOpen((prev) => !prev);
@@ -87,6 +72,15 @@ export default function ContextWindowIndicator({
         isOpen={isPopoverOpen}
         onClose={() => setIsPopoverOpen(false)}
         triggerRef={triggerRef}
+        pct={pct}
+        isNearLimit={isNearLimit}
+        contextWindow={contextWindow}
+        activeTokens={activeTokens}
+        inputTokens={metrics.inputTokens}
+        outputTokens={metrics.outputTokens}
+        totalApiUsage={metrics.totalApiUsage}
+        totalCost={metrics.totalCost}
+        modelBreakdowns={metrics.modelBreakdowns}
       />
     </>
   );

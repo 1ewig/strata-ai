@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
-import { ModelOption } from '@/lib/models';
+import React, { useRef } from 'react';
+import type { ModelOption } from '@/lib/models';
 import {
   formatContextWindow,
   formatCost,
-  ConversationTokenMetrics,
+  type ConversationTokenMetrics,
 } from '@/lib/token-usage';
-import { NEAR_LIMIT_PERCENT } from '@/lib/limits';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 export interface TokenUsagePopoverProps {
   modelOption: ModelOption;
@@ -15,56 +15,38 @@ export interface TokenUsagePopoverProps {
   isOpen: boolean;
   onClose: () => void;
   triggerRef?: React.RefObject<HTMLElement | null>;
+  pct: number;
+  isNearLimit: boolean;
+  contextWindow: number;
+  activeTokens: number;
+  inputTokens: number;
+  outputTokens: number;
+  totalApiUsage: number;
+  totalCost: number;
+  modelBreakdowns: ConversationTokenMetrics['modelBreakdowns'];
 }
 
 export default function TokenUsagePopover({
-  modelOption,
-  tokenUsage,
   isOpen,
   onClose,
   triggerRef,
+  pct,
+  isNearLimit,
+  contextWindow,
+  inputTokens,
+  outputTokens,
+  totalApiUsage,
+  totalCost,
+  modelBreakdowns = [],
 }: TokenUsagePopoverProps) {
   const popoverRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
-      if (
-        popoverRef.current &&
-        !popoverRef.current.contains(e.target as Node) &&
-        triggerRef?.current &&
-        !triggerRef.current.contains(e.target as Node)
-      ) {
-        onClose();
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('touchstart', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('touchstart', handleClickOutside);
-    };
-  }, [isOpen, onClose, triggerRef]);
+  useClickOutside(popoverRef, onClose, {
+    triggerRef,
+    enabled: isOpen,
+  });
 
   if (!isOpen) return null;
-
-  const { contextWindow } = modelOption;
-
-  const activeTokens = tokenUsage?.active.totalTokens ?? 0;
-  const inputTokens = tokenUsage?.active.inputTokens ?? 0;
-  const outputTokens = tokenUsage?.active.outputTokens ?? 0;
-  const totalApiUsage = tokenUsage?.session.totalApiTokens ?? activeTokens;
-  const totalCost = tokenUsage?.totalCost ?? 0;
-  const modelBreakdowns = tokenUsage?.modelBreakdowns ?? [];
-
-  const pct =
-    contextWindow > 0
-      ? Math.min(100, Math.round((activeTokens / contextWindow) * 100))
-      : 0;
-
-  const isNearLimit = pct >= NEAR_LIMIT_PERCENT;
 
   return (
     <>
@@ -96,8 +78,9 @@ export default function TokenUsagePopover({
           </div>
           <div className="w-full bg-surface-elevated rounded-full h-1.5 overflow-hidden">
             <div
-              className={`h-full transition-all duration-300 ${isNearLimit ? 'bg-warning' : 'bg-primary'
-                }`}
+              className={`h-full transition-all duration-300 ${
+                isNearLimit ? 'bg-warning' : 'bg-primary'
+              }`}
               style={{ width: `${pct}%` }}
             />
           </div>

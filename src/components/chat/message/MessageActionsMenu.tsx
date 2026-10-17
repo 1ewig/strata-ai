@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { MoreHorizontal, Copy, FileText, Check } from 'lucide-react';
 import { copyToClipboard, stripMarkdown } from '@/lib/clipboard';
+import { useClickOutside } from '@/hooks/useClickOutside';
 
 interface MessageActionsMenuProps {
   textContent: string;
@@ -39,34 +40,7 @@ export default function MessageActionsMenu({
   const resetTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Close menu on clicks/taps outside or on Escape
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handlePointerDownOutside = (event: MouseEvent | TouchEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('pointerdown', handlePointerDownOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('pointerdown', handlePointerDownOutside);
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, setIsOpen]);
-
-  useEffect(() => {
-    return () => {
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
-    };
-  }, []);
+  useClickOutside(menuRef, () => setIsOpen(false), { enabled: isOpen });
 
   const triggerCopyFeedback = useCallback((type: 'markdown' | 'text') => {
     if (resetTimerRef.current) clearTimeout(resetTimerRef.current);

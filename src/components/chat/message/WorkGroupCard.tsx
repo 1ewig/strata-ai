@@ -6,8 +6,10 @@ import { ChevronDown, Loader2, Workflow } from 'lucide-react';
 import ThoughtAccordion from './ThoughtAccordion';
 import ToolCallCard from './ToolCallCard';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
-import { Segment } from '@/agent/client/segments';
+import type { Segment } from '@/agent/client/segments';
 import { accordionVariants } from '@/constants/animations';
+import { estimateWorkGroupDuration } from '@/lib/timing';
+import { useElapsedTimer } from '@/hooks/useElapsedTimer';
 
 interface WorkGroupCardProps {
   items: Segment[];
@@ -19,10 +21,8 @@ interface WorkGroupCardProps {
  * Displays a unified "Worked for X s" header trigger on the chat background,
  * and expands to reveal individual thought accordions and tool call cards.
  */
-function WorkGroupCard({ items, isStreaming }: WorkGroupCardProps) {
+function WorkGroupCard({ items, isStreaming = false }: WorkGroupCardProps) {
   const [isOpen, setIsOpen] = useState(() => Boolean(isStreaming));
-  const startTimeRef = useRef<number | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(1);
   const prevStreamingRef = useRef(isStreaming);
 
   // While working/streaming, keep open so thoughts & tools display live; collapse when work finishes.
@@ -35,37 +35,11 @@ function WorkGroupCard({ items, isStreaming }: WorkGroupCardProps) {
     prevStreamingRef.current = isStreaming;
   }, [isStreaming]);
 
-  // Compute estimated duration for historical or non-streaming messages
   const estimatedSeconds = React.useMemo(() => {
-    let toolCount = 0;
-    let reasoningChars = 0;
-    items.forEach((item) => {
-      if (item.type === 'tool') toolCount += 1;
-      if (item.type === 'reasoning' && item.content) {
-        reasoningChars += item.content.length;
-      }
-    });
-    return Math.max(1, Math.ceil(toolCount * 1.5 + reasoningChars / 250));
+    return estimateWorkGroupDuration(items);
   }, [items]);
 
-  useEffect(() => {
-    if (!isStreaming) return;
-
-    if (!startTimeRef.current) {
-      startTimeRef.current = Date.now();
-    }
-
-    const interval = setInterval(() => {
-      if (startTimeRef.current) {
-        const seconds = Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000));
-        setElapsedSeconds(seconds);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isStreaming]);
-
-  const displaySeconds = isStreaming ? elapsedSeconds : Math.max(elapsedSeconds, estimatedSeconds);
+  const { displaySeconds } = useElapsedTimer(isStreaming, estimatedSeconds);
 
   if (!items || items.length === 0) return null;
 

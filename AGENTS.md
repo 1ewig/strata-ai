@@ -2,6 +2,10 @@
 
 Operating guidelines and critical rules for AI agents in this repository. For comprehensive architecture, data flows, and playbooks, refer to [docs/SUMMARY.md](docs/SUMMARY.md).
 
+## Prioritize Parallel Tool Use (CRITICAL)
+
+Always prefer issuing multiple tool calls in parallel within a single turn — especially file reads and writes, searches, and inspections. Only run calls sequentially when one genuinely depends on another's output.
+
 ## Runtime & Commands
 
 Always use **bun**. Never run `npm`, `yarn`, or `npx`.
@@ -42,11 +46,18 @@ The app ships light + dark themes (light default; dark via `.dark` class + `html
 - **Unified Stream Assembly:** All model streaming must flow through `createUIStreamResponder` (`src/agent/core/runner.ts`) with `smoothStream` and `coalesceToolInputDeltas`.
 - **Route Guards & Quota:** Wrap agent routes with `withAgentRouteGuards` (`src/agent/guards/route-guards.ts`). Auto-refund rate limits on upstream inference failure.
 - **Tool Card Isolation:** Do not edit `ToolCallCard.tsx` when adding tools; register display configs and summaries in `components/chat/tools/resolver.tsx`.
-- **Presentational Purity:** Keep UI components presentational. Fetching, Dexie queries, auth calls, and router logic live in page hooks and pass down as props.
 - **Auto-scroll:** Handled exclusively by `<StickToBottom>` in `src/components/ChatPageClient.tsx`. No manual scroll loops.
 - **Async Next.js 16 APIs:** Unwrap dynamic route `params` with `use(params)` in client components, `await searchParams`/`headers()` in RSCs.
-- **Parallel Tool Execution:** Always batch independent file reads, searches, and inspections in parallel within a single turn to minimize round trips.
 - **General Rules:** No emojis in code or files. Follow neighboring patterns. Preserve existing comments.
+
+## Clean Codebase & Separation of Concerns (CRITICAL)
+
+- **Single Responsibility:** Keep every module focused on one concern. When a component, hook, or file starts doing too much, extract the rest into a co-located file, hook, or helper.
+- **Respect the Layers:** Route files and top-level components compose; hooks (`src/hooks/`) own fetching, Dexie, auth, and router logic; UI components stay presentational and receive data as props. Never bury side effects in the view layer.
+- **Co-locate by Domain:** Group related files in domain folders (`components/chat/header/`, `chat/input/`, `chat/message/`, `chat/tools/`). Shared pure helpers live in `src/lib/`, hooks in `src/hooks/`, contexts in `src/contexts/`, constants in `src/constants/`.
+- **No Duplication or Dead Code:** Extract repeated logic into a shared helper/hook. Delete unused files, shims, and superseded code instead of leaving them behind.
+- **Thin Entry Points:** Keep route files and page shells minimal — they wire pieces together, they don't implement.
+- **Prefer Composition:** Break large components into smaller ones; use scoped contexts (e.g. `ChatInputContext`) for cross-cutting UI state instead of prop drilling.
 
 ## Testing Conventions
 

@@ -3,39 +3,11 @@
 
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AlertCircle, X, FileText, FileSpreadsheet, FileJson, FileCode2 } from 'lucide-react';
-import { ProcessedImage } from '@/lib/image-utils';
-import { ProcessedDocument, formatFileSize } from '@/lib/document-utils';
+import { AlertCircle, X } from 'lucide-react';
+import type { ProcessedImage } from '@/lib/image-utils';
+import { formatFileSize, type ProcessedDocument } from '@/lib/document-utils';
 import { attachmentThumbVariants } from '@/constants/animations';
-
-/** Helper to render a semantic icon matching the document format. */
-function getDocIcon(mediaType: string, filename: string) {
-  const lower = filename.toLowerCase();
-  if (mediaType === 'application/pdf' || lower.endsWith('.pdf')) {
-    return <FileText className="w-4 h-4 text-primary shrink-0" />;
-  }
-  if (lower.endsWith('.csv') || lower.endsWith('.tsv')) {
-    return <FileSpreadsheet className="w-4 h-4 text-secondary shrink-0" />;
-  }
-  if (lower.endsWith('.json')) {
-    return <FileJson className="w-4 h-4 text-info shrink-0" />;
-  }
-  if (
-    lower.endsWith('.ts') ||
-    lower.endsWith('.tsx') ||
-    lower.endsWith('.js') ||
-    lower.endsWith('.jsx') ||
-    lower.endsWith('.py') ||
-    lower.endsWith('.html') ||
-    lower.endsWith('.css') ||
-    lower.endsWith('.sql') ||
-    lower.endsWith('.rs') ||
-    lower.endsWith('.go')
-  ) {
-    return <FileCode2 className="w-4 h-4 text-secondary shrink-0" />;
-  }
-  return <FileText className="w-4 h-4 text-text-secondary shrink-0" />;
-}
+import { DocumentIcon } from '@/components/chat/DocumentIcon';
 
 /** Props for the pending attachment previews row. */
 interface AttachmentPreviewsProps {
@@ -132,7 +104,7 @@ function AttachmentPreviews({
             layout
             className="group/doc relative flex items-center gap-2 px-3 py-2 rounded-xl bg-surface-raised border border-edge-raised shadow-button text-text-primary max-w-[240px] sm:max-w-[280px]"
           >
-            {getDocIcon(doc.mediaType, doc.filename)}
+            <DocumentIcon mediaType={doc.mediaType} filename={doc.filename} />
             <div className="flex flex-col min-w-0 pr-3">
               <span className="text-caption font-medium text-text-primary truncate">
                 {doc.filename}

@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import { Globe, FileText, Compass } from 'lucide-react';
 import { motion } from 'motion/react';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import { useChatInput } from '@/contexts/ChatInputContext';
@@ -11,35 +10,7 @@ import {
   emblemPopVariants,
   chipHoverProps,
 } from '@/constants/animations';
-
-/** Quick-action suggestion chips for the Dribbble-style hero empty state. */
-export const SUGGESTION_CHIPS = [
-  {
-    icon: Globe,
-    label: 'Web Research',
-    prompt: 'Search the web for the latest updates on AI agents and summarize key findings into a new workspace file.',
-  },
-  {
-    icon: FileText,
-    label: 'Draft Document',
-    prompt: 'Create a structured project proposal document in the workspace with milestones and technical architecture.',
-  },
-  {
-    icon: Compass,
-    label: 'Analyze Workspace',
-    prompt: 'List and analyze all current workspace files, providing a comprehensive executive summary.',
-  },
-];
-
-/** Pool of short, engaging welcome greetings for new chats. */
-export const WELCOME_MESSAGES = [
-  "What would you like to build or edit today?",
-  "How can I help with your workspace today?",
-  "What are we working on today?",
-  "Ready to create, edit, or analyze your files.",
-  "What would you like to research or draft?",
-  "How can Strata AI assist your workspace today?",
-];
+import { SUGGESTION_CHIPS, getWelcomeMessage } from '@/constants/prompts';
 
 export interface ChatHeroProps {
   chatId?: string;
@@ -54,16 +25,8 @@ export interface ChatHeroProps {
 function ChatHero({ chatId, chatInputNode }: ChatHeroProps) {
   const { insertPrompt } = useChatInput();
 
-  // Pick a stable welcome message from the pool based on the conversation ID
   const welcomeMessage = React.useMemo(() => {
-    if (!chatId) return WELCOME_MESSAGES[0];
-    let hash = 0;
-    for (let i = 0; i < chatId.length; i++) {
-      hash = (hash << 5) - hash + chatId.charCodeAt(i);
-      hash |= 0;
-    }
-    const index = Math.abs(hash) % WELCOME_MESSAGES.length;
-    return WELCOME_MESSAGES[index];
+    return getWelcomeMessage(chatId);
   }, [chatId]);
 
   const handleChipClick = (promptText: string) => {
