@@ -17,9 +17,9 @@ import { ComposerProvider } from '@/contexts/ComposerContext';
 import Sidebar from '@/components/sidebar/Sidebar';
 import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
 import ChatHeader from '@/components/chat/header/ChatHeader';
-import ChatInput from '@/components/chat/ChatInput';
+import ChatInput from '@/components/chat/composer/ChatInput';
 import ChatHero from '@/components/chat/ChatHero';
-import MessageList from '@/components/chat/MessageList';
+import MessageList from '@/components/chat/message/MessageList';
 import { pillFloatVariants } from '@/constants/animations';
 
 export interface ChatPageClientProps {

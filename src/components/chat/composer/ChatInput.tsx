@@ -3,11 +3,11 @@ import { MAX_MESSAGE_CHARS, MAX_ATTACHMENTS_PER_MESSAGE, buildQuotaError } from 
 import { getModelSupportsVision } from '@/lib/models';
 import { type ProcessedImage } from '@/lib/image-utils';
 import { type ProcessedDocument } from '@/lib/document-utils';
-import AttachmentPreviews from './composer/AttachmentPreviews';
-import ComposerStatusRow from './composer/ComposerStatusRow';
-import ComposerToolbar from './composer/ComposerToolbar';
-import DropZoneOverlay from './composer/DropZoneOverlay';
-import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './composer/SlashCommandMenu';
+import AttachmentPreviews from './AttachmentPreviews';
+import ComposerStatusRow from './ComposerStatusRow';
+import ComposerToolbar from './ComposerToolbar';
+import DropZoneOverlay from './DropZoneOverlay';
+import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './SlashCommandMenu';
 import { useComposerFileDrop } from '@/hooks/useComposerFileDrop';
 import { useComposer } from '@/contexts/ComposerContext';
 
