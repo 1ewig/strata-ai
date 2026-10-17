@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import type { authClient } from "@/lib/auth-client";
+import type { authClient } from "@/lib/auth/client";
 import { LogOut, LogIn, Loader2, ChevronUp } from "lucide-react";
 
 import ConfirmDialog from "@/components/ui/ConfirmDialog";

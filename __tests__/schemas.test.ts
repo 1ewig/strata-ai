@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { agentRequestBodySchema } from "@/lib/schemas";
+import { agentRequestBodySchema } from "@/agent/guards/schemas";
 
 const validFile = {
   id: "f1",

@@ -9,7 +9,7 @@ import {
   fadeUpVariants,
   buttonHoverProps,
   viewportOnce,
-} from '@/components/landing/animations';
+} from '@/constants/landing-animations';
 
 interface LandingCTAProps {
   userId?: string;

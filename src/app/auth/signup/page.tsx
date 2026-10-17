@@ -2,8 +2,8 @@
 
 import { Suspense, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "@/lib/auth-client";
-import { useSignUp } from "@/hooks/useSignUp";
+import { useSession } from "@/lib/auth/client";
+import { useSignUp } from "@/hooks/auth/useAuth";
 import { LoadingScreen } from "@/components/auth/loading-screen";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { SignUpForm } from "@/components/auth/sign-up-form";

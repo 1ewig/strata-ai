@@ -25,7 +25,7 @@ mock.module("pg", () => ({
   default: { Pool: FakePool },
 }));
 
-const { checkAndIncrementRateLimit, getRateLimitStatus, refundRateLimit } = await import("@/lib/rate-limit");
+const { checkAndIncrementRateLimit, getRateLimitStatus, refundRateLimit } = await import("@/lib/server/rate-limit");
 
 function countRows(value: number) {
   return { rows: [{ cnt: String(value) }] };

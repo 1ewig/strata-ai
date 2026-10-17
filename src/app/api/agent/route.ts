@@ -1,6 +1,6 @@
-import { createMutableWorkspace } from "@/lib/ai/workspace";
-import { runAgentResponse } from "@/lib/ai/agent-runner";
-import { withAgentRouteGuards, safeAsyncRefundRateLimit } from "@/lib/ai/route-guards";
+import { createMutableWorkspace } from "@/agent/workspace";
+import { runAgentResponse } from "@/agent/core/runner";
+import { withAgentRouteGuards, safeAsyncRefundRateLimit } from "@/agent/guards/route-guards";
 
 /**
  * POST /api/agent - streams an agent reply using the AI SDK UI message

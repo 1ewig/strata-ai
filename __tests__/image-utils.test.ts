@@ -4,7 +4,7 @@ import {
   isAllowedImageType,
   countImageParts,
   findImagePartViolations,
-} from "@/lib/image-utils";
+} from "@/lib/attachments/images";
 import {
   MAX_IMAGE_DATA_URL_CHARS,
   MAX_IMAGE_INPUT_BYTES,
@@ -120,7 +120,7 @@ describe("sanitizeMessagesForProvider & stripImageContentForUnsupportedModels", 
   const {
     sanitizeMessagesForProvider,
     stripImageContentForUnsupportedModels,
-  } = require("@/lib/ai/sanitization");
+  } = require("@/agent/sanitization");
 
   it("annotates UI image file parts with filename labels and forwards binary for vision models", async () => {
     const input = [

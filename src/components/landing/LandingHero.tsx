@@ -9,7 +9,7 @@ import {
   fadeUpVariants,
   cardVariants,
   buttonHoverProps,
-} from '@/components/landing/animations';
+} from '@/constants/landing-animations';
 
 interface LandingHeroProps {
   userId?: string;

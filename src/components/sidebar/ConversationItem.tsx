@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { MessageSquare, MoreVertical, Pin, PinOff, Edit3, Trash2, Check, X } from 'lucide-react';
-import type { Conversation } from '@/lib/db/db';
+import type { Conversation } from '@/lib/db/database';
 
 interface ConversationRenameEditorProps {
   initialTitle: string;
@@ -145,9 +145,6 @@ function ConversationItem({
             }`}
         />
         <span className="truncate flex-1">{conv.title || 'Untitled Chat'}</span>
-        {conv.pinned && (
-          <Pin className="w-3 h-3 text-primary shrink-0 opacity-80" />
-        )}
       </Link>
 
       {/* 3-dots Menu Button & Dropdown Container */}

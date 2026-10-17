@@ -5,7 +5,7 @@ import {
   upsertFileIntoWorkspace,
   removeFileFromWorkspace,
   createMutableWorkspace,
-} from "@/lib/ai/workspace";
+} from "@/agent/workspace";
 import { makeFile } from "./helpers";
 
 describe("isSameFilename", () => {

@@ -1,5 +1,5 @@
-import { runCompactionResponse } from "@/lib/ai/agent-runner";
-import { withAgentRouteGuards, safeAsyncRefundRateLimit } from "@/lib/ai/route-guards";
+import { runCompactionResponse } from "@/agent/core/runner";
+import { withAgentRouteGuards, safeAsyncRefundRateLimit } from "@/agent/guards/route-guards";
 
 /**
  * POST /api/agent/compact - streams a high-density context compaction summary

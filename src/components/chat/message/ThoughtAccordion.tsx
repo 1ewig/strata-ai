@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BrainCircuit, ChevronDown, Loader2 } from 'lucide-react';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
-import { accordionVariants } from '@/components/chat/animations';
+import { accordionVariants } from '@/constants/animations';
+import { estimateThoughtDuration } from '@/lib/timing';
+import { useElapsedTimer } from '@/hooks/common/useElapsedTimer';
 
 /**
  * Props for the ThoughtAccordion component.
@@ -20,34 +22,14 @@ interface ThoughtAccordionProps {
  * @param text - The reasoning content shown inside the expanded body.
  * @param isThinking - When true, renders a loading spinner and "Thinking..." label in the header.
  */
-function ThoughtAccordion({ text, isThinking }: ThoughtAccordionProps) {
+function ThoughtAccordion({ text, isThinking = false }: ThoughtAccordionProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const startTimeRef = useRef<number | null>(null);
-  const [elapsedSeconds, setElapsedSeconds] = useState<number>(1);
 
-  // Compute estimated thought duration based on character count
   const estimatedSeconds = React.useMemo(() => {
-    return Math.max(1, Math.round(text.length / 220));
-  }, [text.length]);
+    return estimateThoughtDuration(text);
+  }, [text]);
 
-  useEffect(() => {
-    if (!isThinking) return;
-
-    if (!startTimeRef.current) {
-      startTimeRef.current = Date.now();
-    }
-
-    const interval = setInterval(() => {
-      if (startTimeRef.current) {
-        const seconds = Math.max(1, Math.floor((Date.now() - startTimeRef.current) / 1000));
-        setElapsedSeconds(seconds);
-      }
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [isThinking]);
-
-  const displaySeconds = isThinking ? elapsedSeconds : Math.max(elapsedSeconds, estimatedSeconds);
+  const { displaySeconds } = useElapsedTimer(isThinking, estimatedSeconds);
 
   // Hide the whole accordion when there is no reasoning content to display.
   if (!text || !text.trim()) return null;

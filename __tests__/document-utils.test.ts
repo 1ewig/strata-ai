@@ -8,7 +8,7 @@ import {
   countDocumentParts,
   countTotalAttachmentParts,
   findDocumentPartViolations,
-} from "@/lib/document-utils";
+} from "@/lib/attachments/documents";
 import {
   MAX_DOCUMENT_DATA_URL_CHARS,
   MAX_DOCUMENT_INPUT_BYTES,

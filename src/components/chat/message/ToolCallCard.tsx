@@ -4,8 +4,8 @@ import React, { useState, type ReactNode } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Loader2, XCircle, type LucideIcon } from 'lucide-react';
 import { resolveToolDisplay } from '../tools/resolver';
-import type { ToolInvocationLike } from '@/lib/ai/message-segments';
-import { accordionVariants } from '@/components/chat/animations';
+import type { ToolInvocationLike } from '@/agent/client/segments';
+import { accordionVariants } from '@/constants/animations';
 
 /**
  * Card rendering a single AI tool invocation: status icon and badge in the header, plus a

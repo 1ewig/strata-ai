@@ -7,7 +7,7 @@ import {
   getModelSupportsVision,
   getStoredThinkingLevel,
   getValidThinkingLevelForModel,
-} from "@/lib/models";
+} from "@/lib/ai/models";
 
 // Minimal localStorage stand-in so getInitialModel / getStoredThinkingLevel can
 // exercise their browser branches under the Node test runner.
@@ -136,6 +136,10 @@ describe("getModelSupportsVision", () => {
 
   it("flags the Fireworks GLM model as vision-capable", () => {
     expect(getModelSupportsVision("accounts/fireworks/models/glm-5p3-flash")).toBe(true);
+  });
+
+  it("flags the Fireworks DeepSeek model as vision-capable", () => {
+    expect(getModelSupportsVision("accounts/fireworks/models/deepseek-v4p1-flash")).toBe(true);
   });
 
   it("defaults unknown model ids to vision-capable", () => {

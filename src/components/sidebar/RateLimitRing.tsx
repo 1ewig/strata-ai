@@ -2,27 +2,34 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT } from '@/lib/limits';
+import { useRateLimit } from '@/contexts/RateLimitContext';
 
 /**
  * Props for the RateLimitRing component.
  */
 interface RateLimitRingProps {
-  rateLimitData: {
+  rateLimitData?: {
     remaining5h: number;
     remainingWeek: number;
     retryAfter?: number;
   } | null;
-  isQuotaExhausted: boolean;
+  isQuotaExhausted?: boolean;
 }
 
 /**
  * Compact quota indicator showing how many messages remain in the current 5-hour window.
  * Renders a progress ring plus a hover/tap popover with details for both quota windows.
  * Renders nothing when rateLimitData is null.
- * @param rateLimitData - Remaining message counts for the 5-hour and 7-day windows, plus an optional reset delay; null hides the indicator.
- * @param isQuotaExhausted - When true, styles the badge and popover with danger colors and labels the quota as exhausted.
+ * Reads from RateLimitContext by default when props are omitted.
  */
-export default function RateLimitRing({ rateLimitData, isQuotaExhausted }: RateLimitRingProps) {
+export default function RateLimitRing({
+  rateLimitData: rateLimitDataProp,
+  isQuotaExhausted: isQuotaExhaustedProp,
+}: RateLimitRingProps) {
+  const { rateLimitData: contextRateLimitData, isQuotaExhausted: contextIsQuotaExhausted } = useRateLimit();
+  const rateLimitData = rateLimitDataProp !== undefined ? rateLimitDataProp : contextRateLimitData;
+  const isQuotaExhausted = isQuotaExhaustedProp !== undefined ? isQuotaExhaustedProp : contextIsQuotaExhausted;
+
   const [isOpen, setIsOpen] = useState(false);
   const ringRef = useRef<HTMLDivElement>(null);
 

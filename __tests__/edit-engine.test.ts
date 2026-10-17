@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { StringEditEngine } from "@/lib/edit-engine";
+import { StringEditEngine } from "@/agent/tools/edit-engine";
 
 describe("StringEditEngine.applyEdit", () => {
   it("rejects an empty or whitespace-only search string", () => {

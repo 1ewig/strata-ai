@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { Check, Code2 } from 'lucide-react';
-import { highlightCode } from '@/lib/syntax-highlighter';
-import { getLanguageLabel } from '@/lib/languages';
+import { highlightCode } from '@/lib/code/syntax-highlighter';
+import { getLanguageLabel } from '@/lib/code/languages';
 
 export type MarkdownVariant = 'assistant' | 'user' | 'thought' | 'canvas';
 
@@ -181,7 +181,7 @@ const TOKENS: Record<MarkdownVariant, TokenSet> = {
   },
 };
 
-import { useCopyClipboard } from '@/hooks/useCopyClipboard';
+import { useCopyClipboard } from '@/hooks/common/useCopyClipboard';
 
 interface CodeSnippetBlockProps {
   rawCode: string;

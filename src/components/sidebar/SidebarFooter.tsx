@@ -1,7 +1,7 @@
 import React from 'react';
-import type { authClient } from '@/lib/auth-client';
+import type { authClient } from '@/lib/auth/client';
 import UserButton from '@/components/auth/user-button';
-import ThemeToggle from '@/components/theme-toggle';
+import ThemeToggle from './ThemeToggle';
 import RateLimitRing from '@/components/sidebar/RateLimitRing';
 
 type Session = typeof authClient.$Infer.Session;
@@ -17,14 +17,6 @@ interface SidebarFooterProps {
   isDark: boolean;
   /** Callback to toggle between light and dark theme. */
   onToggleTheme: () => void;
-  /** Remaining message quota data. */
-  rateLimitData?: {
-    remaining5h: number;
-    remainingWeek: number;
-    retryAfter?: number;
-  } | null;
-  /** Whether quota is completely exhausted. */
-  isQuotaExhausted: boolean;
 }
 
 /**
@@ -37,8 +29,6 @@ function SidebarFooter({
   onSignOut,
   isDark,
   onToggleTheme,
-  rateLimitData,
-  isQuotaExhausted,
 }: SidebarFooterProps) {
   return (
     <div className="p-3 border-t border-edge-hover/50 space-y-2 shrink-0">
@@ -47,7 +37,7 @@ function SidebarFooter({
           <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
         </div>
         <div className="flex-1 min-w-0">
-          <RateLimitRing rateLimitData={rateLimitData ?? null} isQuotaExhausted={isQuotaExhausted} />
+          <RateLimitRing />
         </div>
       </div>
       <UserButton session={session} isSigningOut={isSigningOut} onSignOut={onSignOut} />

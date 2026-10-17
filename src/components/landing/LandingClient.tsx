@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/db/db';
+import { db } from '@/lib/db/database';
 import { generateId } from '@/lib/id';
 import { LandingHeader } from '@/components/landing/LandingHeader';
 import { LandingHero } from '@/components/landing/LandingHero';

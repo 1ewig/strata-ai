@@ -6,10 +6,10 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'motion/react';
 import { ArrowRight, Moon, Sun } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
-import { useTheme } from '@/hooks/useTheme';
-import { db } from '@/lib/db/db';
+import { useTheme } from '@/hooks/common/useTheme';
+import { db } from '@/lib/db/database';
 import { generateId } from '@/lib/id';
-import { buttonHoverProps } from './animations';
+import { buttonHoverProps } from '@/constants/landing-animations';
 
 /** Props for the LandingHeader component. */
 interface LandingHeaderProps {

@@ -5,7 +5,7 @@ import {
   getLanguageLabel,
   getPrismGrammarName,
   isMarkdownFile,
-} from "@/lib/languages";
+} from "@/lib/code/languages";
 
 describe("detectLanguage", () => {
   it("detects languages from file extensions", () => {

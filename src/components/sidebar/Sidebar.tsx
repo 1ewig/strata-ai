@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import type { Conversation } from '@/lib/db/db';
-import type { authClient } from '@/lib/auth-client';
+import type { Conversation } from '@/lib/db/database';
+import type { authClient } from '@/lib/auth/client';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useChatUI } from '@/contexts/ChatUIContext';
 import SidebarHeader from './SidebarHeader';
@@ -17,8 +17,6 @@ export interface SidebarProps {
   conversations: Conversation[] | undefined;
   /** Number of conversations the user has. */
   conversationCount: number;
-  /** Whether the per-user conversation cap has been reached. */
-  isMaxConversationsReached: boolean;
   /** The id of the conversation currently open, used to highlight it. */
   activeConversationId: string;
   /** Creates a new conversation and navigates to it. */
@@ -41,12 +39,6 @@ export interface SidebarProps {
   isDark: boolean;
   /** Toggles the theme, forwarded to the theme toggle. */
   onToggleTheme: () => void;
-  /** Remaining 5-hour/weekly message quota, forwarded to the quota ring. */
-  rateLimitData?: {
-    remaining5h: number;
-    remainingWeek: number;
-    retryAfter?: number;
-  } | null;
 }
 
 /**
@@ -57,7 +49,6 @@ export interface SidebarProps {
 function Sidebar({
   conversations,
   conversationCount,
-  isMaxConversationsReached,
   activeConversationId,
   onNewChat,
   isCurrentChatEmpty = false,
@@ -69,14 +60,9 @@ function Sidebar({
   onSignOut,
   isDark,
   onToggleTheme,
-  rateLimitData: rateLimitDataProp,
 }: SidebarProps) {
   const { isSidebarOpen, closeSidebar, isSidebarCollapsed } = useChatUI();
   const [chatToDelete, setChatToDelete] = useState<Conversation | null>(null);
-
-  const rateLimitData = rateLimitDataProp ?? null;
-  const isQuotaExhausted =
-    rateLimitData !== null && (rateLimitData.remaining5h <= 0 || rateLimitData.remainingWeek <= 0);
 
   const handleNewChat = useCallback(() => {
     onNewChat();
@@ -118,14 +104,12 @@ function Sidebar({
 
         <NewChatButton
           onNewChat={handleNewChat}
-          isMaxConversationsReached={isMaxConversationsReached}
           isCurrentChatEmpty={isCurrentChatEmpty}
         />
 
         <ConversationList
           conversations={conversations}
           conversationCount={conversationCount}
-          isMaxConversationsReached={isMaxConversationsReached}
           activeConversationId={activeConversationId}
           onCloseSidebar={closeSidebar}
           onRename={onRename}
@@ -139,8 +123,6 @@ function Sidebar({
           onSignOut={onSignOut}
           isDark={isDark}
           onToggleTheme={onToggleTheme}
-          rateLimitData={rateLimitData}
-          isQuotaExhausted={isQuotaExhausted}
         />
       </aside>
 

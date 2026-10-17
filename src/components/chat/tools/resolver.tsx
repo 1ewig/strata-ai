@@ -11,7 +11,8 @@ import {
   Link2,
   Wrench,
 } from 'lucide-react';
-import type { ToolInvocationLike } from '@/lib/ai/message-segments';
+import type { ToolInvocationLike } from '@/agent/client/segments';
+import { normalizeToolPart } from '@/agent/client/tool-normalization';
 import {
   buildListFilesSummary,
   buildReadFileSummary,
@@ -244,53 +245,19 @@ function extractToolInfo(toolCall: ToolInvocationLike | unknown) {
     return { name: '', rawName: '', args: {}, result: {}, state: 'input-available', status: 'error' as const, isCustom: true };
   }
 
-  const callObj = toolCall as Record<string, unknown>;
-  const rawInv = callObj.toolInvocation || callObj.toolCall || callObj.toolResult || callObj;
-  const inv = (rawInv && typeof rawInv === 'object' ? rawInv : {}) as Record<string, unknown>;
+  const norm = normalizeToolPart(toolCall);
+  const { normalized: name, isCustom } = normalizeToolName(norm.rawName);
+  const status = extractToolStatus(toolCall, norm.result, norm.state);
 
-  // Prefer explicit toolName/name field
-  const rawName =
-    (typeof inv.toolName === 'string' && inv.toolName) ||
-    (typeof inv.name === 'string' && inv.name) ||
-    (typeof (inv.function as { name?: string } | undefined)?.name === 'string' && (inv.function as { name?: string }).name) ||
-    (typeof callObj.toolName === 'string' && callObj.toolName) ||
-    (typeof callObj.name === 'string' && callObj.name) ||
-    (typeof inv.type === 'string' && inv.type.startsWith('tool-') && inv.type !== 'tool-invocation'
-      ? inv.type.replace(/^tool-/, '')
-      : '') ||
-    '';
-
-  const { normalized: name, isCustom } = normalizeToolName(rawName);
-
-  let args =
-    inv.args ||
-    inv.input ||
-    inv.parameters ||
-    callObj.args ||
-    callObj.input ||
-    {};
-
-  let result =
-    inv.result ||
-    inv.output ||
-    inv.response ||
-    callObj.result ||
-    callObj.output;
-
-  if (typeof args === 'string') {
-    try { args = JSON.parse(args); } catch {}
-  }
-  if (typeof result === 'string') {
-    try { result = JSON.parse(result); } catch {}
-  }
-
-  const rawState =
-    (typeof inv.state === 'string' && inv.state) ||
-    (typeof callObj.state === 'string' && callObj.state) ||
-    (result && hasMeaningfulResult(result) ? 'output-available' : 'input-available');
-  const status = extractToolStatus(inv, result, rawState);
-
-  return { name, rawName, args, result: result || {}, state: rawState, status, isCustom };
+  return {
+    name,
+    rawName: norm.rawName,
+    args: norm.args,
+    result: (norm.result as Record<string, unknown>) || {},
+    state: norm.state,
+    status,
+    isCustom,
+  };
 }
 
 /**

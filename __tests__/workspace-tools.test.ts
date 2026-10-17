@@ -6,7 +6,7 @@ import {
   createReadFileTool,
   createRenameFileTool,
   createWriteFileTool,
-} from "@/lib/ai/tools/workspace-tools";
+} from "@/agent/tools/workspace-tools";
 import {
   MAX_FILE_CHARS,
   MAX_FILES_PER_WORKSPACE,

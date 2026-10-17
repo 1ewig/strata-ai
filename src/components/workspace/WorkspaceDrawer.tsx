@@ -1,14 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Eye, Code } from 'lucide-react';
-import { WorkspaceFile } from '@/lib/schemas';
+import { WorkspaceFile } from '@/lib/db/schemas';
 import { MAX_FILE_CHARS, formatCharCount } from '@/lib/limits';
-import { detectLanguage, isMarkdownFile } from '@/lib/languages';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
-import { useCopyClipboard } from '@/hooks/useCopyClipboard';
+import { useChatUI } from '@/contexts/ChatUIContext';
+import { useWorkspaceEditor } from '@/hooks/workspace/useWorkspaceEditor';
 import CodeViewer from './CodeViewer';
 import WorkspaceFileSelector from './WorkspaceFileSelector';
 import WorkspaceEditor from './WorkspaceEditor';
@@ -18,8 +18,8 @@ import WorkspaceOverflowMenu from './WorkspaceOverflowMenu';
 
 /** Props for the WorkspaceDrawer component. */
 interface WorkspaceDrawerProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
   files: WorkspaceFile[];
   activeFileId: string | null;
   onSelectFile: (fileId: string) => void;
@@ -32,11 +32,11 @@ interface WorkspaceDrawerProps {
 /**
  * Slide-in drawer panel for viewing and editing workspace files.
  * Orchestrates file switching, markdown preview vs syntax-highlighted code viewing,
- * and inline file creation/editing.
+ * and inline file creation/editing via useWorkspaceEditor.
  */
 export default React.memo(function WorkspaceDrawer({
-  isOpen,
-  onClose,
+  isOpen: isOpenProp,
+  onClose: onCloseProp,
   files,
   activeFileId,
   onSelectFile,
@@ -44,60 +44,46 @@ export default React.memo(function WorkspaceDrawer({
   onCreateFile,
   onDeleteFile,
 }: WorkspaceDrawerProps) {
+  const { isWorkspaceDrawerOpen, closeWorkspaceDrawer } = useChatUI();
+  const isOpen = isOpenProp !== undefined ? isOpenProp : isWorkspaceDrawerOpen;
+  const onClose = onCloseProp ?? closeWorkspaceDrawer;
+
   const activeFile = files.find((f) => f.id === activeFileId) || files[0] || null;
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [fileName, setFileName] = useState(activeFile?.name || '');
-  const [contentValue, setContentValue] = useState(activeFile?.content || '');
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const [newFileName, setNewFileName] = useState('');
-  const [fileToDelete, setFileToDelete] = useState<WorkspaceFile | null>(null);
-  const [markdownViewMode, setMarkdownViewMode] = useState<'preview' | 'source'>('preview');
-
-  const { copied, copy } = useCopyClipboard();
-
-  const handleStartEditing = () => {
-    setFileName(activeFile?.name || '');
-    setContentValue(activeFile?.content || '');
-    setIsEditing(true);
-  };
-
-  const isFileOverLimit = isEditing && contentValue.length > MAX_FILE_CHARS;
-  const isFileWarning = isEditing && contentValue.length > MAX_FILE_CHARS * 0.9 && !isFileOverLimit;
-
-  const handleSaveEdit = () => {
-    if (!activeFile || isFileOverLimit) return;
-    const finalName = fileName.trim() || activeFile.name;
-    onUpdateFile({
-      ...activeFile,
-      name: finalName,
-      language: detectLanguage(finalName),
-      content: contentValue,
-      updatedAt: new Date().toISOString(),
-    });
-    setIsEditing(false);
-  };
-
-  const handleCreateNewFileSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = newFileName.trim();
-    if (!trimmed) return;
-    onCreateFile(trimmed, '');
-    setNewFileName('');
-    setIsCreatingNew(false);
-  };
-
-  const handleSelectFile = (fileId: string) => {
-    setIsEditing(false);
-    onSelectFile(fileId);
-  };
-
-  const handleOpenCreateNew = () => {
-    setIsEditing(false);
-    setIsCreatingNew(true);
-  };
-
-  const isMarkdown = isMarkdownFile(activeFile?.name, activeFile?.language);
+  const {
+    isEditing,
+    fileName,
+    setFileName,
+    contentValue,
+    setContentValue,
+    isCreatingNew,
+    newFileName,
+    setNewFileName,
+    fileToDelete,
+    markdownViewMode,
+    setMarkdownViewMode,
+    isFileOverLimit,
+    isFileWarning,
+    isMarkdown,
+    copied,
+    handleStartEditing,
+    handleCancelEditing,
+    handleSaveEdit,
+    handleOpenCreateNew,
+    handleCancelCreateNew,
+    handleCreateNewFileSubmit,
+    handleSelectFile,
+    handleRequestDelete,
+    handleConfirmDelete,
+    handleCancelDelete,
+    handleCopyContent,
+  } = useWorkspaceEditor({
+    activeFile,
+    onUpdateFile,
+    onCreateFile,
+    onDeleteFile,
+    onSelectFile,
+  });
 
   return (
     <>
@@ -181,9 +167,9 @@ export default React.memo(function WorkspaceDrawer({
                       activeFile={activeFile}
                       isEditing={isEditing}
                       copied={copied}
-                      onCopy={() => copy(activeFile.content)}
+                      onCopy={handleCopyContent}
                       onStartEditing={handleStartEditing}
-                      onDeleteClick={() => setFileToDelete(activeFile)}
+                      onDeleteClick={() => handleRequestDelete(activeFile)}
                     />
                   )}
                 </div>
@@ -203,7 +189,7 @@ export default React.memo(function WorkspaceDrawer({
                   <button type="submit" className="text-label font-semibold bg-primary hover:bg-primary-hover active:scale-95 text-surface px-3.5 py-1.5 rounded-lg transition-all duration-150 shadow-button cursor-pointer">
                     Create
                   </button>
-                  <button type="button" onClick={() => setIsCreatingNew(false)} className="text-label text-text-muted hover:text-text-primary active:scale-95 px-2.5 py-1.5 rounded-lg transition-all duration-150 cursor-pointer">
+                  <button type="button" onClick={handleCancelCreateNew} className="text-label text-text-muted hover:text-text-primary active:scale-95 px-2.5 py-1.5 rounded-lg transition-all duration-150 cursor-pointer">
                     Cancel
                   </button>
                 </form>
@@ -247,7 +233,7 @@ export default React.memo(function WorkspaceDrawer({
                 isEditing={isEditing}
                 isFileOverLimit={isFileOverLimit}
                 onClose={onClose}
-                onCancelEditing={() => setIsEditing(false)}
+                onCancelEditing={handleCancelEditing}
                 onSaveEdit={handleSaveEdit}
               />
             </motion.div>
@@ -268,13 +254,8 @@ export default React.memo(function WorkspaceDrawer({
         confirmLabel="Delete File"
         cancelLabel="Cancel"
         variant="danger"
-        onConfirm={() => {
-          if (fileToDelete) {
-            onDeleteFile(fileToDelete.id);
-            setFileToDelete(null);
-          }
-        }}
-        onCancel={() => setFileToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        onCancel={handleCancelDelete}
       />
     </>
   );

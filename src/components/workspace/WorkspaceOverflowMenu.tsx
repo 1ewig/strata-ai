@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { MoreVertical, Copy, Check, Edit3, Trash2 } from 'lucide-react';
-import { WorkspaceFile } from '@/lib/schemas';
+import { WorkspaceFile } from '@/lib/db/schemas';
 
 interface WorkspaceOverflowMenuProps {
   activeFile: WorkspaceFile;

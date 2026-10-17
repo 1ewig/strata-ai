@@ -1,4 +1,0 @@
-[install]
-linker = "isolated"
-globalStore = false
-publicHoistPattern = ["*pg*", "*postgres*"]
