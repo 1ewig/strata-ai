@@ -184,7 +184,7 @@ src/
 │   ├── providers/        # resolveAgentModel, getModelProvider, reasoning mapping
 │   ├── guards/           # withAgentRouteGuards, agentRequestBodySchema, refunds
 │   ├── sanitization/     # provider metadata pruning, PDF text extraction, image stripping
-│   ├── workspace/        # operations and mutable-workspace context
+│   ├── workspace/        # per-request mutable workspace + file operations
 │   └── client/           # tool-normalization, extractor, segments, reconciler, error-handler
 ├── proxy.ts              # Middleware: session-cookie gate + security headers
 ├── instrumentation.ts    # OTel NodeSDK + Langfuse span processor (server-only)
