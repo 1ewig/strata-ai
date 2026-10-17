@@ -41,7 +41,7 @@ Read the rest top-down: what a request does end-to-end (§4-5), then the subsyst
 
 **Model catalog** (`src/lib/models.ts`) is the single source of truth for selectable models,
 pricing, context windows (all 131,072), and thinking levels. `resolveAgentModel`
-(`src/lib/ai/providers.ts`) maps a catalog id to the provider-specific `streamText` config;
+(`src/agent/providers/index.ts`) maps a catalog id to the provider-specific `streamText` config;
 only ids carrying a `provider` field route to Fireworks.
 
 ## 3. Commands
@@ -72,12 +72,12 @@ This is the spine of the system. Everything below happens for one user message.
 3. **Proxy gate.** `src/proxy.ts` runs a fast `getSessionCookie` pre-check (JSON 401 for `/api/*`,
    redirect to `/auth` for pages — deliberately dropping `callbackUrl` on `/chat-id/*` so a private
    chat id is never inherited by another account) and injects `nosniff` / `DENY` / `strict-origin`.
-4. **Route guards.** `withAgentRouteGuards` (`src/lib/ai/route-guards.ts`) runs a fixed pipeline:
+4. **Route guards.** `withAgentRouteGuards` (`src/agent/guards/route-guards.ts`) runs a fixed pipeline:
    `auth.api.getSession` (401) -> `req.json()` (400) -> `agentRequestBodySchema` (400) ->
    `sliceMessagesAfterCompaction` -> length and attachment-part bounds (400) ->
    `checkAndIncrementRateLimit` (429). Quota is reserved only after every input check passes; the
    route stays a thin shell receiving `{ session, body, messages, rateLimit, signal }`.
-5. **Stream assembly.** `runAgentResponse` (`src/lib/ai/agent-runner.ts`) computes the active token
+5. **Stream assembly.** `runAgentResponse` (`src/agent/core/runner.ts`) computes the active token
    budget, then delegates to the private `createUIStreamResponder` — the single choke point for all
    model execution. It sanitizes cross-provider metadata, converts messages once, strips image parts
    for text-only models, applies
@@ -90,7 +90,7 @@ This is the spine of the system. Everything below happens for one user message.
 7. **Client application.** `useChat.onData` handles `data-workspace` parts live, so the drawer
    reflects the agent's work mid-stream. `useWorkspaceFiles` coalesces rapid updates on a 150 ms
    timer before writing to Dexie.
-8. **Reconcile.** `useChat.onFinish` -> `reconcileFinishedStep` (`src/lib/ai/chat-reconciler.ts`)
+8. **Reconcile.** `useChat.onFinish` -> `reconcileFinishedStep` (`src/agent/client/reconciler.ts`)
    persists all messages, merges workspace deltas from the finished message's tool parts, and — on
    `finishReason === 'step-limit'` — schedules an auto-continuation, capped at 2 per user turn.
 
@@ -107,7 +107,7 @@ that real summary text was produced, and reconciles. Server-side it reuses the s
 `error`, `finish`. Every stream carries `X-RateLimit-Remaining-5h` and
 `X-RateLimit-Remaining-Week`.
 
-**Tools** (registered in `src/lib/ai/tools/index.ts`, built per request from
+**Tools** (registered in `src/agent/tools/index.ts`, built per request from
 `createMutableWorkspace(files)` so all tools share one live mutable array):
 
 | Tool | Arguments | Effect | Emits |
@@ -121,7 +121,7 @@ that real summary text was produced, and reconciles. Server-side it reuses the s
 | `webSearch` | `query`, depth/topic/timeRange/domains... | Tavily search, 30s timeout, mapped errors | — |
 | `extractUrl` | `urls` (1-3), `extractDepth`, `query?` | Tavily extract, 45s timeout, 18k char cap per page | — |
 
-`editFile` delegates to `StringEditEngine` (`src/lib/edit-engine.ts`), which tries
+`editFile` delegates to `StringEditEngine` (`src/agent/tools/edit-engine.ts`), which tries
 **exact** substring, then **whitespace-normalized** line matching, then **anchor-matched**
 first/last-line bounding. Every strategy rejects ambiguous matches with an actionable error rather
 than guessing.
@@ -190,20 +190,40 @@ src/
 │                         # ComposerContext (imperative composer handle)
 ├── hooks/                # useChatSession (orchestrator), useChatTransport, useCompaction,
 │                         # useWorkspaceFiles, useConversations, useModelSettings, useTheme, ...
+```
+src/
+├── agent/                # Folder-based agent architecture
+│   ├── core/             # runner (stream choke point), error-classifier, transforms
+│   ├── tools/            # workspace-tools, tavily-tools, edit-engine, types
+│   ├── prompts/          # system, compaction, types
+│   ├── providers/        # resolveAgentModel, getModelProvider, reasoning mapping
+│   ├── guards/           # withAgentRouteGuards, agentRequestBodySchema, refunds
+│   ├── sanitization/     # provider metadata pruning, PDF text extraction, image stripping
+│   ├── workspace/        # mutable-workspace, operations
+│   └── client/           # reconciler, error-handler, extractor, segments
+├── proxy.ts              # Middleware: session-cookie gate + security headers
+├── instrumentation.ts    # OTel NodeSDK + Langfuse span processor (server-only)
+├── app/
+│   ├── layout.tsx        # RSC shell: fonts, anti-flash script, RateLimitProvider
+│   ├── page.tsx          # Landing (public)
+│   ├── auth/             # signin / signup / redirector
+│   ├── chat-id/[id]/     # Chat workspace; use(params); owns <StickToBottom>
+│   └── api/              # agent, agent/compact, user/rate-limit, auth/[...all]
+├── components/           # chat/ (composer, message, tools), workspace/, sidebar/, auth/, landing/, ui/
+├── contexts/             # RateLimitContext (global quota), ChatUIContext (sidebar shell),
+│                         # ComposerContext (imperative composer handle)
+├── hooks/                # useChatSession (orchestrator), useChatTransport, useCompaction,
+│                         # useWorkspaceFiles, useConversations, useModelSettings, useTheme, ...
 └── lib/
-    ├── ai/               # agent-runner (stream choke point), route-guards, providers, prompts,
-    │                     # sanitization, error-classifier, chat-reconciler, chat-error-handler,
-    │                     # message-extractor, message-segments, stream-transforms, workspace.ts, tools/
     ├── db/db.ts          # Dexie schema v5 + all conversation/file persistence
     ├── auth.ts           # Server Better Auth (pg Pool)   |  auth-client.ts  # Client
     ├── limits.ts         # Every limit constant (never inline these numbers)
     ├── models.ts         # Model catalog, pricing, thinking levels
-    ├── edit-engine.ts    # StringEditEngine 3-strategy matcher
     ├── languages.ts      # 25 grammars, extension mapping, Prism name resolution
     ├── token-usage.ts    # Context-window and session token metrics
     ├── image-utils.ts    # Client-side canvas downscaling
     ├── document-utils.ts # PDF/text ingestion and extraction caps
-    └── schemas.ts        # WorkspaceFileSchema + agentRequestBodySchema
+    └── schemas.ts        # WorkspaceFileSchema (+ agentRequestBodySchema re-export)
 __tests__/                # 18 suites, run with bun test --isolate
 ```
 
@@ -250,7 +270,7 @@ concise" warning mode at the same threshold.
 1. **Zero Server Actions.** No `"use server"` anywhere. Mutations use Route Handlers (streaming and
    quota only), Dexie (local entities), or Better Auth client methods.
 2. **Unified Stream Responder.** All model execution goes through `createUIStreamResponder`
-   (`src/lib/ai/agent-runner.ts`) with `smoothStream` and `coalesceToolInputDeltas`. Never call
+   (`src/agent/core/runner.ts`) with `smoothStream` and `coalesceToolInputDeltas`. Never call
    `streamText` from a route directly.
 3. **Milo Color Tokens Only.** No hex literals, no default Tailwind palette names (`emerald`, `rose`,
    `zinc`, `red-*`, ...). Use `primary`, `secondary`, `surface-*`, `text-*`, `edge-*`, `danger`,
@@ -281,4 +301,4 @@ concise" warning mode at the same threshold.
 **Testing conventions:** suites live in `__tests__/`, run via `bun test --isolate`. Shared fixtures
 (`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`, `withEnv`) come from
 `__tests__/helpers.ts`. Route tests must `mock.module` `@/lib/auth`, `@/lib/rate-limit`, and
-`@/lib/ai/agent-runner` *before* dynamically importing the route.
+`@/agent/core/runner` *before* dynamically importing the route.

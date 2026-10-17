@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, mock } from "bun:test";
-import { createExtractUrlTool, createWebSearchTool } from "@/lib/ai/tools/tavily-tools";
+import { createExtractUrlTool, createWebSearchTool } from "@/agent/tools/tavily-tools";
 import { jsonResponse, runTool } from "./helpers";
 
 const originalFetch = globalThis.fetch;

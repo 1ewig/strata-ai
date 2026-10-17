@@ -1,4 +1,4 @@
-import { agentRequestBodySchema, AgentRequestBody } from "@/lib/schemas";
+import { agentRequestBodySchema, type AgentRequestBody } from "./schemas";
 import {
   MAX_MESSAGE_CHARS,
   MAX_ATTACHMENTS_PER_MESSAGE,
@@ -6,9 +6,9 @@ import {
 } from "@/lib/limits";
 import { findImagePartViolations } from "@/lib/image-utils";
 import { countTotalAttachmentParts, findDocumentPartViolations } from "@/lib/document-utils";
-import { sliceMessagesAfterCompaction } from "@/lib/ai/message-extractor";
+import { sliceMessagesAfterCompaction } from "../client/extractor";
 import { auth } from "@/lib/auth";
-import { checkAndIncrementRateLimit, refundRateLimit, RateLimitResult } from "@/lib/rate-limit";
+import { checkAndIncrementRateLimit, refundRateLimit, type RateLimitResult } from "@/lib/rate-limit";
 
 /**
  * Context passed to the route delegate after validation and rate-limiting have succeeded.

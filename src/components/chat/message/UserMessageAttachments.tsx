@@ -1,6 +1,6 @@
 import React from 'react';
 import { FileText, FileSpreadsheet, FileJson, FileCode2 } from 'lucide-react';
-import { ImageAttachmentInfo, DocumentAttachmentInfo } from '@/lib/ai/message-segments';
+import { ImageAttachmentInfo, DocumentAttachmentInfo } from '@/agent/client/segments';
 import { formatFileSize } from '@/lib/document-utils';
 
 /** Props for the UserMessageAttachments component. */

@@ -120,7 +120,7 @@ describe("sanitizeMessagesForProvider & stripImageContentForUnsupportedModels", 
   const {
     sanitizeMessagesForProvider,
     stripImageContentForUnsupportedModels,
-  } = require("@/lib/ai/sanitization");
+  } = require("@/agent/sanitization");
 
   it("annotates UI image file parts with filename labels and forwards binary for vision models", async () => {
     const input = [

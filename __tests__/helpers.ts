@@ -1,6 +1,6 @@
 import { mock } from "bun:test";
 import type { WorkspaceFile } from "@/lib/schemas";
-import { createMutableWorkspace } from "@/lib/ai/workspace";
+import { createMutableWorkspace } from "@/agent/workspace";
 
 /**
  * Builds a minimal valid workspace file for tests.

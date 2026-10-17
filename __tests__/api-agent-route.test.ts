@@ -25,7 +25,7 @@ mock.module("@/lib/rate-limit", () => ({
   refundRateLimit: refundRateLimitMock,
 }));
 
-mock.module("@/lib/ai/agent-runner", () => ({
+mock.module("@/agent/core/runner", () => ({
   runAgentResponse: runAgentResponseMock,
 }));
 

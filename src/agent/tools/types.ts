@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { WorkspaceFile } from "@/lib/schemas";
+import type { WorkspaceFile } from "@/lib/schemas";
 
 /**
  * Closures wiring tools to the live workspace state of the current request.
@@ -34,5 +34,5 @@ export const fileSummarySchema = z.object({
   updatedAt: z.string().optional(),
 });
 
-// Re-export shared filename and workspace file search utilities from workspace.ts
-export { isSameFilename, findWorkspaceFile } from "../workspace";
+// Re-export shared filename and workspace file search utilities from workspace operations
+export { isSameFilename, findWorkspaceFile } from "../workspace/operations";

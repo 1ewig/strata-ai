@@ -6,32 +6,37 @@ import {
   toUIMessageStream,
   smoothStream,
   createUIMessageStream,
-  LanguageModelUsage,
+  type LanguageModelUsage,
 } from "ai";
 import {
   buildSystemInstruction,
   buildCompactionInstruction,
-  createWorkspaceTools,
-} from "@/lib/ai";
-import { resolveAgentModel, getModelProvider, DEFAULT_AGENT_MODEL } from "@/lib/ai/providers";
-import { WorkspaceToolsContext } from "@/lib/ai/tools/types";
-import { WorkspaceFile } from "@/lib/schemas";
-import { getModelContextWindow, getModelSupportsVision, COMPACTION_MODEL_ID, COMPACTION_THINKING_LEVEL } from "@/lib/models";
-import { calculateTokenMetrics, ChatMetadata } from "@/lib/token-usage";
+} from "../prompts";
+import { createWorkspaceTools } from "../tools";
+import { resolveAgentModel, getModelProvider, DEFAULT_AGENT_MODEL } from "../providers";
+import type { WorkspaceToolsContext } from "../tools/types";
+import type { WorkspaceFile } from "@/lib/schemas";
+import {
+  getModelContextWindow,
+  getModelSupportsVision,
+  COMPACTION_MODEL_ID,
+  COMPACTION_THINKING_LEVEL,
+} from "@/lib/models";
+import { calculateTokenMetrics, type ChatMetadata } from "@/lib/token-usage";
 import {
   sanitizeMessagesForProvider,
   stripImageContentForUnsupportedModels,
-} from "./sanitization";
-import { coalesceToolInputDeltas } from "./stream-transforms";
+} from "../sanitization";
+import { coalesceToolInputDeltas } from "./transforms";
 import { classifyProviderError } from "./error-classifier";
 import { propagateAttributes } from "@langfuse/tracing";
 import { langfuseSpanProcessor } from "@/instrumentation";
 
-// Re-export sanitization helpers for backwards compatibility
+// Re-export sanitization helpers for convenience
 export {
   sanitizeMessagesForProvider,
   stripImageContentForUnsupportedModels,
-} from "./sanitization";
+} from "../sanitization";
 
 /**
  * Server-side agent run configuration.
@@ -137,22 +142,6 @@ export async function runAgentResponse({
 /**
  * Configuration for `createUIStreamResponder`: the deltas between the agent and
  * context-compaction runs layered onto the shared streaming wiring.
- * @property prefix - Lifecycle log prefix ("[agent]" or "[compaction]").
- * @property messages - Conversation messages to feed the model.
- * @property modelId - Optional catalog model id; defaults to the lite Gemini model.
- * @property thinkingLevel - Optional thinking effort requested by the client.
- * @property signal - Optional abort signal tied to the incoming request.
- * @property remaining5h / remainingWeek - Quota echoed as response headers.
- * @property userId - Optional authenticated user ID for trace attribution.
- * @property sessionId - Optional conversation / chat ID for trace session grouping.
- * @property initialSystem - System prompt emitted with the initial step.
- * @property buildTools - Optional factory producing tools bound to the live writer.
- * @property prepareStep - Optional system re-injection hook between agent steps.
- * @property stopWhen - Optional agent tool-loop step cap.
- * @property maxOutputTokens - Optional output cap (compaction).
- * @property appendUserMessage - Optional user turn appended after converted history.
- * @property extraMetadata - Extra metadata merged onto the finished assistant message.
- * @property onInferenceError - Optional callback invoked when stream or generation encounters an error.
  */
 interface UIStreamResponderConfig {
   prefix: string;
@@ -318,9 +307,6 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
                   stream: result.stream,
                   messageMetadata: ({ part }) => {
                     // Attach the provider-reported usage to the finished assistant message.
-                    // Following Claude Code / OpenCode / Codex standard, we record the final step's
-                    // usage as the active conversation context snapshot (avoiding multi-step N-pass inflation),
-                    // while preserving stepTotalUsage for cumulative session analytics.
                     if (part.type === "finish") {
                       return {
                         ...config.extraMetadata,
@@ -379,14 +365,6 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
 
 /**
  * Server-side compaction run configuration.
- * @property files - The workspace files to reference in the compaction prompt.
- * @property messages - The conversation messages to summarize.
- * @property modelId - Optional catalog model id; defaults to the lite Gemini model.
- * @property thinkingLevel - Optional thinking effort requested by the client.
- * @property signal - Optional abort signal tied to the incoming request.
- * @property userId - Optional authenticated user ID for trace attribution.
- * @property sessionId - Optional conversation / chat ID for trace session grouping.
- * @property onInferenceError - Optional callback invoked when stream or generation encounters an error.
  */
 export interface RunCompactionResponseParams {
   files?: WorkspaceFile[];

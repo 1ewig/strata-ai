@@ -1,13 +1,12 @@
 import { google } from "@ai-sdk/google";
 import { fireworks } from "@ai-sdk/fireworks";
-import { streamText, type LanguageModel } from "ai";
 import { MODELS, MODEL_THINKING_LEVELS } from "@/lib/models";
+import type { ModelProvider, ResolvedAgentModel } from "./types";
+
+export * from "./types";
 
 /** Default model used when the client omits or sends an unknown model id. */
 export const DEFAULT_AGENT_MODEL = "gemini-3.5-flash-lite";
-
-/** Backend providers the agent endpoint can route to. */
-export type ModelProvider = "google" | "fireworks";
 
 /** Provider lookup derived from the MODELS catalog (client-facing shape, server-side only usage). */
 const providerByModelId: Record<string, ModelProvider> = Object.fromEntries(
@@ -25,7 +24,7 @@ export function getModelProvider(modelId: string): ModelProvider {
 
 /**
  * Maps app thinking levels to Fireworks reasoning effort. GLM 5.3 Flash
- * exposes low/medium/high, so the four app levels collapse onto those.
+ * and DeepSeek V4.1 Flash expose low/medium/high, so the four app levels collapse onto those.
  */
 const FIREWORKS_EFFORT: Record<string, "low" | "medium" | "high"> = {
   minimal: "low",
@@ -36,13 +35,6 @@ const FIREWORKS_EFFORT: Record<string, "low" | "medium" | "high"> = {
 
 /** Fireworks-hosted GLM 5.3 Flash model id. */
 export const FIREWORKS_MODEL_ID = "accounts/fireworks/models/glm-5p3-flash";
-
-/** The resolved model configuration passed into streamText. */
-export interface ResolvedAgentModel {
-  model: LanguageModel;
-  reasoning?: string;
-  providerOptions?: NonNullable<Parameters<typeof streamText>[0]>["providerOptions"];
-}
 
 /**
  * Resolves a catalog model id into the provider-specific streamText config.

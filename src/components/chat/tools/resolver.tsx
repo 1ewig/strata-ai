@@ -11,7 +11,7 @@ import {
   Link2,
   Wrench,
 } from 'lucide-react';
-import type { ToolInvocationLike } from '@/lib/ai/message-segments';
+import type { ToolInvocationLike } from '@/agent/client/segments';
 import {
   buildListFilesSummary,
   buildReadFileSummary,

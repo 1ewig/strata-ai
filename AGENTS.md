@@ -39,8 +39,8 @@ The app ships light + dark themes (light default; dark via `.dark` class + `html
 ## Core Architectural Invariants
 
 - **No Server Actions:** Zero `"use server"` directives. State mutations use (1) Route Handlers for streaming/quota, (2) Dexie (`lib/db/db.ts`) for local entities, or (3) Better Auth client methods.
-- **Unified Stream Assembly:** All model streaming must flow through `createUIStreamResponder` (`lib/ai/agent-runner.ts`) with `smoothStream` and `coalesceToolInputDeltas`.
-- **Route Guards & Quota:** Wrap agent routes with `withAgentRouteGuards` (`lib/ai/route-guards.ts`). Auto-refund rate limits on upstream inference failure.
+- **Unified Stream Assembly:** All model streaming must flow through `createUIStreamResponder` (`src/agent/core/runner.ts`) with `smoothStream` and `coalesceToolInputDeltas`.
+- **Route Guards & Quota:** Wrap agent routes with `withAgentRouteGuards` (`src/agent/guards/route-guards.ts`). Auto-refund rate limits on upstream inference failure.
 - **Tool Card Isolation:** Do not edit `ToolCallCard.tsx` when adding tools; register display configs and summaries in `components/chat/tools/resolver.tsx`.
 - **Presentational Purity:** Keep UI components presentational. Fetching, Dexie queries, auth calls, and router logic live in page hooks and pass down as props.
 - **Auto-scroll:** Handled exclusively by `<StickToBottom>` in `app/chat-id/[id]/page.tsx`. No manual scroll loops.
@@ -53,4 +53,4 @@ The app ships light + dark themes (light default; dark via `.dark` class + `html
 - Run tests with `--isolate` (`bun test`).
 - Import shared fixtures from `__tests__/helpers.ts` (`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`).
 - Import limit constants from `@/lib/limits` (never hardcode magic numbers).
-- Mock `@/lib/auth`, `@/lib/rate-limit`, and `@/lib/ai/agent-runner` with `mock.module` before dynamic route imports in route tests.
+- Mock `@/lib/auth`, `@/lib/rate-limit`, and `@/agent/core/runner` with `mock.module` before dynamic route imports in route tests.

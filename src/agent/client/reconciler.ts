@@ -5,14 +5,14 @@ import {
   updateConversationFiles,
 } from '@/lib/db/db';
 import {
-  GenericUIMessage,
+  type GenericUIMessage,
   extractDeletedFilesFromMessage,
   extractFilesFromMessage,
-} from '@/lib/ai/message-extractor';
+} from './extractor';
 import {
   removeFileFromWorkspace,
   upsertFileIntoWorkspace,
-} from '@/lib/ai/workspace';
+} from '../workspace';
 
 /**
  * Parameters needed to reconcile one finished agent step into Dexie.

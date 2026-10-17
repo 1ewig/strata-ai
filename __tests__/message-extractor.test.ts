@@ -4,7 +4,7 @@ import {
   extractDeletedFilesFromMessage,
   findLatestCompactedMessageIndex,
   sliceMessagesAfterCompaction,
-} from "@/lib/ai/message-extractor";
+} from "@/agent/client/extractor";
 import { makeFile } from "./helpers";
 
 function legacyToolResult(result: unknown, toolCallId = "call-1") {

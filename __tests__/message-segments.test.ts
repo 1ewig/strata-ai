@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { flattenMessageSegments } from "@/lib/ai/message-segments";
+import { flattenMessageSegments } from "@/agent/client/segments";
 
 describe("flattenMessageSegments", () => {
   it("joins all text parts into a single user bubble", () => {

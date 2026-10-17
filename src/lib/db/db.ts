@@ -5,7 +5,7 @@ import {
   isSameFilename,
   removeFileFromWorkspace,
   upsertFileIntoWorkspace,
-} from '@/lib/ai/workspace';
+} from '@/agent/workspace';
 
 /**
  * A persisted chat session row stored in the `conversations` table.

@@ -5,9 +5,9 @@ import { readUIMessageStream, parseJsonEventStream, uiMessageChunkSchema } from 
 import { WorkspaceFile } from '@/lib/schemas';
 import { COMPACTION_MODEL_ID } from '@/lib/models';
 import { RateLimitData, QuotaError } from '@/contexts/RateLimitContext';
-import { reconcileFinishedStep } from '@/lib/ai/chat-reconciler';
+import { reconcileFinishedStep } from '@/agent/client/reconciler';
 import { buildQuotaError } from '@/lib/limits';
-import { getFriendlyErrorMessage } from '@/lib/ai/chat-error-handler';
+import { getFriendlyErrorMessage } from '@/agent/client/error-handler';
 import { persistMessages } from '@/lib/db/db';
 
 /** Parameters required by the `useCompaction` hook. */

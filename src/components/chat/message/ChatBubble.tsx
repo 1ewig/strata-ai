@@ -10,7 +10,7 @@ import WorkGroupCard from './WorkGroupCard';
 import MessageActionsMenu from './MessageActionsMenu';
 import UserMessageAttachments from './UserMessageAttachments';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
-import { flattenMessageSegments, Segment } from '@/lib/ai/message-segments';
+import { flattenMessageSegments, Segment } from '@/agent/client/segments';
 
 const InferenceTimer = React.memo(function InferenceTimer() {
   const [seconds, setSeconds] = useState(1);

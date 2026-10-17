@@ -1,7 +1,7 @@
 import { tool } from "ai";
 import { z } from "zod";
 import { WorkspaceFile } from "@/lib/schemas";
-import { StringEditEngine } from "@/lib/edit-engine";
+import { StringEditEngine } from "./edit-engine";
 import {
   MAX_FILE_CHARS,
   MAX_FILES_PER_WORKSPACE,

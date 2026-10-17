@@ -1,5 +1,5 @@
 import { describe, it, expect } from "bun:test";
-import { classifyProviderError } from "@/lib/ai/error-classifier";
+import { classifyProviderError } from "@/agent/core/error-classifier";
 
 describe("classifyProviderError", () => {
   it("classifies user abort / cancellations", () => {

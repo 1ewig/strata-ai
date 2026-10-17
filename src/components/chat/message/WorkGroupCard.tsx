@@ -6,7 +6,7 @@ import { ChevronDown, Loader2, Workflow } from 'lucide-react';
 import ThoughtAccordion from './ThoughtAccordion';
 import ToolCallCard from './ToolCallCard';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
-import { Segment } from '@/lib/ai/message-segments';
+import { Segment } from '@/agent/client/segments';
 import { accordionVariants } from '@/components/chat/animations';
 
 interface WorkGroupCardProps {
