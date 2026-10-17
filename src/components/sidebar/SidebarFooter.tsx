@@ -1,7 +1,7 @@
 import React from 'react';
 import type { authClient } from '@/lib/auth-client';
 import UserButton from '@/components/auth/user-button';
-import ThemeToggle from '@/components/theme-toggle';
+import ThemeToggle from './ThemeToggle';
 import RateLimitRing from '@/components/sidebar/RateLimitRing';
 
 type Session = typeof authClient.$Infer.Session;
