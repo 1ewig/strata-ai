@@ -41,12 +41,6 @@ export interface SidebarProps {
   isDark: boolean;
   /** Toggles the theme, forwarded to the theme toggle. */
   onToggleTheme: () => void;
-  /** Remaining 5-hour/weekly message quota, forwarded to the quota ring. */
-  rateLimitData?: {
-    remaining5h: number;
-    remainingWeek: number;
-    retryAfter?: number;
-  } | null;
 }
 
 /**
@@ -69,7 +63,6 @@ function Sidebar({
   onSignOut,
   isDark,
   onToggleTheme,
-  rateLimitData,
 }: SidebarProps) {
   const { isSidebarOpen, closeSidebar, isSidebarCollapsed } = useChatUI();
   const [chatToDelete, setChatToDelete] = useState<Conversation | null>(null);
@@ -135,7 +128,6 @@ function Sidebar({
           onSignOut={onSignOut}
           isDark={isDark}
           onToggleTheme={onToggleTheme}
-          rateLimitData={rateLimitData}
         />
       </aside>
 
