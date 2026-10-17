@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn, signUp, signOut, useSession } from '@/lib/auth/client';
+import { signIn, signUp, signOut } from '@/lib/auth/client';
 
 /** Loose shape accepted from auth client responses (e.g. Better Auth's { data, error }). */
 interface AuthResultLike {
@@ -144,21 +144,4 @@ export function useSignOut() {
   }, [router]);
 
   return { isPending, handleSignOut };
-}
-
-/**
- * Unified authentication hook: combines the active session query with
- * the sign-out mutation for components that manage user profile and logout.
- */
-export function useAuth() {
-  const sessionResult = useSession();
-  const { isPending: isSigningOut, handleSignOut } = useSignOut();
-
-  return {
-    session: sessionResult.data,
-    isSessionPending: sessionResult.isPending,
-    error: sessionResult.error,
-    isSigningOut,
-    handleSignOut,
-  };
 }

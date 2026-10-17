@@ -197,9 +197,9 @@ src/
 ├── components/           # ChatPageClient (workspace orchestrator), chat/ (header/, input/, message/, tools/), workspace/, sidebar/, auth/, landing/, ui/
 ├── contexts/             # RateLimitContext (global quota), ChatUIContext (sidebar shell),
 │                         # ChatInputContext (imperative chat input handle)
-├── hooks/                # Domain folders: common/ (useTheme, useIsMobile, useClickOutside, ...),
+├── hooks/                # Domain folders: common/ (useTheme, useCopyClipboard, useClickOutside, ...),
 │                         # chat/ (useChatSession orchestrator, useChatTransport, useCompaction, ...),
-│                         # conversations/, workspace/, auth/ (unified auth machine); barrel index.ts
+│                         # conversations/, workspace/, auth/ (sign in/up/out state machines)
 └── lib/
     ├── auth/             # server.ts (Server Better Auth + pg Pool) | client.ts (client auth)
     ├── db/               # database.ts (Dexie v5 + Conversation/DBMessage), conversations.ts,
