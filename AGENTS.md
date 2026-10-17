@@ -43,7 +43,7 @@ The app ships light + dark themes (light default; dark via `.dark` class + `html
 - **Route Guards & Quota:** Wrap agent routes with `withAgentRouteGuards` (`src/agent/guards/route-guards.ts`). Auto-refund rate limits on upstream inference failure.
 - **Tool Card Isolation:** Do not edit `ToolCallCard.tsx` when adding tools; register display configs and summaries in `components/chat/tools/resolver.tsx`.
 - **Presentational Purity:** Keep UI components presentational. Fetching, Dexie queries, auth calls, and router logic live in page hooks and pass down as props.
-- **Auto-scroll:** Handled exclusively by `<StickToBottom>` in `app/chat-id/[id]/page.tsx`. No manual scroll loops.
+- **Auto-scroll:** Handled exclusively by `<StickToBottom>` in `src/components/ChatPageClient.tsx`. No manual scroll loops.
 - **Async Next.js 16 APIs:** Unwrap dynamic route `params` with `use(params)` in client components, `await searchParams`/`headers()` in RSCs.
 - **Parallel Tool Execution:** Always batch independent file reads, searches, and inspections in parallel within a single turn to minimize round trips.
 - **General Rules:** No emojis in code or files. Follow neighboring patterns. Preserve existing comments.

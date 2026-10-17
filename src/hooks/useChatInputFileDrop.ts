@@ -12,12 +12,12 @@ import {
   type ProcessedDocument,
 } from '@/lib/document-utils';
 
-export interface UseComposerFileDropOptions {
+export interface UseChatInputFileDropOptions {
   /** Whether the active model can accept vision inputs. */
   supportsVision: boolean;
   /** Whether attachment is currently disabled (e.g. streaming, blocked quota). */
   isAttachDisabled: boolean;
-  /** Current combined number of pending attachments in the composer. */
+  /** Current combined number of pending attachments in the chat input. */
   attachedCount: number;
   /** Maximum number of attachments allowed per message. */
   maxAttachments: number;
@@ -31,10 +31,10 @@ export interface UseComposerFileDropOptions {
 
 /**
  * Custom hook managing drag-and-drop and clipboard paste interactions for the
- * chat message composer. Accepts both images (for vision models) and documents
+ * chat input. Accepts both images (for vision models) and documents
  * (PDF, Markdown, TXT, CSV, JSON, code).
  */
-export function useComposerFileDrop({
+export function useChatInputFileDrop({
   supportsVision,
   isAttachDisabled,
   attachedCount,
@@ -42,7 +42,7 @@ export function useComposerFileDrop({
   onImagesAttached,
   onDocumentsAttached,
   onError,
-}: UseComposerFileDropOptions) {
+}: UseChatInputFileDropOptions) {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const dragDepthRef = useRef(0);
 

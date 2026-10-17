@@ -166,7 +166,7 @@ html[data-theme="dark"] {
   /* Surfaces (Warm charcoal & espresso sand) */
   --color-surface-base: #14100c;      /* Canvas page: deep warm charcoal */
   --color-surface-raised: #1c1713;    /* Canvas warm: sidebar, drawer, header */
-  --color-surface-overlay: #241e19;   /* Canvas sand: inputs, composer, cards */
+  --color-surface-overlay: #241e19;   /* Canvas sand: inputs, chat input, cards */
   --color-surface-elevated: #2b2520;  /* Surface subtle: menus, popovers, badges */
   --color-surface-hover: #352e28;     /* Surface hover: active item highlight */
   --color-surface: #ffffff;

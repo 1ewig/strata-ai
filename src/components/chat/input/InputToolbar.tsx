@@ -4,8 +4,8 @@ import React from 'react';
 import { ArrowUp, Paperclip, Square } from 'lucide-react';
 import ModelSelectorMenu from './ModelSelectorMenu';
 
-/** Props for the composer bottom toolbar (attach, drawer, send/stop). */
-interface ComposerToolbarProps {
+/** Props for the chat input bottom toolbar (attach, drawer, send/stop). */
+interface InputToolbarProps {
   isAttachDisabled: boolean;
   isAttachmentCapReached: boolean;
   attachedCount: number;
@@ -27,11 +27,11 @@ interface ComposerToolbarProps {
 }
 
 /**
- * Row 2 of the composer: the attach button (with tooltip chain and
+ * Row 2 of the chat input: the attach button (with tooltip chain and
  * pending-count badge), the mobile model selector menu trigger, and the
  * send/stop button with its full disabled-state and title logic.
  */
-function ComposerToolbar({
+function InputToolbar({
   isAttachDisabled,
   isAttachmentCapReached,
   attachedCount,
@@ -50,7 +50,7 @@ function ComposerToolbar({
   isQuotaExhausted,
   isContextWindowExhausted,
   charLimit,
-}: ComposerToolbarProps) {
+}: InputToolbarProps) {
   const sendDisabled = !hasContent || isBlocked || isCharOverLimit;
 
   return (
@@ -164,4 +164,4 @@ function ComposerToolbar({
   );
 }
 
-export default React.memo(ComposerToolbar);
+export default React.memo(InputToolbar);

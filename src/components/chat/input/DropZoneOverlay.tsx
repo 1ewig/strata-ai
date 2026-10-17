@@ -4,7 +4,7 @@ import React from 'react';
 import { ImagePlus, AlertCircle } from 'lucide-react';
 
 interface DropZoneOverlayProps {
-  /** Whether a file drag is currently hovering over the composer. */
+  /** Whether a file drag is currently hovering over the chat input. */
   isVisible: boolean;
   /** Whether image attachment is currently blocked. */
   isAttachDisabled?: boolean;
@@ -13,7 +13,7 @@ interface DropZoneOverlayProps {
 }
 
 /**
- * Visual dropzone overlay displayed over the composer when files are dragged
+ * Visual dropzone overlay displayed over the chat input when files are dragged
  * into the chat window. Styled using Milo design system tokens with subtle
  * animations and pointer-events-none to prevent event disruption.
  */

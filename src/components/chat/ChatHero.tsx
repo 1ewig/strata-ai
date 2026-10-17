@@ -4,7 +4,7 @@ import React from 'react';
 import { Globe, FileText, Compass } from 'lucide-react';
 import { motion } from 'motion/react';
 import { StrataIcon } from '@/components/ui/strata-icon';
-import { useComposer } from '@/contexts/ComposerContext';
+import { useChatInput } from '@/contexts/ChatInputContext';
 import {
   heroStaggerVariants,
   heroItemVariants,
@@ -49,10 +49,10 @@ export interface ChatHeroProps {
 /**
  * Empty-state hero presentation shown on new/empty conversations:
  * brand icon with ambient glow, greeting, suggestion chips, centered
- * composer slot, and supported engines strip.
+ * chat input slot, and supported engines strip.
  */
 function ChatHero({ chatId, chatInputNode }: ChatHeroProps) {
-  const { insertPrompt } = useComposer();
+  const { insertPrompt } = useChatInput();
 
   // Pick a stable welcome message from the pool based on the conversation ID
   const welcomeMessage = React.useMemo(() => {
@@ -115,7 +115,7 @@ function ChatHero({ chatId, chatInputNode }: ChatHeroProps) {
         })}
       </motion.div>
 
-      {/* Composer Slot */}
+      {/* Chat Input Slot */}
       {chatInputNode && (
         <motion.div variants={heroItemVariants} className="w-full text-left pt-2">
           {chatInputNode}

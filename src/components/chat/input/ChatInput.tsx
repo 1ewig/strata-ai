@@ -4,14 +4,14 @@ import { getModelSupportsVision } from '@/lib/models';
 import { type ProcessedImage } from '@/lib/image-utils';
 import { type ProcessedDocument } from '@/lib/document-utils';
 import AttachmentPreviews from './AttachmentPreviews';
-import ComposerStatusRow from './ComposerStatusRow';
-import ComposerToolbar from './ComposerToolbar';
+import InputStatusRow from './InputStatusRow';
+import InputToolbar from './InputToolbar';
 import DropZoneOverlay from './DropZoneOverlay';
 import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './SlashCommandMenu';
-import { useComposerFileDrop } from '@/hooks/useComposerFileDrop';
-import { useComposer } from '@/contexts/ComposerContext';
+import { useChatInputFileDrop } from '@/hooks/useChatInputFileDrop';
+import { useChatInput } from '@/contexts/ChatInputContext';
 
-/** Props for the ChatInput composer. */
+/** Props for the chat input. */
 interface ChatInputProps {
   chatId?: string;
   onSendMessage: (text: string, images?: ProcessedImage[], documents?: ProcessedDocument[]) => void;
@@ -31,7 +31,7 @@ interface ChatInputProps {
   isContextWindowExhausted?: boolean;
 }
 
-/** Available placeholder prompts for the chat input composer. */
+/** Available placeholder prompts for the chat input. */
 export const PLACEHOLDER_PROMPTS = [
   "How can Strata help?",
   "What are you working on?",
@@ -57,7 +57,7 @@ function getRandomPlaceholderIndex(excludeIndex?: number): number {
 }
 
 /**
- * Renders the message composer orchestrator: owns all input state and handlers,
+ * Renders the chat input orchestrator: owns all input state and handlers,
  * and composes the slash command popup, status row (compacting/blocked/textarea),
  * pending image & document attachment previews, and the bottom toolbar (attach,
  * model selector, send/stop) with floating island aesthetics.
@@ -85,7 +85,7 @@ export default React.memo(function ChatInput({
   const [placeholderIndex, setPlaceholderIndex] = useState(() => getRandomPlaceholderIndex());
   const prevChatIdRef = useRef(chatId);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
-  const { registerPromptTarget } = useComposer();
+  const { registerPromptTarget } = useChatInput();
 
   // Update placeholder when switching to a different or fresh chat conversation.
   useEffect(() => {
@@ -148,7 +148,7 @@ export default React.memo(function ChatInput({
 
   // Drag-and-drop, clipboard paste, and file-picker validation/processing are all
   // funneled through this single hook so the attachment pipeline has one source of truth.
-  const { isDraggingOver, handleFiles, dragHandlers } = useComposerFileDrop({
+  const { isDraggingOver, handleFiles, dragHandlers } = useChatInputFileDrop({
     supportsVision,
     isAttachDisabled,
     attachedCount: totalAttachedCount,
@@ -209,7 +209,7 @@ export default React.memo(function ChatInput({
   // Guard flag: input exceeds the hard character cap.
   const isCharOverLimit = inputValue.length > MAX_MESSAGE_CHARS;
 
-  /** Triggers compaction and clears the composer. Shared by the command and send paths. */
+  /** Triggers compaction and clears the chat input. Shared by the command and send paths. */
   const triggerCompaction = useCallback(() => {
     setInputValue('');
     setAttachError(null);
@@ -228,7 +228,7 @@ export default React.memo(function ChatInput({
 
   /**
    * Validates the trimmed input against the loading/quota/limit guards,
-   * submits the message or command, and clears the composer on success.
+   * submits the message or command, and clears the chat input on success.
    * Attachment-only messages are allowed (text may be empty when files are attached).
    */
   const handleSend = useCallback(() => {
@@ -362,7 +362,7 @@ export default React.memo(function ChatInput({
         )}
 
         {/* Row 1: Text Field Input, Compacting Notice, or Blocking Warning */}
-        <ComposerStatusRow
+        <InputStatusRow
           isCompacting={isCompacting}
           isBlocked={isBlocked}
           isContextWindowExhausted={isContextWindowExhausted}
@@ -378,7 +378,7 @@ export default React.memo(function ChatInput({
         />
 
         {/* Row 2: Bottom Toolbar */}
-        <ComposerToolbar
+        <InputToolbar
           isAttachDisabled={isAttachDisabled}
           isAttachmentCapReached={isAttachmentCapReached}
           attachedCount={totalAttachedCount}

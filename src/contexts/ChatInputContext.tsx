@@ -2,26 +2,26 @@
 
 import React, { createContext, useContext, useCallback, useRef, useMemo } from 'react';
 
-/** Imperative callback registered by the composer input to receive injected prompts. */
+/** Imperative callback registered by the chat input to receive injected prompts. */
 type PromptTarget = (text: string) => void;
 
-/** Shape of the composer context consumed by suggestion chips and the input. */
-interface ComposerContextType {
-  /** Injects prompt text into the active composer input and focuses it. */
+/** Shape of the chat input context consumed by suggestion chips and the input. */
+interface ChatInputContextType {
+  /** Injects prompt text into the active chat input and focuses it. */
   insertPrompt: (text: string) => void;
-  /** Registers the composer input as the prompt target; pass null on unmount. */
+  /** Registers the chat input as the prompt target; pass null on unmount. */
   registerPromptTarget: (target: PromptTarget | null) => void;
 }
 
 /** The context itself, undefined until a provider mounts so consumers can detect missing scope. */
-const ComposerContext = createContext<ComposerContextType | undefined>(undefined);
+const ChatInputContext = createContext<ChatInputContextType | undefined>(undefined);
 
 /**
  * Bridges cross-component prompt injection (empty-state suggestion chips) into
- * the composer input without prop drilling or window events. Kept imperative via
+ * the chat input without prop drilling or window events. Kept imperative via
  * a ref so injecting a prompt never triggers a re-render of siblings.
  */
-export function ComposerProvider({ children }: { children: React.ReactNode }) {
+export function ChatInputProvider({ children }: { children: React.ReactNode }) {
   const targetRef = useRef<PromptTarget | null>(null);
 
   const registerPromptTarget = useCallback((target: PromptTarget | null) => {
@@ -32,23 +32,23 @@ export function ComposerProvider({ children }: { children: React.ReactNode }) {
     targetRef.current?.(text);
   }, []);
 
-  const value = useMemo<ComposerContextType>(
+  const value = useMemo<ChatInputContextType>(
     () => ({ insertPrompt, registerPromptTarget }),
     [insertPrompt, registerPromptTarget],
   );
 
-  return <ComposerContext.Provider value={value}>{children}</ComposerContext.Provider>;
+  return <ChatInputContext.Provider value={value}>{children}</ChatInputContext.Provider>;
 }
 
 /**
- * Reads the composer context.
+ * Reads the chat input context.
  * @returns The prompt injection helpers.
- * @throws If called outside a ComposerProvider.
+ * @throws If called outside a ChatInputProvider.
  */
-export function useComposer() {
-  const context = useContext(ComposerContext);
+export function useChatInput() {
+  const context = useContext(ChatInputContext);
   if (!context) {
-    throw new Error('useComposer must be used within a ComposerProvider');
+    throw new Error('useChatInput must be used within a ChatInputProvider');
   }
   return context;
 }

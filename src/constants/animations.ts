@@ -94,7 +94,7 @@ export const pillFloatVariants: Variants = {
 };
 
 /**
- * Thumbnail pop-in / scale-down removal animation for composer attachments.
+ * Thumbnail pop-in / scale-down removal animation for chat input attachments.
  */
 export const attachmentThumbVariants: Variants = {
   hidden: {

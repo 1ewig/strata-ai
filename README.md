@@ -26,10 +26,10 @@ Switch seamlessly between flagship frontier models like **Gemini 3.5 Flash Lite*
 
 ![Model and Thinking Effort Selector](public/images/model-selector-menu.webp)
 
-### 2. Multimodal Composer & Document Ingestion
+### 2. Multimodal Input & Document Ingestion
 Attach images for visual breakdown or upload PDFs, markdown reports, and source code files directly into the prompt. The agent analyzes attachments natively, extracting context and referencing documents while planning its work.
 
-![Composer with Attachments & Thinking Mode](public/images/composer-attach-focus.webp)
+![Chat Input with Attachments & Thinking Mode](public/images/input-attach-focus.webp)
 
 ### 3. Autonomous Reasoning & Multi-Step Tool Execution
 When tasked with complex objectives, Strata AI does not generate guesswork. It runs autonomous loops—searching the live web, inspecting existing files, making surgical diffs, and verifying outputs. Every thought and tool invocation streams in real time through an intuitive, collapsible accordion.

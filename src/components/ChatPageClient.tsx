@@ -13,11 +13,11 @@ import { useConversations } from '@/hooks/useConversations';
 import { useSignOut } from '@/hooks/useAuth';
 import { useTheme } from '@/hooks/useTheme';
 import { ChatUIProvider } from '@/contexts/ChatUIContext';
-import { ComposerProvider } from '@/contexts/ComposerContext';
+import { ChatInputProvider } from '@/contexts/ChatInputContext';
 import Sidebar from '@/components/sidebar/Sidebar';
 import WorkspaceDrawer from '@/components/workspace/WorkspaceDrawer';
 import ChatHeader from '@/components/chat/header/ChatHeader';
-import ChatInput from '@/components/chat/composer/ChatInput';
+import ChatInput from '@/components/chat/input/ChatInput';
 import ChatHero from '@/components/chat/ChatHero';
 import MessageList from '@/components/chat/message/MessageList';
 import { pillFloatVariants } from '@/constants/animations';
@@ -112,19 +112,19 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
   );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const composerContainerRef = useRef<HTMLDivElement>(null);
-  const [composerHeight, setComposerHeight] = useState(176);
+  const inputContainerRef = useRef<HTMLDivElement>(null);
+  const [inputHeight, setInputHeight] = useState(176);
 
-  // Dynamically sync bottom padding of the chat content with floating composer height changes
+  // Dynamically sync bottom padding of the chat content with floating chat input height changes
   React.useEffect(() => {
-    const el = composerContainerRef.current;
+    const el = inputContainerRef.current;
     if (!el) return;
 
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const height = entry.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight;
         if (height > 0) {
-          setComposerHeight(Math.ceil(height));
+          setInputHeight(Math.ceil(height));
         }
       }
     });
@@ -168,7 +168,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
 
   return (
     <ChatUIProvider>
-      <ComposerProvider>
+      <ChatInputProvider>
         <main className="h-dvh max-h-dvh bg-surface-base text-text-primary flex overflow-hidden font-sans">
           <Sidebar
             conversations={conversations}
@@ -213,7 +213,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
                     className={`max-w-4xl w-full mx-auto px-4 ${
                       isNewChat ? 'min-h-full flex flex-col justify-center py-6' : ''
                     }`}
-                    style={!isNewChat ? { paddingBottom: `${composerHeight}px` } : undefined}
+                    style={!isNewChat ? { paddingBottom: `${inputHeight}px` } : undefined}
                   >
                     {isNewChat ? (
                       <ChatHero chatId={chatId} chatInputNode={chatInputNode} />
@@ -228,7 +228,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
 
                   {!isNewChat && (
                     <div
-                      ref={composerContainerRef}
+                      ref={inputContainerRef}
                       className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-12 pb-4 px-4 pointer-events-none z-30 animate-slide-up"
                     >
                       <div className="relative max-w-4xl mx-auto pointer-events-auto">
@@ -277,7 +277,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
             isLoading={isLoading}
           />
         </main>
-      </ComposerProvider>
+      </ChatInputProvider>
     </ChatUIProvider>
   );
 }

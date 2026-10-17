@@ -2,8 +2,8 @@
 
 import React from 'react';
 
-/** Props for the composer status row (compacting notice, blocked banner, or textarea). */
-interface ComposerStatusRowProps {
+/** Props for the chat input status row (compacting notice, blocked banner, or textarea). */
+interface InputStatusRowProps {
   isCompacting: boolean;
   isBlocked: boolean;
   isContextWindowExhausted: boolean;
@@ -19,11 +19,11 @@ interface ComposerStatusRowProps {
 }
 
 /**
- * Row 1 of the composer: renders the compacting notice, the blocking warning
+ * Row 1 of the chat input: renders the compacting notice, the blocking warning
  * (quota or context window, with an optional "Compact history" action), or the
  * auto-growing textarea itself.
  */
-function ComposerStatusRow({
+function InputStatusRow({
   isCompacting,
   isBlocked,
   isContextWindowExhausted,
@@ -36,7 +36,7 @@ function ComposerStatusRow({
   onChange,
   onKeyDown,
   textareaRef,
-}: ComposerStatusRowProps) {
+}: InputStatusRowProps) {
   if (isCompacting) {
     return (
       <div className="w-full min-h-[28px] py-1 flex items-center gap-2 text-primary text-label font-medium animate-in fade-in">
@@ -83,4 +83,4 @@ function ComposerStatusRow({
   );
 }
 
-export default React.memo(ComposerStatusRow);
+export default React.memo(InputStatusRow);
