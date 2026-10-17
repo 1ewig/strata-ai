@@ -3,16 +3,15 @@
 import { useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { db, type Conversation } from '@/lib/db/database';
 import {
-  db,
   deleteConversation,
   updateConversationTitle,
   toggleConversationPin,
   isConversationEmpty,
   findExistingEmptyConversation,
   pruneEmptyConversations,
-  type Conversation,
-} from '@/lib/db/db';
+} from '@/lib/db/conversations';
 import { generateId } from '@/lib/id';
 import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 

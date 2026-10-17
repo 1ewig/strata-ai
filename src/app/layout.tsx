@@ -3,8 +3,8 @@ import { headers } from 'next/headers';
 import { Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { RateLimitProvider } from '@/contexts/RateLimitContext';
-import { auth } from '@/lib/auth';
-import { getRateLimitStatus, RateLimitResult } from '@/lib/rate-limit';
+import { auth } from '@/lib/auth/server';
+import { getRateLimitStatus, RateLimitResult } from '@/lib/server/rate-limit';
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],

@@ -1,6 +1,6 @@
 import React from 'react';
 import type { ImageAttachmentInfo, DocumentAttachmentInfo } from '@/agent/client/segments';
-import { formatFileSize } from '@/lib/document-utils';
+import { formatFileSize } from '@/lib/attachments/documents';
 import { DocumentIcon } from '@/components/chat/DocumentIcon';
 
 /** Props for the UserMessageAttachments component. */

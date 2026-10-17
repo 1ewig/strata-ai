@@ -1,4 +1,4 @@
-import { persistMessages } from '@/lib/db/db';
+import { persistMessages } from '@/lib/db/messages';
 import { generateId } from '@/lib/id';
 import { buildQuotaError } from '@/lib/limits';
 

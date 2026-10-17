@@ -15,11 +15,11 @@ const rateLimitMock = mock(DEFAULT_QUOTA);
 const refundRateLimitMock = mock(() => Promise.resolve(true));
 const runCompactionResponseMock = mock(DEFAULT_RESPONSE);
 
-mock.module("@/lib/auth", () => ({
+mock.module("@/lib/auth/server", () => ({
   auth: { api: { getSession: sessionMock } },
 }));
 
-mock.module("@/lib/rate-limit", () => ({
+mock.module("@/lib/server/rate-limit", () => ({
   checkAndIncrementRateLimit: rateLimitMock,
   refundRateLimit: refundRateLimitMock,
 }));

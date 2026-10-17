@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { useSession } from '@/lib/auth-client';
+import { useSession } from '@/lib/auth/client';
 import { QUOTA_5H_LIMIT, QUOTA_WEEK_LIMIT, buildQuotaError } from '@/lib/limits';
 
 /** Global usage quota state reported by the API on each chat response. */

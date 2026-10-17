@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { Check } from 'lucide-react';
-import { WorkspaceFile } from '@/lib/schemas';
+import { WorkspaceFile } from '@/lib/db/schemas';
 import { MAX_FILE_CHARS } from '@/lib/limits';
-import { getLanguageLabel } from '@/lib/languages';
+import { getLanguageLabel } from '@/lib/code/languages';
 
 interface WorkspaceDrawerFooterProps {
   activeFile: WorkspaceFile | null;

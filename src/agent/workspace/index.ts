@@ -1,4 +1,4 @@
-import type { WorkspaceFile } from "@/lib/schemas";
+import type { WorkspaceFile } from "@/lib/db/schemas";
 import type { WorkspaceToolsContext } from "../tools/types";
 
 /**

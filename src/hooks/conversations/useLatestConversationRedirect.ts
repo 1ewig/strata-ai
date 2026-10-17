@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { db } from '@/lib/db/db';
+import { db } from '@/lib/db/database';
 import { generateId } from '@/lib/id';
 
 /**

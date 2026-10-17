@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { MessageSquare, MoreVertical, Pin, PinOff, Edit3, Trash2, Check, X } from 'lucide-react';
-import type { Conversation } from '@/lib/db/db';
+import type { Conversation } from '@/lib/db/database';
 
 interface ConversationRenameEditorProps {
   initialTitle: string;

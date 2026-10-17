@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import type { Conversation } from '@/lib/db/db';
-import type { authClient } from '@/lib/auth-client';
+import type { Conversation } from '@/lib/db/database';
+import type { authClient } from '@/lib/auth/client';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useChatUI } from '@/contexts/ChatUIContext';
 import SidebarHeader from './SidebarHeader';

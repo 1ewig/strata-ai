@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { WorkspaceFile } from "@/lib/schemas";
+import type { WorkspaceFile } from "@/lib/db/schemas";
 
 /**
  * Closures wiring tools to the live workspace state of the current request.

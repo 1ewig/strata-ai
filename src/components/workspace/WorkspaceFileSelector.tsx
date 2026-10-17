@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, FileText, FileCode2, Plus } from 'lucide-react';
-import { WorkspaceFile } from '@/lib/schemas';
+import { WorkspaceFile } from '@/lib/db/schemas';
 import { MAX_FILES_PER_WORKSPACE } from '@/lib/limits';
-import { isMarkdownFile, getLanguageMeta } from '@/lib/languages';
+import { isMarkdownFile, getLanguageMeta } from '@/lib/code/languages';
 
 interface WorkspaceFileSelectorProps {
   files: WorkspaceFile[];

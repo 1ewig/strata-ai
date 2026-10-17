@@ -1,6 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
-import { WorkspaceFile } from "@/lib/schemas";
+import { WorkspaceFile } from "@/lib/db/schemas";
 import { StringEditEngine } from "./edit-engine";
 import {
   MAX_FILE_CHARS,
@@ -13,7 +13,7 @@ import { WorkspaceToolsContext,
   findWorkspaceFile,
   isSameFilename,
 } from "./types";
-import { detectLanguage } from "@/lib/languages";
+import { detectLanguage } from "@/lib/code/languages";
 
 /**
  * Creates the listFiles tool reporting metadata for every workspace file.

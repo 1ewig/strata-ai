@@ -34,7 +34,7 @@ export interface ActiveContextUsage {
   remainingTokens: number;
 }
 
-import { MODELS, getModelPricing } from '@/lib/models';
+import { MODELS, getModelPricing } from '@/lib/ai/models';
 
 /** Per-model token volume and cost breakdown for a conversation. */
 export interface ModelUsageStats {

@@ -1,7 +1,7 @@
 import type { LanguageModel, streamText } from "ai";
 import { google } from "@ai-sdk/google";
 import { fireworks } from "@ai-sdk/fireworks";
-import { MODELS, MODEL_THINKING_LEVELS } from "@/lib/models";
+import { MODELS, MODEL_THINKING_LEVELS } from "@/lib/ai/models";
 
 /** Backend providers the agent endpoint can route to. */
 export type ModelProvider = "google" | "fireworks";

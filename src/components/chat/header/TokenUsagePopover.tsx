@@ -1,12 +1,12 @@
 'use client';
 
 import React, { useRef } from 'react';
-import type { ModelOption } from '@/lib/models';
+import type { ModelOption } from '@/lib/ai/models';
 import {
   formatContextWindow,
   formatCost,
   type ConversationTokenMetrics,
-} from '@/lib/token-usage';
+} from '@/lib/ai/token-usage';
 import { useClickOutside } from '@/hooks';
 
 export interface TokenUsagePopoverProps {

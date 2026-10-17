@@ -1,16 +1,16 @@
 'use client';
 
 import { useState, useCallback, useMemo, useRef } from 'react';
+import type { Conversation } from '@/lib/db/database';
 import {
-  Conversation,
   getWorkspaceFiles,
   saveWorkspaceFile,
   deleteWorkspaceFile,
-} from '@/lib/db/db';
-import { WorkspaceFile } from '@/lib/schemas';
+} from '@/lib/db/workspace-files';
+import { WorkspaceFile } from '@/lib/db/schemas';
 import { generateId } from '@/lib/id';
 import { MAX_FILE_CHARS, MAX_FILES_PER_WORKSPACE } from '@/lib/limits';
-import { detectLanguage } from '@/lib/languages';
+import { detectLanguage } from '@/lib/code/languages';
 
 /**
  * Owns the workspace files (markdown/text scratch files) for a chat session.

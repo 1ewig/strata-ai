@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { highlightCodeLines } from '@/lib/syntax-highlighter';
+import { highlightCodeLines } from '@/lib/code/syntax-highlighter';
 
 interface CodeViewerProps {
   /** The raw code content to display. */

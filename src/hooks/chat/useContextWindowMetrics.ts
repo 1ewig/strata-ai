@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo } from 'react';
-import { MODELS, type ModelOption } from '@/lib/models';
+import { MODELS, type ModelOption } from '@/lib/ai/models';
 import { NEAR_LIMIT_PERCENT } from '@/lib/limits';
-import type { ConversationTokenMetrics } from '@/lib/token-usage';
+import type { ConversationTokenMetrics } from '@/lib/ai/token-usage';
 
 export interface ContextWindowMetrics {
   modelOption: ModelOption;

@@ -3,24 +3,21 @@
 import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { useChat } from '@ai-sdk/react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import {
-  db,
-  createConversation,
-  updateConversationTitle,
-} from '@/lib/db/db';
+import { db } from '@/lib/db/database';
+import { createConversation, updateConversationTitle } from '@/lib/db/conversations';
 import { useModelSettings } from './useModelSettings';
 import { useWorkspaceFiles } from '../workspace/useWorkspaceFiles';
 import { useChatTransport } from './useChatTransport';
 import { useCompaction } from './useCompaction';
 import { handleChatError } from '@/agent/client/error-handler';
 import { reconcileFinishedStep } from '@/agent/client/reconciler';
-import { calculateTokenMetrics, ChatMetadata } from '@/lib/token-usage';
-import { getModelContextWindow } from '@/lib/models';
+import { calculateTokenMetrics, ChatMetadata } from '@/lib/ai/token-usage';
+import { getModelContextWindow } from '@/lib/ai/models';
 import { buildQuotaError } from '@/lib/limits';
-import type { ProcessedImage } from '@/lib/image-utils';
-import type { ProcessedDocument } from '@/lib/document-utils';
+import type { ProcessedImage } from '@/lib/attachments/images';
+import type { ProcessedDocument } from '@/lib/attachments/documents';
 import { useRateLimit } from '@/contexts/RateLimitContext';
-import { useSession } from '@/lib/auth-client';
+import { useSession } from '@/lib/auth/client';
 
 /**
  * Structural message type carrying provider-reported usage metadata. Kept loose

@@ -5,12 +5,12 @@ import {
   processImageFile,
   validateImageFile,
   type ProcessedImage,
-} from '@/lib/image-utils';
+} from '@/lib/attachments/images';
 import {
   processDocumentFile,
   validateDocumentFile,
   type ProcessedDocument,
-} from '@/lib/document-utils';
+} from '@/lib/attachments/documents';
 
 export interface UseChatInputFileDropOptions {
   /** Whether the active model can accept vision inputs. */

@@ -1,8 +1,8 @@
 'use client';
 
 import React from 'react';
-import type { WorkspaceFile } from '@/lib/schemas';
-import type { ConversationTokenMetrics } from '@/lib/token-usage';
+import type { WorkspaceFile } from '@/lib/db/schemas';
+import type { ConversationTokenMetrics } from '@/lib/ai/token-usage';
 import HeaderSidebarToggles from './HeaderSidebarToggles';
 import ContextWindowIndicator from './ContextWindowIndicator';
 import NewChatButton from './NewChatButton';

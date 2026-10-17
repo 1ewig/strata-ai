@@ -4,11 +4,11 @@ import {
   MAX_ATTACHMENTS_PER_MESSAGE,
   buildRateLimitErrorMessage,
 } from "@/lib/limits";
-import { findImagePartViolations } from "@/lib/image-utils";
-import { countTotalAttachmentParts, findDocumentPartViolations } from "@/lib/document-utils";
+import { findImagePartViolations } from "@/lib/attachments/images";
+import { countTotalAttachmentParts, findDocumentPartViolations } from "@/lib/attachments/documents";
 import { sliceMessagesAfterCompaction } from "../client/extractor";
-import { auth } from "@/lib/auth";
-import { checkAndIncrementRateLimit, refundRateLimit, type RateLimitResult } from "@/lib/rate-limit";
+import { auth } from "@/lib/auth/server";
+import { checkAndIncrementRateLimit, refundRateLimit, type RateLimitResult } from "@/lib/server/rate-limit";
 
 /**
  * Context passed to the route delegate after validation and rate-limiting have succeeded.

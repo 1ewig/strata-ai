@@ -15,14 +15,14 @@ import {
 import { createWorkspaceTools } from "../tools";
 import { resolveAgentModel, getModelProvider, DEFAULT_AGENT_MODEL } from "../providers";
 import type { WorkspaceToolsContext } from "../tools/types";
-import type { WorkspaceFile } from "@/lib/schemas";
+import type { WorkspaceFile } from "@/lib/db/schemas";
 import {
   getModelContextWindow,
   getModelSupportsVision,
   COMPACTION_MODEL_ID,
   COMPACTION_THINKING_LEVEL,
-} from "@/lib/models";
-import { calculateTokenMetrics, type ChatMetadata } from "@/lib/token-usage";
+} from "@/lib/ai/models";
+import { calculateTokenMetrics, type ChatMetadata } from "@/lib/ai/token-usage";
 import {
   sanitizeMessagesForProvider,
   stripImageContentForUnsupportedModels,

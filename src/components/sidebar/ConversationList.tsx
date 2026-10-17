@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import type { Conversation } from '@/lib/db/db';
+import type { Conversation } from '@/lib/db/database';
 import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 import ConversationItem from './ConversationItem';
 

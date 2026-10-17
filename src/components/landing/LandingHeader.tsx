@@ -7,7 +7,7 @@ import { motion } from 'motion/react';
 import { ArrowRight, Moon, Sun } from 'lucide-react';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import { useTheme } from '@/hooks';
-import { db } from '@/lib/db/db';
+import { db } from '@/lib/db/database';
 import { generateId } from '@/lib/id';
 import { buttonHoverProps } from '@/constants/landing-animations';
 

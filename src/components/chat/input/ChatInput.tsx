@@ -1,7 +1,7 @@
 import React from 'react';
 import { MAX_MESSAGE_CHARS, MAX_ATTACHMENTS_PER_MESSAGE } from '@/lib/limits';
-import type { ProcessedImage } from '@/lib/image-utils';
-import type { ProcessedDocument } from '@/lib/document-utils';
+import type { ProcessedImage } from '@/lib/attachments/images';
+import type { ProcessedDocument } from '@/lib/attachments/documents';
 import AttachmentPreviews from './AttachmentPreviews';
 import InputStatusRow from './InputStatusRow';
 import InputToolbar from './InputToolbar';

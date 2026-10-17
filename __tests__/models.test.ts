@@ -7,7 +7,7 @@ import {
   getModelSupportsVision,
   getStoredThinkingLevel,
   getValidThinkingLevelForModel,
-} from "@/lib/models";
+} from "@/lib/ai/models";
 
 // Minimal localStorage stand-in so getInitialModel / getStoredThinkingLevel can
 // exercise their browser branches under the Node test runner.

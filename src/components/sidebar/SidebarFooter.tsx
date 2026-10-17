@@ -1,5 +1,5 @@
 import React from 'react';
-import type { authClient } from '@/lib/auth-client';
+import type { authClient } from '@/lib/auth/client';
 import UserButton from '@/components/auth/user-button';
 import ThemeToggle from './ThemeToggle';
 import RateLimitRing from '@/components/sidebar/RateLimitRing';

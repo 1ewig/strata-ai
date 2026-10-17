@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { MAX_MESSAGE_CHARS, MAX_ATTACHMENTS_PER_MESSAGE, buildQuotaError } from '@/lib/limits';
-import { getModelSupportsVision } from '@/lib/models';
-import type { ProcessedImage } from '@/lib/image-utils';
-import type { ProcessedDocument } from '@/lib/document-utils';
+import { getModelSupportsVision } from '@/lib/ai/models';
+import type { ProcessedImage } from '@/lib/attachments/images';
+import type { ProcessedDocument } from '@/lib/attachments/documents';
 import { useChatInputFileDrop } from './useChatInputFileDrop';
 import { useChatInput } from '@/contexts/ChatInputContext';
 import { getRandomPlaceholderIndex, PLACEHOLDER_PROMPTS } from '@/constants/prompts';

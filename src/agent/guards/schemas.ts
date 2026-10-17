@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { WorkspaceFileSchema, type WorkspaceFile } from "@/lib/schemas";
+import { WorkspaceFileSchema, type WorkspaceFile } from "@/lib/db/schemas";
 
 export { WorkspaceFileSchema, type WorkspaceFile };
 

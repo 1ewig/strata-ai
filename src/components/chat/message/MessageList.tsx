@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { motion } from 'motion/react';
-import type { ChatMessage, ChatMetadata } from '@/lib/token-usage';
+import type { ChatMessage, ChatMetadata } from '@/lib/ai/token-usage';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import CompactionDivider from './CompactionDivider';
 import UserMessageItem from './UserMessageItem';

@@ -5,7 +5,7 @@ import {
   formatContextWindow,
   formatTokens,
   type ConversationTokenMetrics,
-} from '@/lib/token-usage';
+} from '@/lib/ai/token-usage';
 import TokenUsagePopover from './TokenUsagePopover';
 import { useContextWindowMetrics } from '@/hooks';
 

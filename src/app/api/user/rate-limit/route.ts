@@ -1,5 +1,5 @@
-import { auth } from "@/lib/auth";
-import { getRateLimitStatus } from "@/lib/rate-limit";
+import { auth } from "@/lib/auth/server";
+import { getRateLimitStatus } from "@/lib/server/rate-limit";
 
 export const dynamic = "force-dynamic";
 

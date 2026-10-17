@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import { AnimatePresence, motion } from 'motion/react';
 import { Eye, Code } from 'lucide-react';
-import { WorkspaceFile } from '@/lib/schemas';
+import { WorkspaceFile } from '@/lib/db/schemas';
 import { MAX_FILE_CHARS, formatCharCount } from '@/lib/limits';
-import { detectLanguage, isMarkdownFile } from '@/lib/languages';
+import { detectLanguage, isMarkdownFile } from '@/lib/code/languages';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { useCopyClipboard } from '@/hooks';

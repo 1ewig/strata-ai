@@ -1,5 +1,5 @@
 import { headers } from 'next/headers';
-import { auth } from '@/lib/auth';
+import { auth } from '@/lib/auth/server';
 import { LandingClient } from '@/components/landing/LandingClient';
 
 /**

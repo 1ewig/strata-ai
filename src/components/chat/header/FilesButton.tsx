@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Folder } from 'lucide-react';
-import { WorkspaceFile } from '@/lib/schemas';
+import { WorkspaceFile } from '@/lib/db/schemas';
 
 /** Props for the FilesButton component. */
 export interface FilesButtonProps {

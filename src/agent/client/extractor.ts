@@ -1,5 +1,5 @@
 import type { UIMessage } from "ai";
-import type { WorkspaceFile } from "@/lib/schemas";
+import type { WorkspaceFile } from "@/lib/db/schemas";
 import { normalizeToolPart } from "./tool-normalization";
 
 /**

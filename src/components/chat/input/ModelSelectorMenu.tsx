@@ -6,7 +6,7 @@ import {
   MODELS,
   MODEL_DESCRIPTIONS,
   THINKING_LEVEL_LABELS,
-} from '@/lib/models';
+} from '@/lib/ai/models';
 import { useModelSelectorMenu } from '@/hooks';
 
 /** Props for the ModelSelectorMenu dropdown. */

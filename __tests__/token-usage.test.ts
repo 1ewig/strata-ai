@@ -5,7 +5,7 @@ import {
   formatCost,
   formatTokens,
   formatContextWindow,
-} from "@/lib/token-usage";
+} from "@/lib/ai/token-usage";
 
 type TestMessage = { role?: string; metadata?: any };
 

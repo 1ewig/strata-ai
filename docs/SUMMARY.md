@@ -26,7 +26,7 @@ Read the rest top-down: what a request does end-to-end (§4-5), then the subsyst
 | Framework | Next.js 16.4.0 (App Router, Node runtime), React 19.2.7, TypeScript 7.0.2 |
 | Package manager | Bun 1.4.3 (pinned via `packageManager`). Never npm/yarn/npx. |
 | AI engine | Vercel AI SDK 7 (`ai`), `@ai-sdk/google`, `@ai-sdk/fireworks` |
-| Models | Gemini 3.5 Flash Lite (default), Gemini 3.1 Flash Lite, GLM 5.3 Flash, DeepSeek V4.1 Flash (`src/lib/models.ts`) |
+| Models | Gemini 3.5 Flash Lite (default), Gemini 3.1 Flash Lite, GLM 5.3 Flash, DeepSeek V4.1 Flash (`src/lib/ai/models.ts`) |
 | Web research | Tavily REST API (`webSearch`, `extractUrl`) |
 | Client DB | Dexie 4.4 — `StrataAIChatDB` schema v5 |
 | Server DB | Supabase PostgreSQL, `better_auth` schema, `pg` Pool |
@@ -39,7 +39,7 @@ Read the rest top-down: what a request does end-to-end (§4-5), then the subsyst
 `NEXT_PUBLIC_GEMINI_MODEL`, `TAVILY_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`,
 `LANGFUSE_BASE_URL`.
 
-**Model catalog** (`src/lib/models.ts`) is the single source of truth for selectable models,
+**Model catalog** (`src/lib/ai/models.ts`) is the single source of truth for selectable models,
 pricing, context windows (all 131,072), and thinking levels. `resolveAgentModel`
 (`src/agent/providers/index.ts`) maps a catalog id to the provider-specific `streamText` config;
 only ids carrying a `provider` field route to Fireworks.
@@ -63,7 +63,7 @@ Lint and build must both pass before a change is considered done.
 This is the spine of the system. Everything below happens for one user message.
 
 1. **Compose.** `ChatInput` builds UI-message parts: `file` parts first (images, then documents, as
-   data URLs), then `text`. `handleSendMessage` (`src/hooks/useChatSession.ts`) pre-checks quota and
+   data URLs), then `text`. `handleSendMessage` (`src/hooks/chat/useChatSession.ts`) pre-checks quota and
    context-window exhaustion, auto-titles the conversation, then calls `chat.sendMessage({ parts })`.
 2. **Transport.** `useChatTransport` returns a memoized `DefaultChatTransport` pointed at
    `/api/agent`. Its `body()` reads live values through refs so the transport never re-creates
@@ -149,7 +149,7 @@ inference failure. `getRateLimitStatus` powers the read-only `GET /api/user/rate
 
 ## 7. Data Model
 
-**Client — Dexie `StrataAIChatDB` v5** (`src/lib/db/db.ts`):
+**Client — Dexie `StrataAIChatDB` v5** (`src/lib/db/database.ts`):
 
 - `conversations` (PK `id`; indexes `userId`, `updatedAt`, `createdAt`): `title` (auto-capped at 40
   chars), `model`, `thinkingLevel`, `pinned`, `files` (`WorkspaceFile[]`), `activeFileId`, timestamps.
@@ -197,18 +197,21 @@ src/
 ├── components/           # ChatPageClient (workspace orchestrator), chat/ (header/, input/, message/, tools/), workspace/, sidebar/, auth/, landing/, ui/
 ├── contexts/             # RateLimitContext (global quota), ChatUIContext (sidebar shell),
 │                         # ChatInputContext (imperative chat input handle)
-├── hooks/                # useChatSession (orchestrator), useChatTransport, useCompaction,
-│                         # useWorkspaceFiles, useConversations, useAuth (unified auth machine), useModelSettings, useTheme, ...
+├── hooks/                # Domain folders: common/ (useTheme, useIsMobile, useClickOutside, ...),
+│                         # chat/ (useChatSession orchestrator, useChatTransport, useCompaction, ...),
+│                         # conversations/, workspace/, auth/ (unified auth machine); barrel index.ts
 └── lib/
-    ├── db/db.ts          # Dexie schema v5 + all conversation/file persistence
-    ├── auth.ts           # Server Better Auth (pg Pool)   |  auth-client.ts  # Client
+    ├── auth/             # server.ts (Server Better Auth + pg Pool) | client.ts (client auth)
+    ├── db/               # database.ts (Dexie v5 + Conversation/DBMessage), conversations.ts,
+    │                     # messages.ts, workspace-files.ts, schemas.ts (WorkspaceFileSchema)
+    ├── ai/               # models.ts (catalog, pricing, thinking levels), token-usage.ts
+    ├── attachments/      # images.ts (canvas downscaling), documents.ts (PDF/text ingestion)
+    ├── code/             # languages.ts (25 grammars), syntax-highlighter.ts
+    ├── server/           # rate-limit.ts (Postgres quota)
     ├── limits.ts         # Every limit constant (never inline these numbers)
-    ├── models.ts         # Model catalog, pricing, thinking levels
-    ├── languages.ts      # 25 grammars, extension mapping, Prism name resolution
-    ├── token-usage.ts    # Context-window and session token metrics
-    ├── image-utils.ts    # Client-side canvas downscaling
-    ├── document-utils.ts # PDF/text ingestion and extraction caps
-    └── schemas.ts        # WorkspaceFileSchema (+ agentRequestBodySchema re-export)
+    ├── clipboard.ts      # stripMarkdown + copy
+    ├── id.ts             # generateId
+    └── timing.ts         # thought/work-group duration estimates
 __tests__/                # 19 suites, run with bun test --isolate
 ```
 
@@ -287,5 +290,5 @@ concise" warning mode at the same threshold.
 
 **Testing conventions:** suites live in `__tests__/`, run via `bun test --isolate`. Shared fixtures
 (`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`, `withEnv`) come from
-`__tests__/helpers.ts`. Route tests must `mock.module` `@/lib/auth`, `@/lib/rate-limit`, and
+`__tests__/helpers.ts`. Route tests must `mock.module` `@/lib/auth/server`, `@/lib/server/rate-limit`, and
 `@/agent/core/runner` *before* dynamically importing the route.

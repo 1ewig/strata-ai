@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { signIn, signUp, signOut, useSession } from '@/lib/auth-client';
+import { signIn, signUp, signOut, useSession } from '@/lib/auth/client';
 
 /** Loose shape accepted from auth client responses (e.g. Better Auth's { data, error }). */
 interface AuthResultLike {

@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { StickToBottom } from 'use-stick-to-bottom';
 import { ArrowDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { useSession } from '@/lib/auth-client';
+import { useSession } from '@/lib/auth/client';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db/db';
+import { db } from '@/lib/db/database';
 import {
   useChatSession,
   useConversations,

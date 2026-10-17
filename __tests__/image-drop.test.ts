@@ -4,7 +4,7 @@ import {
   isAllowedImageType,
   countImageParts,
   findImagePartViolations,
-} from '@/lib/image-utils';
+} from '@/lib/attachments/images';
 import { MAX_IMAGE_INPUT_BYTES } from '@/lib/limits';
 
 describe('Image Drop & Validation Unit Tests', () => {

@@ -1,4 +1,4 @@
-import type { WorkspaceFile } from "@/lib/schemas";
+import type { WorkspaceFile } from "@/lib/db/schemas";
 import {
   MAX_FILE_CHARS,
   MAX_FILES_PER_WORKSPACE,

@@ -1,9 +1,7 @@
-import {
-  db,
-  getWorkspaceFiles,
-  persistMessages,
-  updateConversationFiles,
-} from '@/lib/db/db';
+import { db } from '@/lib/db/database';
+import { updateConversationFiles } from '@/lib/db/conversations';
+import { persistMessages } from '@/lib/db/messages';
+import { getWorkspaceFiles } from '@/lib/db/workspace-files';
 import {
   type GenericUIMessage,
   extractDeletedFilesFromMessage,

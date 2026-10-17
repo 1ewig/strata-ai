@@ -4,8 +4,8 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertCircle, X } from 'lucide-react';
-import type { ProcessedImage } from '@/lib/image-utils';
-import { formatFileSize, type ProcessedDocument } from '@/lib/document-utils';
+import type { ProcessedImage } from '@/lib/attachments/images';
+import { formatFileSize, type ProcessedDocument } from '@/lib/attachments/documents';
 import { attachmentThumbVariants } from '@/constants/animations';
 import { DocumentIcon } from '@/components/chat/DocumentIcon';
 

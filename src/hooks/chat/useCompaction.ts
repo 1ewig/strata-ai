@@ -2,13 +2,13 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { readUIMessageStream, parseJsonEventStream, uiMessageChunkSchema } from 'ai';
-import { WorkspaceFile } from '@/lib/schemas';
-import { COMPACTION_MODEL_ID } from '@/lib/models';
+import { WorkspaceFile } from '@/lib/db/schemas';
+import { COMPACTION_MODEL_ID } from '@/lib/ai/models';
 import { RateLimitData, QuotaError } from '@/contexts/RateLimitContext';
 import { reconcileFinishedStep } from '@/agent/client/reconciler';
 import { buildQuotaError } from '@/lib/limits';
 import { getFriendlyErrorMessage } from '@/agent/client/error-handler';
-import { persistMessages } from '@/lib/db/db';
+import { persistMessages } from '@/lib/db/messages';
 
 /** Parameters required by the `useCompaction` hook. */
 export interface UseCompactionParams {

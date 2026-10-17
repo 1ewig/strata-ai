@@ -5,7 +5,7 @@ import {
   MODELS,
   MODEL_THINKING_LEVELS,
   THINKING_LEVEL_LABELS,
-} from '@/lib/models';
+} from '@/lib/ai/models';
 import { useClickOutside } from '../common/useClickOutside';
 
 export interface UseModelSelectorMenuOptions {

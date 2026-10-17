@@ -7,8 +7,9 @@ import {
   getStoredThinkingLevel,
   saveThinkingLevel,
   getValidThinkingLevelForModel,
-} from '@/lib/models';
-import { updateConversationModel, Conversation } from '@/lib/db/db';
+} from '@/lib/ai/models';
+import { updateConversationModel } from '@/lib/db/conversations';
+import type { Conversation } from '@/lib/db/database';
 
 /**
  * Owns the selected model and thinking level for a chat session.

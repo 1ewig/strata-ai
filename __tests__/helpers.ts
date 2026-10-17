@@ -1,5 +1,5 @@
 import { mock } from "bun:test";
-import type { WorkspaceFile } from "@/lib/schemas";
+import type { WorkspaceFile } from "@/lib/db/schemas";
 import { createMutableWorkspace } from "@/agent/workspace";
 
 /**
