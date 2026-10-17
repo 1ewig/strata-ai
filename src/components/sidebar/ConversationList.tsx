@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { Conversation } from '@/lib/db/database';
 import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 import ConversationItem from './ConversationItem';
+import ConversationSection from './ConversationSection';
 
 interface ConversationListProps {
   /** The user's conversations, sorted most recent or pinned first. */
@@ -23,8 +24,9 @@ interface ConversationListProps {
 }
 
 /**
- * Scrollable conversation list container with section header, quota indicator,
- * empty state, and item management.
+ * Scrollable conversation list container with grouped sections, quota indicator,
+ * empty state, and item management. Pinned chats render in their own top section,
+ * separated from the remaining conversation list.
  */
 function ConversationList({
   conversations,
@@ -86,48 +88,86 @@ function ConversationList({
     setActiveMenuId(null);
   }, []);
 
+  const pinnedConversations = useMemo(
+    () => (conversations ?? []).filter((conv) => conv.pinned),
+    [conversations],
+  );
+
+  const otherConversations = useMemo(
+    () => (conversations ?? []).filter((conv) => !conv.pinned),
+    [conversations],
+  );
+
+  const totalCount = conversations?.length ?? 0;
+  // Only the last two rows of the whole list flip their overflow menu upward.
+  const nearBottomStartIndex = totalCount > 3 ? totalCount - 2 : totalCount;
+
+  const renderConversation = useCallback(
+    (conv: Conversation, globalIndex: number) => (
+      <ConversationItem
+        key={conv.id}
+        conv={conv}
+        isActive={activeConversationId === conv.id}
+        isNearBottom={globalIndex >= nearBottomStartIndex}
+        isEditing={editingChatId === conv.id}
+        isMenuOpen={activeMenuId === conv.id}
+        onCloseSidebar={onCloseSidebar}
+        onStartRename={handleStartRename}
+        onSaveRename={handleSaveRename}
+        onCancelRename={handleCancelRename}
+        onToggleMenu={handleToggleMenu}
+        onCloseMenu={handleCloseMenu}
+        onTogglePin={onTogglePin}
+        onRequestDelete={onRequestDelete}
+        menuContainerRef={activeMenuId === conv.id ? menuContainerRef : undefined}
+      />
+    ),
+    [
+      activeConversationId,
+      nearBottomStartIndex,
+      editingChatId,
+      activeMenuId,
+      onCloseSidebar,
+      handleStartRename,
+      handleSaveRename,
+      handleCancelRename,
+      handleToggleMenu,
+      handleCloseMenu,
+      onTogglePin,
+      onRequestDelete,
+    ],
+  );
+
+  const countBadge = (
+    <span className={isMaxConversationsReached ? 'text-warning font-bold' : ''}>
+      {conversationCount} / {MAX_CONVERSATIONS_PER_USER}
+    </span>
+  );
+
   return (
-    <div className="flex-1 overflow-y-auto p-2 space-y-1 pb-16">
-      {/* Section Header */}
-      <div className="px-2 py-1 flex items-center justify-between text-micro font-semibold text-text-muted uppercase tracking-wider">
-        <span>Conversations</span>
-        <span className={isMaxConversationsReached ? 'text-warning font-bold' : ''}>
-          {conversationCount} / {MAX_CONVERSATIONS_PER_USER}
-        </span>
-      </div>
-
-      {/* Empty State or Items List */}
+    <div className="flex-1 overflow-y-auto p-2 space-y-2 pb-16">
       {!conversations || conversations.length === 0 ? (
-        <div className="px-3 py-4 text-center text-caption text-text-faint">
-          No saved chats yet
-        </div>
+        <ConversationSection label="Conversations" trailing={countBadge}>
+          <div className="px-3 py-4 text-center text-caption text-text-faint">
+            No saved chats yet
+          </div>
+        </ConversationSection>
       ) : (
-        conversations.map((conv, index) => {
-          const isActive = activeConversationId === conv.id;
-          const isEditingThis = editingChatId === conv.id;
-          const isMenuOpen = activeMenuId === conv.id;
-          const isNearBottom = conversations.length > 3 && index >= conversations.length - 2;
+        <>
+          {pinnedConversations.length > 0 && (
+            <ConversationSection label="Pinned">
+              {pinnedConversations.map((conv, index) => renderConversation(conv, index))}
+            </ConversationSection>
+          )}
 
-          return (
-            <ConversationItem
-              key={conv.id}
-              conv={conv}
-              isActive={isActive}
-              isNearBottom={isNearBottom}
-              isEditing={isEditingThis}
-              isMenuOpen={isMenuOpen}
-              onCloseSidebar={onCloseSidebar}
-              onStartRename={handleStartRename}
-              onSaveRename={handleSaveRename}
-              onCancelRename={handleCancelRename}
-              onToggleMenu={handleToggleMenu}
-              onCloseMenu={handleCloseMenu}
-              onTogglePin={onTogglePin}
-              onRequestDelete={onRequestDelete}
-              menuContainerRef={isMenuOpen ? menuContainerRef : undefined}
-            />
-          );
-        })
+          {otherConversations.length > 0 && (
+            <ConversationSection label="Conversations" trailing={countBadge}>
+              {otherConversations.map((conv, index) =>
+                renderConversation(conv, pinnedConversations.length + index),
+              )}
+            </ConversationSection>
+          )}
+        </>
       )}
     </div>
   );
