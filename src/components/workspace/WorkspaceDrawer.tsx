@@ -8,7 +8,7 @@ import { MAX_FILE_CHARS, formatCharCount } from '@/lib/limits';
 import { detectLanguage, isMarkdownFile } from '@/lib/code/languages';
 import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
-import { useCopyClipboard } from '@/hooks';
+import { useCopyClipboard } from '@/hooks/common/useCopyClipboard';
 import CodeViewer from './CodeViewer';
 import WorkspaceFileSelector from './WorkspaceFileSelector';
 import WorkspaceEditor from './WorkspaceEditor';

@@ -7,7 +7,7 @@ import InputStatusRow from './InputStatusRow';
 import InputToolbar from './InputToolbar';
 import DropZoneOverlay from './DropZoneOverlay';
 import SlashCommandMenu from './SlashCommandMenu';
-import { useChatInputController } from '@/hooks';
+import { useChatInputController } from '@/hooks/chat/useChatInputController';
 
 /** Props for the chat input. */
 interface ChatInputProps {

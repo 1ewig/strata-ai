@@ -6,7 +6,7 @@ import { BrainCircuit, ChevronDown, Loader2 } from 'lucide-react';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { accordionVariants } from '@/constants/animations';
 import { estimateThoughtDuration } from '@/lib/timing';
-import { useElapsedTimer } from '@/hooks';
+import { useElapsedTimer } from '@/hooks/common/useElapsedTimer';
 
 /**
  * Props for the ThoughtAccordion component.

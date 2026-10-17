@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { Sun, Moon, Shield } from "lucide-react";
 import { StrataIcon } from "@/components/ui/strata-icon";
-import { useTheme } from "@/hooks";
+import { useTheme } from "@/hooks/common/useTheme";
 
 /**
  * Props for the shared auth page shell.
