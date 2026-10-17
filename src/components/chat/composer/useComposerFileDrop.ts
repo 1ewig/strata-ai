@@ -183,6 +183,8 @@ export function useComposerFileDrop({
 
   return {
     isDraggingOver,
+    /** Shared validation + processing entry point, reused by drop, paste, and the file picker. */
+    handleFiles,
     dragHandlers: {
       onDragEnter,
       onDragOver,

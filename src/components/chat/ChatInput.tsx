@@ -1,16 +1,8 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback, useMemo } from 'react';
 import { MAX_MESSAGE_CHARS, MAX_ATTACHMENTS_PER_MESSAGE, buildQuotaError } from '@/lib/limits';
 import { getModelSupportsVision } from '@/lib/models';
-import {
-  processImageFile,
-  validateImageFile,
-  type ProcessedImage,
-} from '@/lib/image-utils';
-import {
-  processDocumentFile,
-  validateDocumentFile,
-  type ProcessedDocument,
-} from '@/lib/document-utils';
+import { type ProcessedImage } from '@/lib/image-utils';
+import { type ProcessedDocument } from '@/lib/document-utils';
 import AttachmentPreviews from './composer/AttachmentPreviews';
 import ComposerStatusRow from './composer/ComposerStatusRow';
 import ComposerToolbar from './composer/ComposerToolbar';
@@ -118,7 +110,7 @@ export default React.memo(function ChatInput({
     isLoading || isBlocked || isAttachmentCapReached || isCompacting;
 
   // Canonical quota-exhausted copy (from buildQuotaError) with a retry hint.
-  const blockedQuotaCopy = React.useMemo(() => {
+  const blockedQuotaCopy = useMemo(() => {
     const err = buildQuotaError(
       rateLimitData?.remaining5h ?? 0,
       rateLimitData?.remainingWeek ?? 0,
@@ -133,33 +125,30 @@ export default React.memo(function ChatInput({
 
   // Slash commands menu state
   const isSlashMenuOpen = inputValue.startsWith('/') && !isLoading && !isBlocked;
-  const slashFilter = inputValue.toLowerCase().trim();
-  const filteredCommands = SLASH_COMMANDS.filter((cmd) =>
-    cmd.name.toLowerCase().startsWith(slashFilter)
-  );
-
-  // Reset selected command index on input changes
-  useEffect(() => {
-    setSelectedCommandIndex(0);
+  const filteredCommands = useMemo(() => {
+    const slashFilter = inputValue.toLowerCase().trim();
+    return SLASH_COMMANDS.filter((cmd) => cmd.name.toLowerCase().startsWith(slashFilter));
   }, [inputValue]);
 
-  /** Keeps the input state in sync with the textarea value. */
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  /** Keeps the input state in sync with the textarea value and resets command selection. */
+  const handleInput = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInputValue(e.target.value);
-  };
+    setSelectedCommandIndex(0);
+  }, []);
 
   /** Appends newly validated and processed image attachments up to the cap. */
-  const handleImagesAttached = (newImages: ProcessedImage[]) => {
+  const handleImagesAttached = useCallback((newImages: ProcessedImage[]) => {
     setAttachedImages((prev) => [...prev, ...newImages].slice(0, MAX_ATTACHMENTS_PER_MESSAGE));
-  };
+  }, []);
 
   /** Appends newly validated and processed document attachments up to the cap. */
-  const handleDocumentsAttached = (newDocs: ProcessedDocument[]) => {
+  const handleDocumentsAttached = useCallback((newDocs: ProcessedDocument[]) => {
     setAttachedDocuments((prev) => [...prev, ...newDocs].slice(0, MAX_ATTACHMENTS_PER_MESSAGE));
-  };
+  }, []);
 
-  // Drag-and-drop & clipboard paste hook for images and documents
-  const { isDraggingOver, dragHandlers } = useComposerFileDrop({
+  // Drag-and-drop, clipboard paste, and file-picker validation/processing are all
+  // funneled through this single hook so the attachment pipeline has one source of truth.
+  const { isDraggingOver, handleFiles, dragHandlers } = useComposerFileDrop({
     supportsVision,
     isAttachDisabled,
     attachedCount: totalAttachedCount,
@@ -169,92 +158,40 @@ export default React.memo(function ChatInput({
     onError: setAttachError,
   });
 
-  /**
-   * Validates and processes selected files (images and documents), appending
-   * them to the pending-attachment queue up to the per-message cap.
-   */
-  const handleFilesSelected = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    e.target.value = '';
-    if (files.length === 0) return;
-
-    setAttachError(null);
-    const availableSlots = MAX_ATTACHMENTS_PER_MESSAGE - totalAttachedCount;
-    if (availableSlots <= 0) {
-      setAttachError(`Maximum of ${MAX_ATTACHMENTS_PER_MESSAGE} attachments per message reached.`);
-      return;
-    }
-
-    const filesToProcess = files.slice(0, availableSlots);
-    if (files.length > availableSlots) {
-      setAttachError(
-        `Only ${availableSlots} file${availableSlots === 1 ? '' : 's'} could be attached (limit: ${MAX_ATTACHMENTS_PER_MESSAGE}).`
-      );
-    }
-
-    const nextImages: ProcessedImage[] = [];
-    const nextDocs: ProcessedDocument[] = [];
-
-    for (const file of filesToProcess) {
-      if (file.type.startsWith('image/')) {
-        if (!supportsVision) {
-          setAttachError(`Model does not support images. Could not attach "${file.name}".`);
-          continue;
-        }
-        const validationError = validateImageFile(file);
-        if (validationError) {
-          setAttachError(validationError);
-          continue;
-        }
-        try {
-          nextImages.push(await processImageFile(file));
-        } catch {
-          setAttachError(`Could not process "${file.name}".`);
-        }
-      } else {
-        const docValidationError = validateDocumentFile(file);
-        if (docValidationError) {
-          setAttachError(docValidationError);
-          continue;
-        }
-        try {
-          nextDocs.push(await processDocumentFile(file));
-        } catch {
-          setAttachError(`Could not process document "${file.name}".`);
-        }
-      }
-    }
-
-    if (nextImages.length > 0) {
-      handleImagesAttached(nextImages);
-    }
-    if (nextDocs.length > 0) {
-      handleDocumentsAttached(nextDocs);
-    }
-  };
+  /** Forwards selected files to the shared attachment pipeline. */
+  const handleFilesSelected = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const files = Array.from(e.target.files || []);
+      e.target.value = '';
+      if (files.length === 0) return;
+      void handleFiles(files);
+    },
+    [handleFiles],
+  );
 
   /** Removes a pending image attachment by index. */
-  const handleRemoveImage = (index: number) => {
+  const handleRemoveImage = useCallback((index: number) => {
     setAttachedImages((prev) => prev.filter((_, i) => i !== index));
     setAttachError(null);
-  };
+  }, []);
 
   /** Removes a pending document attachment by index. */
-  const handleRemoveDocument = (index: number) => {
+  const handleRemoveDocument = useCallback((index: number) => {
     setAttachedDocuments((prev) => prev.filter((_, i) => i !== index));
     setAttachError(null);
-  };
+  }, []);
 
   /** Opens the hidden file picker when the attach button is enabled. */
-  const handleAttachClick = () => {
+  const handleAttachClick = useCallback(() => {
     if (isAttachDisabled || !fileInputRef.current) return;
     fileInputRef.current.click();
-  };
+  }, [isAttachDisabled]);
 
   // Register as the prompt injection target for the empty-state suggestion chips.
   useEffect(() => {
     registerPromptTarget((text) => {
       setInputValue(text);
+      setSelectedCommandIndex(0);
       textareaRef.current?.focus();
     });
     return () => registerPromptTarget(null);
@@ -272,24 +209,32 @@ export default React.memo(function ChatInput({
   // Guard flag: input exceeds the hard character cap.
   const isCharOverLimit = inputValue.length > MAX_MESSAGE_CHARS;
 
+  /** Triggers compaction and clears the composer. Shared by the command and send paths. */
+  const triggerCompaction = useCallback(() => {
+    setInputValue('');
+    setAttachError(null);
+    onTriggerCompaction?.();
+  }, [onTriggerCompaction]);
+
   /** Executes a selected slash command. */
-  const executeCommand = (command: SlashCommand) => {
-    if (command.id === 'compact') {
-      setInputValue('');
-      onTriggerCompaction?.();
-    }
-  };
+  const executeCommand = useCallback(
+    (command: SlashCommand) => {
+      if (command.id === 'compact') {
+        triggerCompaction();
+      }
+    },
+    [triggerCompaction],
+  );
 
   /**
    * Validates the trimmed input against the loading/quota/limit guards,
    * submits the message or command, and clears the composer on success.
    * Attachment-only messages are allowed (text may be empty when files are attached).
    */
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     const text = inputValue.trim();
     if (text.toLowerCase() === '/compact') {
-      setInputValue('');
-      onTriggerCompaction?.();
+      triggerCompaction();
       return;
     }
 
@@ -306,38 +251,50 @@ export default React.memo(function ChatInput({
       setAttachedDocuments([]);
       setAttachError(null);
     }
-  };
+  }, [
+    inputValue,
+    attachedImages,
+    attachedDocuments,
+    isLoading,
+    isBlocked,
+    isCharOverLimit,
+    onSendMessage,
+    triggerCompaction,
+  ]);
 
   /** Enter submits the message or selects the command; Shift+Enter inserts a newline instead. */
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (isSlashMenuOpen && filteredCommands.length > 0) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedCommandIndex((prev) => (prev + 1) % filteredCommands.length);
-        return;
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+      if (isSlashMenuOpen && filteredCommands.length > 0) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setSelectedCommandIndex((prev) => (prev + 1) % filteredCommands.length);
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setSelectedCommandIndex((prev) => (prev - 1 + filteredCommands.length) % filteredCommands.length);
+          return;
+        }
+        if (e.key === 'Enter' || e.key === 'Tab') {
+          e.preventDefault();
+          executeCommand(filteredCommands[selectedCommandIndex]);
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setInputValue('');
+          return;
+        }
       }
-      if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedCommandIndex((prev) => (prev - 1 + filteredCommands.length) % filteredCommands.length);
-        return;
-      }
-      if (e.key === 'Enter' || e.key === 'Tab') {
-        e.preventDefault();
-        executeCommand(filteredCommands[selectedCommandIndex]);
-        return;
-      }
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setInputValue('');
-        return;
-      }
-    }
 
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  };
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    },
+    [isSlashMenuOpen, filteredCommands, selectedCommandIndex, executeCommand, handleSend],
+  );
 
   const hasContent = inputValue.trim().length > 0 || attachedImages.length > 0 || attachedDocuments.length > 0;
 
