@@ -20,6 +20,8 @@ export interface DocumentAttachmentInfo {
   size?: number;
 }
 
+import { isToolPart, normalizeToolPart } from './tool-normalization';
+
 /** Structural tool invocation representation from assistant message parts. */
 export interface ToolInvocationLike {
   id?: string;
@@ -27,18 +29,11 @@ export interface ToolInvocationLike {
   toolName?: string;
   name?: string;
   type?: string;
+  state?: string;
   args?: Record<string, unknown> | unknown;
   input?: Record<string, unknown> | unknown;
-  parameters?: Record<string, unknown> | unknown;
   result?: Record<string, unknown> | unknown;
   output?: Record<string, unknown> | unknown;
-  response?: Record<string, unknown> | unknown;
-  state?: string;
-  step?: number;
-  toolInvocation?: ToolInvocationLike | unknown;
-  toolCall?: ToolInvocationLike | unknown;
-  toolResult?: ToolInvocationLike | unknown;
-  function?: { name?: string; arguments?: string };
   [key: string]: unknown;
 }
 
@@ -138,11 +133,7 @@ export function flattenMessageSegments(
   // Detect tool invocations and reasoning/thought parts across both the
   // streaming parts schema and legacy shape variants.
   message.parts.forEach((p, idx) => {
-    const isTool =
-      p.type === 'tool-invocation' ||
-      p.type === 'dynamic-tool' ||
-      (typeof p.type === 'string' && p.type.startsWith('tool')) ||
-      p.toolInvocation !== undefined;
+    const isTool = isToolPart(p);
 
     const isReasoning =
       p.type === 'reasoning' ||
@@ -170,9 +161,8 @@ export function flattenMessageSegments(
         rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}` });
         currentText = '';
       }
-      const inv = p.toolInvocation || p;
-      const key = inv.toolCallId || p.toolCallId || `tool-${idx}`;
-      rawSegments.push({ type: 'tool', part: p, key });
+      const norm = normalizeToolPart(p, idx);
+      rawSegments.push({ type: 'tool', part: p, key: norm.callId });
     } else if (p.type === 'text' && typeof p.text === 'string') {
       currentText += p.text;
     }

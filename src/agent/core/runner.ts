@@ -165,6 +165,40 @@ interface UIStreamResponderConfig {
   onInferenceError?: (error: unknown) => Promise<void> | void;
 }
 
+interface RunnerErrorHandlerOptions {
+  err: unknown;
+  phase: string;
+  prefix: string;
+  writer?: { write: (chunk: { type: "error"; errorText: string }) => void };
+  triggerInferenceError: (classified: unknown) => Promise<void>;
+}
+
+async function handleRunnerError({
+  err,
+  phase,
+  prefix,
+  writer,
+  triggerInferenceError,
+}: RunnerErrorHandlerOptions) {
+  const classified = classifyProviderError(err);
+  console.error(`${prefix} ${phase} [${classified.code}]:`, err);
+  await triggerInferenceError(classified);
+  if (writer) {
+    try {
+      writer.write({
+        type: "error",
+        errorText: classified.message,
+      });
+    } catch {
+      // Writer might already be closed
+    }
+  }
+  void langfuseSpanProcessor.forceFlush().catch((flushErr) => {
+    console.warn(`${prefix} Langfuse span flush error:`, flushErr);
+  });
+  return classified;
+}
+
 /**
  * Builds and returns the SSE UI-message streaming response for a model run,
  * collapsing the shared `streamText` configuration (model resolution, provider
@@ -285,19 +319,12 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
                   });
                 },
                 onError({ error }) {
-                  const classified = classifyProviderError(error);
-                  console.error(`${config.prefix} Stream error [${classified.code}]:`, error);
-                  void triggerInferenceError(classified);
-                  try {
-                    writer.write({
-                      type: "error",
-                      errorText: classified.message,
-                    });
-                  } catch {
-                    // Writer might already be closed
-                  }
-                  void langfuseSpanProcessor.forceFlush().catch((err) => {
-                    console.warn(`${config.prefix} Langfuse span flush error:`, err);
+                  void handleRunnerError({
+                    err: error,
+                    phase: "Stream error",
+                    prefix: config.prefix,
+                    writer,
+                    triggerInferenceError,
                   });
                 },
               });
@@ -322,19 +349,12 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
             }
           );
         } catch (execError) {
-          const classified = classifyProviderError(execError);
-          console.error(`${config.prefix} Execution error [${classified.code}]:`, execError);
-          await triggerInferenceError(classified);
-          try {
-            writer.write({
-              type: "error",
-              errorText: classified.message,
-            });
-          } catch {
-            // Writer might already be closed
-          }
-          void langfuseSpanProcessor.forceFlush().catch((err) => {
-            console.warn(`${config.prefix} Langfuse span flush error:`, err);
+          await handleRunnerError({
+            err: execError,
+            phase: "Execution error",
+            prefix: config.prefix,
+            writer,
+            triggerInferenceError,
           });
           throw execError;
         }
@@ -354,10 +374,11 @@ async function createUIStreamResponder(config: UIStreamResponderConfig): Promise
       },
     });
   } catch (setupError) {
-    console.error(`${config.prefix} Responder setup error:`, setupError);
-    await triggerInferenceError(setupError);
-    void langfuseSpanProcessor.forceFlush().catch((err) => {
-      console.warn(`${config.prefix} Langfuse span flush error:`, err);
+    await handleRunnerError({
+      err: setupError,
+      phase: "Responder setup error",
+      prefix: config.prefix,
+      triggerInferenceError,
     });
     throw setupError;
   }

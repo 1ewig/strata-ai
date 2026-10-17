@@ -1,12 +1,9 @@
 import type { UIMessage } from "ai";
 import type { WorkspaceFile } from "@/lib/schemas";
+import { normalizeToolPart } from "./tool-normalization";
 
 /**
  * Structural subset of a UI message, decoupled from the AI SDK's exact typing.
- * @property id - Optional message identifier.
- * @property role - Optional message role (e.g. 'assistant').
- * @property content - Optional plain-text message content.
- * @property parts - Optional array of message parts, including tool parts.
  */
 export interface GenericUIMessage {
   id?: string;
@@ -24,26 +21,11 @@ type FileResult = {
   name?: string;
 };
 
-// Extracts the FileResult from a tool part, handling both the modern typed shape and legacy invocation shape.
+// Extracts the FileResult from a tool part using the canonical normalizer.
 function getToolOutput(part: unknown): FileResult | undefined {
   if (!part || typeof part !== "object") return undefined;
-  const p = part as any;
-
-  // Modern typed tool part
-  if (p.state === "output-available" && p.output) {
-    return p.output as FileResult;
-  }
-
-  // Legacy tool-invocation part
-  if (p.toolInvocation) {
-    const inv = p.toolInvocation;
-    const res = inv.result ?? inv.output;
-    return res as FileResult | undefined;
-  }
-
-  // Direct tool part or result object
-  const res = p.result ?? p.output;
-  return res as FileResult | undefined;
+  const { result } = normalizeToolPart(part);
+  return result && typeof result === "object" ? (result as FileResult) : undefined;
 }
 
 /**

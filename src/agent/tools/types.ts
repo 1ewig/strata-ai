@@ -35,4 +35,4 @@ export const fileSummarySchema = z.object({
 });
 
 // Re-export shared filename and workspace file search utilities from workspace operations
-export { isSameFilename, findWorkspaceFile } from "../workspace/operations";
+export { isSameFilename, findWorkspaceFile } from "../workspace";

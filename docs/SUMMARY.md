@@ -177,30 +177,15 @@ inference failure. `getRateLimitStatus` powers the read-only `GET /api/user/rate
 
 ```
 src/
-├── proxy.ts              # Middleware: session-cookie gate + security headers
-├── instrumentation.ts    # OTel NodeSDK + Langfuse span processor (server-only)
-├── app/
-│   ├── layout.tsx        # RSC shell: fonts, anti-flash script, RateLimitProvider
-│   ├── page.tsx          # Landing (public)
-│   ├── auth/             # signin / signup / redirector
-│   ├── chat-id/[id]/     # Chat workspace; use(params); owns <StickToBottom>
-│   └── api/              # agent, agent/compact, user/rate-limit, auth/[...all]
-├── components/           # chat/ (composer, message, tools), workspace/, sidebar/, auth/, landing/, ui/
-├── contexts/             # RateLimitContext (global quota), ChatUIContext (sidebar shell),
-│                         # ComposerContext (imperative composer handle)
-├── hooks/                # useChatSession (orchestrator), useChatTransport, useCompaction,
-│                         # useWorkspaceFiles, useConversations, useModelSettings, useTheme, ...
-```
-src/
 ├── agent/                # Folder-based agent architecture
 │   ├── core/             # runner (stream choke point), error-classifier, transforms
 │   ├── tools/            # workspace-tools, tavily-tools, edit-engine, types
-│   ├── prompts/          # system, compaction, types
+│   ├── prompts/          # system, compaction
 │   ├── providers/        # resolveAgentModel, getModelProvider, reasoning mapping
 │   ├── guards/           # withAgentRouteGuards, agentRequestBodySchema, refunds
 │   ├── sanitization/     # provider metadata pruning, PDF text extraction, image stripping
-│   ├── workspace/        # mutable-workspace, operations
-│   └── client/           # reconciler, error-handler, extractor, segments
+│   ├── workspace/        # operations and mutable-workspace context
+│   └── client/           # tool-normalization, extractor, segments, reconciler, error-handler
 ├── proxy.ts              # Middleware: session-cookie gate + security headers
 ├── instrumentation.ts    # OTel NodeSDK + Langfuse span processor (server-only)
 ├── app/
