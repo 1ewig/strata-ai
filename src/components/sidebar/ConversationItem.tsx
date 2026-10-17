@@ -145,9 +145,6 @@ function ConversationItem({
             }`}
         />
         <span className="truncate flex-1">{conv.title || 'Untitled Chat'}</span>
-        {conv.pinned && (
-          <Pin className="w-3 h-3 text-primary shrink-0 opacity-80" />
-        )}
       </Link>
 
       {/* 3-dots Menu Button & Dropdown Container */}

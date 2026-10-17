@@ -13,7 +13,6 @@ import {
   pruneEmptyConversations,
 } from '@/lib/db/conversations';
 import { generateId } from '@/lib/id';
-import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 
 /**
  * Returns the conversations belonging to a user, pinned chats first, then most recently updated first.
@@ -58,9 +57,7 @@ export function useConversations(
   const conversations = useLiveQuery(() => getUserConversations(userId), [userId]);
 
   const conversationCount = conversations?.length || 0;
-  // Enforce the per-user conversation cap on the new chat action.
-  const isMaxConversationsReached = conversationCount >= MAX_CONVERSATIONS_PER_USER;
-  const isNewChatDisabled = isMaxConversationsReached || isCurrentChatEmpty;
+  const isNewChatDisabled = isCurrentChatEmpty;
 
   // Prune any abandoned duplicate empty chats in the background, keeping the current conversation
   useEffect(() => {
@@ -74,8 +71,6 @@ export function useConversations(
    * or creates a fresh one. If the active chat is already new, this is a no-op.
    */
   const handleNewChat = useCallback(async () => {
-    if (isMaxConversationsReached) return;
-
     // 1. If the current view is already a new/empty chat, do nothing
     if (isCurrentChatEmpty) return;
 
@@ -97,7 +92,7 @@ export function useConversations(
     // 4. Otherwise, generate a fresh conversation ID and navigate
     const newId = generateId();
     router.push(`/chat-id/${newId}`);
-  }, [isMaxConversationsReached, isCurrentChatEmpty, currentConversationId, userId, router]);
+  }, [isCurrentChatEmpty, currentConversationId, userId, router]);
 
   /**
    * Deletes a conversation, then navigates away when the open chat is the one
@@ -145,7 +140,6 @@ export function useConversations(
   return {
     conversations,
     conversationCount,
-    isMaxConversationsReached,
     isCurrentChatEmpty,
     isNewChatDisabled,
     handleNewChat,

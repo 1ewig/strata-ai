@@ -17,8 +17,6 @@ export interface SidebarProps {
   conversations: Conversation[] | undefined;
   /** Number of conversations the user has. */
   conversationCount: number;
-  /** Whether the per-user conversation cap has been reached. */
-  isMaxConversationsReached: boolean;
   /** The id of the conversation currently open, used to highlight it. */
   activeConversationId: string;
   /** Creates a new conversation and navigates to it. */
@@ -51,7 +49,6 @@ export interface SidebarProps {
 function Sidebar({
   conversations,
   conversationCount,
-  isMaxConversationsReached,
   activeConversationId,
   onNewChat,
   isCurrentChatEmpty = false,
@@ -107,14 +104,12 @@ function Sidebar({
 
         <NewChatButton
           onNewChat={handleNewChat}
-          isMaxConversationsReached={isMaxConversationsReached}
           isCurrentChatEmpty={isCurrentChatEmpty}
         />
 
         <ConversationList
           conversations={conversations}
           conversationCount={conversationCount}
-          isMaxConversationsReached={isMaxConversationsReached}
           activeConversationId={activeConversationId}
           onCloseSidebar={closeSidebar}
           onRename={onRename}

@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { Conversation } from '@/lib/db/database';
-import { MAX_CONVERSATIONS_PER_USER } from '@/lib/limits';
 import ConversationItem from './ConversationItem';
 import ConversationSection from './ConversationSection';
 
@@ -9,8 +8,6 @@ interface ConversationListProps {
   conversations: Conversation[] | undefined;
   /** Total conversation count for the user. */
   conversationCount: number;
-  /** Whether the user has hit the conversation cap. */
-  isMaxConversationsReached: boolean;
   /** Currently active conversation id. */
   activeConversationId: string;
   /** Callback to close sidebar on mobile navigation. */
@@ -31,7 +28,6 @@ interface ConversationListProps {
 function ConversationList({
   conversations,
   conversationCount,
-  isMaxConversationsReached,
   activeConversationId,
   onCloseSidebar,
   onRename,
@@ -139,8 +135,8 @@ function ConversationList({
   );
 
   const countBadge = (
-    <span className={isMaxConversationsReached ? 'text-warning font-bold' : ''}>
-      {conversationCount} / {MAX_CONVERSATIONS_PER_USER}
+    <span className="tabular-nums">
+      {conversationCount}
     </span>
   );
 

@@ -195,7 +195,7 @@ src/
 │   ├── chat-id/[id]/     # Thin route unwrap: use(params); delegates to ChatPageClient
 │   └── api/              # agent, agent/compact, user/rate-limit, auth/[...all]
 ├── components/           # ChatPageClient (workspace orchestrator), chat/ (header/, input/, message/, tools/), workspace/, sidebar/ (ConversationSection), auth/, landing/, ui/
-├── contexts/             # RateLimitContext (global quota), ChatUIContext (sidebar shell),
+├── contexts/             # RateLimitContext (global quota), ChatUIContext (sidebar & drawer shell),
 │                         # ChatInputContext (imperative chat input handle)
 ├── hooks/                # Domain folders: common/ (useTheme, useCopyClipboard, useClickOutside, ...),
 │                         # chat/ (useChatSession orchestrator, useChatTransport, useCompaction, ...),
@@ -224,13 +224,13 @@ __tests__/                # 19 suites, run with bun test --isolate
 | `GET /api/user/rate-limit` | Protected read-only quota snapshot (`force-dynamic`) |
 | `ALL /api/auth/[...all]` | Better Auth handler (`toNextJsHandler`) |
 
-**Client component boundary:** `src/app/chat-id/[id]/page.tsx` is an ultra-lean 11-line dynamic route
-wrapper unwrapping `use(params)`; it delegates state composition to `src/components/ChatPageClient.tsx`.
+**Client component boundary:** `src/app/chat-id/[id]/page.tsx` is an ultra-lean dynamic route
+wrapper unwrapping `use(params)` and mounting `<ChatUIProvider>`; it delegates state composition to `src/components/ChatPageClient.tsx`.
 `ChatPageClient` calls `useChatSession(chatId)` and coordinates the 3-pillar layout (`Sidebar`, center
 `<StickToBottom>` chat viewport, and `WorkspaceDrawer`). Dexie queries, auth calls, and router
 navigation live in `src/hooks/*`, never inside presentation primitives. Two ephemeral UI concerns
 that would otherwise be drilled live in page-mounted scoped contexts instead: `ChatUIContext` (mobile
-sidebar drawer + desktop collapse, sessionStorage-persisted) and `ChatInputContext` (an imperative ref
+sidebar drawer + desktop collapse, sessionStorage-persisted, plus workspace drawer open/close state) and `ChatInputContext` (an imperative ref
 so empty-state suggestion chips inject a prompt with no parent re-render). Conversation and workspace
 data flow as props from `useChatSession` + Dexie.
 
@@ -247,7 +247,6 @@ All constants live in `src/lib/limits.ts`. Import them; never inline the numbers
 | Files per workspace | `MAX_FILES_PER_WORKSPACE = 3` | `writeFile` + UI | Tool throws; button disabled |
 | File length | `MAX_FILE_CHARS = 10,000` | `editFile` + editor | Edit rejected; input blocked |
 | Workspace total | `MAX_WORKSPACE_TOTAL_CHARS = 50,000` | `editFile` validator | Edit rejected |
-| Conversations per user | `MAX_CONVERSATIONS_PER_USER = 5` | Sidebar action | Blocked with notice |
 | Message quota | 10 / 5h, 50 / 7d | Atomic Postgres CTE | 429 + `Retry-After` |
 | Agent steps | Clamped 1-30 (default 25) | `/api/agent` | `step-limit`; <= 2 continuations |
 | Context window | 131,072 tokens | `token-usage.ts` | Sends blocked; `/compact` offered |
@@ -278,7 +277,7 @@ concise" warning mode at the same threshold.
    `components/chat/tools/resolver.tsx`. Never edit `ToolCallCard.tsx`.
 7. **Presentational Purity.** Components render props. Queries, auth, and routing live in
    `src/hooks/*` and page-level composition. Ephemeral cross-component UI state uses scoped
-   contexts in `src/contexts/` (sidebar shell, chat input handle) rather than prop drilling or a
+   contexts in `src/contexts/` (sidebar & drawer shell, chat input handle) rather than prop drilling or a
    state library; global quota state is the only app-wide context.
 8. **Auto-Scroll Exclusivity.** Only `<StickToBottom>` in `src/components/ChatPageClient.tsx` scrolls
    the chat. No manual scroll loops anywhere.

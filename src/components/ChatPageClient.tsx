@@ -91,7 +91,6 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
   const {
     conversations,
     conversationCount,
-    isMaxConversationsReached,
     handleNewChat,
     handleDeleteConversation,
     handleRenameConversation,
@@ -166,7 +165,6 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
         <Sidebar
           conversations={conversations}
           conversationCount={conversationCount}
-          isMaxConversationsReached={isMaxConversationsReached}
           activeConversationId={chatId}
           onNewChat={handleNewChat}
           isCurrentChatEmpty={isNewChat}
