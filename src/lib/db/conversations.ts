@@ -148,11 +148,15 @@ export async function findExistingEmptyConversation(userId: string | undefined):
 }
 
 /**
- * Prunes duplicate or abandoned empty conversations for a user, optionally
- * sparing an active/current conversation id.
+ * Enforces the single-empty-conversation invariant for a user: keeps one empty
+ * conversation and deletes the rest. The survivor is the currently open chat
+ * when it is empty, otherwise the most recently updated empty chat. This keeps
+ * a new chat the user just left visible in the sidebar while still preventing a
+ * second unstarted chat from accumulating.
  *
  * @param userId - The owner user id.
- * @param keepChatId - Conversation id to preserve even if currently empty.
+ * @param keepChatId - The conversation currently open; always preserved and
+ *   preferred as the survivor when it has no messages or files.
  */
 export async function pruneEmptyConversations(userId: string | undefined, keepChatId?: string): Promise<void> {
   if (!userId) return;
@@ -160,15 +164,22 @@ export async function pruneEmptyConversations(userId: string | undefined, keepCh
     .filter((c) => !c.userId || c.userId === userId)
     .toArray();
 
-  const emptyIdsToDelete: string[] = [];
+  const emptyConvs: Conversation[] = [];
+  let keepIsEmpty = false;
   for (const conv of list) {
-    if (conv.id === keepChatId) continue;
     if (conv.files && conv.files.length > 0) continue;
     const count = await db.messages.where('chatId').equals(conv.id).count();
-    if (count === 0) {
-      emptyIdsToDelete.push(conv.id);
+    if (count !== 0) continue;
+    if (conv.id === keepChatId) {
+      keepIsEmpty = true;
+      continue;
     }
+    emptyConvs.push(conv);
   }
+
+  // Keep the current chat when it is empty, otherwise the most recently updated empty chat.
+  emptyConvs.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  const emptyIdsToDelete = (keepIsEmpty ? emptyConvs : emptyConvs.slice(1)).map((c) => c.id);
 
   if (emptyIdsToDelete.length > 0) {
     await db.transaction('rw', [db.conversations, db.messages], async () => {

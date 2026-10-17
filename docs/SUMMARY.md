@@ -166,7 +166,7 @@ inference failure. `getRateLimitStatus` powers the read-only `GET /api/user/rate
 **Empty Conversation Lifecycle & Single-Empty-Chat Invariant:**
 - `isConversationEmpty(chatId)` detects conversations with zero messages and zero workspace files.
 - `findExistingEmptyConversation(userId)` retrieves an existing unstarted chat for the active user.
-- `pruneEmptyConversations(userId, keepChatId)` prunes redundant abandoned empty conversations in a Dexie transaction.
+- `pruneEmptyConversations(userId, keepChatId)` keeps a single empty conversation — the currently open chat when empty, otherwise the most recently updated empty chat — and deletes the rest in a Dexie transaction, so a new chat the user just left stays visible in the sidebar.
 - `useConversations` enforces that users can have at most one unstarted chat: clicking "New Chat" while in an empty conversation is an inert no-op (the UI button dims with an informative tooltip), and clicking "New Chat" from an existing chat navigates to the existing empty chat if one already exists rather than allocating a new ID and row.
 
 **Server — PostgreSQL `better_auth` schema:** standard Better Auth `user`, `session`, `account`,
