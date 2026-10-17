@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { AlertCircle, X, FileText, FileSpreadsheet, FileJson, FileCode2 } from 'lucide-react';
 import { ProcessedImage } from '@/lib/image-utils';
 import { ProcessedDocument, formatFileSize } from '@/lib/document-utils';
-import { attachmentThumbVariants } from '@/components/chat/animations';
+import { attachmentThumbVariants } from '@/constants/animations';
 
 /** Helper to render a semantic icon matching the document format. */
 function getDocIcon(mediaType: string, filename: string) {

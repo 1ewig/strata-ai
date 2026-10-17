@@ -10,7 +10,7 @@ import {
   heroItemVariants,
   emblemPopVariants,
   chipHoverProps,
-} from '@/components/chat/animations';
+} from '@/constants/animations';
 
 /** Quick-action suggestion chips for the Dribbble-style hero empty state. */
 export const SUGGESTION_CHIPS = [

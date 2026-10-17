@@ -9,7 +9,7 @@ import { StrataIcon } from '@/components/ui/strata-icon';
 import { useTheme } from '@/hooks/useTheme';
 import { db } from '@/lib/db/db';
 import { generateId } from '@/lib/id';
-import { buttonHoverProps } from './animations';
+import { buttonHoverProps } from '@/constants/landing-animations';
 
 /** Props for the LandingHeader component. */
 interface LandingHeaderProps {

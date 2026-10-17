@@ -20,7 +20,7 @@ import ChatHeader from '@/components/chat/header/ChatHeader';
 import ChatInput from '@/components/chat/ChatInput';
 import ChatHero from '@/components/chat/ChatHero';
 import MessageList from '@/components/chat/MessageList';
-import { pillFloatVariants } from '@/components/chat/animations';
+import { pillFloatVariants } from '@/constants/animations';
 
 export interface ChatPageClientProps {
   chatId: string;

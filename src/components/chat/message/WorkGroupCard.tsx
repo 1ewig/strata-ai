@@ -7,7 +7,7 @@ import ThoughtAccordion from './ThoughtAccordion';
 import ToolCallCard from './ToolCallCard';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { Segment } from '@/agent/client/segments';
-import { accordionVariants } from '@/components/chat/animations';
+import { accordionVariants } from '@/constants/animations';
 
 interface WorkGroupCardProps {
   items: Segment[];

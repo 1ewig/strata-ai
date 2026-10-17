@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BrainCircuit, ChevronDown, Loader2 } from 'lucide-react';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
-import { accordionVariants } from '@/components/chat/animations';
+import { accordionVariants } from '@/constants/animations';
 
 /**
  * Props for the ThoughtAccordion component.

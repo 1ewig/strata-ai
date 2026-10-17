@@ -8,7 +8,7 @@ import {
   fadeUpVariants,
   cardVariants,
   viewportOnce,
-} from '@/components/landing/animations';
+} from '@/constants/landing-animations';
 
 const PROCESS_STEPS = [
   {

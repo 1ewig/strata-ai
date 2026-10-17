@@ -13,7 +13,7 @@ import MessageActionsMenu from '@/components/chat/message/MessageActionsMenu';
 import UserMessageAttachments from '@/components/chat/message/UserMessageAttachments';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { flattenMessageSegments, type Segment } from '@/agent/client/segments';
-import { heroItemVariants } from '@/components/chat/animations';
+import { heroItemVariants } from '@/constants/animations';
 
 /** Elapsed inference duration timer displayed during active model generation. */
 const InferenceTimer = React.memo(function InferenceTimer() {

@@ -8,7 +8,7 @@ import {
   cardVariants,
   cardHoverProps,
   viewportOnce,
-} from '@/components/landing/animations';
+} from '@/constants/landing-animations';
 
 interface EngineCardData {
   initial: string;

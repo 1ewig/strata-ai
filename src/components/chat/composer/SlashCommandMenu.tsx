@@ -3,7 +3,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Minimize2 } from 'lucide-react';
-import { popoverVariants } from '@/components/chat/animations';
+import { popoverVariants } from '@/constants/animations';
 
 /** Available slash command definition. */
 export interface SlashCommand {

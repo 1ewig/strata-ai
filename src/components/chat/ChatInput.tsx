@@ -8,7 +8,7 @@ import ComposerStatusRow from './composer/ComposerStatusRow';
 import ComposerToolbar from './composer/ComposerToolbar';
 import DropZoneOverlay from './composer/DropZoneOverlay';
 import SlashCommandMenu, { SLASH_COMMANDS, SlashCommand } from './composer/SlashCommandMenu';
-import { useComposerFileDrop } from './composer/useComposerFileDrop';
+import { useComposerFileDrop } from '@/hooks/useComposerFileDrop';
 import { useComposer } from '@/contexts/ComposerContext';
 
 /** Props for the ChatInput composer. */
