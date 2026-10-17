@@ -3,8 +3,7 @@
 import React from 'react';
 import { Globe, FileText, Compass } from 'lucide-react';
 import { motion } from 'motion/react';
-import ChatBubble from '@/components/chat/message/ChatBubble';
-import CompactionDivider from '@/components/chat/message/CompactionDivider';
+import MessageList from '@/components/chat/MessageList';
 import { StrataIcon } from '@/components/ui/strata-icon';
 import { useComposer } from '@/contexts/ComposerContext';
 import {
@@ -13,7 +12,7 @@ import {
   emblemPopVariants,
   chipHoverProps,
 } from '@/components/chat/animations';
-import type { ChatMessage, ChatMetadata } from '@/lib/token-usage';
+import type { ChatMessage } from '@/lib/token-usage';
 
 /** Quick-action suggestion chips for the Dribbble-style hero empty state. */
 const SUGGESTION_CHIPS = [
@@ -167,59 +166,10 @@ export default React.memo(function ChatPanel({
   }
 
   return (
-    <div className="pt-4 space-y-4">
-      {/* Fallback empty state if isNewChat flag is not explicitly passed */}
-      {messages.length === 0 && !isLoading && (
-        <motion.div
-          variants={heroItemVariants}
-          initial="hidden"
-          animate="visible"
-          className="flex flex-col items-center justify-center py-20 text-center space-y-3"
-        >
-          <StrataIcon className="w-12 h-12" />
-          <h3 className="text-heading font-semibold text-text-primary font-display">Ready to help with your workspace</h3>
-        </motion.div>
-      )}
-
-      {/* Messages rendering with compaction dividers */}
-      {messages.map((message, idx) => {
-        const isLastAssistant = isLoading && message.role === 'assistant' && idx === messages.length - 1;
-        const meta = message.metadata as ChatMetadata | undefined;
-        const isCompacted = meta?.isCompactedSummary === true;
-        const isCompactionFailed = meta?.isCompactionFailed === true;
-
-        return (
-          <React.Fragment key={message.id}>
-            {isCompacted && <CompactionDivider label="Compaction started" />}
-            <ChatBubble
-              message={message}
-              isStreaming={isLastAssistant}
-            />
-            {isCompacted && !isLastAssistant && (
-              <CompactionDivider
-                label={isCompactionFailed ? 'Compaction failed' : 'Compaction completed'}
-                variant={isCompactionFailed ? 'danger' : 'default'}
-              />
-            )}
-          </React.Fragment>
-        );
-      })}
-
-      {/* Standalone typing bubble before the first assistant tokens arrive. */}
-      {isLoading && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
-        <div className="flex items-start gap-3.5 fade-in">
-          <div className="hidden sm:flex shrink-0 mt-0.5">
-            <StrataIcon className="w-7 h-7" />
-          </div>
-          <div className="px-4 py-3 rounded-2xl rounded-tl-xs bg-surface-overlay/90 border border-edge-raised flex items-center gap-1.5 backdrop-blur-sm shadow-card">
-            <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
-            <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
-            <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
-          </div>
-        </div>
-      )}
-
-      <div ref={messagesEndRef} />
-    </div>
+    <MessageList
+      messages={messages}
+      isLoading={isLoading}
+      messagesEndRef={messagesEndRef}
+    />
   );
 });
