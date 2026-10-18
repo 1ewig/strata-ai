@@ -22,6 +22,12 @@ import ChatHero from '@/components/chat/ChatHero';
 import MessageList from '@/components/chat/message/MessageList';
 import { pillFloatVariants } from '@/constants/animations';
 
+/**
+ * Extra clearance at the bottom of the chat viewport so downward-opening
+ * menus (e.g. MessageActionsMenu) do not collide with the floating ChatInput.
+ */
+const CHAT_VIEWPORT_BOTTOM_BUFFER_PX = 100;
+
 export interface ChatPageClientProps {
   chatId: string;
 }
@@ -202,7 +208,11 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
                     className={`max-w-4xl w-full mx-auto px-4 ${
                       isNewChat ? 'min-h-full flex flex-col justify-center py-6' : ''
                     }`}
-                    style={!isNewChat ? { paddingBottom: `${inputHeight}px` } : undefined}
+                    style={
+                      !isNewChat
+                        ? { paddingBottom: `${inputHeight + CHAT_VIEWPORT_BOTTOM_BUFFER_PX}px` }
+                        : undefined
+                    }
                   >
                     {isNewChat ? (
                       <ChatHero chatId={chatId} chatInputNode={chatInputNode} />

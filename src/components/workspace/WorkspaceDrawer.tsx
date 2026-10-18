@@ -77,6 +77,7 @@ export default React.memo(function WorkspaceDrawer({
     handleConfirmDelete,
     handleCancelDelete,
     handleCopyContent,
+    handleDownloadFile,
   } = useWorkspaceEditor({
     activeFile,
     onUpdateFile,
@@ -84,6 +85,10 @@ export default React.memo(function WorkspaceDrawer({
     onDeleteFile,
     onSelectFile,
   });
+
+  const isCodeView = Boolean(
+    activeFile && !isEditing && activeFile.content && (!isMarkdown || markdownViewMode === 'source')
+  );
 
   return (
     <>
@@ -168,6 +173,7 @@ export default React.memo(function WorkspaceDrawer({
                       isEditing={isEditing}
                       copied={copied}
                       onCopy={handleCopyContent}
+                      onDownload={handleDownloadFile}
                       onStartEditing={handleStartEditing}
                       onDeleteClick={() => handleRequestDelete(activeFile)}
                     />
@@ -196,7 +202,11 @@ export default React.memo(function WorkspaceDrawer({
               )}
 
               {/* Drawer Content Body */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              <div
+                className={`flex-1 overflow-y-auto overscroll-y-contain [transform:translateZ(0)] ${
+                  isCodeView ? 'py-4 sm:py-6 px-0' : 'p-4 sm:p-6'
+                }`}
+              >
                 {!activeFile ? (
                   <WorkspaceEmptyState type="no-files" onCreateFileClick={handleOpenCreateNew} />
                 ) : isEditing ? (
@@ -210,7 +220,7 @@ export default React.memo(function WorkspaceDrawer({
                 ) : !activeFile.content ? (
                   <WorkspaceEmptyState type="empty-file" fileName={activeFile.name} onEditFileClick={handleStartEditing} />
                 ) : isMarkdown && markdownViewMode === 'preview' ? (
-                  <article className="text-body text-text-primary leading-relaxed selection:bg-secondary/50">
+                  <article className="text-body text-text-primary leading-relaxed selection:bg-secondary/50 [contain:content]">
                     <MarkdownRenderer
                       content={activeFile.content}
                       variant="canvas"

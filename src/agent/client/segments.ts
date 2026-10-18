@@ -162,7 +162,34 @@ export function flattenMessageSegments(
         currentText = '';
       }
       const norm = normalizeToolPart(p, idx);
-      rawSegments.push({ type: 'tool', part: p, key: norm.callId });
+      const existingIdx = rawSegments.findIndex(
+        (seg) => seg.type === 'tool' && seg.key === norm.callId,
+      );
+
+      if (existingIdx !== -1) {
+        // Merge with existing tool segment so call and result unite into a single card
+        const existingPart = (rawSegments[existingIdx].part || {}) as Record<string, unknown>;
+        const incomingPart = (p || {}) as Record<string, unknown>;
+        rawSegments[existingIdx].part = {
+          ...existingPart,
+          ...incomingPart,
+          args: incomingPart.args ?? incomingPart.input ?? existingPart.args ?? existingPart.input ?? {},
+          input: incomingPart.input ?? incomingPart.args ?? existingPart.input ?? existingPart.args ?? {},
+          result: incomingPart.result ?? incomingPart.output ?? existingPart.result ?? existingPart.output,
+          output: incomingPart.output ?? incomingPart.result ?? existingPart.output ?? existingPart.result,
+          state:
+            incomingPart.state === 'output-available' ||
+            incomingPart.state === 'result' ||
+            existingPart.state === 'output-available' ||
+            existingPart.state === 'result' ||
+            incomingPart.result !== undefined ||
+            incomingPart.output !== undefined
+              ? 'output-available'
+              : (incomingPart.state as string) || (existingPart.state as string) || 'input-available',
+        };
+      } else {
+        rawSegments.push({ type: 'tool', part: p, key: norm.callId });
+      }
     } else if (p.type === 'text' && typeof p.text === 'string') {
       currentText += p.text;
     }

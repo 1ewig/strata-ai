@@ -11,6 +11,7 @@ import { useChatTransport } from './useChatTransport';
 import { useCompaction } from './useCompaction';
 import { handleChatError } from '@/agent/client/error-handler';
 import { reconcileFinishedStep } from '@/agent/client/reconciler';
+import { useThrottledMessages } from './useThrottledMessages';
 import { calculateTokenMetrics, ChatMetadata } from '@/lib/ai/token-usage';
 import { getModelContextWindow } from '@/lib/ai/models';
 import { buildQuotaError } from '@/lib/limits';
@@ -327,12 +328,15 @@ export function useChatSession(chatId: string) {
     }
   }, [chat.messages, isCompacting, isLoading, setQuotaError, triggerCompaction]);
 
+  const isStreaming = chat.status === 'streaming';
+  const throttledMessages = useThrottledMessages(chat.messages, isStreaming);
+
   return {
     model: modelSettings.model,
     thinkingLevel: modelSettings.thinkingLevel,
     files: workspace.files,
     activeFileId: workspace.activeFileId,
-    displayMessages: chat.messages,
+    displayMessages: throttledMessages,
     tokenUsage: tokenMetrics,
     tokenMetrics,
     isContextWindowExhausted,

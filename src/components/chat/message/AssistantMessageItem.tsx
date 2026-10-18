@@ -38,7 +38,7 @@ function AssistantMessageItem({
   return (
     <div
       ref={containerRef}
-      className={`relative flex items-start gap-3.5 fade-in ${openMenuKey ? 'z-30' : ''}`}
+      className={`relative flex items-start gap-3.5 fade-in ${openMenuKey ? 'z-[35]' : ''}`}
     >
       {/* Assistant Avatar */}
       <div className="hidden sm:flex relative w-8 h-8 items-center justify-center shrink-0 mt-0.5 transition-all duration-300">
@@ -90,7 +90,7 @@ function AssistantMessageItem({
               <div key={seg.key} className="flex flex-col items-start gap-1 w-fit max-w-full">
                 <div
                   onClick={(e) => !isStreamingActiveSegment && handleBubbleClick(e, seg.key)}
-                  className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-overlay/90 border text-text-primary rounded-tl-xs backdrop-blur-sm w-fit max-w-full cursor-default select-none ${
+                  className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-raised border text-text-primary rounded-tl-xs w-fit max-w-full cursor-default select-none ${
                     isActionActive
                       ? 'border-primary/60 shadow-card-lg'
                       : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
@@ -119,7 +119,7 @@ function AssistantMessageItem({
                       isOpen={isMenuOpen}
                       onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
                       align="left"
-                      direction="up"
+                      direction="down"
                     />
                   </div>
                 )}

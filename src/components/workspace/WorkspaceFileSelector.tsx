@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { ChevronDown, FileText, FileCode2, Plus } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/db/schemas';
 import { MAX_FILES_PER_WORKSPACE } from '@/lib/limits';
-import { isMarkdownFile, getLanguageMeta } from '@/lib/code/languages';
+import { isMarkdownFile } from '@/lib/code/languages';
 
 interface WorkspaceFileSelectorProps {
   files: WorkspaceFile[];
@@ -14,8 +14,8 @@ interface WorkspaceFileSelectorProps {
 }
 
 /**
- * Dropdown selector for switching workspace files, showing active file status,
- * language badges, and the "Create New File" trigger.
+ * Dropdown selector for switching workspace files, showing active file status
+ * and the "Create New File" trigger.
  */
 export default React.memo(function WorkspaceFileSelector({
   files,
@@ -70,7 +70,7 @@ export default React.memo(function WorkspaceFileSelector({
         <div className="absolute mt-1.5 left-0 w-72 max-w-[calc(100vw-3rem)] bg-surface-elevated border border-edge-hover rounded-xl shadow-card-lg overflow-hidden text-caption z-50 animate-in fade-in zoom-in-95 duration-100">
           <div className="px-3 py-2 border-b border-edge-raised font-semibold text-text-muted text-micro uppercase tracking-wider flex items-center justify-between">
             <span>Workspace Files</span>
-            <span className="px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised font-mono text-micro text-text-secondary font-semibold">
+            <span className="font-mono text-micro text-text-muted font-medium tabular-nums normal-case">
               {files.length}/{MAX_FILES_PER_WORKSPACE} files
             </span>
           </div>
@@ -79,7 +79,6 @@ export default React.memo(function WorkspaceFileSelector({
             {files.map((f) => {
               const isActive = f.id === activeFile?.id;
               const isMd = isMarkdownFile(f.name, f.language);
-              const meta = getLanguageMeta(f.name || f.language);
               return (
                 <button
                   key={f.id}
@@ -103,11 +102,6 @@ export default React.memo(function WorkspaceFileSelector({
                       />
                     )}
                     <span className="truncate">{f.name}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                    <span className="text-micro font-mono text-text-muted px-1.5 py-0.5 rounded bg-surface-base border border-edge-raised">
-                      {meta.label}
-                    </span>
                   </div>
                 </button>
               );

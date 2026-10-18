@@ -5,6 +5,7 @@ import type { WorkspaceFile } from '@/lib/db/schemas';
 import { MAX_FILE_CHARS } from '@/lib/limits';
 import { detectLanguage, isMarkdownFile } from '@/lib/code/languages';
 import { useCopyClipboard } from '@/hooks/common/useCopyClipboard';
+import { downloadWorkspaceFile } from '@/lib/workspace/download';
 
 /** Options required by the useWorkspaceEditor hook. */
 export interface UseWorkspaceEditorOptions {
@@ -112,6 +113,12 @@ export function useWorkspaceEditor({
     }
   }, [activeFile?.content, copy]);
 
+  const handleDownloadFile = useCallback(() => {
+    if (activeFile) {
+      downloadWorkspaceFile(activeFile);
+    }
+  }, [activeFile]);
+
   const isMarkdown = isMarkdownFile(activeFile?.name, activeFile?.language);
 
   return {
@@ -141,5 +148,6 @@ export function useWorkspaceEditor({
     handleConfirmDelete,
     handleCancelDelete,
     handleCopyContent,
+    handleDownloadFile,
   };
 }

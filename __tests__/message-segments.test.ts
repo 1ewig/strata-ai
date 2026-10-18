@@ -214,4 +214,35 @@ describe("flattenMessageSegments", () => {
     });
     expect(segments[0].images?.[0].filename).toBe("Attached image");
   });
+
+  it("merges separate tool-call and tool-result parts sharing the same callId into a single tool segment", () => {
+    const message = {
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-call",
+          toolCallId: "chatcmpl-tool-8aa19227689512be",
+          toolName: "writeFile",
+          args: { name: "test.ts", content: "console.log('hi')" },
+        },
+        {
+          type: "tool-result",
+          toolCallId: "chatcmpl-tool-8aa19227689512be",
+          toolName: "writeFile",
+          result: { success: true, action: "created" },
+        },
+        { type: "text", text: "Finished creating file." },
+      ],
+    };
+
+    const segments = flattenMessageSegments(message, true);
+    // Must produce exactly 1 tool segment and 1 text segment, with unique keys
+    expect(segments.map((s) => s.type)).toEqual(["tool", "text"]);
+    expect(segments[0].key).toBe("chatcmpl-tool-8aa19227689512be");
+
+    const toolPart = segments[0].part as any;
+    expect(toolPart.args).toEqual({ name: "test.ts", content: "console.log('hi')" });
+    expect(toolPart.result).toEqual({ success: true, action: "created" });
+    expect(toolPart.state).toBe("output-available");
+  });
 });

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { MoreVertical, Copy, Check, Edit3, Trash2 } from 'lucide-react';
+import { MoreVertical, Copy, Check, Edit3, Trash2, Download } from 'lucide-react';
 import { WorkspaceFile } from '@/lib/db/schemas';
 
 interface WorkspaceOverflowMenuProps {
@@ -9,19 +9,21 @@ interface WorkspaceOverflowMenuProps {
   isEditing: boolean;
   copied: boolean;
   onCopy: () => void;
+  onDownload: () => void;
   onStartEditing: () => void;
   onDeleteClick: () => void;
 }
 
 /**
  * 3-dots overflow menu in the Workspace Drawer header containing
- * Copy Content, Edit File, and Delete File actions.
+ * Copy Content, Download File, Edit File, and Delete File actions.
  */
 export default React.memo(function WorkspaceOverflowMenu({
   activeFile,
   isEditing,
   copied,
   onCopy,
+  onDownload,
   onStartEditing,
   onDeleteClick,
 }: WorkspaceOverflowMenuProps) {
@@ -99,6 +101,21 @@ export default React.memo(function WorkspaceOverflowMenu({
               )}
               <span>{copied ? 'Copied Content!' : 'Copy Content'}</span>
             </div>
+          </button>
+
+          {/* Download File */}
+          <button
+            type="button"
+            role="menuitem"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDownload();
+              setIsOpen(false);
+            }}
+            className="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-caption font-medium text-text-primary hover:bg-surface-hover hover:text-text-bright transition-colors text-left cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5 text-text-secondary shrink-0" />
+            <span>Download File</span>
           </button>
 
           {/* Edit File */}
