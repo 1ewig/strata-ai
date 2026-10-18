@@ -27,9 +27,12 @@ export function isToolPart(part: unknown): boolean {
   );
 }
 
+const toolPartCache = new WeakMap<object, NormalizedToolPart>();
+
 /**
  * Normalizes any tool part (modern AI SDK v4+ typed parts or legacy invocations)
- * into a single canonical model.
+ * into a single canonical model. Caches results via WeakMap to keep per-token
+ * streaming passes O(1).
  */
 export function normalizeToolPart(part: unknown, fallbackIndex = 0): NormalizedToolPart {
   if (!part || typeof part !== 'object') {
@@ -44,6 +47,9 @@ export function normalizeToolPart(part: unknown, fallbackIndex = 0): NormalizedT
       isCustom: false,
     };
   }
+
+  const cached = toolPartCache.get(part);
+  if (cached) return cached;
 
   const p = part as Record<string, unknown>;
   const inv = (p.toolInvocation && typeof p.toolInvocation === 'object' ? p.toolInvocation : p) as Record<string, unknown>;
@@ -125,7 +131,7 @@ export function normalizeToolPart(part: unknown, fallbackIndex = 0): NormalizedT
     }
   }
 
-  return {
+  const normalized: NormalizedToolPart = {
     callId,
     name,
     rawName,
@@ -135,4 +141,7 @@ export function normalizeToolPart(part: unknown, fallbackIndex = 0): NormalizedT
     status,
     isCustom,
   };
+
+  toolPartCache.set(part, normalized);
+  return normalized;
 }
