@@ -77,6 +77,7 @@ export default React.memo(function WorkspaceDrawer({
     handleConfirmDelete,
     handleCancelDelete,
     handleCopyContent,
+    handleDownloadFile,
   } = useWorkspaceEditor({
     activeFile,
     onUpdateFile,
@@ -168,6 +169,7 @@ export default React.memo(function WorkspaceDrawer({
                       isEditing={isEditing}
                       copied={copied}
                       onCopy={handleCopyContent}
+                      onDownload={handleDownloadFile}
                       onStartEditing={handleStartEditing}
                       onDeleteClick={() => handleRequestDelete(activeFile)}
                     />

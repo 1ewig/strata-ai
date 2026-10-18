@@ -209,12 +209,13 @@ src/
     ├── ai/               # models.ts (catalog, pricing, thinking levels), token-usage.ts
     ├── attachments/      # images.ts (canvas downscaling), documents.ts (PDF/text ingestion)
     ├── code/             # languages.ts (25 grammars), syntax-highlighter.ts
+    ├── workspace/        # download.ts (canonical extension resolution & browser downloads)
     ├── server/           # rate-limit.ts (Postgres quota)
     ├── limits.ts         # Every limit constant (never inline these numbers)
     ├── clipboard.ts      # stripMarkdown + copy
     ├── id.ts             # generateId
     └── timing.ts         # thought/work-group duration estimates
-__tests__/                # 19 suites, run with bun test --isolate
+__tests__/                # 20 suites, run with bun test --isolate
 scripts/                  # migrate-better-auth-schema.ts (+ .sql), test-db.ts, test-langfuse.ts
 ```
 
