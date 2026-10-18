@@ -328,7 +328,7 @@ export function useChatSession(chatId: string) {
     }
   }, [chat.messages, isCompacting, isLoading, setQuotaError, triggerCompaction]);
 
-  const isStreaming = chat.status === 'streaming';
+  const isStreaming = chat.status === 'streaming' || isCompacting;
   const throttledMessages = useThrottledMessages(chat.messages, isStreaming);
 
   return {

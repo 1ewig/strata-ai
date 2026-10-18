@@ -23,20 +23,34 @@ export function useThrottledMessages<T extends { id?: string }>(
 ): T[] {
   const [throttledMessages, setThrottledMessages] = useState<T[]>(messages);
   const latestMessagesRef = useRef<T[]>(messages);
+  const throttledMessagesRef = useRef<T[]>(throttledMessages);
   const rafIdRef = useRef<number | null>(null);
 
   latestMessagesRef.current = messages;
+  throttledMessagesRef.current = throttledMessages;
 
   useEffect(() => {
-    // Structural changes (message added/removed, conversation switch, or stream complete)
-    // must flush immediately to avoid any perceived UI latency.
-    const hasStructuralChange =
-      messages.length !== throttledMessages.length ||
-      (messages.length > 0 &&
-        throttledMessages.length > 0 &&
-        messages[messages.length - 1]?.id !== throttledMessages[throttledMessages.length - 1]?.id);
+    // When not streaming, cancel any pending animation frame and ensure state matches.
+    if (!isStreaming) {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+        rafIdRef.current = null;
+      }
+      if (throttledMessagesRef.current !== messages) {
+        setThrottledMessages(messages);
+      }
+      return;
+    }
 
-    if (!isStreaming || hasStructuralChange) {
+    // Structural changes (message added/removed, conversation switch) flush immediately.
+    const currentThrottled = throttledMessagesRef.current;
+    const hasStructuralChange =
+      messages.length !== currentThrottled.length ||
+      (messages.length > 0 &&
+        currentThrottled.length > 0 &&
+        messages[messages.length - 1]?.id !== currentThrottled[currentThrottled.length - 1]?.id);
+
+    if (hasStructuralChange) {
       if (rafIdRef.current !== null) {
         cancelAnimationFrame(rafIdRef.current);
         rafIdRef.current = null;
@@ -52,7 +66,7 @@ export function useThrottledMessages<T extends { id?: string }>(
         setThrottledMessages(latestMessagesRef.current);
       });
     }
-  }, [messages, isStreaming, throttledMessages.length, throttledMessages]);
+  }, [messages, isStreaming]);
 
   // Clean up any in-flight rAF on unmount
   useEffect(() => {
@@ -64,5 +78,5 @@ export function useThrottledMessages<T extends { id?: string }>(
     };
   }, []);
 
-  return throttledMessages;
+  return isStreaming ? throttledMessages : messages;
 }

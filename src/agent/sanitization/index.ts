@@ -130,13 +130,14 @@ export async function sanitizeMessagesForProvider(
           resultProviderMetadata?: Record<string, unknown>;
         };
 
+        const resolvedCallMetadata = typedPart.callProviderMetadata ?? typedPart.providerMetadata;
         const sanitizedPart = {
           ...part,
           ...(typedPart.providerMetadata !== undefined
             ? { providerMetadata: prune(typedPart.providerMetadata) }
             : {}),
-          ...(typedPart.callProviderMetadata !== undefined
-            ? { callProviderMetadata: prune(typedPart.callProviderMetadata) }
+          ...(resolvedCallMetadata !== undefined
+            ? { callProviderMetadata: prune(resolvedCallMetadata) }
             : {}),
           ...(typedPart.resultProviderMetadata !== undefined
             ? { resultProviderMetadata: prune(typedPart.resultProviderMetadata) }
