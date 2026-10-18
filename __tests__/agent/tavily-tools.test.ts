@@ -1,6 +1,6 @@
 import { afterEach, describe, it, expect, mock } from "bun:test";
 import { createExtractUrlTool, createWebSearchTool } from "@/agent/tools/tavily-tools";
-import { jsonResponse, runTool } from "./helpers";
+import { jsonResponse, runTool } from "../helpers";
 
 const originalFetch = globalThis.fetch;
 const originalApiKey = process.env.TAVILY_API_KEY;

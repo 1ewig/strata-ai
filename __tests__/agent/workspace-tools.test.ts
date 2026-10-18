@@ -11,7 +11,7 @@ import {
   MAX_FILE_CHARS,
   MAX_FILES_PER_WORKSPACE,
 } from "@/lib/limits";
-import { makeFile, runTool, setupWorkspaceTools } from "./helpers";
+import { makeFile, runTool, setupWorkspaceTools } from "../helpers";
 
 describe("listFiles", () => {
   it("returns an empty listing for an empty workspace", async () => {

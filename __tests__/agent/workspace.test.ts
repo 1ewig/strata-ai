@@ -6,7 +6,7 @@ import {
   removeFileFromWorkspace,
   createMutableWorkspace,
 } from "@/agent/workspace";
-import { makeFile } from "./helpers";
+import { makeFile } from "../helpers";
 
 describe("isSameFilename", () => {
   it("compares names case-insensitively", () => {

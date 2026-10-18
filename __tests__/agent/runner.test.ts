@@ -16,7 +16,7 @@ mock.module("@/agent/core/stream-responder", () => ({
 const { runAgentResponse, runCompactionResponse } = await import("@/agent/core/runner");
 const { COMPACTION_MODEL_ID, COMPACTION_THINKING_LEVEL } = await import("@/lib/ai/models");
 const { createMutableWorkspace } = await import("@/agent/workspace");
-const { makeFile } = await import("./helpers");
+const { makeFile } = await import("../helpers");
 
 function config() {
   return responderMock.mock.calls[responderMock.mock.calls.length - 1][0] as any;

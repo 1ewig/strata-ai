@@ -5,7 +5,7 @@ import {
   findLatestCompactedMessageIndex,
   sliceMessagesAfterCompaction,
 } from "@/agent/client/extractor";
-import { makeFile } from "./helpers";
+import { makeFile } from "../helpers";
 
 function legacyToolResult(result: unknown, toolCallId = "call-1") {
   return {

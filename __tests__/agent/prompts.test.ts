@@ -7,7 +7,7 @@ import {
   getActiveFiles,
 } from "@/agent/prompts";
 import { NEAR_LIMIT_PERCENT } from "@/lib/limits";
-import { makeFile } from "./helpers";
+import { makeFile } from "../helpers";
 
 describe("getActiveFiles", () => {
   it("keeps only files with non-whitespace content", () => {
