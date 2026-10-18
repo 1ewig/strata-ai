@@ -1,284 +1,128 @@
 'use client';
 
 import React from 'react';
-import { Check, Code2 } from 'lucide-react';
-import { highlightCode } from '@/lib/code/syntax-highlighter';
-import { getLanguageLabel } from '@/lib/code/languages';
+import CodeSnippetBlock from './CodeSnippetBlock';
 
 export type MarkdownVariant = 'assistant' | 'user' | 'thought' | 'canvas';
 
-interface TokenSet {
-  heading1Text: string;
-  heading1Border: string;
-  heading1MT: string;
-  heading1MB: string;
-  heading1PB: string;
-  heading2Text: string;
-  heading2MT: string;
-  heading2MB: string;
-  heading3Text: string;
-  heading3MT: string;
-  heading3MB: string;
-  paraText: string;
-  paraMB: string;
-  listText: string;
-  listSpacing: string;
-  listMT: string;
-  listMB: string;
-  strongText: string;
+interface MarkdownVariantStyles {
+  h1: string;
+  h2: string;
+  h3: string;
+  p: string;
+  ul: string;
+  ol: string;
+  strong: string;
   codeInline: string;
   codeBlockBorder: string;
   codeBlockExtra: string;
-  snippetPrefix: string;
   tableWrap: string;
-  tableText: string;
-  thCell: string;
-  tdCell: string;
-  blockquoteText: string;
-  blockquoteBorder: string;
-  hrBorder: string;
-  hrMy: string;
-  linkClass: string;
-  emEl: (({ children }: any) => React.ReactNode) | null;
+  table: string;
+  th: string;
+  td: string;
+  blockquote: string;
+  hr: string;
+  a: string;
+  em?: (({ children }: any) => React.ReactNode) | null;
 }
 
-const TOKENS: Record<MarkdownVariant, TokenSet> = {
-  assistant: {
-    heading1Text: 'text-text-bright',
-    heading1Border: 'border-edge-raised/80',
-    heading1MT: 'mt-3',
-    heading1MB: 'mb-2',
-    heading1PB: 'pb-1.5',
-    heading2Text: 'text-primary/90',
-    heading2MT: 'mt-3',
-    heading2MB: 'mb-1.5',
-    heading3Text: 'text-text-primary',
-    heading3MT: 'mt-2',
-    heading3MB: 'mb-1',
-    paraText: '',
-    paraMB: 'mb-2.5',
-    listText: 'text-text-secondary',
-    listSpacing: 'space-y-1.5',
-    listMT: 'mb-3',
-    listMB: 'mb-3',
-    strongText: 'text-text-bright',
-    codeInline: 'bg-surface-elevated/90 text-primary font-mono px-1.5 py-0.5 rounded text-micro border border-edge-hover/60',
-    codeBlockBorder: 'border-edge-raised/80',
-    codeBlockExtra: '',
-    snippetPrefix: 'snippet-',
-    tableWrap: 'my-3 rounded-xl border border-edge-raised/80 bg-surface-base/40',
-    tableText: 'text-text-secondary',
-    thCell: 'bg-surface-elevated/70 px-3 py-2 border-b border-edge-raised font-semibold text-text-primary',
-    tdCell: 'px-3 py-2 border-b border-edge-raised/40 hover:bg-surface-hover/20',
-    blockquoteText: 'text-text-muted',
-    blockquoteBorder: 'border-primary/60',
-    hrBorder: 'border-edge-raised',
-    hrMy: 'my-3.5',
-    linkClass: 'text-primary underline decoration-primary/50 hover:decoration-primary font-medium transition-colors',
-    emEl: null,
-  },
-  user: {
-    heading1Text: 'text-surface',
-    heading1Border: 'border-surface/30',
-    heading1MT: 'mt-2',
-    heading1MB: 'mb-1.5',
-    heading1PB: 'pb-1',
-    heading2Text: 'text-surface',
-    heading2MT: 'mt-2',
-    heading2MB: 'mb-1',
-    heading3Text: 'text-surface',
-    heading3MT: 'mt-1.5',
-    heading3MB: 'mb-0.5',
-    paraText: 'text-surface',
-    paraMB: 'mb-2',
-    listText: 'text-surface/95',
-    listSpacing: 'space-y-1',
-    listMT: 'my-1.5',
-    listMB: 'my-1.5',
-    strongText: 'text-surface',
-    codeInline: 'bg-surface/20 text-surface font-mono px-1.5 py-0.5 rounded text-micro border border-surface/30',
-    codeBlockBorder: 'border-edge-raised/80',
-    codeBlockExtra: 'text-text-primary text-left',
-    snippetPrefix: 'user-snippet-',
-    tableWrap: 'my-2.5 rounded-xl border border-surface/30 bg-surface/10',
-    tableText: 'text-surface',
-    thCell: 'bg-surface/20 px-3 py-1.5 border-b border-surface/30 font-semibold text-surface',
-    tdCell: 'px-3 py-1.5 border-b border-surface/20 hover:bg-surface/15',
-    blockquoteText: 'text-surface/90',
-    blockquoteBorder: 'border-surface/60',
-    hrBorder: 'border-surface/30',
-    hrMy: 'my-3',
-    linkClass: 'underline decoration-surface/60 hover:decoration-surface transition-colors font-medium text-surface',
-    emEl: ({ children }: any) => <em className="italic text-surface/90">{children}</em>,
-  },
-  thought: {
-    heading1Text: 'text-subheading font-bold text-text-primary',
-    heading1Border: 'border-edge-raised/50',
-    heading1MT: 'mt-2',
-    heading1MB: 'mb-1',
-    heading1PB: 'pb-1',
-    heading2Text: 'text-label font-bold text-text-primary',
-    heading2MT: 'mt-2',
-    heading2MB: 'mb-1',
-    heading3Text: 'text-caption font-semibold text-text-primary',
-    heading3MT: 'mt-1.5',
-    heading3MB: 'mb-0.5',
-    paraText: 'text-text-secondary',
-    paraMB: 'mb-2',
-    listText: 'text-text-muted',
-    listSpacing: 'space-y-1',
-    listMT: 'mb-2',
-    listMB: 'mb-2',
-    strongText: 'font-semibold text-info',
-    codeInline: 'bg-surface-raised text-info px-1 py-0.5 rounded text-micro font-mono border border-edge-raised',
-    codeBlockBorder: 'border-edge-raised/60',
-    codeBlockExtra: '',
-    snippetPrefix: 'thought-snippet-',
-    tableWrap: 'my-2 rounded-lg border border-edge-raised bg-surface-base/30',
-    tableText: 'text-text-secondary text-micro',
-    thCell: 'bg-surface-elevated/60 px-2 py-1 border-b border-edge-raised font-semibold text-text-primary',
-    tdCell: 'px-2 py-1 border-b border-edge-raised/30',
-    blockquoteText: 'text-text-muted text-caption',
-    blockquoteBorder: 'border-edge-raised',
-    hrBorder: 'border-edge-raised',
-    hrMy: 'my-2',
-    linkClass: 'text-info underline decoration-info/50 hover:decoration-info font-medium transition-colors',
-    emEl: null,
-  },
-  canvas: {
-    heading1Text: 'text-title font-display font-bold text-text-bright tracking-tight',
-    heading1Border: 'border-edge-raised',
-    heading1MT: 'mt-4',
-    heading1MB: 'mb-3',
-    heading1PB: 'pb-2',
-    heading2Text: 'text-heading font-display font-bold text-primary/90 tracking-wide',
-    heading2MT: 'mt-6',
-    heading2MB: 'mb-2',
-    heading3Text: 'text-subheading font-semibold text-text-primary',
-    heading3MT: 'mt-3',
-    heading3MB: 'mb-1',
-    paraText: 'text-text-secondary',
-    paraMB: 'mb-2.5',
-    listText: 'text-text-secondary',
-    listSpacing: 'space-y-1.5',
-    listMT: 'my-2',
-    listMB: 'my-2',
-    strongText: 'text-text-bright',
-    codeInline: 'bg-surface-elevated/90 text-primary font-mono px-1.5 py-0.5 rounded text-micro border border-edge-hover/60',
-    codeBlockBorder: 'border-edge-raised/80',
-    codeBlockExtra: '',
-    snippetPrefix: 'canvas-snippet-',
-    tableWrap: 'my-3 rounded-xl border border-edge-raised/80 bg-surface-base/40',
-    tableText: 'text-text-secondary',
-    thCell: 'bg-surface-elevated/70 px-3 py-2 border-b border-edge-raised font-semibold text-text-primary',
-    tdCell: 'px-3 py-2 border-b border-edge-raised/40 hover:bg-surface-hover/20',
-    blockquoteText: 'text-text-muted',
-    blockquoteBorder: 'border-primary/60',
-    hrBorder: 'border-edge-raised',
-    hrMy: 'my-4',
-    linkClass: 'text-primary underline decoration-primary/50 hover:decoration-primary font-medium transition-colors',
-    emEl: ({ children }: any) => <em className="text-text-muted not-italic text-caption">{children}</em>,
-  },
+const BASE_STYLES: MarkdownVariantStyles = {
+  h1: 'text-title font-display font-bold text-text-bright mt-3 mb-2 border-b border-edge-raised/80 pb-1.5 flex items-center gap-2',
+  h2: 'text-heading font-display font-bold text-primary/90 mt-3 mb-1.5 tracking-wide',
+  h3: 'text-subheading font-semibold text-text-primary mt-2 mb-1',
+  p: 'text-body mb-2.5 leading-relaxed last:mb-0',
+  ul: 'list-disc list-inside space-y-1.5 mb-3 text-text-secondary',
+  ol: 'list-decimal list-inside space-y-1.5 mb-3 text-text-secondary',
+  strong: 'font-semibold text-text-bright',
+  codeInline: 'bg-surface-elevated/90 text-primary font-mono px-1.5 py-0.5 rounded text-micro',
+  codeBlockBorder: 'border-edge-raised/80',
+  codeBlockExtra: '',
+  tableWrap: 'my-3 rounded-xl border border-edge-raised/80 bg-surface-base/40',
+  table: 'min-w-full text-caption text-left text-text-secondary',
+  th: 'bg-surface-elevated/70 px-3 py-2 border-b border-edge-raised font-semibold text-text-primary',
+  td: 'px-3 py-2 border-b border-edge-raised/40 hover:bg-surface-hover/20',
+  blockquote: 'border-l-2 border-primary/60 pl-3 my-2 text-text-muted italic text-caption',
+  hr: 'my-3.5 border-edge-raised',
+  a: 'text-primary underline decoration-primary/50 hover:decoration-primary font-medium transition-colors',
+  em: null,
 };
 
-import { useCopyClipboard } from '@/hooks/common/useCopyClipboard';
+const VARIANT_STYLES: Record<MarkdownVariant, MarkdownVariantStyles> = {
+  assistant: BASE_STYLES,
 
-interface CodeSnippetBlockProps {
-  rawCode: string;
-  rawLang: string;
-  className?: string;
-  borderClass: string;
-  extraClass: string;
-  snippetPrefix: string;
-  enableCopy?: boolean;
-}
+  canvas: {
+    ...BASE_STYLES,
+    h1: 'text-title font-display font-bold text-text-bright tracking-tight mt-4 mb-3 border-b border-edge-raised pb-2 flex items-center gap-2',
+    h2: 'text-heading font-display font-bold text-primary/90 tracking-wide mt-6 mb-2',
+    h3: 'text-subheading font-semibold text-text-primary mt-3 mb-1',
+    p: 'text-body mb-2.5 leading-relaxed last:mb-0 text-text-secondary',
+    ul: 'list-disc list-inside space-y-1.5 my-2 text-text-secondary',
+    ol: 'list-decimal list-inside space-y-1.5 my-2 text-text-secondary',
+    hr: 'my-4 border-edge-raised',
+    em: ({ children }: any) => <em className="text-text-muted not-italic text-caption">{children}</em>,
+  },
 
-const CodeSnippetBlock = React.memo(function CodeSnippetBlock({
-  rawCode,
-  rawLang,
-  className,
-  borderClass,
-  extraClass,
-  enableCopy = false,
-}: CodeSnippetBlockProps) {
-  const { copied, copy } = useCopyClipboard(2000);
-  const displayLabel = rawLang ? getLanguageLabel(rawLang) : 'Code';
-  const highlightedHtml = React.useMemo(() => highlightCode(rawCode, rawLang), [rawCode, rawLang]);
+  user: {
+    ...BASE_STYLES,
+    h1: 'text-title font-display font-bold text-surface mt-2 mb-1.5 border-b border-surface/30 pb-1 flex items-center gap-2',
+    h2: 'text-heading font-display font-bold text-surface mt-2 mb-1 tracking-wide',
+    h3: 'text-subheading font-semibold text-surface mt-1.5 mb-0.5',
+    p: 'text-body mb-2 leading-relaxed last:mb-0 text-surface',
+    ul: 'list-disc list-inside space-y-1 my-1.5 text-surface/95',
+    ol: 'list-decimal list-inside space-y-1 my-1.5 text-surface/95',
+    strong: 'font-semibold text-surface',
+    codeInline: 'bg-surface/20 text-surface font-mono px-1.5 py-0.5 rounded text-micro',
+    codeBlockExtra: 'text-text-primary text-left',
+    tableWrap: 'my-2.5 rounded-xl border border-surface/30 bg-surface/10',
+    table: 'min-w-full text-caption text-left text-surface',
+    th: 'bg-surface/20 px-3 py-1.5 border-b border-surface/30 font-semibold text-surface',
+    td: 'px-3 py-1.5 border-b border-surface/20 hover:bg-surface/15',
+    blockquote: 'border-l-2 border-surface/60 pl-3 my-2 text-surface/90 italic text-caption',
+    hr: 'my-3 border-surface/30',
+    a: 'underline decoration-surface/60 hover:decoration-surface transition-colors font-medium text-surface',
+    em: ({ children }: any) => <em className="italic text-surface/90">{children}</em>,
+  },
 
-  return (
-    <div className={`my-2.5 rounded-xl bg-surface-base border ${borderClass} overflow-hidden font-mono text-micro shadow-card ${extraClass}`}>
-      <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-micro text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
-        <span className="text-text-muted font-mono">{displayLabel}</span>
-        {enableCopy && (
-          <button
-            type="button"
-            onClick={() => copy(rawCode)}
-            className="flex items-center gap-1 text-micro text-text-muted hover:text-primary active:scale-90 hover:scale-105 transition-all duration-150 cursor-pointer"
-          >
-            {copied ? (
-              <>
-                <Check className="w-3 h-3 text-primary animate-in zoom-in-75 duration-100" />
-                <span className="text-primary font-medium">Copied</span>
-              </>
-            ) : (
-              <>
-                <Code2 className="w-3 h-3" />
-                <span>Copy</span>
-              </>
-            )}
-          </button>
-        )}
-      </div>
-      <pre className="p-3 overflow-x-auto text-text-primary leading-relaxed">
-        <code
-          className={className}
-          dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-        />
-      </pre>
-    </div>
-  );
-});
+  thought: {
+    ...BASE_STYLES,
+    h1: 'text-subheading font-bold text-text-primary mt-2 mb-1 border-b border-edge-raised/50 pb-1 flex items-center gap-2',
+    h2: 'text-label font-bold text-text-primary mt-2 mb-1 tracking-wide',
+    h3: 'text-caption font-semibold text-text-primary mt-1.5 mb-0.5',
+    p: 'text-body mb-2 leading-relaxed last:mb-0 text-text-secondary',
+    ul: 'list-disc list-inside space-y-1 mb-2 text-text-muted',
+    ol: 'list-decimal list-inside space-y-1 mb-2 text-text-muted',
+    strong: 'font-semibold text-info',
+    codeInline: 'bg-surface-raised text-info font-mono px-1 py-0.5 rounded text-micro',
+    codeBlockBorder: 'border-edge-raised/60',
+    tableWrap: 'my-2 rounded-lg border border-edge-raised bg-surface-base/30',
+    table: 'min-w-full text-caption text-left text-text-secondary text-micro',
+    th: 'bg-surface-elevated/60 px-2 py-1 border-b border-edge-raised font-semibold text-text-primary',
+    td: 'px-2 py-1 border-b border-edge-raised/30',
+    blockquote: 'border-l-2 border-edge-raised pl-3 my-2 text-text-muted text-caption italic',
+    hr: 'my-2 border-edge-raised',
+    a: 'text-info underline decoration-info/50 hover:decoration-info font-medium transition-colors',
+  },
+};
 
 function buildMarkdownComponents(
   variant: MarkdownVariant = 'assistant',
   enableSnippetCopy = false,
 ) {
-  const T = TOKENS[variant];
+  const S = VARIANT_STYLES[variant];
 
-  const sharedComponents: Record<string, (props: any) => React.ReactNode> = {
-    h1: ({ children }: any) => (
-      <h1 className={`text-title font-display font-bold ${T.heading1Text} ${T.heading1MT} ${T.heading1MB} border-b ${T.heading1Border} ${T.heading1PB} flex items-center gap-2`}>
-        {children}
-      </h1>
-    ),
-    h2: ({ children }: any) => (
-      <h2 className={`text-heading font-display font-bold ${T.heading2Text} ${T.heading2MT} ${T.heading2MB} tracking-wide`}>
-        {children}
-      </h2>
-    ),
-    h3: ({ children }: any) => (
-      <h3 className={`text-subheading font-semibold ${T.heading3Text} ${T.heading3MT} ${T.heading3MB}`}>
-        {children}
-      </h3>
-    ),
-    p: ({ children }: any) => (
-      <p className={`text-body ${T.paraMB} leading-relaxed last:mb-0 ${T.paraText}`}>{children}</p>
-    ),
-    ul: ({ children }: any) => (
-      <ul className={`list-disc list-inside ${T.listSpacing} ${T.listMT} ${T.listText}`}>{children}</ul>
-    ),
-    ol: ({ children }: any) => (
-      <ol className={`list-decimal list-inside ${T.listSpacing} ${T.listMB} ${T.listText}`}>{children}</ol>
-    ),
+  const components: Record<string, (props: any) => React.ReactNode> = {
+    h1: ({ children }: any) => <h1 className={S.h1}>{children}</h1>,
+    h2: ({ children }: any) => <h2 className={S.h2}>{children}</h2>,
+    h3: ({ children }: any) => <h3 className={S.h3}>{children}</h3>,
+    p: ({ children }: any) => <p className={S.p}>{children}</p>,
+    ul: ({ children }: any) => <ul className={S.ul}>{children}</ul>,
+    ol: ({ children }: any) => <ol className={S.ol}>{children}</ol>,
     li: ({ children }: any) => <li className="text-body leading-relaxed">{children}</li>,
-    strong: ({ children }: any) => (
-      <strong className={`font-semibold ${T.strongText}`}>{children}</strong>
-    ),
+    strong: ({ children }: any) => <strong className={S.strong}>{children}</strong>,
     code: ({ className, children, ...props }: any) => {
-      const isInline = !className;
-      if (isInline) {
+      if (!className) {
         return (
-          <code className={T.codeInline} {...props}>
+          <code className={S.codeInline} {...props}>
             {children}
           </code>
         );
@@ -293,49 +137,30 @@ function buildMarkdownComponents(
           rawCode={rawCode}
           rawLang={rawLang}
           className={className}
-          borderClass={T.codeBlockBorder}
-          extraClass={T.codeBlockExtra}
-          snippetPrefix={T.snippetPrefix}
+          borderClass={S.codeBlockBorder}
+          extraClass={S.codeBlockExtra}
           enableCopy={enableSnippetCopy}
         />
       );
     },
     table: ({ children }: any) => (
-      <div className={`overflow-x-auto ${T.tableWrap}`}>
-        <table className={`min-w-full text-caption text-left ${T.tableText}`}>{children}</table>
+      <div className={`overflow-x-auto ${S.tableWrap}`}>
+        <table className={S.table}>{children}</table>
       </div>
     ),
-    th: ({ children }: any) => (
-      <th className={T.thCell}>
-        {children}
-      </th>
-    ),
-    td: ({ children }: any) => (
-      <td className={T.tdCell}>{children}</td>
-    ),
-    blockquote: ({ children }: any) => (
-      <blockquote className={`border-l-2 ${T.blockquoteBorder} pl-3 my-2 ${T.blockquoteText} italic text-caption`}>
-        {children}
-      </blockquote>
-    ),
-    hr: () => <hr className={`${T.hrMy} ${T.hrBorder}`} />,
+    th: ({ children }: any) => <th className={S.th}>{children}</th>,
+    td: ({ children }: any) => <td className={S.td}>{children}</td>,
+    blockquote: ({ children }: any) => <blockquote className={S.blockquote}>{children}</blockquote>,
+    hr: () => <hr className={S.hr} />,
     a: ({ href, children, ...props }: any) => (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={T.linkClass}
-        {...props}
-      >
+      <a href={href} target="_blank" rel="noopener noreferrer" className={S.a} {...props}>
         {children}
       </a>
     ),
   };
 
-  const components: Record<string, (props: any) => React.ReactNode> = { ...sharedComponents };
-
-  if (T.emEl) {
-    components.em = T.emEl;
+  if (S.em) {
+    components.em = S.em;
   }
 
   return components;
