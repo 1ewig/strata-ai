@@ -84,16 +84,20 @@ This is the spine of the system. Everything below happens for one user message.
    for text-only models, applies
    `experimental_transform: [smoothStream({ delayInMs: 15, chunking: 'word' }), coalesceToolInputDeltas()]`,
    re-injects `buildSystemInstruction` per step via `prepareStep`, and caps the loop with
-   `stopWhen: isStepCount(maxSteps)`.
+   `stopWhen: isStepCount(maxSteps)`. Provider metadata pruning falls back
+   `callProviderMetadata ?? providerMetadata` on tool parts so Gemini 3 `thoughtSignature` survives
+   sanitization and multi-step reasoning stays intact.
 6. **Error path.** Any `onError`, execution throw, or setup throw runs `classifyProviderError`,
    writes an `error` stream part, flushes Langfuse, and fires `onInferenceError` once (idempotent latch)
-   -> `safeAsyncRefundRateLimit` (`src/agent/core/runner-error.ts`) deletes the reserved quota row. Users never lose quota to an outage.
+   -> `safeAsyncRefundRateLimit` (`src/agent/guards/route-guards.ts`) deletes the reserved quota row. Users never lose quota to an outage.
 7. **Client application.** `useChat.onData` handles `data-workspace` parts live, so the drawer
    reflects the agent's work mid-stream. `useWorkspaceFiles` coalesces rapid updates on a 150 ms
    timer before writing to Dexie. High-frequency streaming message updates are throttled via
    `requestAnimationFrame` (`useThrottledMessages`) before reaching `MessageList`, while per-message
    segmentation is isolated in memoized `MessageRow` items so historical conversation turns never
-   re-segment during active streaming.
+   re-segment during active streaming. The compaction stream shares this path: `useChatSession`
+   widens `isStreaming` to `status === 'streaming' || isCompacting`, so `/compact` chunks are
+   rAF-throttled identically.
 8. **Reconcile.** `useChat.onFinish` -> `reconcileFinishedStep` (`src/agent/client/reconciler.ts`)
    persists all messages, merges workspace deltas from the finished message's tool parts, and — on
    `finishReason === 'step-limit'` — schedules an auto-continuation, capped at 2 per user turn.
@@ -224,6 +228,11 @@ src/
     ├── id.ts             # generateId
     └── timing.ts         # thought/work-group duration estimates
 __tests__/                # 33 suites (452 passing tests), run with bun test --isolate
+├── agent/                # core, tools, guards, prompts, providers, sanitization, client
+├── lib/                  # db, ai, code, attachments, workspace, limits, clipboard, timing
+├── routes/               # api-agent, api-agent-compact, api-user-rate-limit
+├── helpers.ts            # shared fixtures (makeFile, runTool, jsonResponse, withEnv, ...)
+└── proxy.test.ts         # middleware suite (root-level)
 scripts/                  # migrate-better-auth-schema.ts (+ .sql), test-db.ts, test-langfuse.ts
 ```
 
@@ -282,7 +291,9 @@ concise" warning mode at the same threshold.
    Elevation/radius: `shadow-button`, `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`;
    `rounded-lg` (12), `rounded-xl` (20), `rounded-2xl` (32).
 5. **Centralized Markdown.** Every markdown surface renders through
-   `components/ui/MarkdownRenderer.tsx`. Never add direct `react-markdown` / `remark-gfm`
+   `components/ui/MarkdownRenderer.tsx`, whose element map is the shared factory
+   `components/ui/createMarkdownComponents.tsx` (with `CodeSnippetBlock.tsx` for fenced code).
+   Never add direct `react-markdown` / `remark-gfm`
    imports. (`SmoothStreamText.tsx` is the one pre-existing exception — it wraps its own renderer
    to host the streaming caret. Don't extend the pattern.)
 6. **Tool Card Decoupling.** Adding a tool means registering config + summary in
@@ -299,7 +310,9 @@ concise" warning mode at the same threshold.
 11. **Bun Only.** `bun run dev | lint | typecheck | test | build`. Never npm, yarn, or npx.
 12. **No Emojis, Preserve Comments.** No emojis in code or files; keep existing doc comments intact.
 
-**Testing conventions:** suites live in `__tests__/`, run via `bun test --isolate` (33 suites, 452 passing tests). Shared fixtures
+**Testing conventions:** suites live under `__tests__/` in domain folders — `agent/`, `lib/`,
+and `routes/` (plus root-level `proxy.test.ts`) — and run via `bun test --isolate` (33 suites,
+452 passing tests). Shared fixtures
 (`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`, `withEnv`) come from
 `__tests__/helpers.ts`. Route tests must `mock.module` `@/lib/auth/server`, `@/lib/server/rate-limit`, and
 `@/agent/core/runner` *before* dynamically importing the route.
