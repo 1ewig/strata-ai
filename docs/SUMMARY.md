@@ -256,7 +256,7 @@ All constants live in `src/lib/limits.ts`. Import them; never inline the numbers
 | Attachments | `MAX_ATTACHMENTS_PER_MESSAGE = 4` | Picker/drop + route guard | Blocked; 400 |
 | Image upload | `MAX_IMAGE_INPUT_BYTES = 5 MB` | Client canvas | Downscaled to 1280px / 1.5 MB |
 | Document upload | `MAX_DOCUMENT_INPUT_BYTES = 5 MB` | Ingestion + sanitizer | Text capped at 25,000 chars |
-| Files per workspace | `MAX_FILES_PER_WORKSPACE = 3` | `writeFile` + UI | Tool throws; button disabled |
+| Files per workspace | `MAX_FILES_PER_WORKSPACE = 10` | `writeFile` + UI | Tool throws; button disabled |
 | File length | `MAX_FILE_CHARS = 10,000` | `editFile` + editor | Edit rejected; input blocked |
 | Workspace total | `MAX_WORKSPACE_TOTAL_CHARS = 50,000` | `editFile` validator | Edit rejected |
 | Message quota | 10 / 5h, 50 / 7d | Atomic Postgres CTE | 429 + `Retry-After` |

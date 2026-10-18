@@ -68,7 +68,7 @@ describe("buildSystemInstruction", () => {
 
   it("embeds the hard workspace constraint numbers", () => {
     const prompt = buildSystemInstruction();
-    expect(prompt).toContain("Maximum files per workspace: 3");
+    expect(prompt).toContain("Maximum files per workspace: 10");
     expect(prompt).toContain("characters");
     expect(prompt).toContain("## 3. Hard Workspace Constraints");
   });

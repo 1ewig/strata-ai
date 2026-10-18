@@ -5,7 +5,7 @@ export const MAX_FILE_CHARS = 10000;
 /** Maximum combined characters allowed across all workspace files. */
 export const MAX_WORKSPACE_TOTAL_CHARS = 50000;
 /** Maximum number of files allowed per workspace. */
-export const MAX_FILES_PER_WORKSPACE = 3;
+export const MAX_FILES_PER_WORKSPACE = 10;
 /** Maximum messages allowed in the 5-hour sliding window. */
 export const QUOTA_5H_LIMIT = 10;
 /** Maximum messages allowed in the 7-day sliding window. */

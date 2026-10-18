@@ -156,8 +156,8 @@ describe("writeFile", () => {
     );
     const { context } = setupWorkspaceTools(capFiles);
     await expect(
-      runTool(createWriteFileTool(context), { name: "d.md", content: "4" }),
-    ).rejects.toThrow(/Maximum 3 files allowed/);
+      runTool(createWriteFileTool(context), { name: "overflow.md", content: "11" }),
+    ).rejects.toThrow(new RegExp(`Maximum ${MAX_FILES_PER_WORKSPACE} files allowed`));
   });
 
   it("allows replacing an existing file at the workspace file cap", async () => {
