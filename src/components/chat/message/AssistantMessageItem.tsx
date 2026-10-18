@@ -38,7 +38,7 @@ function AssistantMessageItem({
   return (
     <div
       ref={containerRef}
-      className={`relative flex items-start gap-3.5 fade-in ${openMenuKey ? 'z-30' : ''}`}
+      className={`relative flex items-start gap-3.5 fade-in ${openMenuKey ? 'z-[35]' : ''}`}
     >
       {/* Assistant Avatar */}
       <div className="hidden sm:flex relative w-8 h-8 items-center justify-center shrink-0 mt-0.5 transition-all duration-300">
@@ -119,7 +119,7 @@ function AssistantMessageItem({
                       isOpen={isMenuOpen}
                       onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
                       align="left"
-                      direction="up"
+                      direction="down"
                     />
                   </div>
                 )}

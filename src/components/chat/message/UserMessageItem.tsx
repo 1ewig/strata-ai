@@ -29,7 +29,7 @@ function UserMessageItem({ segments }: UserMessageItemProps) {
     <div
       ref={containerRef}
       className={`relative flex items-start gap-3.5 flex-row-reverse animate-slide-up ${
-        openMenuKey ? 'z-30' : ''
+        openMenuKey ? 'z-[35]' : ''
       }`}
     >
       {/* User Avatar */}
@@ -79,7 +79,7 @@ function UserMessageItem({ segments }: UserMessageItemProps) {
                       isOpen={isMenuOpen}
                       onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
                       align="right"
-                      direction="up"
+                      direction="down"
                     />
                   </div>
                 )}

@@ -20,7 +20,7 @@ export default function MessageActionsMenu({
   onOpenChange,
   className = '',
   align = 'right',
-  direction = 'up',
+  direction = 'down',
 }: MessageActionsMenuProps) {
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const isControlled = controlledIsOpen !== undefined;
