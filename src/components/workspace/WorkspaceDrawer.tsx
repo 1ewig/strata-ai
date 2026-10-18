@@ -86,6 +86,10 @@ export default React.memo(function WorkspaceDrawer({
     onSelectFile,
   });
 
+  const isCodeView = Boolean(
+    activeFile && !isEditing && activeFile.content && (!isMarkdown || markdownViewMode === 'source')
+  );
+
   return (
     <>
       <AnimatePresence>
@@ -198,7 +202,11 @@ export default React.memo(function WorkspaceDrawer({
               )}
 
               {/* Drawer Content Body */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6 overscroll-y-contain [transform:translateZ(0)]">
+              <div
+                className={`flex-1 overflow-y-auto overscroll-y-contain [transform:translateZ(0)] ${
+                  isCodeView ? 'py-4 sm:py-6 px-0' : 'p-4 sm:p-6'
+                }`}
+              >
                 {!activeFile ? (
                   <WorkspaceEmptyState type="no-files" onCreateFileClick={handleOpenCreateNew} />
                 ) : isEditing ? (

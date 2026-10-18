@@ -78,18 +78,22 @@ This is the spine of the system. Everything below happens for one user message.
    `checkAndIncrementRateLimit` (429). Quota is reserved only after every input check passes; the
    route stays a thin shell receiving `{ session, body, messages, rateLimit, signal }`.
 5. **Stream assembly.** `runAgentResponse` (`src/agent/core/runner.ts`) computes the active token
-   budget, then delegates to the private `createUIStreamResponder` — the single choke point for all
+   budget via `computeTokenBudget` (`src/agent/core/token-budget.ts`), then delegates to
+   `createUIStreamResponder` (`src/agent/core/stream-responder.ts`) — the single choke point for all
    model execution. It sanitizes cross-provider metadata, converts messages once, strips image parts
    for text-only models, applies
    `experimental_transform: [smoothStream({ delayInMs: 15, chunking: 'word' }), coalesceToolInputDeltas()]`,
    re-injects `buildSystemInstruction` per step via `prepareStep`, and caps the loop with
    `stopWhen: isStepCount(maxSteps)`.
 6. **Error path.** Any `onError`, execution throw, or setup throw runs `classifyProviderError`,
-   writes an `error` stream part, flushes Langfuse, and fires `onInferenceError` once (idempotent)
-   -> `safeAsyncRefundRateLimit` deletes the reserved quota row. Users never lose quota to an outage.
+   writes an `error` stream part, flushes Langfuse, and fires `onInferenceError` once (idempotent latch)
+   -> `safeAsyncRefundRateLimit` (`src/agent/core/runner-error.ts`) deletes the reserved quota row. Users never lose quota to an outage.
 7. **Client application.** `useChat.onData` handles `data-workspace` parts live, so the drawer
    reflects the agent's work mid-stream. `useWorkspaceFiles` coalesces rapid updates on a 150 ms
-   timer before writing to Dexie.
+   timer before writing to Dexie. High-frequency streaming message updates are throttled via
+   `requestAnimationFrame` (`useThrottledMessages`) before reaching `MessageList`, while per-message
+   segmentation is isolated in memoized `MessageRow` items so historical conversation turns never
+   re-segment during active streaming.
 8. **Reconcile.** `useChat.onFinish` -> `reconcileFinishedStep` (`src/agent/client/reconciler.ts`)
    persists all messages, merges workspace deltas from the finished message's tool parts, and — on
    `finishReason === 'step-limit'` — schedules an auto-continuation, capped at 2 per user turn.
@@ -127,7 +131,11 @@ first/last-line bounding. Every strategy rejects ambiguous matches with an actio
 than guessing.
 
 Tool **display** is registered in `components/chat/tools/resolver.tsx` (config + summary builder +
-name aliases). Never edit `ToolCallCard.tsx` to add a tool.
+name aliases). Never edit `ToolCallCard.tsx` to add a tool. When AI SDK 7 SSE streams separate
+`tool-call` and `tool-result` parts with matching `callId`, `flattenMessageSegments`
+(`src/agent/client/segments.ts`) merges them into a unified card, preventing duplicate keys and
+perpetual spinners. Workspace files in the canvas drawer support one-click export with canonical
+extension resolution via `downloadWorkspaceFile` (`src/lib/workspace/download.ts`).
 
 ## 6. Security, Auth & Quota
 
@@ -178,7 +186,7 @@ inference failure. `getRateLimitStatus` powers the read-only `GET /api/user/rate
 ```
 src/
 ├── agent/                # Folder-based agent architecture
-│   ├── core/             # runner (stream choke point), error-classifier, transforms
+│   ├── core/             # runner, stream-responder (unified choke point), token-budget, runner-error, error-classifier, transforms
 │   ├── tools/            # workspace-tools, tavily-tools, edit-engine, types
 │   ├── prompts/          # system, compaction
 │   ├── providers/        # resolveAgentModel, getModelProvider, reasoning mapping
@@ -200,7 +208,7 @@ src/
 ├── contexts/             # RateLimitContext (global quota), ChatUIContext (sidebar & drawer shell),
 │                         # ChatInputContext (imperative chat input handle)
 ├── hooks/                # Domain folders: common/ (useTheme, useCopyClipboard, useClickOutside, ...),
-│                         # chat/ (useChatSession orchestrator, useChatTransport, useCompaction, ...),
+│                         # chat/ (useChatSession, useThrottledMessages, useChatTransport, useCompaction, ...),
 │                         # conversations/, workspace/, auth/ (sign in/up/out state machines)
 └── lib/
     ├── auth/             # server.ts (Server Better Auth + pg Pool) | client.ts (client auth)
@@ -215,7 +223,7 @@ src/
     ├── clipboard.ts      # stripMarkdown + copy
     ├── id.ts             # generateId
     └── timing.ts         # thought/work-group duration estimates
-__tests__/                # 20 suites, run with bun test --isolate
+__tests__/                # 33 suites (452 passing tests), run with bun test --isolate
 scripts/                  # migrate-better-auth-schema.ts (+ .sql), test-db.ts, test-langfuse.ts
 ```
 
@@ -231,7 +239,7 @@ scripts/                  # migrate-better-auth-schema.ts (+ .sql), test-db.ts, 
 **Client component boundary:** `src/app/chat-id/[id]/page.tsx` is an ultra-lean dynamic route
 wrapper unwrapping `use(params)` and mounting `<ChatUIProvider>`; it delegates state composition to `src/components/ChatPageClient.tsx`.
 `ChatPageClient` calls `useChatSession(chatId)` and coordinates the 3-pillar layout (`Sidebar`, center
-`<StickToBottom>` chat viewport, and `WorkspaceDrawer`). Dexie queries, auth calls, and router
+`<StickToBottom>` chat viewport, and `WorkspaceDrawer`). To guarantee 60fps responsiveness during high-frequency token streams, `ChatPageClient` routes messages through `useThrottledMessages` (rAF throttling) to `<StickToBottom>` / `MessageList`, where individual turns render inside memoized `MessageRow` boundaries that isolate `flattenMessageSegments`. Message action dropdowns open downward with `z-[35]` elevation to stack cleanly above `ChatInput` (`z-30`) and below `WorkspaceDrawer` (`z-50`). `WorkspaceDrawer` isolates rendering via `[transform:translateZ(0)]` GPU compositing and overscroll containment, dynamically omitting horizontal padding (`px-0 py-4 sm:py-6`) for code files while preserving `p-4 sm:p-6` for markdown previews and editing, while `CodeViewer` uses `table-fixed` column sizing and a centered, fixed `w-12` gutter to eliminate cell measurement reflow. Dexie queries, auth calls, and router
 navigation live in `src/hooks/*`, never inside presentation primitives. Two ephemeral UI concerns
 that would otherwise be drilled live in page-mounted scoped contexts instead: `ChatUIContext` (mobile
 sidebar drawer + desktop collapse, sessionStorage-persisted, plus workspace drawer open/close state) and `ChatInputContext` (an imperative ref
@@ -263,7 +271,7 @@ concise" warning mode at the same threshold.
 1. **Zero Server Actions.** No `"use server"` anywhere. Mutations use Route Handlers (streaming and
    quota only), Dexie (local entities), or Better Auth client methods.
 2. **Unified Stream Responder.** All model execution goes through `createUIStreamResponder`
-   (`src/agent/core/runner.ts`) with `smoothStream` and `coalesceToolInputDeltas`. Never call
+   (`src/agent/core/stream-responder.ts`) with `smoothStream` and `coalesceToolInputDeltas`. Never call
    `streamText` from a route directly.
 3. **Milo Color Tokens Only.** No hex literals, no default Tailwind palette names (`emerald`, `rose`,
    `zinc`, `red-*`, ...). Use `primary`, `secondary`, `surface-*`, `text-*`, `edge-*`, `danger`,
@@ -291,7 +299,7 @@ concise" warning mode at the same threshold.
 11. **Bun Only.** `bun run dev | lint | typecheck | test | build`. Never npm, yarn, or npx.
 12. **No Emojis, Preserve Comments.** No emojis in code or files; keep existing doc comments intact.
 
-**Testing conventions:** suites live in `__tests__/`, run via `bun test --isolate`. Shared fixtures
+**Testing conventions:** suites live in `__tests__/`, run via `bun test --isolate` (33 suites, 452 passing tests). Shared fixtures
 (`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`, `withEnv`) come from
 `__tests__/helpers.ts`. Route tests must `mock.module` `@/lib/auth/server`, `@/lib/server/rate-limit`, and
 `@/agent/core/runner` *before* dynamically importing the route.

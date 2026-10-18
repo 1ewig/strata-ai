@@ -36,7 +36,7 @@ export default React.memo(function CodeViewer({
               {/* Line Number Gutter */}
               <td
                 aria-hidden="true"
-                className="select-none text-right pr-4 pl-0 py-0 text-text-faint font-mono text-label w-16 whitespace-nowrap border-r border-edge-raised align-top"
+                className="select-none text-center px-2 py-0 text-text-faint font-mono text-label w-12 whitespace-nowrap border-r border-edge-raised align-top"
               >
                 {index + 1}
               </td>
