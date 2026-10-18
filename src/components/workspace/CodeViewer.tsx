@@ -25,8 +25,8 @@ export default React.memo(function CodeViewer({
   );
 
   return (
-    <div className="overflow-x-auto w-full font-mono text-label leading-relaxed select-text">
-      <table className="w-full border-collapse">
+    <div className="overflow-x-auto w-full font-mono text-label leading-relaxed select-text overscroll-x-contain">
+      <table className="w-full border-collapse table-fixed">
         <tbody>
           {lines.map((lineHtml, index) => (
             <tr
@@ -36,7 +36,7 @@ export default React.memo(function CodeViewer({
               {/* Line Number Gutter */}
               <td
                 aria-hidden="true"
-                className="select-none text-right pr-4 pl-0 py-0 text-text-faint font-mono text-label w-[1%] whitespace-nowrap border-r border-edge-raised align-top"
+                className="select-none text-right pr-4 pl-0 py-0 text-text-faint font-mono text-label w-16 whitespace-nowrap border-r border-edge-raised align-top"
               >
                 {index + 1}
               </td>

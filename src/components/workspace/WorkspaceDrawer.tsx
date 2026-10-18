@@ -198,7 +198,7 @@ export default React.memo(function WorkspaceDrawer({
               )}
 
               {/* Drawer Content Body */}
-              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6 overscroll-y-contain [transform:translateZ(0)]">
                 {!activeFile ? (
                   <WorkspaceEmptyState type="no-files" onCreateFileClick={handleOpenCreateNew} />
                 ) : isEditing ? (
@@ -212,7 +212,7 @@ export default React.memo(function WorkspaceDrawer({
                 ) : !activeFile.content ? (
                   <WorkspaceEmptyState type="empty-file" fileName={activeFile.name} onEditFileClick={handleStartEditing} />
                 ) : isMarkdown && markdownViewMode === 'preview' ? (
-                  <article className="text-body text-text-primary leading-relaxed selection:bg-secondary/50">
+                  <article className="text-body text-text-primary leading-relaxed selection:bg-secondary/50 [contain:content]">
                     <MarkdownRenderer
                       content={activeFile.content}
                       variant="canvas"
