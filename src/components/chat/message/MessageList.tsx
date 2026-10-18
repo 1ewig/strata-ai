@@ -16,6 +16,39 @@ export interface MessageListProps {
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
 }
 
+interface MessageRowProps {
+  message: ChatMessage;
+  isStreaming: boolean;
+}
+
+/**
+ * Isolated, memoized single message row.
+ * Pre-computes and caches message segments per message so historical turns
+ * never re-run segmentation or re-render during active streaming or scrolling.
+ */
+const MessageRow = React.memo(
+  function MessageRow({ message, isStreaming }: MessageRowProps) {
+    const isUser = message.role === 'user';
+    const segments = React.useMemo(
+      () => flattenMessageSegments(message, isStreaming),
+      [message, isStreaming],
+    );
+
+    if (isUser) {
+      return <UserMessageItem segments={segments} />;
+    }
+
+    return (
+      <AssistantMessageItem
+        message={message}
+        segments={segments}
+        isStreaming={isStreaming}
+      />
+    );
+  },
+  (prev, next) => prev.message === next.message && prev.isStreaming === next.isStreaming,
+);
+
 /**
  * MessageList is the parent orchestrator component that coordinates all conversation turns:
  * user messages, assistant bubbles, compaction dividers, and active streaming typing indicators.
@@ -50,23 +83,12 @@ function MessageList({
         const meta = message.metadata as ChatMetadata | undefined;
         const isCompacted = meta?.isCompactedSummary === true;
         const isCompactionFailed = meta?.isCompactionFailed === true;
-        const segments = flattenMessageSegments(message, isLastAssistant);
 
         return (
           <React.Fragment key={message.id}>
             {isCompacted && <CompactionDivider label="Compaction started" />}
 
-            {isUser ? (
-              <UserMessageItem
-                segments={segments}
-              />
-            ) : (
-              <AssistantMessageItem
-                message={message}
-                segments={segments}
-                isStreaming={isLastAssistant}
-              />
-            )}
+            <MessageRow message={message} isStreaming={isLastAssistant} />
 
             {isCompacted && !isLastAssistant && (
               <CompactionDivider
@@ -84,7 +106,7 @@ function MessageList({
           <div className="hidden sm:flex shrink-0 mt-0.5">
             <StrataIcon className="w-7 h-7" />
           </div>
-          <div className="px-4 py-3 rounded-2xl rounded-tl-xs bg-surface-overlay/90 border border-edge-raised flex items-center gap-1.5 backdrop-blur-sm shadow-card">
+          <div className="px-4 py-3 rounded-2xl rounded-tl-xs bg-surface-raised border border-edge-raised flex items-center gap-1.5 shadow-card">
             <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce" />
             <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
             <span className="typing-dot w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
