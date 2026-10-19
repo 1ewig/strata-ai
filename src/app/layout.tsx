@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from 'next';
 import { headers } from 'next/headers';
 import { Plus_Jakarta_Sans } from 'next/font/google';
+import 'katex/dist/katex.min.css';
+import 'streamdown/styles.css';
 import './globals.css';
 import { RateLimitProvider } from '@/contexts/RateLimitContext';
 import { auth } from '@/lib/auth/server';

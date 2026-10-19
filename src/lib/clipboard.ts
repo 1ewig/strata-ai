@@ -1,32 +1,75 @@
 /**
- * Strips markdown formatting and decodes basic HTML entities.
+ * Utility to convert markdown text to clean, readable plain text.
+ * Strips formatting markup, decodes HTML entities, and formats tables/math/lists
+ * for seamless copy-paste into plain-text editors, emails, or chat.
  */
-export function stripMarkdown(markdown: string): string {
-  let text = markdown
-    .replace(/```[\w-]*\n([\s\S]*?)```/g, '$1') // Code blocks
-    .replace(/`([^`]+)`/g, '$1')                // Inline code
-    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')    // Images
-    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')    // Links
-    .replace(/^#{1,6}\s+(.+)$/gm, '$1')          // Headers
-    .replace(/(\*\*|__)(.*?)\1/g, '$2')          // Bold
-    .replace(/(\*|_)(.*?)\1/g, '$2')             // Italic
-    .replace(/~~(.*?)~~/g, '$1')                 // Strikethrough
-    .replace(/^\s*>\s+/gm, '')                   // Blockquotes
-    .replace(/^\s*[-*+]\s+/gm, '')               // Unordered list items
-    .replace(/^\s*\d+\.\s+/gm, '')               // Ordered list items
-    .replace(/^[-*_]{3,}\s*$/gm, '')             // Horizontal rules
-    .replace(/<\/?[^>]+(>|$)/g, '')              // HTML tags
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+export function markdownToPlainText(markdown: string): string {
+  if (!markdown) return '';
 
-  // Basic HTML entity decoding in client browser environment
-  if (typeof document !== 'undefined') {
-    const doc = new DOMParser().parseFromString(text, 'text/html');
-    text = doc.body.textContent || text;
-  }
+  return (
+    markdown
+      // 1. Normalize line endings
+      .replace(/\r\n?/g, '\n')
 
-  return text;
+      // 2. Remove raw HTML tags FIRST
+      .replace(/<[^>]*>/g, '')
+
+      // 3. Decode common HTML entities
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;|&apos;/g, "'")
+      .replace(/&nbsp;/g, ' ')
+
+      // 4. Code blocks & inline code (preserve content before math/formatting)
+      .replace(/```[\w-]*\n?([\s\S]*?)```/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+
+      // 5. Clean LaTeX / KaTeX (block + inline)
+      .replace(/\$\$\n?([\s\S]*?)\n?\$\$/g, '$1')
+      .replace(/\\\[([\s\S]*?)\\\]/g, '$1')
+      .replace(/\\\(([\s\S]*?)\\\)/g, '$1')
+      .replace(/\\\$/g, '$') // Unescape literal currency (\$10 -> $10)
+      .replace(/\$([^\s$](?:[^$\n]*?[^\s$])?)\$/g, '$1') // Tight inline math
+
+      // 6. Images & links -> label
+      .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+      .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+
+      // 7. Headers (ATX & Setext)
+      .replace(/^#{1,6}\s+(.+)$/gm, '$1')
+      .replace(/^[=-]{2,}$/gm, '')
+
+      // 8. Horizontal rules
+      .replace(/^(?:[-*_]\s*){3,}$/gm, '')
+
+      // 9. Table formatting: remove separator line, clean leading/trailing pipes
+      .replace(/^\|?(\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?$/gm, '')
+      .replace(/^\|\s*(.+?)\s*\|$/gm, '$1')
+
+      // 10. Bold, italics, strikethrough
+      .replace(/(\*\*|__)(.*?)\1/g, '$2')
+      .replace(/(\*|_)(.*?)\1/g, '$2')
+      .replace(/~~(.*?)~~/g, '$1')
+
+      // 11. Blockquotes
+      .replace(/^\s*>+\s?/gm, '')
+
+      // 12. Task lists before unordered lists (preserves [ ] and [x])
+      .replace(/^\s*[-*+]\s+\[([ xX])\]\s+/gm, '[$1] ')
+      .replace(/^\s*[-*+]\s+/gm, '')
+      .replace(/^\s*\d+\.\s+/gm, '')
+
+      // 13. Clean trailing whitespace + collapse blank lines
+      .replace(/[ \t]+$/gm, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  );
 }
+
+/** Backwards-compatible alias for existing callers. */
+export const stripMarkdown = markdownToPlainText;
 
 /**
  * Robust clipboard utility with legacy execCommand fallback.
