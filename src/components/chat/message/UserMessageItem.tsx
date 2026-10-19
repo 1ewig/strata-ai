@@ -73,12 +73,12 @@ function UserMessageItem({ segments }: UserMessageItemProps) {
                 </div>
 
                 {userContent && (
-                  <div className="w-full flex items-center justify-start px-1">
+                  <div className="w-full flex items-center justify-end px-1">
                     <MessageActionsMenu
                       textContent={userContent}
                       isOpen={isMenuOpen}
                       onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
-                      align="left"
+                      align="right"
                       direction="down"
                     />
                   </div>
