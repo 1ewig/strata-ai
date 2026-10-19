@@ -1,8 +1,6 @@
 import React from 'react';
 import type { authClient } from '@/lib/auth/client';
-import UserButton from '@/components/auth/user-button';
-import ThemeToggle from './ThemeToggle';
-import RateLimitRing from '@/components/sidebar/RateLimitRing';
+import AccountMenu from './AccountMenu';
 
 type Session = typeof authClient.$Infer.Session;
 
@@ -20,8 +18,8 @@ interface SidebarFooterProps {
 }
 
 /**
- * Pinned sidebar footer containing the theme toggle, rate limit ring,
- * and user profile / sign-out button.
+ * Pinned sidebar footer containing the unified account menu
+ * with profile details, usage quota, theme switcher, and sign-out dropup.
  */
 function SidebarFooter({
   session,
@@ -31,16 +29,14 @@ function SidebarFooter({
   onToggleTheme,
 }: SidebarFooterProps) {
   return (
-    <div className="p-3 border-t border-edge-hover/50 space-y-2 shrink-0">
-      <div className="flex items-center gap-2">
-        <div className="flex-1 min-w-0">
-          <ThemeToggle isDark={isDark} onToggle={onToggleTheme} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <RateLimitRing />
-        </div>
-      </div>
-      <UserButton session={session} isSigningOut={isSigningOut} onSignOut={onSignOut} />
+    <div className="p-3 border-t border-edge-hover/50 shrink-0">
+      <AccountMenu
+        session={session}
+        isSigningOut={isSigningOut}
+        onSignOut={onSignOut}
+        isDark={isDark}
+        onToggleTheme={onToggleTheme}
+      />
     </div>
   );
 }
