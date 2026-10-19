@@ -21,6 +21,7 @@ import ChatInput from '@/components/chat/input/ChatInput';
 import ChatHero from '@/components/chat/ChatHero';
 import MessageList from '@/components/chat/message/MessageList';
 import { pillFloatVariants } from '@/constants/animations';
+import { prewarmHighlighter } from '@/lib/code/shiki-highlighter';
 
 /**
  * Extra clearance at the bottom of the chat viewport so downward-opening
@@ -68,6 +69,11 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
       router.replace('/');
     }
   }, [isUnauthorized, router]);
+
+  // Prewarm syntax highlighter during browser idle time
+  React.useEffect(() => {
+    prewarmHighlighter();
+  }, []);
 
   const { openWorkspaceDrawer } = useChatUI();
 

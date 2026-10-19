@@ -1,318 +1,214 @@
-# Strata AI — System Architecture & Agent Guide
+# Strata AI — System Architecture
 
-## 1. What This Is
+Strata AI is a local-first conversational workspace studio. A user prompts an agent that runs multi-step
+autonomous loops over a fixed tool set, producing a durable multi-file workspace that lives in a slide-over
+canvas drawer.
 
-Strata AI is a local-first conversational workspace studio. A user prompts an agent that runs
-multi-step autonomous loops (up to 30 steps per turn) over 8 Zod-validated tools, producing
-durable multi-file workspaces (25 language grammars) that live in a slide-over canvas drawer.
+Three properties explain nearly every design decision:
 
-Three facts explain almost every design decision in this codebase:
+- **Local-first storage.** Conversations, messages, and workspace files live in the user's browser (Dexie /
+  IndexedDB). The server never stores user documents.
+- **Stateless server.** The backend is a gateway: session validation, an atomic Postgres quota ledger, and
+  unified AI SDK 7 SSE streaming.
+- **Compaction instead of truncation.** `/compact` distills history and workspace state into an anchor message;
+  later turns prune everything before that anchor server-side.
 
-- **Local-first storage.** Conversations, messages, and workspace files live in the user's browser
-  (Dexie / IndexedDB). The server never stores user documents.
-- **Stateless server.** The backend is a gateway: session validation, an atomic Postgres quota
-  ledger, and unified AI SDK 7 SSE streaming. Nothing else.
-- **Compaction instead of truncation.** `/compact` distills history + workspace state into an
-  anchor message. Subsequent turns prune everything before that anchor server-side, so long
-  conversations stay cheap without losing decisions.
+This document describes how the pieces fit together — the request lifecycle, the subsystem contracts, and the
+seams where behaviour is centralised. It is descriptive; the authoritative details live in the source files it
+names.
 
-Read the rest top-down: what a request does end-to-end (§4-5), then the subsystem reference
-(§6-8), then the rules you must not break (§10).
+## 1. Runtime & Layout
 
-## 2. Tech Stack & Environment
+Next.js 16.4 (App Router, Node runtime), React 19.2, TypeScript 7, Bun as package manager and test runner;
+`package.json` pins the toolchain and `.env.example` lists the environment. The AI layer is Vercel AI SDK 7 with
+Google and Fireworks providers plus Tavily for web research. Persistence is Dexie 4 in the browser and Supabase
+Postgres through a `pg` Pool on the server. Langfuse is wired in via an OpenTelemetry NodeSDK
+(`src/instrumentation.ts`).
 
-| Layer | Choice |
+| Path | Owns |
 |---|---|
-| Framework | Next.js 16.4.0 (App Router, Node runtime), React 19.2.7, TypeScript 7.0.2 |
-| Package manager | Bun 1.4.3 (pinned via `packageManager`). Never npm/yarn/npx. |
-| AI engine | Vercel AI SDK 7 (`ai`), `@ai-sdk/google`, `@ai-sdk/fireworks` |
-| Models | Gemini 3.5 Flash Lite (default), Gemini 3.1 Flash Lite, GLM 5.3 Flash, DeepSeek V4.1 Flash (`src/lib/ai/models.ts`) |
-| Web research | Tavily REST API (`webSearch`, `extractUrl`) |
-| Client DB | Dexie 4.4 — `StrataAIChatDB` schema v5 |
-| Server DB | Supabase PostgreSQL, `better_auth` schema, `pg` Pool |
-| Auth & quota | Better Auth 1.6 (`emailAndPassword`, `nextCookies`) + atomic sliding-window ledger |
-| UI | Tailwind 4.1 + Milo design tokens (`globals.css`), PrismJS 1.30, `motion` 12, `use-stick-to-bottom` 1.1.6, `unpdf` 1.8.1 |
-| Observability | Langfuse 5.10 via OpenTelemetry NodeSDK (`src/instrumentation.ts`) |
+| `src/agent/` | the server-side agent: runner, stream responder, tools, prompts, provider resolution, route guards, provider sanitization, per-request workspace, browser-side client helpers |
+| `src/app/` | thin route shells; `api/` holds four route handlers |
+| `src/components/` | presentational React: `chat/` (header, input, message, tools), `workspace/` drawer, `sidebar/`, `ui/`, `landing/`, `auth/` |
+| `src/hooks/` | every data and side-effect owner: chat session, transport, compaction, throttling, conversations, workspace, auth, common |
+| `src/contexts/` | `RateLimitContext` (app-wide quota), `ChatUIContext` (sidebar and drawer shell), `ChatInputContext` (imperative prompt handle) |
+| `src/lib/` | `ai/` (model catalog, token metrics), `db/` (Dexie), `code/` (languages, two highlighters), `attachments/`, `auth/`, `server/rate-limit.ts`, `workspace/download.ts`, `limits.ts` |
+| `src/proxy.ts` | Next.js 16 proxy (middleware): cheap cookie pre-check plus security headers |
 
-**Environment variables:** `GOOGLE_GENERATIVE_AI_API_KEY`, `FIREWORKS_API_KEY`, `DATABASE_URL`,
-`BETTER_AUTH_SECRET` (min 32 chars), `BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`,
-`NEXT_PUBLIC_GEMINI_MODEL`, `TAVILY_API_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_PUBLIC_KEY`,
-`LANGFUSE_BASE_URL`.
+## 2. Request Lifecycle
 
-**Model catalog** (`src/lib/ai/models.ts`) is the single source of truth for selectable models,
-pricing, context windows (all 131,072), and thinking levels. `resolveAgentModel`
-(`src/agent/providers/index.ts`) maps a catalog id to the provider-specific `streamText` config;
-only ids carrying a `provider` field route to Fireworks.
+1. **Compose.** `ChatInput` and `useChatInputController` build UI-message parts: image `file` parts first, then
+   document `file` parts, then `text`. `useChatSession.handleSendMessage` pre-checks quota and context-window
+   exhaustion, derives the conversation title from the user's own text, then calls
+   `chat.sendMessage({ parts })`.
+2. **Transport.** `useChatTransport` returns a memoized `DefaultChatTransport` on `/api/agent`. Its `body()`
+   reads live values through refs, so the transport identity never changes. Its custom `fetch` is a header
+   layer: it surfaces `X-RateLimit-Remaining-5h` and `-Week` into `RateLimitContext`, converts 429 into a
+   `QuotaError` plus `chat.stop()`, and throws for other failures.
+3. **Proxy gate.** `src/proxy.ts` runs a `getSessionCookie` pre-check. A missing cookie means a JSON 401 on
+   `/api/*` and a redirect to `/auth` on pages; `callbackUrl` is dropped for `/chat-id/*` so a private chat id
+   is never inherited by another account. Passing responses carry `nosniff`, `DENY`, and `strict-origin`.
+4. **Route guards.** `withAgentRouteGuards` runs a fixed pipeline: `auth.api.getSession` (401) → `req.json()`
+   (400) → `agentRequestBodySchema` (400) → `sliceMessagesAfterCompaction` → message-length and attachment-part
+   bounds (400) → `checkAndIncrementRateLimit` (429). Quota is reserved only after every input check passes; the
+   handler receives `{ session, body, messages, rateLimit, signal }`.
+5. **Stream assembly.** The route clamps `maxSteps` to 1–30 (default 25), builds a mutable workspace from the
+   request's `files`, and calls `runAgentResponse`. That computes a token budget, then hands off to
+   `createUIStreamResponder` — the single place in the repo where `streamText` is called. The responder resolves
+   the model, prunes cross-provider metadata, converts messages once, strips image parts for text-only models,
+   applies `smoothStream` (15 ms, word chunking) and `coalesceToolInputDeltas`, re-injects the system prompt
+   each step via `prepareStep`, and stops on `isStepCount(maxSteps)`.
+6. **Error path.** Any setup, execution, or stream error runs `classifyProviderError`, writes an `error` stream
+   part, flushes Langfuse, and fires `onInferenceError` once behind an idempotent latch →
+   `safeAsyncRefundRateLimit` deletes the reserved quota row, so an outage does not cost the user quota.
+7. **Client application.** `useChat.onData` handles `data-workspace` parts live, so the drawer reflects the
+   agent's work mid-stream. `useWorkspaceFiles` coalesces rapid file updates on a 150 ms timer before writing to
+   Dexie. `useThrottledMessages` caps React updates to one per animation frame, and each message renders inside
+   a memoized `MessageRow` so historical turns never re-segment during streaming. `useChatSession` widens
+   `isStreaming` to `status === 'streaming' || isCompacting`, so compaction chunks are throttled identically.
+8. **Reconcile.** `useChat.onFinish` calls `reconcileFinishedStep`, which persists messages, merges workspace
+   deltas from the finished message's tool parts, and — on `finishReason === 'step-limit'` — schedules one
+   auto-continuation after 300 ms, capped at 2 per user turn.
 
-## 3. Commands
+## 3. The Agent Run
 
-| Command | Action |
-|---|---|
-| `bun run dev` | Next.js dev server |
-| `bun run build` | Production build |
-| `bun run typecheck` | `bun check` |
-| `bun run lint` | `oxlint` |
-| `bun run test` | `bun test --isolate` |
-| `bun run db:migrate` | Better Auth schema + quota table migration |
-| `bun run db:test` | DB connection and schema healthcheck |
+`createWorkspaceTools` (`src/agent/tools/index.ts`) returns eight tools bound to one live workspace context, so
+every tool in a run sees the same mutable array. Six are workspace tools — `listFiles`, `readFile`, `writeFile`,
+`editFile`, `renameFile`, `deleteFile` — in `workspace-tools.ts`; the mutating four emit a `data-workspace` part
+(`file-updated` or `file-deleted`) that the client applies live. The other two are Tavily tools, `webSearch` and
+`extractUrl` in `tavily-tools.ts`: search snippets truncate at a word boundary, extract caps each page at
+`min(10k, floor(20k / pageCount))` chars.
 
-Lint and build must both pass before a change is considered done.
+`editFile` delegates to `StringEditEngine` (`src/agent/tools/edit-engine.ts`), which tries exact substring
+match, then whitespace-normalised line matching, then anchor-matched first/last-line bounding; ambiguous matches
+are rejected with an actionable error rather than guessed. Tool *display* lives in
+`src/components/chat/tools/resolver.tsx` (label, icon, badge, accent, summary builder, plus an alias table for
+legacy names), and `ToolCallCard.tsx` renders whatever it returns. The agent loop is bounded by
+`isStepCount(maxSteps)`; when the budget runs out the finish reason is `step-limit` and the reconciler re-sends
+a "continue where you left off" message, at most twice per user turn, resetting the counter on a normal finish.
 
-## 4. Request Lifecycle (Agent Turn)
+## 4. Compaction
 
-This is the spine of the system. Everything below happens for one user message.
+`/compact` posts the message array to `/api/agent/compact` over raw `fetch` and consumes the SSE with
+`parseJsonEventStream` + `readUIMessageStream`, then validates that real summary text came back before
+reconciling. Server-side it reuses the same responder with the compaction model, a 3500-token output cap, and
+`isCompactedSummary` metadata. That anchor message is what `sliceMessagesAfterCompaction` uses to prune history
+on later turns; `calculateTokenMetrics` also resets the measured active context to a system baseline once a
+compaction summary is the latest assistant message.
 
-1. **Compose.** `ChatInput` builds UI-message parts: `file` parts first (images, then documents, as
-   data URLs), then `text`. `handleSendMessage` (`src/hooks/chat/useChatSession.ts`) pre-checks quota and
-   context-window exhaustion, auto-titles the conversation, then calls `chat.sendMessage({ parts })`.
-2. **Transport.** `useChatTransport` returns a memoized `DefaultChatTransport` pointed at
-   `/api/agent`. Its `body()` reads live values through refs so the transport never re-creates
-   itself; its custom `fetch` is a pure header layer — surfacing `X-RateLimit-*` into
-   `RateLimitContext`, turning 429 into a `QuotaError` + `chat.stop()`, throwing on other failures.
-3. **Proxy gate.** `src/proxy.ts` runs a fast `getSessionCookie` pre-check (JSON 401 for `/api/*`,
-   redirect to `/auth` for pages — deliberately dropping `callbackUrl` on `/chat-id/*` so a private
-   chat id is never inherited by another account) and injects `nosniff` / `DENY` / `strict-origin`.
-4. **Route guards.** `withAgentRouteGuards` (`src/agent/guards/route-guards.ts`) runs a fixed pipeline:
-   `auth.api.getSession` (401) -> `req.json()` (400) -> `agentRequestBodySchema` (400) ->
-   `sliceMessagesAfterCompaction` -> length and attachment-part bounds (400) ->
-   `checkAndIncrementRateLimit` (429). Quota is reserved only after every input check passes; the
-   route stays a thin shell receiving `{ session, body, messages, rateLimit, signal }`.
-5. **Stream assembly.** `runAgentResponse` (`src/agent/core/runner.ts`) computes the active token
-   budget via `computeTokenBudget` (`src/agent/core/token-budget.ts`), then delegates to
-   `createUIStreamResponder` (`src/agent/core/stream-responder.ts`) — the single choke point for all
-   model execution. It sanitizes cross-provider metadata, converts messages once, strips image parts
-   for text-only models, applies
-   `experimental_transform: [smoothStream({ delayInMs: 15, chunking: 'word' }), coalesceToolInputDeltas()]`,
-   re-injects `buildSystemInstruction` per step via `prepareStep`, and caps the loop with
-   `stopWhen: isStepCount(maxSteps)`. Provider metadata pruning falls back
-   `callProviderMetadata ?? providerMetadata` on tool parts so Gemini 3 `thoughtSignature` survives
-   sanitization and multi-step reasoning stays intact.
-6. **Error path.** Any `onError`, execution throw, or setup throw runs `classifyProviderError`,
-   writes an `error` stream part, flushes Langfuse, and fires `onInferenceError` once (idempotent latch)
-   -> `safeAsyncRefundRateLimit` (`src/agent/guards/route-guards.ts`) deletes the reserved quota row. Users never lose quota to an outage.
-7. **Client application.** `useChat.onData` handles `data-workspace` parts live, so the drawer
-   reflects the agent's work mid-stream. `useWorkspaceFiles` coalesces rapid updates on a 150 ms
-   timer before writing to Dexie. High-frequency streaming message updates are throttled via
-   `requestAnimationFrame` (`useThrottledMessages`) before reaching `MessageList`, while per-message
-   segmentation is isolated in memoized `MessageRow` items so historical conversation turns never
-   re-segment during active streaming. The compaction stream shares this path: `useChatSession`
-   widens `isStreaming` to `status === 'streaming' || isCompacting`, so `/compact` chunks are
-   rAF-throttled identically.
-8. **Reconcile.** `useChat.onFinish` -> `reconcileFinishedStep` (`src/agent/client/reconciler.ts`)
-   persists all messages, merges workspace deltas from the finished message's tool parts, and — on
-   `finishReason === 'step-limit'` — schedules an auto-continuation, capped at 2 per user turn.
+## 5. Streaming Contract
 
-**Compaction turn (`/compact`):** `useCompaction` posts the message array to `/api/agent/compact`
-via raw `fetch`, consumes the SSE with `parseJsonEventStream` + `readUIMessageStream`, validates
-that real summary text was produced, and reconciles. Server-side it reuses the same responder with
-`COMPACTION_MODEL_ID`, `maxOutputTokens: 3500`, and `isCompactedSummary` metadata.
+| Part | Produced by | Consumed by |
+|---|---|---|
+| `text` | `smoothStream` | `MarkdownRenderer` |
+| `reasoning` | provider | `ThoughtAccordion` |
+| `tool-call` / `tool-input-delta` | provider, coalesced | `ToolCallCard` via `flattenMessageSegments` |
+| `data-workspace` | workspace tools | `useChatSession.onData` → `useWorkspaceFiles` |
+| `error` | `handleRunnerError` | `handleChatError` |
+| `finish` | SDK | `useChat.onFinish` → reconciler |
 
-## 5. Streaming Protocol & Tools
+Every stream response also carries `X-RateLimit-Remaining-5h` and `X-RateLimit-Remaining-Week`. AI SDK 7 emits
+`tool-call` and `tool-result` as separate parts with a matching `callId`; `flattenMessageSegments` merges them
+into one card, which is what prevents duplicate keys and perpetual spinners.
 
-**Protocol:** AI SDK 7 UI message SSE, `text/plain`. Part types reaching the client: `text`
-(paced by `smoothStream`), `reasoning` (rendered by `ThoughtAccordion`), `tool-call` /
-`tool-input-delta` (buffered by `coalesceToolInputDeltas`), `data-workspace` (canvas deltas),
-`error`, `finish`. Every stream carries `X-RateLimit-Remaining-5h` and
-`X-RateLimit-Remaining-Week`.
+## 6. Persistence
 
-**Tools** (registered in `src/agent/tools/index.ts`, built per request from
-`createMutableWorkspace(files)` so all tools share one live mutable array):
+**Client — Dexie `StrataAIChatDB` (v5)**, `src/lib/db/database.ts`:
 
-| Tool | Arguments | Effect | Emits |
-|---|---|---|---|
-| `listFiles` | — | Metadata for every file (no content) | — |
-| `readFile` | `nameOrId`, `section?` | Full content, or one markdown heading section | — |
-| `writeFile` | `name`, `content`, `language?` | Creates or replaces; truncates at 10k chars | `file-updated` |
-| `editFile` | `nameOrId`, `explanation`, `searchString`, `replaceString` | 3-strategy replacement; enforces per-file and workspace-total caps | `file-updated` |
-| `renameFile` | `nameOrId`, `newName` | Rejects case-insensitive collisions; re-detects language | `file-updated` |
-| `deleteFile` | `nameOrId` | Removes from workspace | `file-deleted` |
-| `webSearch` | `query`, depth/topic/timeRange/domains... | Tavily search, 30s timeout, mapped errors | — |
-| `extractUrl` | `urls` (1-3), `extractDepth`, `query?` | Tavily extract, 45s timeout, 18k char cap per page | — |
+- `conversations` — PK `id`; indexes `userId`, `updatedAt`, `createdAt`. Holds `title`, `model`,
+  `thinkingLevel`, `pinned`, the `files` array (`WorkspaceFile[]`), and `activeFileId`. Workspace files live
+  inside the conversation row, not in a separate table.
+- `messages` — PK `id`; indexes `chatId`, `userId`, `timestamp`. An AI SDK `UIMessage` plus `chatId`, `userId`,
+  and a position-derived ISO timestamp, strictly monotonic within a batch so sorting by timestamp reproduces
+  true order.
+- Assistant `metadata` is `ChatMetadata` (`src/lib/ai/token-usage.ts`): provider `usage` for the final step,
+  cumulative `stepTotalUsage`, `modelId`, and the compaction flags.
+- `WorkspaceFile` — `id`, case-insensitively unique `name`, `content`, auto-detected `language`, `createdAt`,
+  `updatedAt`.
 
-`editFile` delegates to `StringEditEngine` (`src/agent/tools/edit-engine.ts`), which tries
-**exact** substring, then **whitespace-normalized** line matching, then **anchor-matched**
-first/last-line bounding. Every strategy rejects ambiguous matches with an actionable error rather
-than guessing.
+**Server — Postgres `better_auth` schema**: the standard Better Auth tables plus
+`message_log(id, user_id, created_at)` indexed on `(user_id, created_at)`, which is the quota ledger.
 
-Tool **display** is registered in `components/chat/tools/resolver.tsx` (config + summary builder +
-name aliases). Never edit `ToolCallCard.tsx` to add a tool. When AI SDK 7 SSE streams separate
-`tool-call` and `tool-result` parts with matching `callId`, `flattenMessageSegments`
-(`src/agent/client/segments.ts`) merges them into a unified card, preventing duplicate keys and
-perpetual spinners. Workspace files in the canvas drawer support one-click export with canonical
-extension resolution via `downloadWorkspaceFile` (`src/lib/workspace/download.ts`).
+`isConversationEmpty`, `findExistingEmptyConversation`, and `pruneEmptyConversations`
+(`src/lib/db/conversations.ts`) maintain a single-empty-chat invariant: "New Chat" on an already-empty chat is
+an inert no-op, and from a started chat it navigates to an existing empty chat rather than allocating a new row.
+The sidebar splits pinned chats into their own section above the rest. Legacy rows with no `userId` stay visible
+for backwards compatibility.
 
-## 6. Security, Auth & Quota
+## 7. Auth & Quota
 
-**Three independent layers:**
+Three independent layers: the *proxy* (`src/proxy.ts`) does a cheap cookie pre-check and adds security headers,
+with a matcher covering `/`, `/chat-id/:path*`, `/api/agent`, and `/api/agent/:path*`; the *route guard*'s
+`auth.api.getSession` against Postgres is the authoritative check; and *client-side RLS* compares
+`conversation.userId` with the session user, with `ChatPageClient` redirecting to `/` on a mismatch and
+`useChatSession` computing the same flag.
 
-1. *Proxy gate* (`src/proxy.ts`) — cheap cookie pre-check and security headers. Matcher is scoped
-   to `/`, `/chat-id/:path*`, `/api/agent`, `/api/agent/:path*`.
-2. *Route guard* (`withAgentRouteGuards`) — cryptographic session lookup against PostgreSQL via
-   `auth.api.getSession`. Authoritative; the proxy alone is never trusted.
-3. *Client-side RLS* — `src/components/ChatPageClient.tsx` and `useChatSession` verify
-   `conversation.userId === session.user.id` and redirect to `/` on mismatch. Legacy rows with no
-   `userId` stay visible for backwards compatibility.
+**Sliding-window quota**: 10 messages per 5 hours and 50 per 7 days. `checkAndIncrementRateLimit` runs
+purge-old-rows, window counts, and a conditional insert in one atomic CTE, so concurrent requests cannot
+oversubscribe. `refundRateLimit` deletes the row on inference failure. `getRateLimitStatus` backs the read-only
+`GET /api/user/rate-limit` snapshot, and 429 responses add `Retry-After` and `X-RateLimit-Retry-After`.
 
-**Sliding-window quota** (`better_auth.message_log`): 10 messages / 5 hours and 50 / 7 days.
-`checkAndIncrementRateLimit` runs purge-old-rows + window-count + conditional-insert in a single
-atomic CTE, so concurrent requests cannot oversubscribe. `refundRateLimit` deletes the row on
-inference failure. `getRateLimitStatus` powers the read-only `GET /api/user/rate-limit` snapshot;
-429 responses add `Retry-After` and `X-RateLimit-Retry-After`.
+## 8. Client Rendering
 
-## 7. Data Model
+`src/app/chat-id/[id]/page.tsx` is an ultra-lean route wrapper; `ChatPageClient` composes three pillars —
+`Sidebar`, a centre `StickToBottom` viewport, and `WorkspaceDrawer` — and coordinates them.
 
-**Client — Dexie `StrataAIChatDB` v5** (`src/lib/db/database.ts`):
+Messages go through `flattenMessageSegments` (`src/agent/client/segments.ts`), which turns a raw UI message into
+render-ready segments. While streaming, parts stay ungrouped and arrive in real time; once the turn ends, all
+pre-answer output (narration, reasoning accordions, tool cards) folds into a single collapsible `work-group` and
+only the final answer stays in the body. `MessageRow` is memoized inside `MessageList.tsx` with a comparator on
+message identity and streaming state, which keeps historical turns from re-segmenting during an active stream.
 
-- `conversations` (PK `id`; indexes `userId`, `updatedAt`, `createdAt`): `title` (auto-capped at 40
-  chars), `model`, `thinkingLevel`, `pinned`, `files` (`WorkspaceFile[]`), `activeFileId`, timestamps.
-- `messages` (PK `id`; indexes `chatId`, `userId`, `timestamp`): AI SDK `UIMessage` plus
-  `chatId`, `userId`, and a position-derived ISO `timestamp` (strictly monotonic within a batch, so
-  sorting by timestamp reproduces true order without UUID tie-breakers).
-- `metadata` on assistant messages is `ChatMetadata`: `usage` (final step), `stepTotalUsage`
-  (cumulative), `modelId`, `isCompactedSummary`.
-- `WorkspaceFile`: `id`, `name` (case-insensitively unique), `content` (<= 10k chars), `language`
-  (auto-detected from extension), `createdAt`, `updatedAt`.
+`ChatInputContext` is an imperative handle so the empty-state suggestion chips can inject a prompt without a
+parent re-render. `ChatUIContext` holds the mobile sidebar drawer, the desktop collapse (both persisted in
+`sessionStorage`), and the workspace drawer state. `RateLimitContext` is the only app-wide provider, mounted in
+the root layout with SSR-seeded quota data. The sidebar footer mounts `AccountMenu`, a dropup consolidating
+profile details, numeric quota meters for both windows with reset countdowns, and the light/dark switch; the
+header carries the context-window badge, the token-usage popover, and the workspace drawer trigger, while the
+input toolbar carries the model and thinking-level selector.
 
-`deleteConversation` removes the row and its messages in one `db.transaction('rw', ...)`.
+Performance work is concentrated here: message updates are throttled to one React render per animation frame
+(structural changes apply immediately), workspace writes are coalesced on a 150 ms timer and short-circuit when
+content is unchanged, the workspace drawer body is GPU-composited with `translateZ(0)` and contains its own
+overscroll, and Shiki highlights are cached, debounced, and prewarmed on idle.
 
-**Empty Conversation Lifecycle & Single-Empty-Chat Invariant:**
-- `isConversationEmpty(chatId)` detects conversations with zero messages and zero workspace files.
-- `findExistingEmptyConversation(userId)` retrieves an existing unstarted chat for the active user.
-- `pruneEmptyConversations(userId, keepChatId)` keeps a single empty conversation — the currently open chat when empty, otherwise the most recently updated empty chat — and deletes the rest in a Dexie transaction, so a new chat the user just left stays visible in the sidebar.
-- `useConversations` enforces that users can have at most one unstarted chat: clicking "New Chat" while in an empty conversation is an inert no-op (the UI button dims with an informative tooltip), and clicking "New Chat" from an existing chat navigates to the existing empty chat if one already exists rather than allocating a new ID and row. The sidebar renders pinned chats in a separate `Pinned` section above the remaining `Conversations` list (empty sections are hidden), showing a plain conversation count with no per-user cap; pinned status is conveyed by the section alone, so rows carry no inline pin icon.
+## 9. Markdown & Code
 
-**Server — PostgreSQL `better_auth` schema:** standard Better Auth `user`, `session`, `account`,
-`verification` tables, plus `message_log(id UUID PK, user_id FK, created_at TIMESTAMPTZ)` indexed on
-`(user_id, created_at)`.
+`MarkdownRenderer` renders every markdown surface through Streamdown with `@streamdown/math` for KaTeX formulas.
+It has four variants — `assistant`, `user`, `thought`, `canvas` — and `createMarkdownComponents` supplies the
+shared element map, including an href allowlist restricted to `https`, `http`, and `mailto` that neutralises
+`javascript:` and `data:` URLs.
 
-## 8. Directory Map & Component Boundaries
+Two highlighters serve different surfaces. Shiki (`src/lib/code/shiki-highlighter.ts`) runs on the JS regex
+engine with no WASM, debounces 120 ms, and caches up to 500 results; it serves chat code snippets through
+`CodeSnippetBlock`. PrismJS (`src/lib/code/syntax-highlighter.ts`) is synchronous and serves the line-numbered
+workspace viewer. The `pre` and `code` renderers in the markdown element map route to the Shiki-backed
+`CodeSnippetBlock`.
 
-```
-src/
-├── agent/                # Folder-based agent architecture
-│   ├── core/             # runner, stream-responder (unified choke point), token-budget, runner-error, error-classifier, transforms
-│   ├── tools/            # workspace-tools, tavily-tools, edit-engine, types
-│   ├── prompts/          # system, compaction
-│   ├── providers/        # resolveAgentModel, getModelProvider, reasoning mapping
-│   ├── guards/           # withAgentRouteGuards, agentRequestBodySchema, refunds
-│   ├── sanitization/     # provider metadata pruning, PDF text extraction, image stripping
-│   ├── workspace/        # per-request mutable workspace + file operations
-│   └── client/           # tool-normalization, extractor, segments, reconciler, error-handler
-├── proxy.ts              # Middleware: session-cookie gate + security headers
-├── instrumentation.ts    # OTel NodeSDK + Langfuse span processor (server-only)
-├── app/
-│   ├── layout.tsx        # RSC shell: fonts, anti-flash script, RateLimitProvider
-│   ├── page.tsx          # Landing (public)
-│   ├── auth/             # signin / signup / redirector
-│   ├── chat-id/[id]/     # Thin route unwrap: use(params), mounts ChatUIProvider; delegates to ChatPageClient
-│   └── api/              # agent, agent/compact, user/rate-limit, auth/[...all]
-├── components/           # ChatPageClient (workspace orchestrator), chat/ (header/, input/, message/, tools/), workspace/, sidebar/ (ConversationSection), auth/, landing/, ui/
-├── constants/            # animations.ts (motion presets), landing-animations.ts (hero curves),
-│                         # prompts.ts (landing suggestion chips)
-├── contexts/             # RateLimitContext (global quota), ChatUIContext (sidebar & drawer shell),
-│                         # ChatInputContext (imperative chat input handle)
-├── hooks/                # Domain folders: common/ (useTheme, useCopyClipboard, useClickOutside, ...),
-│                         # chat/ (useChatSession, useThrottledMessages, useChatTransport, useCompaction, ...),
-│                         # conversations/, workspace/, auth/ (sign in/up/out state machines)
-└── lib/
-    ├── auth/             # server.ts (Server Better Auth + pg Pool) | client.ts (client auth)
-    ├── db/               # database.ts (Dexie v5 + Conversation/DBMessage), conversations.ts,
-    │                     # messages.ts, workspace-files.ts, schemas.ts (WorkspaceFileSchema)
-    ├── ai/               # models.ts (catalog, pricing, thinking levels), token-usage.ts
-    ├── attachments/      # images.ts (canvas downscaling), documents.ts (PDF/text ingestion)
-    ├── code/             # languages.ts (25 grammars), syntax-highlighter.ts
-    ├── workspace/        # download.ts (canonical extension resolution & browser downloads)
-    ├── server/           # rate-limit.ts (Postgres quota)
-    ├── limits.ts         # Every limit constant (never inline these numbers)
-    ├── clipboard.ts      # stripMarkdown + copy
-    ├── id.ts             # generateId
-    └── timing.ts         # thought/work-group duration estimates
-__tests__/                # 33 suites (452 passing tests), run with bun test --isolate
-├── agent/                # core, tools, guards, prompts, providers, sanitization, client
-├── lib/                  # db, ai, code, attachments, workspace, limits, clipboard, timing
-├── routes/               # api-agent, api-agent-compact, api-user-rate-limit
-├── helpers.ts            # shared fixtures (makeFile, runTool, jsonResponse, withEnv, ...)
-└── proxy.test.ts         # middleware suite (root-level)
-scripts/                  # migrate-better-auth-schema.ts (+ .sql), test-db.ts, test-langfuse.ts
-```
+## 10. Observability & Errors
 
-**Route handlers:**
+`src/instrumentation.ts` starts an OpenTelemetry `NodeSDK` with a Langfuse span processor on the Node runtime
+and registers the AI SDK telemetry integration. The stream responder opens a Langfuse trace (`agent-workspace`
+or `context-compaction`) carrying model id, thinking level, and provider, and force-flushes on stream end.
 
-| Route | Purpose |
-|---|---|
-| `POST /api/agent` | Protected agent stream; clamps `maxSteps` to 1-30 (default 25) |
-| `POST /api/agent/compact` | Protected compaction stream via Gemini 3.1 Flash Lite |
-| `GET /api/user/rate-limit` | Protected read-only quota snapshot (`force-dynamic`) |
-| `ALL /api/auth/[...all]` | Better Auth handler (`toNextJsHandler`) |
+`classifyProviderError` (`src/agent/core/error-classifier.ts`) maps provider failures onto a fixed taxonomy —
+provider rate limit, provider restricted, safety filter, context exceeded, authentication error, aborted,
+network error, inference failure — each with a retryable flag. `handleRunnerError` turns that into an `error`
+stream part and triggers the quota refund. On the client, `handleChatError` stops the stream, surfaces quota
+cards for 429, and replaces the in-flight assistant message with friendly copy that is then persisted.
 
-**Client component boundary:** `src/app/chat-id/[id]/page.tsx` is an ultra-lean dynamic route
-wrapper unwrapping `use(params)` and mounting `<ChatUIProvider>`; it delegates state composition to `src/components/ChatPageClient.tsx`.
-`ChatPageClient` calls `useChatSession(chatId)` and coordinates the 3-pillar layout (`Sidebar`, center
-`<StickToBottom>` chat viewport, and `WorkspaceDrawer`). To guarantee 60fps responsiveness during high-frequency token streams, `ChatPageClient` routes messages through `useThrottledMessages` (rAF throttling) to `<StickToBottom>` / `MessageList`, where individual turns render inside memoized `MessageRow` boundaries that isolate `flattenMessageSegments`. Message action dropdowns open downward with `z-[35]` elevation to stack cleanly above `ChatInput` (`z-30`) and below `WorkspaceDrawer` (`z-50`). `WorkspaceDrawer` isolates rendering via `[transform:translateZ(0)]` GPU compositing and overscroll containment, dynamically omitting horizontal padding (`px-0 py-4 sm:py-6`) for code files while preserving `p-4 sm:p-6` for markdown previews and editing, while `CodeViewer` uses `table-fixed` column sizing and a centered, fixed `w-12` gutter to eliminate cell measurement reflow. Dexie queries, auth calls, and router
-navigation live in `src/hooks/*`, never inside presentation primitives. Two ephemeral UI concerns
-that would otherwise be drilled live in page-mounted scoped contexts instead: `ChatUIContext` (mobile
-sidebar drawer + desktop collapse, sessionStorage-persisted, plus workspace drawer open/close state) and `ChatInputContext` (an imperative ref
-so empty-state suggestion chips inject a prompt with no parent re-render). Conversation and workspace
-data flow as props from `useChatSession` + Dexie.
+## 11. Limits & Constraints
 
-## 9. Limits & Constraints
+All numeric limits live in `src/lib/limits.ts`. The ones that shape architecture: the message and attachment
+caps, enforced both in the input and again in the route guard; the image downscaling and document text caps
+applied during ingestion; the per-workspace file count and character budgets enforced by the workspace tools;
+the Tavily page, pool, and snippet caps; the two quota windows; the agent step clamp; and `NEAR_LIMIT_PERCENT`,
+which the system prompt and the UI share so both flip into "be concise" mode at the same threshold.
 
-All constants live in `src/lib/limits.ts`. Import them; never inline the numbers.
+## 12. Tests
 
-| Resource | Constant | Enforced at | Failure behavior |
-|---|---|---|---|
-| User prompt | `MAX_MESSAGE_CHARS = 2000` | Chat input + route guard | Send disabled; 400 |
-| Attachments | `MAX_ATTACHMENTS_PER_MESSAGE = 4` | Picker/drop + route guard | Blocked; 400 |
-| Image upload | `MAX_IMAGE_INPUT_BYTES = 5 MB` | Client canvas | Downscaled to 1280px / 1.5 MB |
-| Document upload | `MAX_DOCUMENT_INPUT_BYTES = 5 MB` | Ingestion + sanitizer | Text capped at 25,000 chars |
-| Files per workspace | `MAX_FILES_PER_WORKSPACE = 10` | `writeFile` + UI | Tool throws; button disabled |
-| File length | `MAX_FILE_CHARS = 10,000` | `editFile` + editor | Edit rejected; input blocked |
-| Workspace total | `MAX_WORKSPACE_TOTAL_CHARS = 50,000` | `editFile` validator | Edit rejected |
-| Message quota | 10 / 5h, 50 / 7d | Atomic Postgres CTE | 429 + `Retry-After` |
-| Agent steps | Clamped 1-30 (default 25) | `/api/agent` | `step-limit`; <= 2 continuations |
-| Context window | 131,072 tokens | `token-usage.ts` | Sends blocked; `/compact` offered |
-
-`NEAR_LIMIT_PERCENT = 80` is shared by the system prompt and the UI so both flip into "be
-concise" warning mode at the same threshold.
-
-## 10. Non-Negotiable Invariants
-
-1. **Zero Server Actions.** No `"use server"` anywhere. Mutations use Route Handlers (streaming and
-   quota only), Dexie (local entities), or Better Auth client methods.
-2. **Unified Stream Responder.** All model execution goes through `createUIStreamResponder`
-   (`src/agent/core/stream-responder.ts`) with `smoothStream` and `coalesceToolInputDeltas`. Never call
-   `streamText` from a route directly.
-3. **Milo Color Tokens Only.** No hex literals, no default Tailwind palette names (`emerald`, `rose`,
-   `zinc`, `red-*`, ...). Use `primary`, `secondary`, `surface-*`, `text-*`, `edge-*`, `danger`,
-   `warning`, `info`, `scrim`, `*-soft`.
-4. **Milo Type Scale Only.** No `text-xs` / `text-sm` / `text-base` / arbitrary pixel sizes. Use
-   `text-micro` (11px), `text-caption` (12px), `text-label` (14px), `text-body` (16px),
-   `text-subheading` (18px), `text-heading` (20px), `text-title` (24px), `text-display` (32px).
-   Elevation/radius: `shadow-button`, `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`;
-   `rounded-lg` (12), `rounded-xl` (20), `rounded-2xl` (32).
-5. **Centralized Markdown.** Every markdown surface renders through
-   `components/ui/MarkdownRenderer.tsx`, whose element map is the shared factory
-   `components/ui/createMarkdownComponents.tsx` (with `CodeSnippetBlock.tsx` for fenced code).
-   Never add direct `react-markdown` / `remark-gfm`
-   imports. (`SmoothStreamText.tsx` is the one pre-existing exception — it wraps its own renderer
-   to host the streaming caret. Don't extend the pattern.)
-6. **Tool Card Decoupling.** Adding a tool means registering config + summary in
-   `components/chat/tools/resolver.tsx`. Never edit `ToolCallCard.tsx`.
-7. **Presentational Purity.** Components render props. Queries, auth, and routing live in
-   `src/hooks/*` and page-level composition. Ephemeral cross-component UI state uses scoped
-   contexts in `src/contexts/` (sidebar & drawer shell, chat input handle) rather than prop drilling or a
-   state library; global quota state is the only app-wide context.
-8. **Auto-Scroll Exclusivity.** Only `<StickToBottom>` in `src/components/ChatPageClient.tsx` scrolls
-   the chat. No manual scroll loops anywhere.
-9. **Async Next.js 16 APIs.** Unwrap dynamic route `params` with `use(params)` in client
-   components; `await searchParams` / `headers()` in RSCs.
-10. **Limits from One Source.** Import from `@/lib/limits`. Magic numbers in feature code are bugs.
-11. **Bun Only.** `bun run dev | lint | typecheck | test | build`. Never npm, yarn, or npx.
-12. **No Emojis, Preserve Comments.** No emojis in code or files; keep existing doc comments intact.
-
-**Testing conventions:** suites live under `__tests__/` in domain folders — `agent/`, `lib/`,
-and `routes/` (plus root-level `proxy.test.ts`) — and run via `bun test --isolate` (33 suites,
-452 passing tests). Shared fixtures
-(`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`, `withEnv`) come from
-`__tests__/helpers.ts`. Route tests must `mock.module` `@/lib/auth/server`, `@/lib/server/rate-limit`, and
-`@/agent/core/runner` *before* dynamically importing the route.
+Suites live under `__tests__/` in domain folders — `agent/`, `lib/`, `routes/` — plus a root-level
+`proxy.test.ts`: 35 files, 97 describe blocks, 472 test cases, run with `bun test --isolate`. Shared fixtures
+(`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`, `withEnv`) come from `__tests__/helpers.ts`.
+Route tests `mock.module` the auth server, the rate-limit module, and the runner before dynamically importing
+the route.

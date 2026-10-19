@@ -56,6 +56,19 @@ describe("stripMarkdown", () => {
   it("leaves plain prose untouched", () => {
     expect(stripMarkdown("just a sentence")).toBe("just a sentence");
   });
+
+  it("cleans inline and block LaTeX math formulas", () => {
+    expect(stripMarkdown("Formula: $E=mc^2$ is famous")).toBe("Formula: E=mc^2 is famous");
+    expect(stripMarkdown("Equation:\n$$\n\\frac{a}{b} = c\n$$\nDone")).toBe("Equation:\n\\frac{a}{b} = c\nDone");
+  });
+
+  it("handles GFM task lists while preserving checkbox status", () => {
+    expect(stripMarkdown("- [x] Done task\n- [ ] Pending task")).toBe("[x] Done task\n[ ] Pending task");
+  });
+
+  it("decodes common HTML entities cleanly", () => {
+    expect(stripMarkdown("&lt;div&gt; &amp; &quot;hello&quot;")).toBe("<div> & \"hello\"");
+  });
 });
 
 describe("generateId", () => {

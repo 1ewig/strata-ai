@@ -1,29 +1,38 @@
 'use client';
 
-import React from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-
-const REMARK_PLUGINS = [remarkGfm];
+import React, { memo } from 'react';
+import MarkdownRenderer from './MarkdownRenderer';
+import { MarkdownVariant } from './createMarkdownComponents';
 
 interface SmoothStreamTextProps {
   /** The full accumulated text of the message segment so far. */
   text: string;
   /** Whether the message is actively streaming tokens. */
   isStreaming: boolean;
-  /** Custom ReactMarkdown component dictionary. */
+  /** Custom Markdown variant or components dictionary. */
   components?: any;
+  variant?: MarkdownVariant;
+  className?: string;
 }
 
 /**
- * Renders live streaming Markdown formatted in real-time with an active streaming caret.
+ * Backwards-compatible wrapper delegating to MarkdownRenderer with Streamdown's
+ * native word-level streaming animation.
  */
-export function SmoothStreamText({ text, isStreaming, components }: SmoothStreamTextProps) {
+export function SmoothStreamText({
+  text,
+  isStreaming,
+  variant = 'assistant',
+  className = '',
+}: SmoothStreamTextProps) {
   return (
     <div className="relative">
-      <ReactMarkdown remarkPlugins={REMARK_PLUGINS} components={components}>
-        {text}
-      </ReactMarkdown>
+      <MarkdownRenderer
+        content={text}
+        isStreaming={isStreaming}
+        variant={variant}
+        className={className}
+      />
       {isStreaming && (
         <span
           className="inline-block w-[2px] h-[1.05em] ml-1 -mb-0.5 bg-primary/90 rounded-full animate-caret align-text-bottom"
@@ -34,4 +43,4 @@ export function SmoothStreamText({ text, isStreaming, components }: SmoothStream
   );
 }
 
-export default React.memo(SmoothStreamText);
+export default memo(SmoothStreamText);

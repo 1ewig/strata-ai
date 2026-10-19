@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
-import { Check, Code2 } from 'lucide-react';
-import { highlightCode } from '@/lib/code/syntax-highlighter';
-import { getLanguageLabel } from '@/lib/code/languages';
-import { useCopyClipboard } from '@/hooks/common/useCopyClipboard';
+import React, { useState, memo, useCallback } from 'react';
+import { Check, Copy, Download } from 'lucide-react';
+import { useHighlightedCode } from '@/lib/code/shiki-highlighter';
+import { useTheme } from '@/hooks/common/useTheme';
+import { downloadWorkspaceFile } from '@/lib/workspace/download';
 
 export interface CodeSnippetBlockProps {
   rawCode: string;
@@ -13,52 +13,114 @@ export interface CodeSnippetBlockProps {
   borderClass: string;
   extraClass?: string;
   enableCopy?: boolean;
+  children?: React.ReactNode;
 }
 
-export const CodeSnippetBlock = React.memo(function CodeSnippetBlock({
-  rawCode,
-  rawLang,
-  className,
-  borderClass,
-  extraClass = '',
-  enableCopy = false,
-}: CodeSnippetBlockProps) {
-  const { copied, copy } = useCopyClipboard(2000);
-  const displayLabel = rawLang ? getLanguageLabel(rawLang) : 'Code';
-  const highlightedHtml = React.useMemo(() => highlightCode(rawCode, rawLang), [rawCode, rawLang]);
+export const CodeSnippetBlock = memo(
+  function CodeSnippetBlock({
+    rawCode,
+    rawLang,
+    className,
+    borderClass,
+    extraClass = '',
+    enableCopy = true,
+    children,
+  }: CodeSnippetBlockProps) {
+    const [copied, setCopied] = useState(false);
+    const copyTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+    const { isDark } = useTheme();
 
-  return (
-    <div className={`my-2.5 rounded-xl bg-surface-base border ${borderClass} overflow-hidden font-mono text-micro shadow-card ${extraClass}`}>
-      <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-micro text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between">
-        <span className="text-text-muted font-mono">{displayLabel}</span>
-        {enableCopy && (
-          <button
-            type="button"
-            onClick={() => copy(rawCode)}
-            className="flex items-center gap-1 text-micro text-text-muted hover:text-primary active:scale-90 hover:scale-105 transition-all duration-150 cursor-pointer"
-          >
-            {copied ? (
-              <>
-                <Check className="w-3 h-3 text-primary animate-in zoom-in-75 duration-100" />
-                <span className="text-primary font-medium">Copied</span>
-              </>
-            ) : (
-              <>
-                <Code2 className="w-3 h-3" />
-                <span>Copy</span>
-              </>
+    React.useEffect(() => {
+      return () => {
+        if (copyTimeoutRef.current) {
+          clearTimeout(copyTimeoutRef.current);
+        }
+      };
+    }, []);
+
+    const effectiveTheme = isDark ? 'dark' : 'light';
+    const { html, isHighlighted } = useHighlightedCode(rawCode, rawLang, effectiveTheme);
+
+    const handleCopy = useCallback(async () => {
+      if (!rawCode) return;
+      try {
+        await navigator.clipboard.writeText(rawCode);
+        setCopied(true);
+        if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000);
+      } catch {
+        // Fallback if clipboard API is unavailable
+      }
+    }, [rawCode]);
+
+    const handleDownload = useCallback(() => {
+      if (!rawCode) return;
+      downloadWorkspaceFile({
+        name: 'snippet',
+        content: rawCode,
+        language: rawLang,
+      });
+    }, [rawCode, rawLang]);
+
+    const displayLabel = rawLang ? rawLang.toUpperCase() : 'CODE';
+
+    return (
+      <div className={`my-2.5 rounded-xl bg-surface-base border ${borderClass} overflow-hidden font-mono text-micro shadow-card [contain:paint_layout] ${extraClass}`}>
+        {/* Header bar */}
+        <div className="bg-surface-raised/90 px-3 py-1.5 border-b border-edge-raised text-micro text-text-muted font-semibold uppercase tracking-wider flex items-center justify-between select-none">
+          <span className="text-text-muted font-mono">{displayLabel}</span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={handleDownload}
+              aria-label="Download code snippet"
+              className="p-1 rounded text-text-muted hover:text-text-primary hover:bg-surface-hover/60 transition-colors cursor-pointer"
+              title="Download snippet"
+            >
+              <Download className="w-3.5 h-3.5" />
+            </button>
+            {enableCopy && (
+              <button
+                type="button"
+                onClick={handleCopy}
+                aria-label="Copy code"
+                className="flex items-center gap-1 py-0.5 px-1.5 rounded text-micro text-text-muted hover:text-text-primary hover:bg-surface-hover/60 active:scale-95 transition-all cursor-pointer"
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-primary animate-in zoom-in-75 duration-100" />
+                    <span className="text-primary font-medium">Copied</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    <span>Copy</span>
+                  </>
+                )}
+              </button>
             )}
-          </button>
+          </div>
+        </div>
+
+        {/* Code body */}
+        {isHighlighted && html ? (
+          <pre className="p-3 overflow-x-auto text-text-primary leading-relaxed whitespace-pre m-0">
+            <code dangerouslySetInnerHTML={{ __html: html }} />
+          </pre>
+        ) : (
+          <pre className="p-3 overflow-x-auto text-text-primary leading-relaxed whitespace-pre m-0">
+            <code className={className}>{children ?? rawCode}</code>
+          </pre>
         )}
       </div>
-      <pre className="p-3 overflow-x-auto text-text-primary leading-relaxed">
-        <code
-          className={className}
-          dangerouslySetInnerHTML={{ __html: highlightedHtml }}
-        />
-      </pre>
-    </div>
-  );
-});
+    );
+  },
+  (prev, next) =>
+    prev.rawCode === next.rawCode &&
+    prev.rawLang === next.rawLang &&
+    prev.borderClass === next.borderClass &&
+    prev.extraClass === next.extraClass &&
+    prev.enableCopy === next.enableCopy
+);
 
 export default CodeSnippetBlock;

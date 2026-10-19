@@ -2,6 +2,8 @@
 
 @source "..";
 @source "../../src";
+@source "../../node_modules/streamdown/dist/*.js";
+@source "../../node_modules/@streamdown/math/dist/*.js";
 
 @theme {
   /* Surfaces (Warm Studio Linen & Tactile Canvas) */
@@ -336,4 +338,103 @@ html[data-theme="dark"] ::selection {
 html[data-theme="dark"] .bg-primary ::selection {
   background-color: rgba(255, 255, 255, 0.35);
   color: #ffffff;
-}
+}
+
+/* ==========================================================================
+   KaTeX Theme Integration & Responsive Math Handling
+   ========================================================================== */
+.katex {
+  font-size: 1.05em;
+  color: var(--color-text-primary);
+  letter-spacing: normal !important;
+  text-rendering: auto;
+}
+
+.katex .katex-html {
+  font-size: 1.08rem;
+  line-height: 1.4;
+}
+
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: transparent;
+  padding: 12px 16px;
+  margin: 1rem 0 !important;
+  border-radius: 8px;
+  line-height: 1.5;
+  max-width: 100%;
+  contain: paint layout;
+}
+
+.katex-display > .katex {
+  max-width: 100%;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Improve division rendering: prevent fraction line (divider) from overlapping numbers */
+.katex .mfrac .frac-line {
+  min-height: 1.5px;
+  border-bottom-width: 0.05em !important;
+}
+
+/* Ensure clean vertical clearance between numerator, division bar, and denominator */
+.katex .mfrac .vlist > span:has(> .frac-line) + span {
+  transform: translateY(-2.5px);
+}
+
+.katex .mfrac .vlist > span:has(+ span > .frac-line) {
+  transform: translateY(2.5px);
+}
+
+/* ==========================================================================
+   Streamdown Streaming Blur-In & Fade Animation
+   Ensures streamed words bloom in smoothly with architectural easing without
+   getting abruptly cancelled by subsequent streaming token passes.
+   ========================================================================== */
+@keyframes sd-blurIn {
+  0% {
+    opacity: 0;
+    filter: blur(4px);
+    transform: translateY(1.5px);
+  }
+  30% {
+    opacity: 0.65;
+    filter: blur(2.5px);
+  }
+  65% {
+    opacity: 0.9;
+    filter: blur(1px);
+  }
+  85% {
+    opacity: 0.98;
+    filter: blur(0.3px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0.001px);
+    transform: translateY(0);
+  }
+}
+
+@keyframes sd-fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes sd-slideUp {
+  0% {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+

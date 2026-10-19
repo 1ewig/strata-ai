@@ -1,5 +1,11 @@
 import { tool } from "ai";
 import { z } from "zod";
+import {
+  MAX_TAVILY_EXTRACT_CHARS_PER_PAGE,
+  MAX_TAVILY_EXTRACT_TOTAL_CHARS,
+  MAX_TAVILY_SEARCH_SNIPPET_CHARS,
+} from "@/lib/limits";
+import { cleanExtractedMarkdown, truncateSnippetAtWordBoundary } from "./markdown-cleaner";
 
 interface TavilyApiResponse<T> {
   success: boolean;
@@ -212,11 +218,14 @@ export function createWebSearchTool() {
       const data = apiRes.data;
       const results = Array.isArray(data.results)
         ? data.results.map((r: any) => ({
-            title: String(r.title || ""),
-            url: String(r.url || ""),
-            content: String(r.content || ""),
-            score: typeof r.score === "number" ? r.score : undefined,
-            publishedDate: r.published_date ? String(r.published_date) : undefined,
+            title: String(r.title || "").trim(),
+            url: String(r.url || "").trim(),
+            content: truncateSnippetAtWordBoundary(
+              String(r.content || ""),
+              MAX_TAVILY_SEARCH_SNIPPET_CHARS,
+            ),
+            score: typeof r.score === "number" ? Math.round(r.score * 100) / 100 : undefined,
+            publishedDate: r.published_date ? String(r.published_date).slice(0, 10) : undefined,
           }))
         : [];
 
@@ -236,7 +245,7 @@ export function createWebSearchTool() {
 export function createExtractUrlTool() {
   return tool({
     description:
-      "Extract full, clean Markdown content from specific web page URLs using Tavily Extract API. Call this tool when webSearch snippets are too brief or when complete article/documentation context is required. Supports query intent to extract and rerank relevant sections of large pages.",
+      "Extract clean Markdown content from specific web page URLs using Tavily Extract API. Call this tool when webSearch snippets are too brief or when complete article/documentation context is required. Always provide 'query' when seeking specific information to retrieve focused, reranked sections instead of entire pages.",
     inputSchema: z.object({
       urls: z
         .array(z.string())
@@ -321,13 +330,19 @@ export function createExtractUrlTool() {
         };
       }
 
+      const perPageLimit = Math.min(
+        MAX_TAVILY_EXTRACT_CHARS_PER_PAGE,
+        Math.floor(MAX_TAVILY_EXTRACT_TOTAL_CHARS / Math.max(normalizedUrls.length, 1)),
+      );
+
       const data = apiRes.data;
       const extracted = Array.isArray(data.results)
         ? data.results.map((r: any) => {
             const raw = String(r.raw_content || r.markdown || r.content || r.text || "").trim();
+            const cleaned = cleanExtractedMarkdown(raw);
             const content =
-              raw.length > 0
-                ? raw.slice(0, 18000)
+              cleaned.length > 0
+                ? cleaned.slice(0, perPageLimit)
                 : "[No extractable text content found on this page. The site may be blocking scrapers, behind a paywall, or requiring dynamic rendering. Try extractDepth: 'advanced' or search for alternative sources.]";
             return {
               url: String(r.url || ""),

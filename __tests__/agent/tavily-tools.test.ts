@@ -214,7 +214,7 @@ describe("extractUrl", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
-  it("caps extracted content at 18k characters", async () => {
+  it("caps extracted content at 10k characters", async () => {
     mockFetch(async () =>
       jsonResponse({ results: [{ url: "https://a.com", raw_content: "x".repeat(20000) }] }),
     );
@@ -222,7 +222,7 @@ describe("extractUrl", () => {
 
     const result = await runTool(createExtractUrlTool(), { urls: ["https://a.com"] });
     expect(result.success).toBe(true);
-    expect(result.extracted[0].rawContent).toHaveLength(18000);
+    expect(result.extracted[0].rawContent).toHaveLength(10000);
   });
 
   it("returns success:false with per-URL errors when every URL fails", async () => {
@@ -302,5 +302,68 @@ describe("extractUrl", () => {
     const result = await runTool(createExtractUrlTool(), { urls: ["https://a.com"] });
     expect(result.success).toBe(false);
     expect(result.error).toContain("Tavily rate limit exceeded");
+  });
+
+  it("clamps extracted content to the per-page limit and cleans markdown", async () => {
+    const hugeMarkdown = "![logo](https://img.png)\n\n\n\n# Heading\n" + "a".repeat(15000);
+    mockFetch(async () =>
+      jsonResponse({ results: [{ url: "https://a.com", raw_content: hugeMarkdown }] }),
+    );
+    process.env.TAVILY_API_KEY = "test-key";
+
+    const result = await runTool(createExtractUrlTool(), { urls: ["https://a.com"] });
+    expect(result.success).toBe(true);
+    expect(result.extracted[0].rawContent.length).toBeLessThanOrEqual(10000);
+    expect(result.extracted[0].rawContent).not.toContain("![logo]");
+    expect(result.extracted[0].rawContent).not.toContain("\n\n\n");
+  });
+
+  it("divides extraction budget across multiple URLs", async () => {
+    const pageContent = "b".repeat(15000);
+    mockFetch(async () =>
+      jsonResponse({
+        results: [
+          { url: "https://a.com", raw_content: pageContent },
+          { url: "https://b.com", raw_content: pageContent },
+          { url: "https://c.com", raw_content: pageContent },
+        ],
+      }),
+    );
+    process.env.TAVILY_API_KEY = "test-key";
+
+    const result = await runTool(createExtractUrlTool(), {
+      urls: ["https://a.com", "https://b.com", "https://c.com"],
+    });
+    expect(result.success).toBe(true);
+    expect(result.extracted).toHaveLength(3);
+    // 20,000 / 3 ≈ 6,666 chars max per page
+    for (const item of result.extracted) {
+      expect(item.rawContent.length).toBeLessThanOrEqual(6666);
+    }
+  });
+
+  it("truncates search snippets at word boundaries and rounds scores", async () => {
+    const longContent = "Word ".repeat(100);
+    mockFetch(async () =>
+      jsonResponse({
+        results: [
+          {
+            title: "Result",
+            url: "https://example.com",
+            content: longContent,
+            score: 0.987654321,
+            published_date: "2026-03-15T12:00:00Z",
+          },
+        ],
+      }),
+    );
+    process.env.TAVILY_API_KEY = "test-key";
+
+    const result = await runTool(createWebSearchTool(), { query: "test" });
+    expect(result.success).toBe(true);
+    expect(result.results[0].content.length).toBeLessThanOrEqual(280);
+    expect(result.results[0].content.endsWith("...")).toBe(true);
+    expect(result.results[0].score).toBe(0.99);
+    expect(result.results[0].publishedDate).toBe("2026-03-15");
   });
 });
