@@ -72,11 +72,8 @@ export default function AccountMenu({
     setShowSignOutConfirm(false);
   };
 
-  // Remaining quota arc calculation for mini ring on trigger button
   const remaining5h = rateLimitData?.remaining5h ?? QUOTA_5H_LIMIT;
   const remainingWeek = rateLimitData?.remainingWeek ?? QUOTA_WEEK_LIMIT;
-  const quotaRatio = Math.min(1, Math.max(0, remaining5h / QUOTA_5H_LIMIT));
-  const ringCircumference = 37.7; // 2 * PI * 6 for r=6
 
   const quotaColorClass = isQuotaExhausted || remaining5h === 0
     ? 'text-danger'
@@ -271,45 +268,11 @@ export default function AccountMenu({
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 shrink-0 ml-2">
-            {/* Mini Quota Indicator */}
-            {rateLimitData && (
-              <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-surface-elevated border border-edge-default text-micro font-medium text-text-secondary">
-                <svg className="w-3 h-3 -rotate-90 shrink-0" viewBox="0 0 16 16">
-                  <circle
-                    cx="8"
-                    cy="8"
-                    r="6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className="text-edge-default"
-                  />
-                  <circle
-                    cx="8"
-                    cy="8"
-                    r="6"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeDasharray={ringCircumference}
-                    strokeDashoffset={ringCircumference * (1 - quotaRatio)}
-                    strokeLinecap="round"
-                    className={`transition-all duration-300 ${quotaColorClass}`}
-                  />
-                </svg>
-                <span className={isQuotaExhausted ? 'text-danger font-semibold' : ''}>
-                  {remaining5h}
-                </span>
-              </div>
-            )}
-
-            <ChevronUp
-              className={`w-3.5 h-3.5 text-text-muted transition-transform duration-200 ${
-                isOpen ? 'rotate-180 text-text-primary' : ''
-              }`}
-            />
-          </div>
+          <ChevronUp
+            className={`w-3.5 h-3.5 text-text-muted transition-transform duration-200 shrink-0 ml-2 ${
+              isOpen ? 'rotate-180 text-text-primary' : ''
+            }`}
+          />
         </button>
       </div>
 
