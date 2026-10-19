@@ -84,12 +84,6 @@ export default function AccountMenu({
       ? 'text-warning'
       : 'text-primary';
 
-  const quotaBarColorClass = isQuotaExhausted || remaining5h === 0
-    ? 'bg-danger'
-    : remaining5h <= 2
-      ? 'bg-warning'
-      : 'bg-primary';
-
   return (
     <>
       <div className="relative w-full" ref={containerRef}>
@@ -155,14 +149,6 @@ export default function AccountMenu({
                     <span className={`font-semibold ${quotaColorClass}`}>
                       {remaining5h} of {QUOTA_5H_LIMIT} left
                     </span>
-                  </div>
-
-                  {/* Visual Progress Bar */}
-                  <div className="w-full h-1.5 bg-surface-elevated rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all duration-300 ${quotaBarColorClass}`}
-                      style={{ width: `${quotaRatio * 100}%` }}
-                    />
                   </div>
 
                   <div className="flex items-center justify-between pt-0.5">
