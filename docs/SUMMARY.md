@@ -31,7 +31,7 @@ Read the rest top-down: what a request does end-to-end (§4-5), then the subsyst
 | Client DB | Dexie 4.4 — `StrataAIChatDB` schema v5 |
 | Server DB | Supabase PostgreSQL, `better_auth` schema, `pg` Pool |
 | Auth & quota | Better Auth 1.6 (`emailAndPassword`, `nextCookies`) + atomic sliding-window ledger |
-| UI | Tailwind 4.1 + Milo design tokens (`globals.css`), PrismJS 1.30, `motion` 12, `use-stick-to-bottom` 1.1.6, `unpdf` 1.8.1 |
+| UI | Tailwind 4.1 + Milo design tokens (`globals.css`), Streamdown 2.6 + KaTeX 0.18, Shiki 4.4 + PrismJS 1.30, `motion` 12, `use-stick-to-bottom` 1.1.6, `unpdf` 1.8.1 |
 | Observability | Langfuse 5.10 via OpenTelemetry NodeSDK (`src/instrumentation.ts`) |
 
 **Environment variables:** `GOOGLE_GENERATIVE_AI_API_KEY`, `FIREWORKS_API_KEY`, `DATABASE_URL`,
@@ -83,7 +83,7 @@ This is the spine of the system. Everything below happens for one user message.
    model execution. It sanitizes cross-provider metadata, converts messages once, strips image parts
    for text-only models, applies
    `experimental_transform: [smoothStream({ delayInMs: 15, chunking: 'word' }), coalesceToolInputDeltas()]`,
-   re-injects `buildSystemInstruction` per step via `prepareStep`, and caps the loop with
+   re-injects `buildSystemInstruction` per step via `prepareStep` (instructing models to prioritize parallel tool execution for independent tasks), and caps the loop with
    `stopWhen: isStepCount(maxSteps)`. Provider metadata pruning falls back
    `callProviderMetadata ?? providerMetadata` on tool parts so Gemini 3 `thoughtSignature` survives
    sanitization and multi-step reasoning stays intact.
@@ -126,8 +126,8 @@ that real summary text was produced, and reconciles. Server-side it reuses the s
 | `editFile` | `nameOrId`, `explanation`, `searchString`, `replaceString` | 3-strategy replacement; enforces per-file and workspace-total caps | `file-updated` |
 | `renameFile` | `nameOrId`, `newName` | Rejects case-insensitive collisions; re-detects language | `file-updated` |
 | `deleteFile` | `nameOrId` | Removes from workspace | `file-deleted` |
-| `webSearch` | `query`, depth/topic/timeRange/domains... | Tavily search, 30s timeout, mapped errors | — |
-| `extractUrl` | `urls` (1-3), `extractDepth`, `query?` | Tavily extract, 45s timeout, 10k cap per page (20k pool) | — |
+| `webSearch` | `query`, depth/topic/timeRange/domains... | Tavily search, 30s timeout, mapped errors, 280-char snippets | — |
+| `extractUrl` | `urls` (1-3), `extractDepth`, `query?` | Tavily extract, 45s timeout, 10k cap per page (20k pool), markdown sanitization | — |
 
 `editFile` delegates to `StringEditEngine` (`src/agent/tools/edit-engine.ts`), which tries
 **exact** substring, then **whitespace-normalized** line matching, then **anchor-matched**
@@ -191,7 +191,7 @@ inference failure. `getRateLimitStatus` powers the read-only `GET /api/user/rate
 src/
 ├── agent/                # Folder-based agent architecture
 │   ├── core/             # runner, stream-responder (unified choke point), token-budget, runner-error, error-classifier, transforms
-│   ├── tools/            # workspace-tools, tavily-tools, edit-engine, types
+│   ├── tools/            # workspace-tools, tavily-tools, markdown-cleaner, edit-engine, types
 │   ├── prompts/          # system, compaction
 │   ├── providers/        # resolveAgentModel, getModelProvider, reasoning mapping
 │   ├── guards/           # withAgentRouteGuards, agentRequestBodySchema, refunds
@@ -206,7 +206,7 @@ src/
 │   ├── auth/             # signin / signup / redirector
 │   ├── chat-id/[id]/     # Thin route unwrap: use(params), mounts ChatUIProvider; delegates to ChatPageClient
 │   └── api/              # agent, agent/compact, user/rate-limit, auth/[...all]
-├── components/           # ChatPageClient (workspace orchestrator), chat/ (header/, input/, message/, tools/), workspace/, sidebar/ (ConversationSection), auth/, landing/, ui/
+├── components/           # ChatPageClient (workspace orchestrator), chat/ (header/, input/, message/, tools/), workspace/, sidebar/ (ConversationSection, AccountMenu), auth/, landing/, ui/
 ├── constants/            # animations.ts (motion presets), landing-animations.ts (hero curves),
 │                         # prompts.ts (landing suggestion chips)
 ├── contexts/             # RateLimitContext (global quota), ChatUIContext (sidebar & drawer shell),
@@ -220,14 +220,14 @@ src/
     │                     # messages.ts, workspace-files.ts, schemas.ts (WorkspaceFileSchema)
     ├── ai/               # models.ts (catalog, pricing, thinking levels), token-usage.ts
     ├── attachments/      # images.ts (canvas downscaling), documents.ts (PDF/text ingestion)
-    ├── code/             # languages.ts (25 grammars), syntax-highlighter.ts
+    ├── code/             # languages.ts (25 grammars), syntax-highlighter.ts, shiki-highlighter.ts
     ├── workspace/        # download.ts (canonical extension resolution & browser downloads)
     ├── server/           # rate-limit.ts (Postgres quota)
     ├── limits.ts         # Every limit constant (never inline these numbers)
-    ├── clipboard.ts      # stripMarkdown + copy
+    ├── clipboard.ts      # stripMarkdown + markdownToPlainText + copy
     ├── id.ts             # generateId
     └── timing.ts         # thought/work-group duration estimates
-__tests__/                # 33 suites (452 passing tests), run with bun test --isolate
+__tests__/                # 35 suites (472 passing tests), run with bun test --isolate
 ├── agent/                # core, tools, guards, prompts, providers, sanitization, client
 ├── lib/                  # db, ai, code, attachments, workspace, limits, clipboard, timing
 ├── routes/               # api-agent, api-agent-compact, api-user-rate-limit
@@ -249,7 +249,7 @@ scripts/                  # migrate-better-auth-schema.ts (+ .sql), test-db.ts, 
 wrapper unwrapping `use(params)` and mounting `<ChatUIProvider>`; it delegates state composition to `src/components/ChatPageClient.tsx`.
 `ChatPageClient` calls `useChatSession(chatId)` and coordinates the 3-pillar layout (`Sidebar`, center
 `<StickToBottom>` chat viewport, and `WorkspaceDrawer`). To guarantee 60fps responsiveness during high-frequency token streams, `ChatPageClient` routes messages through `useThrottledMessages` (rAF throttling) to `<StickToBottom>` / `MessageList`, where individual turns render inside memoized `MessageRow` boundaries that isolate `flattenMessageSegments`. Message action dropdowns open downward with `z-[35]` elevation to stack cleanly above `ChatInput` (`z-30`) and below `WorkspaceDrawer` (`z-50`). `WorkspaceDrawer` isolates rendering via `[transform:translateZ(0)]` GPU compositing and overscroll containment, dynamically omitting horizontal padding (`px-0 py-4 sm:py-6`) for code files while preserving `p-4 sm:p-6` for markdown previews and editing, while `CodeViewer` uses `table-fixed` column sizing and a centered, fixed `w-12` gutter to eliminate cell measurement reflow. Dexie queries, auth calls, and router
-navigation live in `src/hooks/*`, never inside presentation primitives. Two ephemeral UI concerns
+navigation live in `src/hooks/*`, never inside presentation primitives. The pinned sidebar footer mounts `AccountMenu`, a unified dropup consolidating user profile details, real-time quota meters (5-hour and 7-day windows with reset countdowns), and dark/light theme switching. Two ephemeral UI concerns
 that would otherwise be drilled live in page-mounted scoped contexts instead: `ChatUIContext` (mobile
 sidebar drawer + desktop collapse, sessionStorage-persisted, plus workspace drawer open/close state) and `ChatInputContext` (an imperative ref
 so empty-state suggestion chips inject a prompt with no parent re-render). Conversation and workspace
@@ -268,6 +268,8 @@ All constants live in `src/lib/limits.ts`. Import them; never inline the numbers
 | Files per workspace | `MAX_FILES_PER_WORKSPACE = 10` | `writeFile` + UI | Tool throws; button disabled |
 | File length | `MAX_FILE_CHARS = 10,000` | `editFile` + editor | Edit rejected; input blocked |
 | Workspace total | `MAX_WORKSPACE_TOTAL_CHARS = 50,000` | `editFile` validator | Edit rejected |
+| Tavily extract | `10k chars/page, 20k pooled` | `markdown-cleaner.ts` | Truncated at word boundary |
+| Tavily search snippet | `280 chars` | `markdown-cleaner.ts` | Truncated at word boundary |
 | Message quota | 10 / 5h, 50 / 7d | Atomic Postgres CTE | 429 + `Retry-After` |
 | Agent steps | Clamped 1-30 (default 25) | `/api/agent` | `step-limit`; <= 2 continuations |
 | Context window | 131,072 tokens | `token-usage.ts` | Sends blocked; `/compact` offered |
@@ -290,12 +292,12 @@ concise" warning mode at the same threshold.
    `text-subheading` (18px), `text-heading` (20px), `text-title` (24px), `text-display` (32px).
    Elevation/radius: `shadow-button`, `shadow-card`, `shadow-card-lg`, `shadow-glow-primary`;
    `rounded-lg` (12), `rounded-xl` (20), `rounded-2xl` (32).
-5. **Centralized Markdown.** Every markdown surface renders through
-   `components/ui/MarkdownRenderer.tsx`, whose element map is the shared factory
-   `components/ui/createMarkdownComponents.tsx` (with `CodeSnippetBlock.tsx` for fenced code).
-   Never add direct `react-markdown` / `remark-gfm`
-   imports. (`SmoothStreamText.tsx` is the one pre-existing exception — it wraps its own renderer
-   to host the streaming caret. Don't extend the pattern.)
+5. **Centralized Markdown & Math.** Every markdown surface renders through
+   `components/ui/MarkdownRenderer.tsx`, powered by Streamdown 2.6 with `@streamdown/math` (KaTeX 0.18 formulas)
+   and Shiki 4.4 syntax highlighting (`CodeSnippetBlock.tsx`), whose element map is the shared factory
+   `components/ui/createMarkdownComponents.tsx`.
+   Never add direct uncurated markdown parser imports. (`SmoothStreamText.tsx` delegates directly to
+   `MarkdownRenderer` with an inline streaming caret.)
 6. **Tool Card Decoupling.** Adding a tool means registering config + summary in
    `components/chat/tools/resolver.tsx`. Never edit `ToolCallCard.tsx`.
 7. **Presentational Purity.** Components render props. Queries, auth, and routing live in
@@ -311,8 +313,8 @@ concise" warning mode at the same threshold.
 12. **No Emojis, Preserve Comments.** No emojis in code or files; keep existing doc comments intact.
 
 **Testing conventions:** suites live under `__tests__/` in domain folders — `agent/`, `lib/`,
-and `routes/` (plus root-level `proxy.test.ts`) — and run via `bun test --isolate` (33 suites,
-452 passing tests). Shared fixtures
+and `routes/` (plus root-level `proxy.test.ts`) — and run via `bun test --isolate` (35 suites,
+472 passing tests). Shared fixtures
 (`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`, `withEnv`) come from
 `__tests__/helpers.ts`. Route tests must `mock.module` `@/lib/auth/server`, `@/lib/server/rate-limit`, and
 `@/agent/core/runner` *before* dynamically importing the route.
