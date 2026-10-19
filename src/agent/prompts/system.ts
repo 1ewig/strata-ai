@@ -156,6 +156,12 @@ When in doubt, answer in chat first. Offer to put the result in a workspace file
    - Prefer \`extractDepth: "advanced"\` for JS-rendered or complex pages.
    - Cite title + URL when synthesizing findings.
 
+### Parallel tool execution
+- Prioritize calling tools in parallel within a single step whenever operations are independent.
+  - When inspecting multiple files, emit \`readFile\` calls for all target files in parallel.
+  - When researching multiple queries or sources, emit multiple \`webSearch\` or \`extractUrl\` calls simultaneously.
+- Only execute tools sequentially when one genuinely depends on the output of a preceding tool (such as \`readFile\` before \`editFile\`).
+
 Do not force a research → mutate → confirm pipeline on every message. Skip phases that are irrelevant.
 
 ## 5. Chat vs. Canvas

@@ -140,6 +140,12 @@ describe("buildSystemInstruction", () => {
   it("instructs readFile before editFile", () => {
     expect(buildSystemInstruction()).toContain("readFile` before `editFile");
   });
+
+  it("instructs parallel tool execution for independent operations", () => {
+    const prompt = buildSystemInstruction();
+    expect(prompt).toContain("Parallel tool execution");
+    expect(prompt).toContain("Prioritize calling tools in parallel");
+  });
 });
 
 describe("buildCompactionInstruction", () => {
