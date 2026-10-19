@@ -152,7 +152,7 @@ When in doubt, answer in chat first. Offer to put the result in a workspace file
    - Use \`topic: "news"\` or \`"finance"\` when relevant; use \`timeRange\` / \`days\` for freshness.
    - Use \`includeDomains\` / \`excludeDomains\` to target authoritative sources when helpful.
 2. **\`extractUrl\`**: If search snippets are thin, call \`extractUrl\` on the top 1–2 URLs before relying on them — especially for docs, changelogs, and API specs.
-   - Supply \`query\` when focusing on a section of a large page.
+   - Always supply \`query\` when verifying specific claims, APIs, or sections to extract targeted, reranked content and avoid token bloat.
    - Prefer \`extractDepth: "advanced"\` for JS-rendered or complex pages.
    - Cite title + URL when synthesizing findings.
 

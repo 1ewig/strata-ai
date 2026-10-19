@@ -37,6 +37,13 @@ export const MAX_DOCUMENT_TEXT_CHARS = 25_000;
 /** Server-side gate for document data URL length (chars). */
 export const MAX_DOCUMENT_DATA_URL_CHARS = 7_000_000;
 
+/** Maximum character length returned per extracted web page via Tavily. */
+export const MAX_TAVILY_EXTRACT_CHARS_PER_PAGE = 10_000;
+/** Maximum combined character length across all extracted web pages in a single tool call. */
+export const MAX_TAVILY_EXTRACT_TOTAL_CHARS = 20_000;
+/** Maximum character length of an individual web search snippet before word-boundary truncation. */
+export const MAX_TAVILY_SEARCH_SNIPPET_CHARS = 280;
+
 /** MIME types accepted for document attachments. */
 export const ALLOWED_DOCUMENT_TYPES = [
   'application/pdf',

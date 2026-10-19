@@ -127,7 +127,7 @@ that real summary text was produced, and reconciles. Server-side it reuses the s
 | `renameFile` | `nameOrId`, `newName` | Rejects case-insensitive collisions; re-detects language | `file-updated` |
 | `deleteFile` | `nameOrId` | Removes from workspace | `file-deleted` |
 | `webSearch` | `query`, depth/topic/timeRange/domains... | Tavily search, 30s timeout, mapped errors | — |
-| `extractUrl` | `urls` (1-3), `extractDepth`, `query?` | Tavily extract, 45s timeout, 18k char cap per page | — |
+| `extractUrl` | `urls` (1-3), `extractDepth`, `query?` | Tavily extract, 45s timeout, 10k cap per page (20k pool) | — |
 
 `editFile` delegates to `StringEditEngine` (`src/agent/tools/edit-engine.ts`), which tries
 **exact** substring, then **whitespace-normalized** line matching, then **anchor-matched**
