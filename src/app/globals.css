@@ -364,6 +364,7 @@ html[data-theme="dark"] .bg-primary ::selection {
   border-radius: 8px;
   line-height: 1.5;
   max-width: 100%;
+  contain: paint layout;
 }
 
 .katex-display > .katex {

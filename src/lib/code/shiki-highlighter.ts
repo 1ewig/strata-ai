@@ -180,40 +180,63 @@ export function getCachedHighlight(
 }
 
 /**
+ * Pre-warms the highlighter singleton during browser idle time so the first code
+ * block encountered renders with zero initialization latency.
+ */
+export function prewarmHighlighter(): void {
+  if (typeof window === 'undefined') return;
+  if ('requestIdleCallback' in window) {
+    (window as any).requestIdleCallback(() => {
+      getHighlighterInstance().catch(() => {});
+    });
+  } else {
+    setTimeout(() => {
+      getHighlighterInstance().catch(() => {});
+    }, 1000);
+  }
+}
+
+/**
  * React hook for asynchronous, non-blocking syntax highlighting with zero layout shift.
+ * Debounces execution by default (120ms) so active streaming token churn renders
+ * monospace text immediately with 0 CPU overhead, then smoothly applies Shiki highlighting
+ * as soon as the code block finishes or settles.
  */
 export function useHighlightedCode(
   code: string,
   language?: string,
-  theme: 'dark' | 'light' = 'dark'
+  theme: 'dark' | 'light' = 'dark',
+  debounceMs: number = 120
 ): HighlightResult {
   const cached = getCachedHighlight(code, language, theme);
   const [asyncHtml, setAsyncHtml] = useState<string | null>(null);
-  const [prevKey, setPrevKey] = useState(`${theme}:${language}:${code}`);
-
-  const currentKey = `${theme}:${language}:${code}`;
-  if (currentKey !== prevKey) {
-    setPrevKey(currentKey);
-    setAsyncHtml(null);
-  }
 
   useEffect(() => {
-    if (cached) return;
+    if (cached) {
+      setAsyncHtml(null);
+      return;
+    }
 
     const lang = normalizeLanguage(language);
-    if (lang === 'text') return;
+    if (lang === 'text' || !code) {
+      setAsyncHtml(null);
+      return;
+    }
 
     let isMounted = true;
-    highlightSnippet(code, language, theme).then((res) => {
-      if (isMounted) {
-        setAsyncHtml(res);
-      }
-    });
+    const timer = setTimeout(() => {
+      highlightSnippet(code, language, theme).then((res) => {
+        if (isMounted) {
+          setAsyncHtml(res);
+        }
+      });
+    }, debounceMs);
 
     return () => {
       isMounted = false;
+      clearTimeout(timer);
     };
-  }, [code, language, theme, cached]);
+  }, [code, language, theme, cached, debounceMs]);
 
   const effectiveHtml = cached ?? asyncHtml;
 
