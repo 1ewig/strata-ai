@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { StickToBottom } from 'use-stick-to-bottom';
 import { ArrowDown } from 'lucide-react';
@@ -23,11 +23,6 @@ import MessageList from '@/components/chat/message/MessageList';
 import { pillFloatVariants } from '@/constants/animations';
 import { prewarmHighlighter } from '@/lib/code/shiki-highlighter';
 
-/**
- * Extra clearance at the bottom of the chat viewport so downward-opening
- * menus (e.g. MessageActionsMenu) do not collide with the floating ChatInput.
- */
-const CHAT_VIEWPORT_BOTTOM_BUFFER_PX = 100;
 
 export interface ChatPageClientProps {
   chatId: string;
@@ -118,26 +113,6 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
   );
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputContainerRef = useRef<HTMLDivElement>(null);
-  const [inputHeight, setInputHeight] = useState(176);
-
-  // Dynamically sync bottom padding of the chat content with floating chat input height changes
-  React.useEffect(() => {
-    const el = inputContainerRef.current;
-    if (!el) return;
-
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const height = entry.borderBoxSize?.[0]?.blockSize ?? el.offsetHeight;
-        if (height > 0) {
-          setInputHeight(Math.ceil(height));
-        }
-      }
-    });
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   // Show a spinner while the session is still being verified or redirecting from an unauthorized chat.
   if (isSessionPending || !session?.user || isUnauthorized) {
@@ -204,21 +179,17 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
           />
 
             <StickToBottom
-              className="flex-1 min-h-0 overscroll-y-contain [overflow-anchor:auto] [will-change:scroll-position] [transform:translateZ(0)] chat-scroll-container"
+              className="flex-1 min-h-0 relative overflow-hidden chat-scroll-container"
               resize="auto"
               initial="instant"
             >
               {(context) => (
                 <>
                   <StickToBottom.Content
+                    scrollClassName="chat-scroll-container"
                     className={`max-w-4xl w-full mx-auto px-4 ${
-                      isNewChat ? 'min-h-full flex flex-col justify-center py-6' : ''
+                      isNewChat ? 'min-h-full flex flex-col justify-center py-6' : 'py-4'
                     }`}
-                    style={
-                      !isNewChat
-                        ? { paddingBottom: `${inputHeight + CHAT_VIEWPORT_BOTTOM_BUFFER_PX}px` }
-                        : undefined
-                    }
                   >
                     {isNewChat ? (
                       <ChatHero chatId={chatId} chatInputNode={chatInputNode} />
@@ -231,43 +202,44 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
                     )}
                   </StickToBottom.Content>
 
+                  {/* Floating button appears when scrolled up - anchored cleanly above the docked input */}
                   {!isNewChat && (
-                    <div
-                      ref={inputContainerRef}
-                      className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-surface-base via-surface-base/95 to-transparent pt-12 pb-4 px-4 pointer-events-none z-30 animate-slide-up"
-                    >
-                      <div className="relative max-w-4xl mx-auto pointer-events-auto">
-                        {/* Floating button appears when scrolled up - anchored cleanly above ChatInput */}
-                        <AnimatePresence>
-                          {!context.isAtBottom && (
-                            <motion.div
-                              key="scroll-to-bottom"
-                              variants={pillFloatVariants}
-                              initial="hidden"
-                              animate="visible"
-                              exit="exit"
-                              className="absolute bottom-full mb-3.5 left-1/2 -translate-x-1/2 z-10 pointer-events-auto"
-                            >
-                              <motion.button
-                                type="button"
-                                whileHover={{ scale: 1.04 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => context.scrollToBottom()}
-                                className="flex items-center gap-1.5 rounded-full border border-edge-raised bg-surface-raised/95 dark:bg-surface-raised/90 px-3.5 py-1.5 text-caption font-semibold text-text-primary hover:text-text-bright shadow-card-lg backdrop-blur-md transition-colors cursor-pointer select-none"
-                              >
-                                <ArrowDown className="w-3.5 h-3.5 text-primary" />
-                                <span>Scroll to bottom</span>
-                              </motion.button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                        {chatInputNode}
-                      </div>
-                    </div>
+                    <AnimatePresence>
+                      {!context.isAtBottom && (
+                        <motion.div
+                          key="scroll-to-bottom"
+                          variants={pillFloatVariants}
+                          initial="hidden"
+                          animate="visible"
+                          exit="exit"
+                          className="absolute bottom-3.5 left-1/2 -translate-x-1/2 z-30 pointer-events-auto"
+                        >
+                          <motion.button
+                            type="button"
+                            whileHover={{ scale: 1.04 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => context.scrollToBottom()}
+                            className="flex items-center gap-1.5 rounded-full border border-edge-raised bg-surface-raised/95 dark:bg-surface-raised/90 px-3.5 py-1.5 text-caption font-semibold text-text-primary hover:text-text-bright shadow-card-lg backdrop-blur-md transition-colors cursor-pointer select-none"
+                          >
+                            <ArrowDown className="w-3.5 h-3.5 text-primary" />
+                            <span>Scroll to bottom</span>
+                          </motion.button>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   )}
                 </>
               )}
             </StickToBottom>
+
+            {/* Docked Chat Input Bar below the scroll area */}
+            {!isNewChat && (
+              <div className="shrink-0 pt-2 pb-4 px-4 animate-slide-up">
+                <div className="max-w-4xl mx-auto">
+                  {chatInputNode}
+                </div>
+              </div>
+            )}
           </div>
 
           <WorkspaceDrawer
