@@ -107,7 +107,7 @@ function AssistantMessageItem({
                       isOpen={isMenuOpen}
                       onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
                       align="left"
-                      direction="down"
+                      direction="up"
                     />
                     {sources.length > 0 && isLastSegment && (
                       <MessageSourcesButton sources={sources} />
