@@ -245,4 +245,34 @@ describe("flattenMessageSegments", () => {
     expect(toolPart.result).toEqual({ success: true, action: "created" });
     expect(toolPart.state).toBe("output-available");
   });
+
+  it("marks pre-tool and pre-reasoning text as intermediate narration", () => {
+    const message = {
+      role: "assistant",
+      parts: [
+        { type: "text", text: "Let me check the files first." },
+        { type: "tool-call", toolCallId: "call-1", toolName: "listFiles", args: {} },
+        { type: "tool-result", toolCallId: "call-1", toolName: "listFiles", result: { files: [] } },
+        { type: "text", text: "Here is the final result." },
+      ],
+    };
+
+    const streamingSegments = flattenMessageSegments(message, true);
+    expect(streamingSegments).toHaveLength(3);
+    expect(streamingSegments[0].type).toBe("text");
+    expect(streamingSegments[0].isIntermediate).toBe(true);
+    expect(streamingSegments[1].type).toBe("tool");
+    expect(streamingSegments[2].type).toBe("text");
+    expect(streamingSegments[2].isIntermediate).toBeUndefined();
+
+    const finishedSegments = flattenMessageSegments(message, false);
+    expect(finishedSegments).toHaveLength(2);
+    expect(finishedSegments[0].type).toBe("work-group");
+    expect(finishedSegments[0].items?.map((s) => s.type)).toEqual(["text", "tool"]);
+    expect(finishedSegments[1]).toEqual({
+      type: "text",
+      content: "Here is the final result.",
+      key: "text-final",
+    });
+  });
 });

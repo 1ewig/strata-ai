@@ -83,6 +83,7 @@ function AssistantMessageItem({
           }
 
           if (seg.type === 'text') {
+            const isIntermediate = seg.isIntermediate === true || (!isLastSegment && isStreaming);
             const isStreamingActiveSegment = isStreaming && isLastSegment;
             const textContent = seg.content || '';
             const isCompacted = (message.metadata as ChatMetadata | undefined)?.isCompactedSummary === true;
@@ -91,16 +92,24 @@ function AssistantMessageItem({
             }
             return (
               <div key={seg.key} className="flex flex-col items-start w-full min-w-0">
-                <div className="text-body text-text-primary leading-relaxed relative select-text cursor-text w-full">
+                <div
+                  className={`leading-relaxed relative select-text cursor-text w-full ${
+                    isIntermediate
+                      ? 'text-label text-text-secondary/90 italic'
+                      : 'text-body text-text-primary'
+                  }`}
+                >
                   <MarkdownRenderer
                     content={textContent}
-                    variant="assistant"
+                    variant={isIntermediate ? 'thought' : 'assistant'}
                     isStreaming={isStreamingActiveSegment}
-                    className="text-body text-text-primary leading-relaxed relative select-text cursor-text"
+                    className={`leading-relaxed relative select-text cursor-text ${
+                      isIntermediate ? 'text-label text-text-secondary/90' : 'text-body text-text-primary'
+                    }`}
                   />
                 </div>
 
-                {!isStreamingActiveSegment && textContent && (
+                {!isIntermediate && isLastSegment && !isStreaming && textContent && (
                   <div className="flex items-center justify-start gap-1 pt-1.5 pb-0.5">
                     <MessageActionsMenu
                       textContent={textContent}
@@ -109,7 +118,7 @@ function AssistantMessageItem({
                       align="left"
                       direction="up"
                     />
-                    {sources.length > 0 && isLastSegment && (
+                    {sources.length > 0 && (
                       <MessageSourcesButton sources={sources} />
                     )}
                   </div>

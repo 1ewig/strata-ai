@@ -211,7 +211,7 @@ which the system prompt and the UI share so both flip into "be concise" mode at 
 ## 12. Tests
 
 Suites live under `__tests__/` in domain folders — `agent/`, `lib/`, `routes/` — plus a root-level
-`proxy.test.ts`: 36 files, 98 describe blocks, 483 test cases, run with `bun test --isolate`. Shared fixtures
+`proxy.test.ts`: 36 files, 98 describe blocks, 484 test cases, run with `bun test --isolate`. Shared fixtures
 (`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`, `withEnv`) come from `__tests__/helpers.ts`.
 Route tests `mock.module` the auth server, the rate-limit module, and the runner before dynamically importing
 the route.

@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-7.0.2-blue?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS 4](https://img.shields.io/badge/Tailwind-v4.1.11-38BDF8?style=for-the-badge&logo=tailwindcss)](https://tailwindcss.com/)
 [![Runtime](https://img.shields.io/badge/Runtime-Bun%201.4-f472b6?style=for-the-badge&logo=bun)](https://bun.sh/)
-[![Tests](https://img.shields.io/badge/Tests-483%20passing%20(36%20suites)-success?style=for-the-badge&logo=bun)](https://bun.sh/)
+[![Tests](https://img.shields.io/badge/Tests-484%20passing%20(36%20suites)-success?style=for-the-badge&logo=bun)](https://bun.sh/)
 
 **Strata AI** is a conversational workspace studio where AI does not just reply—it builds. 
 
@@ -88,7 +88,7 @@ bun run dev          # Launch the dev server at http://localhost:3000
 
 ## Technical Documentation & Invariants
 
-Strata AI is built around a disciplined architecture: zero server actions, local-first client persistence via Dexie, unified SSE streaming with AI SDK 7, rAF-throttled 60fps streaming message rendering, memoized historical turns, GPU-isolated `table-fixed` canvas drawer, atomic sliding-window quotas in PostgreSQL, the custom Milo Design System, and 36 isolated test suites (483 passing tests).
+Strata AI is built around a disciplined architecture: zero server actions, local-first client persistence via Dexie, unified SSE streaming with AI SDK 7, rAF-throttled 60fps streaming message rendering, memoized historical turns, GPU-isolated `table-fixed` canvas drawer, atomic sliding-window quotas in PostgreSQL, the custom Milo Design System, and 36 isolated test suites (484 passing tests).
 
 For comprehensive architectural specifications, data schemas, streaming protocols, and agent operating rules, refer to:
 
@@ -104,7 +104,7 @@ For comprehensive architectural specifications, data schemas, streaming protocol
 | `bun run build` | Build the Next.js application for production (`next build`) |
 | `bun run typecheck` | Fast multi-core type checking via `bun check` |
 | `bun run lint` | Run Oxlint across the codebase |
-| `bun run test` | Run the full test suite with module isolation (`bun test --isolate`, 36 suites, 483 tests) |
+| `bun run test` | Run the full test suite with module isolation (`bun test --isolate`, 36 suites, 484 tests) |
 | `bun run db:migrate` | Initialize or update the PostgreSQL database schema |
 | `bun run db:test` | Run database connection and schema healthcheck |
 

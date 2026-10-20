@@ -50,6 +50,7 @@ export interface Segment {
   images?: ImageAttachmentInfo[];
   documents?: DocumentAttachmentInfo[];
   key: string;
+  isIntermediate?: boolean;
 }
 
 /**
@@ -144,7 +145,7 @@ export function flattenMessageSegments(
 
     if (isReasoning) {
       if (currentText) {
-        rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}` });
+        rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}`, isIntermediate: true });
         currentText = '';
       }
       const reasoningText =
@@ -158,7 +159,7 @@ export function flattenMessageSegments(
       }
     } else if (isTool) {
       if (currentText) {
-        rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}` });
+        rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}`, isIntermediate: true });
         currentText = '';
       }
       const norm = normalizeToolPart(p, idx);
@@ -221,7 +222,7 @@ export function flattenMessageSegments(
   // Only the final text segment renders as the assistant message bubble.
   const result: Segment[] = [];
   const lastSegment = rawSegments[rawSegments.length - 1];
-  const hasFinalText = lastSegment?.type === 'text';
+  const hasFinalText = lastSegment?.type === 'text' && !lastSegment.isIntermediate;
   const workItems = hasFinalText ? rawSegments.slice(0, -1) : rawSegments;
 
   if (workItems.length > 0) {
