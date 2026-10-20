@@ -22,8 +22,6 @@ import ChatHero from '@/components/chat/ChatHero';
 import MessageList from '@/components/chat/message/MessageList';
 import { pillFloatVariants } from '@/constants/animations';
 import { prewarmHighlighter } from '@/lib/code/shiki-highlighter';
-import { useActiveScrollbar } from '@/hooks/common/useActiveScrollbar';
-
 
 export interface ChatPageClientProps {
   chatId: string;
@@ -35,7 +33,6 @@ export interface ChatPageClientProps {
  * and renders the 3-pillar layout (Sidebar, center StickToBottom chat viewport, and WorkspaceDrawer).
  */
 export default function ChatPageClient({ chatId }: ChatPageClientProps) {
-  useActiveScrollbar();
   const router = useRouter();
   const { data: session, isPending: isSessionPending } = useSession();
   const userId = session?.user?.id;
