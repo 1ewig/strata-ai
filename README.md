@@ -22,30 +22,30 @@ All your conversations and files stay completely private, persisting locally ins
 
 ## The Strata Experience
 
-### 1. Flexible Model Selection & Controllable Thinking
-Switch seamlessly between flagship frontier models like **Gemini 3.5 Flash Lite** and open-weight powerhouses like **GLM 5.3 Flash** and **DeepSeek V4.1 Flash**. Dial reasoning effort up or down—from rapid responses for quick iterations to deep, multi-step deliberation on intricate architectural challenges.
+### 1. Flexible Model Selection, Attachments & Controllable Thinking
+Switch seamlessly between flagship frontier models like **Gemini 3.5 Flash Lite** and open-weight powerhouses like **GLM 5.3 Flash** and **DeepSeek V4.1 Flash**. Attach images for visual breakdown or upload PDFs, markdown reports, and source code files directly into the prompt—the agent analyzes attachments natively, extracting context and referencing documents while planning its work. Dial reasoning effort up or down—from rapid responses for quick iterations to deep, multi-step deliberation on intricate architectural challenges.
 
-![Model and Thinking Effort Selector](public/images/model-selector-menu.webp)
+![Model Picker, Effort Control and Attachment Entry](public/images/model-selector-menu.webp)
 
-### 2. Multimodal Input & Document Ingestion
-Attach images for visual breakdown or upload PDFs, markdown reports, and source code files directly into the prompt. The agent analyzes attachments natively, extracting context and referencing documents while planning its work.
+### 2. Account, Usage & Theme
+Your account lives one click away in the sidebar footer. The account dropup surfaces the signed-in profile, live usage quota across both the rolling 5-hour and 7-day windows with their reset countdowns, a light/dark switch, and sign-out—without ever leaving the conversation.
 
-![Chat Input with Attachments & Thinking Mode](public/images/input-attach-focus.webp)
+![Account Dropup with Usage Quota and Theme Control](public/images/account-menu-usage.webp)
 
 ### 3. Autonomous Reasoning & Multi-Step Tool Execution
 When tasked with complex objectives, Strata AI does not generate guesswork. It runs autonomous loops—searching the live web, inspecting existing files, making surgical diffs, and verifying outputs. Every thought and tool invocation streams in real time through an intuitive, collapsible accordion.
 
 ![Autonomous Reasoning and Tool Pipeline](public/images/agent-reasoning-and-tools.webp)
 
-### 4. Living Workspace Drawer & Code Viewer
-Files drafted by the agent live on a dedicated slide-over canvas drawer. With syntax highlighting across 25 languages, line numbers, and live character counting, you can inspect, download, or edit files side-by-side with your conversation.
+### 4. Living Workspace Drawer & Document Viewer
+Files drafted by the agent live on a dedicated slide-over canvas drawer. Markdown documents render inline with a **Source** toggle for the raw text, while code files get syntax highlighting across 25 languages, line numbers, and live character counting. Inspect, download, or edit any file side-by-side with your conversation.
 
-![Workspace Drawer Code Viewer](public/images/workspace-code-editor.webp)
+![Rendered Document Preview in the Workspace Drawer](public/images/workspace-document-preview.webp)
 
 ### 5. Structured Outputs & Work Summaries
-Once an agent turn completes, intermediate thoughts and tool executions neatly fold away into a single summary card. Your chat remains uncluttered, presenting polished answers, comparison matrices, and clear takeaways.
+Once an agent turn completes, intermediate thoughts and tool executions neatly fold away into a single summary card. Your chat remains uncluttered, presenting polished answers with the sources behind them, the files they produced, and clear takeaways.
 
-![Synthesized Output and Folded Work Card](public/images/chat-response-table.webp)
+![Synthesized Answer with Sources and Created File](public/images/chat-response-table.webp)
 
 ---
 
