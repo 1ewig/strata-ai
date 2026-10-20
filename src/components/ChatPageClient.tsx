@@ -187,7 +187,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
                   <StickToBottom.Content
                     scrollClassName="chat-scroll-container"
                     className={`max-w-4xl w-full mx-auto px-4 ${
-                      isNewChat ? 'min-h-full flex flex-col justify-center py-6' : 'pt-4 pb-0'
+                      isNewChat ? 'min-h-full flex flex-col justify-center py-6' : 'pt-4 pb-3.5'
                     }`}
                   >
                     {isNewChat ? (
