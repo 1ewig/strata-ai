@@ -194,22 +194,31 @@ html[data-theme="dark"] body::before {
 }
 
 @supports not selector(::-webkit-scrollbar) {
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) transparent;
+  @media (max-width: 767px) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: transparent transparent;
+      transition: scrollbar-color 0.3s ease;
+    }
+
+    .is-scrolling,
+    .is-scrolling *,
+    html.is-scrolling * {
+      scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
+  }
+
+  @media (min-width: 768px) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--scrollbar-thumb) transparent;
+    }
   }
 }
 
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
-}
-
-@media (min-width: 768px) {
-  ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-  }
 }
 
 ::-webkit-scrollbar-button,
@@ -234,16 +243,47 @@ html[data-theme="dark"] body::before {
   transition: background 0.15s ease;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--scrollbar-thumb-hover);
+/* Mobile Scrollbars: Hide thumb when idle, smoothly show while actively scrolling */
+@media (max-width: 767px) {
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb,
+  .chat-scroll-container::-webkit-scrollbar-thumb {
+    background: transparent;
+    transition: background 0.3s ease;
+  }
+
+  .is-scrolling::-webkit-scrollbar-thumb,
+  .is-scrolling *::-webkit-scrollbar-thumb,
+  html.is-scrolling ::-webkit-scrollbar-thumb,
+  .chat-scroll-container.is-scrolling::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    transition: background 0.15s ease;
+  }
 }
 
-::-webkit-scrollbar-thumb:active {
-  background: var(--scrollbar-thumb-active);
-}
-
-/* Desktop Chat Scroll Container */
+/* Desktop Chat Scroll Container & Desktop Scrollbars */
 @media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: var(--scrollbar-thumb-active);
+  }
+
   .chat-scroll-container::-webkit-scrollbar {
     width: 9px;
   }
