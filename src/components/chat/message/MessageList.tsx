@@ -19,6 +19,7 @@ export interface MessageListProps {
 interface MessageRowProps {
   message: ChatMessage;
   isStreaming: boolean;
+  className?: string;
 }
 
 /**
@@ -27,7 +28,7 @@ interface MessageRowProps {
  * never re-run segmentation or re-render during active streaming or scrolling.
  */
 const MessageRow = React.memo(
-  function MessageRow({ message, isStreaming }: MessageRowProps) {
+  function MessageRow({ message, isStreaming, className = '' }: MessageRowProps) {
     const isUser = message.role === 'user';
     const segments = React.useMemo(
       () => flattenMessageSegments(message, isStreaming),
@@ -35,18 +36,27 @@ const MessageRow = React.memo(
     );
 
     if (isUser) {
-      return <UserMessageItem segments={segments} />;
+      return (
+        <div className={className}>
+          <UserMessageItem segments={segments} />
+        </div>
+      );
     }
 
     return (
-      <AssistantMessageItem
-        message={message}
-        segments={segments}
-        isStreaming={isStreaming}
-      />
+      <div className={className}>
+        <AssistantMessageItem
+          message={message}
+          segments={segments}
+          isStreaming={isStreaming}
+        />
+      </div>
     );
   },
-  (prev, next) => prev.message === next.message && prev.isStreaming === next.isStreaming,
+  (prev, next) =>
+    prev.message === next.message &&
+    prev.isStreaming === next.isStreaming &&
+    prev.className === next.className,
 );
 
 /**
@@ -60,7 +70,7 @@ function MessageList({
   messagesEndRef,
 }: MessageListProps) {
   return (
-    <div className="pt-4 space-y-4">
+    <div className="pt-4">
       {/* Fallback empty state if no messages exist and not loading */}
       {messages.length === 0 && !isLoading && (
         <motion.div
@@ -84,11 +94,23 @@ function MessageList({
         const isCompacted = meta?.isCompactedSummary === true;
         const isCompactionFailed = meta?.isCompactionFailed === true;
 
+        const isFollowUp = idx > 0 && messages[idx - 1].role === message.role;
+        const rowMargin =
+          idx === 0
+            ? ''
+            : isUser
+              ? (isFollowUp ? 'mt-1.5' : 'mt-6')
+              : 'mt-1';
+
         return (
           <React.Fragment key={message.id}>
             {isCompacted && <CompactionDivider label="Compaction started" />}
 
-            <MessageRow message={message} isStreaming={isLastAssistant} />
+            <MessageRow
+              message={message}
+              isStreaming={isLastAssistant}
+              className={rowMargin}
+            />
 
             {isCompacted && !isLastAssistant && (
               <CompactionDivider
@@ -102,7 +124,7 @@ function MessageList({
 
       {/* Standalone typing bubble before the first assistant tokens arrive */}
       {isLoading && (messages.length === 0 || messages[messages.length - 1].role === 'user') && (
-        <div className="flex items-start gap-3.5 fade-in">
+        <div className="flex items-start gap-3.5 fade-in mt-1">
           <div className="hidden sm:flex shrink-0 mt-0.5">
             <StrataIcon className="w-7 h-7" />
           </div>

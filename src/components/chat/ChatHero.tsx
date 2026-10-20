@@ -19,8 +19,8 @@ export interface ChatHeroProps {
 
 /**
  * Empty-state hero presentation shown on new/empty conversations:
- * brand icon with ambient glow, greeting, suggestion chips, centered
- * chat input slot, and supported engines strip.
+ * brand icon with ambient glow, impactful single-row headline,
+ * centered chat input slot, and suggestion chips anchored below.
  */
 function ChatHero({ chatId, chatInputNode }: ChatHeroProps) {
   const { insertPrompt } = useChatInput();
@@ -28,6 +28,18 @@ function ChatHero({ chatId, chatInputNode }: ChatHeroProps) {
   const welcomeMessage = React.useMemo(() => {
     return getWelcomeMessage(chatId);
   }, [chatId]);
+
+  const { greetingText, punctuation } = React.useMemo(() => {
+    const raw = welcomeMessage.trim();
+    if (raw.endsWith('?')) {
+      return { greetingText: raw.slice(0, -1), punctuation: '?' };
+    }
+    if (raw.endsWith('.')) {
+      return { greetingText: raw.slice(0, -1), punctuation: '.' };
+    }
+    const isQuestion = /^(how|what|where|who|why|which|can|could|would|should|will|is|are)\b/i.test(raw);
+    return { greetingText: raw, punctuation: isQuestion ? '?' : '.' };
+  }, [welcomeMessage]);
 
   const handleChipClick = (promptText: string) => {
     insertPrompt(promptText);
@@ -50,12 +62,20 @@ function ChatHero({ chatId, chatInputNode }: ChatHeroProps) {
       {/* Hero Greeting */}
       <motion.h2
         variants={heroItemVariants}
-        className="text-title sm:text-display font-bold text-text-bright font-display tracking-tight"
+        className="text-2xl sm:text-3xl md:text-4xl font-extrabold text-text-bright font-display tracking-tight leading-tight max-w-2xl mx-auto"
       >
-        {welcomeMessage}
+        {greetingText}
+        <span className="text-primary">{punctuation}</span>
       </motion.h2>
 
-      {/* Quick Action Suggestion Chips */}
+      {/* Chat Input Slot */}
+      {chatInputNode && (
+        <motion.div variants={heroItemVariants} className="w-full text-left pt-2">
+          {chatInputNode}
+        </motion.div>
+      )}
+
+      {/* Quick Action Suggestion Chips at the bottom */}
       <motion.div
         variants={heroItemVariants}
         className="flex flex-wrap items-center justify-center gap-2 pt-1 max-w-xl"
@@ -76,34 +96,6 @@ function ChatHero({ chatId, chatInputNode }: ChatHeroProps) {
             </motion.button>
           );
         })}
-      </motion.div>
-
-      {/* Chat Input Slot */}
-      {chatInputNode && (
-        <motion.div variants={heroItemVariants} className="w-full text-left pt-2">
-          {chatInputNode}
-        </motion.div>
-      )}
-
-      {/* Supported Engines Strip */}
-      <motion.div
-        variants={heroItemVariants}
-        className="pt-2 flex flex-col items-center gap-2 text-micro text-text-muted font-medium"
-      >
-        <span className="uppercase tracking-widest text-micro text-text-muted">
-          Supported Engines
-        </span>
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          <span className="px-2.5 py-1 rounded-lg bg-surface-raised/80 dark:bg-surface-elevated/70 border border-edge-raised text-text-secondary font-semibold text-micro hover:border-primary/30 transition-colors">
-            Google Gemini 3.5
-          </span>
-          <span className="px-2.5 py-1 rounded-lg bg-surface-raised/80 dark:bg-surface-elevated/70 border border-edge-raised text-text-secondary font-semibold text-micro hover:border-primary/30 transition-colors">
-            GLM 5.3 Flash
-          </span>
-          <span className="px-2.5 py-1 rounded-lg bg-surface-raised/80 dark:bg-surface-elevated/70 border border-edge-raised text-text-secondary font-semibold text-micro hover:border-primary/30 transition-colors">
-            Tavily Realtime Web
-          </span>
-        </div>
       </motion.div>
     </motion.div>
   );

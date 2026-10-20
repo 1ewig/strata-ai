@@ -11,6 +11,8 @@ import InferenceTimer from './InferenceTimer';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import type { Segment } from '@/agent/client/segments';
 import { useBubbleActionMenu } from '@/hooks/chat/useBubbleActionMenu';
+import MessageSourcesButton from './MessageSourcesButton';
+import { extractWebSourcesFromMessage } from '@/lib/urls';
 
 export interface AssistantMessageItemProps {
   message: ChatMessage;
@@ -28,12 +30,14 @@ function AssistantMessageItem({
   isStreaming = false,
 }: AssistantMessageItemProps) {
   const {
-    activeBubbleKey,
     openMenuKey,
     setOpenMenuKey,
     containerRef,
-    handleBubbleClick,
   } = useBubbleActionMenu();
+
+  const sources = React.useMemo(() => {
+    return extractWebSourcesFromMessage(message);
+  }, [message]);
 
   return (
     <div
@@ -48,11 +52,10 @@ function AssistantMessageItem({
         )}
       </div>
 
-      {/* Bubble Message Content */}
-      <div className="flex flex-col min-w-0 gap-2 items-start w-fit max-w-full">
+      {/* Assistant Message Content */}
+      <div className="flex flex-col min-w-0 flex-1 gap-1 items-start max-w-full">
         {segments.map((seg, segIdx) => {
           const isLastSegment = segIdx === segments.length - 1;
-          const isActionActive = openMenuKey === seg.key || activeBubbleKey === seg.key;
           const isMenuOpen = openMenuKey === seg.key;
 
           if (seg.type === 'work-group' && seg.items && seg.items.length > 0) {
@@ -80,6 +83,7 @@ function AssistantMessageItem({
           }
 
           if (seg.type === 'text') {
+            const isIntermediate = seg.isIntermediate === true || (!isLastSegment && isStreaming);
             const isStreamingActiveSegment = isStreaming && isLastSegment;
             const textContent = seg.content || '';
             const isCompacted = (message.metadata as ChatMetadata | undefined)?.isCompactedSummary === true;
@@ -87,40 +91,36 @@ function AssistantMessageItem({
               return null;
             }
             return (
-              <div key={seg.key} className="flex flex-col items-start gap-1 w-fit max-w-full">
+              <div key={seg.key} className="flex flex-col items-start w-full min-w-0">
                 <div
-                  onClick={(e) => !isStreamingActiveSegment && handleBubbleClick(e, seg.key)}
-                  className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 fade-in bg-surface-raised border text-text-primary rounded-tl-xs w-fit max-w-full cursor-default select-none ${
-                    isActionActive
-                      ? 'border-primary/60 shadow-card-lg'
-                      : 'border-edge-raised hover:border-primary/60 shadow-card hover:shadow-card-lg'
-                  } ${isStreamingActiveSegment ? 'shadow-glow-primary' : ''}`}
+                  className={`leading-relaxed relative select-text cursor-text w-full ${
+                    isIntermediate
+                      ? 'text-label text-text-secondary/90 italic'
+                      : 'text-body text-text-primary'
+                  }`}
                 >
-                  <div className="text-body text-text-primary leading-relaxed relative select-text cursor-text w-fit max-w-full">
-                    <MarkdownRenderer
-                      content={textContent}
-                      variant="assistant"
-                      isStreaming={isStreamingActiveSegment}
-                      className="text-body text-text-primary leading-relaxed relative select-text cursor-text"
-                    />
-                  </div>
-
-                  {isStreamingActiveSegment && (
-                    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
-                      <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-primary/8 to-transparent" />
-                    </div>
-                  )}
+                  <MarkdownRenderer
+                    content={textContent}
+                    variant={isIntermediate ? 'thought' : 'assistant'}
+                    isStreaming={isStreamingActiveSegment}
+                    className={`leading-relaxed relative select-text cursor-text ${
+                      isIntermediate ? 'text-label text-text-secondary/90' : 'text-body text-text-primary'
+                    }`}
+                  />
                 </div>
 
-                {!isStreamingActiveSegment && textContent && (
-                  <div className="flex items-center justify-start px-1">
+                {!isIntermediate && isLastSegment && !isStreaming && textContent && (
+                  <div className="flex items-center justify-start gap-1 pt-1.5 pb-0.5">
                     <MessageActionsMenu
                       textContent={textContent}
                       isOpen={isMenuOpen}
                       onOpenChange={(open) => setOpenMenuKey(open ? seg.key : null)}
                       align="left"
-                      direction="down"
+                      direction="up"
                     />
+                    {sources.length > 0 && (
+                      <MessageSourcesButton sources={sources} />
+                    )}
                   </div>
                 )}
               </div>

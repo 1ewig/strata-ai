@@ -1,10 +1,12 @@
 @import "tailwindcss";
 
 @source "..";
-@source "../../src";
 @source "../../node_modules/streamdown/dist/*.js";
 @source "../../node_modules/@streamdown/math/dist/*.js";
 
+/* ==========================================================================
+   Design Tokens (Light Mode Base)
+   ========================================================================== */
 @theme {
   /* Surfaces (Warm Studio Linen & Tactile Canvas) */
   --color-surface-base: #f9f6f0;      /* Tactile warm linen paper (glare-free canvas) */
@@ -37,7 +39,7 @@
   --color-dark: #171310;
   --color-dark-muted: #5e554c;
 
-  /* Pastel & Functional Accents */
+  /* Functional & Pastel Accents */
   --color-accent-blue: #84bde7;
   --color-accent-blue-soft: rgba(132, 189, 231, 0.2);
   --color-accent-pink: #f1b5e1;
@@ -60,106 +62,42 @@
   --shadow-glow-primary: 0 0 24px -4px rgba(255, 85, 32, 0.38);
   --shadow-glow-secondary: 0 0 20px -5px rgba(217, 130, 0, 0.4);
 
-  /* Milo shape language: badges/chips 12px, buttons/inputs 20px, cards 32px */
+  /* Shape Language: badges/chips 12px, buttons/inputs 20px, cards 32px */
   --radius-lg: 12px;
   --radius-xl: 20px;
   --radius-2xl: 32px;
 
-  /* Typography (Plus Jakarta Sans geometric sans) */
+  /* Typography */
   --font-sans: var(--font-sans), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
   --font-display: var(--font-sans), 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
 
-  /* Type scale tokens */
+  /* Type Scale Tokens */
   --text-micro: 0.6875rem; /* 11px - eyebrows, inline code, status badges */
   --text-caption: 0.75rem; /* 12px - meta lines, tool cards, sidebar items */
-  --text-label: 0.875rem; /* 14px - buttons, form labels/inputs, nav */
-  --text-body: 1rem; /* 16px - markdown paragraphs, chat bubbles, drawer body */
+  --text-label: 0.875rem;  /* 14px - buttons, form labels/inputs, nav */
+  --text-body: 1rem;       /* 16px - markdown paragraphs, chat bubbles, drawer body */
   --text-subheading: 1.125rem; /* 18px - h3, section titles */
-  --text-heading: 1.25rem; /* 20px - h2, empty-state titles */
-  --text-title: 1.5rem; /* 24px - h1 */
-  --text-display: 2rem; /* 32px - auth hero, 404 */
+  --text-heading: 1.25rem;     /* 20px - h2, empty-state titles */
+  --text-title: 1.5rem;        /* 24px - h1 */
+  --text-display: 2rem;        /* 32px - auth hero, 404 */
 
-  --animate-shimmer: shimmer 2.8s ease-in-out infinite;
-  --animate-caret: caret 1.1s ease-in-out infinite;
+  /* Animations */
   --animate-fade-in: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-slide-up: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-:root {
-  --scrollbar-thumb: rgba(44, 38, 33, 0.12);
-  --scrollbar-thumb-hover: rgba(44, 38, 33, 0.22);
-}
-
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(255, 85, 32, 0.08), transparent),
-    radial-gradient(ellipse 70% 50% at 85% 85%, rgba(255, 170, 29, 0.06), transparent),
-    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(255, 85, 32, 0.04), transparent);
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Marker-style highlight banner */
-.highlight-marker {
-  background-color: var(--color-secondary);
-  padding: 2px 10px;
-  border-radius: 4px;
-  display: inline-block;
-  transform: rotate(-1deg);
-}
-
-.typing-dot {
-  animation: blink 1.4s infinite both;
-}
-.typing-dot:nth-child(2) { animation-delay: 0.2s; }
-.typing-dot:nth-child(3) { animation-delay: 0.4s; }
-@keyframes blink {
-  0%, 80%, 100% { opacity: 0.2; }
-  40% { opacity: 1; }
-}
-
-.fade-in {
-  animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-slide-up {
-  animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
 @keyframes slideUp {
   from { opacity: 0; transform: translateY(16px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.animate-slide-down {
-  animation: slideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-16px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes shimmer {
-  100% { transform: translateX(100%); }
-}
-
-@keyframes caret {
-  0%, 45% { opacity: 1; }
-  50%, 100% { opacity: 0.15; }
-}
-
 /* ==========================================================================
-   Warm Dark Theme (Rich charcoal, espresso sand canvas, warm amber & orange)
+   Dark Theme Overrides (Warm Charcoal & Espresso Sand Canvas)
    ========================================================================== */
 .dark,
 html[data-theme="dark"] {
@@ -185,7 +123,7 @@ html[data-theme="dark"] {
   --color-edge-raised: rgba(242, 237, 230, 0.16);   /* Border light */
   --color-edge-hover: rgba(242, 237, 230, 0.28);    /* Interactive border */
 
-  /* Brand (Electric fiery orange & warm amber accents) */
+  /* Brand Accents */
   --color-primary: #ff5c28;
   --color-primary-hover: #ff7733;
   --color-primary-soft: rgba(255, 85, 0, 0.14);
@@ -196,7 +134,7 @@ html[data-theme="dark"] {
   --color-dark: #14100c;
   --color-dark-muted: #b7ae9f;
 
-  /* Accents & Functional */
+  /* Functional & Pastel Accents */
   --color-accent-blue: #60a5fa;
   --color-accent-blue-soft: rgba(37, 99, 235, 0.16);
   --color-accent-pink: #f1b5e1;
@@ -219,8 +157,25 @@ html[data-theme="dark"] {
   --shadow-glow-primary: 0 0 28px -4px rgba(255, 85, 0, 0.5), 0 0 10px -2px rgba(255, 119, 51, 0.35);
   --shadow-glow-secondary: 0 0 24px -4px rgba(255, 170, 29, 0.5);
 
-  --scrollbar-thumb: rgba(242, 237, 230, 0.14);
-  --scrollbar-thumb-hover: rgba(242, 237, 230, 0.25);
+  /* Scrollbars in Dark Mode */
+  --scrollbar-thumb: rgba(242, 237, 230, 0.26);
+  --scrollbar-thumb-hover: rgba(242, 237, 230, 0.45);
+  --scrollbar-thumb-active: rgba(242, 237, 230, 0.60);
+}
+
+/* ==========================================================================
+   Base Layout, Ambient Mesh & Custom Scrollbars
+   ========================================================================== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(255, 85, 32, 0.08), transparent),
+    radial-gradient(ellipse 70% 50% at 85% 85%, rgba(255, 170, 29, 0.06), transparent),
+    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(255, 85, 32, 0.04), transparent);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .dark body::before,
@@ -231,7 +186,151 @@ html[data-theme="dark"] body::before {
     radial-gradient(ellipse 50% 35% at 10% 85%, rgba(255, 85, 0, 0.05), transparent 60%);
 }
 
-/* Milo Syntax Highlighting (PrismJS token mapping) */
+/* Global Custom Scrollbars */
+:root {
+  --scrollbar-thumb: rgba(44, 38, 33, 0.28);
+  --scrollbar-thumb-hover: rgba(44, 38, 33, 0.48);
+  --scrollbar-thumb-active: rgba(44, 38, 33, 0.65);
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-button:single-button,
+::-webkit-scrollbar-button:vertical:decrement,
+::-webkit-scrollbar-button:vertical:increment,
+::-webkit-scrollbar-button:horizontal:decrement,
+::-webkit-scrollbar-button:horizontal:increment {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-track-piece,
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track-piece,
+*::-webkit-scrollbar-corner {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  transition: background 0.15s ease;
+}
+
+/* Mobile Scrollbars */
+@media (max-width: 767px) {
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-track-piece,
+  .chat-scroll-container::-webkit-scrollbar-track,
+  .chat-scroll-container::-webkit-scrollbar-track-piece {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  ::-webkit-scrollbar-thumb,
+  .chat-scroll-container::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+}
+
+/* Desktop Chat Scroll Container & Desktop Scrollbars */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background: var(--scrollbar-thumb-active);
+  }
+
+  .chat-scroll-container {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
+  .chat-scroll-container::-webkit-scrollbar {
+    width: 9px;
+  }
+
+  .chat-scroll-container::-webkit-scrollbar-button {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  .chat-scroll-container::-webkit-scrollbar-track,
+  .chat-scroll-container::-webkit-scrollbar-track-piece,
+  .chat-scroll-container::-webkit-scrollbar-corner,
+  .chat-scroll-container:hover::-webkit-scrollbar-track,
+  .chat-scroll-container:hover::-webkit-scrollbar-track-piece {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  .chat-scroll-container::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+
+  .chat-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
+  }
+
+  .chat-scroll-container::-webkit-scrollbar-thumb:active {
+    background: var(--scrollbar-thumb-active);
+  }
+}
+
+/* Text Selection Styling */
+::selection {
+  background-color: var(--color-primary-soft-strong);
+  color: inherit;
+}
+
+.bg-primary ::selection {
+  background-color: rgba(255, 255, 255, 0.35);
+  color: #ffffff;
+}
+
+/* ==========================================================================
+   Syntax Highlighting (PrismJS Token Mapping for CodeViewer)
+   ========================================================================== */
 .token.comment,
 .token.prolog,
 .token.doctype,
@@ -315,32 +414,6 @@ html[data-theme="dark"] body::before {
 }
 
 /* ==========================================================================
-   Text Selection Styling (Milo Theme Harmony)
-   ========================================================================== */
-::selection {
-  background-color: var(--color-primary-soft-strong);
-  color: inherit;
-}
-
-/* User bubble (high-contrast white selection on fiery orange background) */
-.bg-primary ::selection {
-  background-color: rgba(255, 255, 255, 0.35);
-  color: #ffffff;
-}
-
-.dark ::selection,
-html[data-theme="dark"] ::selection {
-  background-color: var(--color-primary-soft-strong);
-  color: inherit;
-}
-
-.dark .bg-primary ::selection,
-html[data-theme="dark"] .bg-primary ::selection {
-  background-color: rgba(255, 255, 255, 0.35);
-  color: #ffffff;
-}
-
-/* ==========================================================================
    KaTeX Theme Integration & Responsive Math Handling
    ========================================================================== */
 .katex {
@@ -373,13 +446,12 @@ html[data-theme="dark"] .bg-primary ::selection {
   white-space: nowrap;
 }
 
-/* Improve division rendering: prevent fraction line (divider) from overlapping numbers */
+/* Vertical clearance and fraction line definition */
 .katex .mfrac .frac-line {
   min-height: 1.5px;
   border-bottom-width: 0.05em !important;
 }
 
-/* Ensure clean vertical clearance between numerator, division bar, and denominator */
 .katex .mfrac .vlist > span:has(> .frac-line) + span {
   transform: translateY(-2.5px);
 }
@@ -389,9 +461,8 @@ html[data-theme="dark"] .bg-primary ::selection {
 }
 
 /* ==========================================================================
-   Streamdown Streaming Blur-In & Fade Animation
-   Ensures streamed words bloom in smoothly with architectural easing without
-   getting abruptly cancelled by subsequent streaming token passes.
+   Streamdown Streaming Blur-In Animation Override
+   Smooth multi-step architectural easing curve for streaming tokens.
    ========================================================================== */
 @keyframes sd-blurIn {
   0% {
@@ -418,23 +489,22 @@ html[data-theme="dark"] .bg-primary ::selection {
   }
 }
 
-@keyframes sd-fadeIn {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
+[data-sd-animate] {
+  display: inline;
+  animation-name: var(--sd-animation, sd-blurIn);
+  animation-duration: 550ms !important;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1) !important;
+  animation-delay: 0ms !important;
+  animation-fill-mode: both !important;
+  animation-iteration-count: 1 !important;
+  will-change: filter, opacity, transform;
 }
 
-@keyframes sd-slideUp {
-  0% {
-    opacity: 0;
-    transform: translateY(3px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
+@media (prefers-reduced-motion: reduce) {
+  [data-sd-animate] {
+    animation: none !important;
+    filter: none !important;
+    transform: none !important;
+    opacity: 1 !important;
   }
 }
-

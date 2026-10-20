@@ -109,7 +109,7 @@ describe("createUIStreamResponder streaming wiring", () => {
 
     const transforms = lastStreamText().experimental_transform;
     expect(transforms).toHaveLength(2);
-    expect(transforms[0]).toEqual({ kind: "smoothStream", opts: { delayInMs: 15, chunking: "word" } });
+    expect(transforms[0]).toEqual({ kind: "smoothStream", opts: { delayInMs: 25, chunking: "word" } });
     expect(typeof transforms[1]).toBe("function");
   });
 

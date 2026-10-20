@@ -137,7 +137,7 @@ export async function createUIStreamResponder(config: UIStreamResponderConfig): 
                 },
                 experimental_transform: [
                   smoothStream({
-                    delayInMs: 15,
+                    delayInMs: 25,
                     chunking: "word",
                   }),
                   coalesceToolInputDeltas() as any,

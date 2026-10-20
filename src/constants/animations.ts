@@ -1,6 +1,25 @@
 import type { Variants, Transition } from 'motion/react';
 
 /**
+ * Architectural cubic bezier deceleration curve ([0.16, 1, 0.3, 1]).
+ * Starts swiftly and settles smoothly into resting position without bounce or jitter.
+ */
+export const EASING_ARCHITECTURAL = [0.16, 1, 0.3, 1] as const;
+
+/**
+ * Tool card entrance transition (subtle Z-axis scale + deblur bloom).
+ */
+export const toolEntranceVariants: Variants = {
+  hidden: { opacity: 0, scale: 1.04, filter: 'blur(4px)' },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    filter: 'blur(0px)',
+    transition: { duration: 0.28, ease: EASING_ARCHITECTURAL },
+  },
+};
+
+/**
  * Standard soft spring transition for responsive, calm micro-interactions.
  */
 export const softSpring: Transition = {

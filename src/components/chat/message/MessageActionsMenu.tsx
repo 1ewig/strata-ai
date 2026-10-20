@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Copy, FileText, Check } from 'lucide-react';
 import { copyToClipboard, stripMarkdown } from '@/lib/clipboard';
 import { useClickOutside } from '@/hooks/common/useClickOutside';
@@ -39,6 +39,8 @@ export default function MessageActionsMenu({
     [isOpen, isControlled, onOpenChange],
   );
 
+  const [effectiveDirection, setEffectiveDirection] = useState<'up' | 'down'>(direction);
+  const [maxMenuHeight, setMaxMenuHeight] = useState<number | undefined>(undefined);
   const [copiedType, setCopiedType] = useState<'markdown' | 'text' | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const resetTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -46,16 +48,65 @@ export default function MessageActionsMenu({
   // Close menu on clicks/taps outside or on Escape
   useClickOutside(menuRef, () => setIsOpen(false), { enabled: isOpen });
 
+  // Clean up timer on unmount
+  useEffect(() => {
+    return () => {
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
+    };
+  }, []);
+
+  // Ensure menu stays contained within viewport dvh on both mobile and desktop
+  useEffect(() => {
+    if (!isOpen || !menuRef.current) return;
+
+    const updatePositionAndContainment = () => {
+      if (!menuRef.current) return;
+      const rect = menuRef.current.getBoundingClientRect();
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const menuEstimatedHeight = 90;
+      const padding = 12; // safe distance from viewport edges
+
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      let chosenDirection = direction;
+      if (direction === 'up' && spaceAbove < menuEstimatedHeight && spaceBelow > spaceAbove) {
+        chosenDirection = 'down';
+      } else if (direction === 'down' && spaceBelow < menuEstimatedHeight && spaceAbove > spaceBelow) {
+        chosenDirection = 'up';
+      }
+
+      setEffectiveDirection(chosenDirection);
+
+      // Clamp max height to available space within dvh
+      const availableSpace = chosenDirection === 'up' ? spaceAbove - padding : spaceBelow - padding;
+      if (availableSpace > 0) {
+        setMaxMenuHeight(Math.max(48, Math.floor(availableSpace)));
+      } else {
+        setMaxMenuHeight(undefined);
+      }
+    };
+
+    updatePositionAndContainment();
+    window.addEventListener('resize', updatePositionAndContainment);
+    window.addEventListener('scroll', updatePositionAndContainment, true);
+
+    return () => {
+      window.removeEventListener('resize', updatePositionAndContainment);
+      window.removeEventListener('scroll', updatePositionAndContainment, true);
+    };
+  }, [isOpen, direction]);
+
   const triggerCopyFeedback = useCallback(
     (type: 'markdown' | 'text') => {
       if (resetTimerRef.current) clearTimeout(resetTimerRef.current);
       setCopiedType(type);
+      // Show feedback and reset it after a few seconds without dismissing the menu
       resetTimerRef.current = setTimeout(() => {
         setCopiedType(null);
-        setIsOpen(false);
-      }, 700);
+      }, 2000);
     },
-    [setIsOpen],
+    [],
   );
 
   const handleCopyMarkdown = useCallback(async () => {
@@ -72,7 +123,7 @@ export default function MessageActionsMenu({
   if (!textContent.trim()) return null;
 
   return (
-    <div ref={menuRef} className={`relative inline-block ${isOpen ? 'z-40' : 'z-20'} ${className}`}>
+    <div ref={menuRef} className={`relative inline-block ${isOpen ? 'z-20' : ''} ${className}`}>
       {/* Copy Trigger Button */}
       <button
         type="button"
@@ -101,9 +152,10 @@ export default function MessageActionsMenu({
         <div
           role="menu"
           aria-orientation="vertical"
-          className={`absolute ${direction === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} ${
+          style={{ maxHeight: maxMenuHeight ? `${maxMenuHeight}px` : undefined }}
+          className={`absolute ${effectiveDirection === 'up' ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} ${
             align === 'left' ? 'left-0' : 'right-0'
-          } z-50 min-w-[170px] max-w-[calc(100vw-32px)] p-1 rounded-xl bg-surface-elevated/95 backdrop-blur-md border border-edge-raised shadow-card-lg flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100`}
+          } z-50 min-w-[170px] max-w-[calc(100vw-32px)] max-h-[calc(100dvh-24px)] overflow-y-auto overscroll-contain p-1 rounded-xl bg-surface-elevated/95 backdrop-blur-md border border-edge-raised shadow-card-lg flex flex-col gap-0.5 animate-in fade-in zoom-in-95 duration-100`}
         >
           {/* Copy as Markdown */}
           <button

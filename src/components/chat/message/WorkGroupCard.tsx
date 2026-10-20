@@ -7,7 +7,7 @@ import ThoughtAccordion from './ThoughtAccordion';
 import ToolCallCard from './ToolCallCard';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import type { Segment } from '@/agent/client/segments';
-import { accordionVariants } from '@/constants/animations';
+import { accordionVariants, toolEntranceVariants } from '@/constants/animations';
 import { estimateWorkGroupDuration } from '@/lib/timing';
 import { useElapsedTimer } from '@/hooks/common/useElapsedTimer';
 
@@ -44,7 +44,12 @@ function WorkGroupCard({ items, isStreaming = false }: WorkGroupCardProps) {
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="my-1.5 w-full text-caption fade-in">
+    <motion.div
+      variants={toolEntranceVariants}
+      initial="hidden"
+      animate="visible"
+      className="w-full text-caption"
+    >
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-fit flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left font-mono text-caption cursor-pointer group"
@@ -108,7 +113,7 @@ function WorkGroupCard({ items, isStreaming = false }: WorkGroupCardProps) {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 
