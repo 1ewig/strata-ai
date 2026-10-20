@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BrainCircuit, ChevronDown, Loader2 } from 'lucide-react';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
-import { accordionVariants } from '@/constants/animations';
+import { accordionVariants, toolEntranceVariants } from '@/constants/animations';
 import { estimateThoughtDuration } from '@/lib/timing';
 import { useElapsedTimer } from '@/hooks/common/useElapsedTimer';
 
@@ -35,7 +35,12 @@ function ThoughtAccordion({ text, isThinking = false }: ThoughtAccordionProps) {
   if (!text || !text.trim()) return null;
 
   return (
-    <div className="w-full text-caption">
+    <motion.div
+      variants={toolEntranceVariants}
+      initial="hidden"
+      animate="visible"
+      className="w-full text-caption"
+    >
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-fit flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left font-mono text-caption cursor-pointer group"
@@ -77,7 +82,7 @@ function ThoughtAccordion({ text, isThinking = false }: ThoughtAccordionProps) {
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 

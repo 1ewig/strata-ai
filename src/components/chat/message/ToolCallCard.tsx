@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Loader2, XCircle, type LucideIcon } from 'lucide-react';
 import { resolveToolDisplay } from '../tools/resolver';
 import type { ToolInvocationLike } from '@/agent/client/segments';
-import { accordionVariants } from '@/constants/animations';
+import { accordionVariants, toolEntranceVariants } from '@/constants/animations';
 
 /**
  * Card rendering a single AI tool invocation: status icon and badge in the header, plus a
@@ -55,7 +55,12 @@ function ToolCallCard({
   const isError = status === 'error';
 
   return (
-    <div className="my-1 w-full text-caption relative">
+    <motion.div
+      variants={toolEntranceVariants}
+      initial="hidden"
+      animate="visible"
+      className="my-1 w-full text-caption relative"
+    >
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-fit flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left font-mono text-caption cursor-pointer group"
@@ -98,7 +103,7 @@ function ToolCallCard({
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </motion.div>
   );
 }
 

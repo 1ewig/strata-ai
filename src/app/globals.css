@@ -193,9 +193,11 @@ html[data-theme="dark"] body::before {
   --scrollbar-thumb-active: rgba(44, 38, 33, 0.65);
 }
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) transparent;
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
 }
 
 ::-webkit-scrollbar {
@@ -208,6 +210,18 @@ html[data-theme="dark"] body::before {
     width: 8px;
     height: 8px;
   }
+}
+
+::-webkit-scrollbar-button,
+::-webkit-scrollbar-button:single-button,
+::-webkit-scrollbar-button:vertical:decrement,
+::-webkit-scrollbar-button:vertical:increment,
+::-webkit-scrollbar-button:horizontal:decrement,
+::-webkit-scrollbar-button:horizontal:increment {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
 }
 
 ::-webkit-scrollbar-track {
@@ -232,6 +246,12 @@ html[data-theme="dark"] body::before {
 @media (min-width: 768px) {
   .chat-scroll-container::-webkit-scrollbar {
     width: 9px;
+  }
+
+  .chat-scroll-container::-webkit-scrollbar-button {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
   }
 
   .chat-scroll-container::-webkit-scrollbar-thumb {
@@ -418,5 +438,25 @@ html[data-theme="dark"] body::before {
     opacity: 1;
     filter: blur(0.001px);
     transform: translateY(0);
+  }
+}
+
+[data-sd-animate] {
+  display: inline;
+  animation-name: var(--sd-animation, sd-blurIn);
+  animation-duration: 550ms !important;
+  animation-timing-function: cubic-bezier(0.16, 1, 0.3, 1) !important;
+  animation-delay: 0ms !important;
+  animation-fill-mode: both !important;
+  animation-iteration-count: 1 !important;
+  will-change: filter, opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-sd-animate] {
+    animation: none !important;
+    filter: none !important;
+    transform: none !important;
+    opacity: 1 !important;
   }
 }
