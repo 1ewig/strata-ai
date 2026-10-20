@@ -13,8 +13,8 @@ export interface UserMessageItemProps {
 }
 
 /**
- * Renders a single user message turn including avatar, attachments,
- * markdown content bubble, and actions menu. Pure presentational block.
+ * Renders a single user message turn with a **perfectly round** bubble.
+ * Pure presentational block. No other behavior changed.
  */
 function UserMessageItem({ segments }: UserMessageItemProps) {
   const {
@@ -28,9 +28,8 @@ function UserMessageItem({ segments }: UserMessageItemProps) {
   return (
     <div
       ref={containerRef}
-      className={`relative flex items-start gap-3.5 flex-row-reverse animate-slide-up ${
-        openMenuKey ? 'z-[35]' : ''
-      }`}
+      className={`relative flex items-start gap-3.5 flex-row-reverse animate-slide-up ${openMenuKey ? 'z-[35]' : ''
+        }`}
     >
       {/* User Avatar */}
       <div className="hidden sm:flex relative w-8 h-8 items-center justify-center shrink-0 mt-0.5 rounded-xl bg-surface-elevated border border-edge-hover/60 text-text-primary shadow-button">
@@ -57,11 +56,10 @@ function UserMessageItem({ segments }: UserMessageItemProps) {
               <div key={seg.key} className="flex flex-col items-end gap-1 w-fit max-w-full">
                 <div
                   onClick={(e) => handleBubbleClick(e, seg.key)}
-                  className={`group/bubble relative rounded-2xl px-4.5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border rounded-tr-xs shadow-card animate-slide-up w-fit max-w-full cursor-default select-none ${
-                    isActionActive
-                      ? 'border-primary-hover shadow-glow-primary/20'
-                      : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/20'
-                  }`}
+                  className={`group/bubble relative rounded-full px-5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border border-primary/40 shadow-card animate-slide-up w-fit max-w-full cursor-default select-none ${isActionActive
+                      ? 'border-primary-hover shadow-glow-primary/30'
+                      : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/30'
+                    }`}
                 >
                   <div className="text-body text-surface leading-relaxed relative select-text cursor-text w-fit max-w-full">
                     <MarkdownRenderer
