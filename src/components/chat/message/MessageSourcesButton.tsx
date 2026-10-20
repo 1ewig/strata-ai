@@ -29,7 +29,7 @@ export function MessageSourcesButton({ sources, className = '' }: MessageSources
   const label = `${count} ${count === 1 ? 'source' : 'sources'}`;
 
   return (
-    <div ref={containerRef} className={`relative inline-block ${isOpen ? 'z-40' : 'z-20'} ${className}`}>
+    <div ref={containerRef} className={`relative inline-block ${isOpen ? 'z-20' : ''} ${className}`}>
       {/* Sources Pill Trigger Button */}
       <button
         type="button"

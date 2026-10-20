@@ -123,7 +123,7 @@ export default function MessageActionsMenu({
   if (!textContent.trim()) return null;
 
   return (
-    <div ref={menuRef} className={`relative inline-block ${isOpen ? 'z-40' : 'z-20'} ${className}`}>
+    <div ref={menuRef} className={`relative inline-block ${isOpen ? 'z-20' : ''} ${className}`}>
       {/* Copy Trigger Button */}
       <button
         type="button"
