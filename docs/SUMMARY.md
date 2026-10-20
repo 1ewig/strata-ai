@@ -29,7 +29,7 @@ Postgres through a `pg` Pool on the server. Langfuse is wired in via an OpenTele
 |---|---|
 | `src/agent/` | the server-side agent: runner, stream responder, tools, prompts, provider resolution, route guards, provider sanitization, per-request workspace, browser-side client helpers |
 | `src/app/` | thin route shells; `api/` holds four route handlers |
-| `src/components/` | presentational React: `chat/` (header, input, message, tools), `workspace/` drawer, `sidebar/`, `ui/`, `landing/`, `auth/` |
+| `src/components/` | presentational React: `chat/` (header, hero, input, message, tools), `workspace/` drawer, `sidebar/`, `ui/`, `landing/`, `auth/` |
 | `src/hooks/` | every data and side-effect owner: chat session, transport, compaction, throttling, conversations, workspace, auth, common |
 | `src/contexts/` | `RateLimitContext` (app-wide quota), `ChatUIContext` (sidebar and drawer shell), `ChatInputContext` (imperative prompt handle) |
 | `src/lib/` | `ai/` (model catalog, token metrics), `db/` (Dexie), `code/` (languages, two highlighters), `attachments/`, `auth/`, `server/rate-limit.ts`, `workspace/download.ts`, `urls.ts`, `limits.ts` |
@@ -113,7 +113,9 @@ compaction summary is the latest assistant message.
 
 Every stream response also carries `X-RateLimit-Remaining-5h` and `X-RateLimit-Remaining-Week`. AI SDK 7 emits
 `tool-call` and `tool-result` as separate parts with a matching `callId`; `flattenMessageSegments` merges them
-into one card, which is what prevents duplicate keys and perpetual spinners.
+into one card, which is what prevents duplicate keys and perpetual spinners. Text chunks emitted before tool
+calls or reasoning steps are tagged as intermediate narration (`isIntermediate: true`) and rendered through the
+`thought` variant, while text emitted after all tool execution forms the terminal response.
 
 ## 6. Persistence
 
@@ -155,17 +157,24 @@ oversubscribe. `refundRateLimit` deletes the row on inference failure. `getRateL
 ## 8. Client Rendering
 
 `src/app/chat-id/[id]/page.tsx` is an ultra-lean route wrapper; `ChatPageClient` composes three pillars —
-`Sidebar`, a centre `StickToBottom` viewport, and `WorkspaceDrawer` — and coordinates them. The chat input bar
-docks cleanly into the layout flow below `StickToBottom`.
+`Sidebar`, a centre `StickToBottom` viewport, and `WorkspaceDrawer` — and coordinates them. On empty conversations,
+`ChatHero` presents an editorial headline with dynamic punctuation (`<span className="text-primary">{punctuation}</span>`),
+embeds the chat input slot directly into its vertical layout flow, and anchors quick-action suggestion chips below.
+In active chats, the chat input bar docks cleanly into the layout flow below `StickToBottom` with an elevated `z-30`
+layering so slash command menus and attachment pickers float unobstructed over the scroll viewport.
 
 Messages go through `flattenMessageSegments` (`src/agent/client/segments.ts`), which turns a raw UI message into
 render-ready segments. User messages render in high-contrast `rounded-3xl` bubbles with right-aligned action menus;
 assistant responses render bare in the layout flow without a boxing card container. While streaming, parts arrive
-in real time with smooth opacity and blur bloom animations (`streamingBloomVariants`, `toolCardVariants`); once
-the turn ends, all pre-answer output (narration, reasoning accordions, tool cards) folds into a single collapsible
-`work-group` and only the final answer stays in the body. `MessageRow` is memoized inside `MessageList.tsx` with a
-comparator on message identity and streaming state, which keeps historical turns from re-segmenting during an active
-stream.
+in real time with smooth opacity and blur bloom animations (`streamingBloomVariants`, `toolCardVariants`). Pre-tool
+and pre-reasoning text parts are identified as intermediate narration (`isIntermediate: true`) and rendered with
+subtle italicized styling (`text-label text-text-secondary/90 italic`, `thought` variant) distinct from the terminal
+answer (`text-body text-text-primary`, `assistant` variant). The copy action menu and cited web sources button are
+mounted strictly on the completed terminal response (`!isIntermediate && isLastSegment && !isStreaming`), scoped
+to `z-20` to prevent collisions. Once the turn ends, all pre-answer output (narration, reasoning accordions, tool cards)
+folds into a single collapsible `work-group` with an elapsed execution timer (`useElapsedTimer`), leaving only the
+final answer in the body. `MessageRow` is memoized inside `MessageList.tsx` with a comparator on message identity
+and streaming state, which keeps historical turns from re-segmenting during an active stream.
 
 `ChatInputContext` is an imperative handle so the empty-state suggestion chips can inject a prompt without a
 parent re-render. `ChatUIContext` holds the mobile sidebar drawer, the desktop collapse (both persisted in
@@ -184,9 +193,12 @@ CSS with fully transparent tracks across mobile and desktop.
 ## 9. Markdown & Code
 
 `MarkdownRenderer` renders every markdown surface through Streamdown with `@streamdown/math` for KaTeX formulas.
-It has four variants — `assistant`, `user`, `thought`, `canvas` — and `createMarkdownComponents` supplies the
-shared element map, including an href allowlist restricted to `https`, `http`, and `mailto` that neutralises
-`javascript:` and `data:` URLs.
+It has four variants — `assistant`, `user`, `thought`, `canvas` — and `createMarkdownComponents` supplies an
+editorial typographic hierarchy across them: high-contrast display headings with tighter tracking
+(`text-title sm:text-display font-extrabold` for h1, `text-heading sm:text-title font-extrabold` for h2,
+`text-subheading font-bold` for h3), warm bordered and padded blockquotes (`bg-surface-elevated/40`), monospaced
+uppercase table headers (`text-micro`), and an href allowlist restricted to `https`, `http`, and `mailto` that
+neutralises `javascript:` and `data:` URLs.
 
 Two highlighters serve different surfaces. Shiki (`src/lib/code/shiki-highlighter.ts`) runs on the JS regex
 engine with no WASM, debounces 120 ms, and caches up to 500 results; it serves chat code snippets through
