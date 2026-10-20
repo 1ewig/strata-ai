@@ -44,7 +44,7 @@ function WorkGroupCard({ items, isStreaming = false }: WorkGroupCardProps) {
   if (!items || items.length === 0) return null;
 
   return (
-    <div className="mt-0.5 mb-1.5 w-full text-caption fade-in">
+    <div className="w-full text-caption fade-in">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-fit flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left font-mono text-caption cursor-pointer group"

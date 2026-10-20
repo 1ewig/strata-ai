@@ -53,7 +53,7 @@ function AssistantMessageItem({
       </div>
 
       {/* Assistant Message Content */}
-      <div className="flex flex-col min-w-0 flex-1 gap-2 items-start max-w-full">
+      <div className="flex flex-col min-w-0 flex-1 gap-1 items-start max-w-full">
         {segments.map((seg, segIdx) => {
           const isLastSegment = segIdx === segments.length - 1;
           const isMenuOpen = openMenuKey === seg.key;
