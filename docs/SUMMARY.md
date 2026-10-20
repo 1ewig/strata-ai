@@ -85,6 +85,12 @@ legacy names), and `ToolCallCard.tsx` renders whatever it returns. The agent loo
 `isStepCount(maxSteps)`; when the budget runs out the finish reason is `step-limit` and the reconciler re-sends
 a "continue where you left off" message, at most twice per user turn, resetting the counter on a normal finish.
 
+System instruction generation (`src/agent/prompts/system.ts`, `buildSystemInstruction`) produces a disciplined,
+metadata-only prompt: active workspace file catalog (`name`, `language`, character count, `id`), temporal
+calendar context, hard workspace constraints, dynamic token budget occupancy, intent-driven tool heuristics,
+and answer-first formatting guidelines (explicit code language fences, standard LaTeX math delimiters `$...$`
+and `$$...$$`, and parallel tool execution) without conversational fluff.
+
 ## 4. Compaction
 
 `/compact` posts the message array to `/api/agent/compact` over raw `fetch` and consumes the SSE with
