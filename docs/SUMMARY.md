@@ -32,7 +32,7 @@ Postgres through a `pg` Pool on the server. Langfuse is wired in via an OpenTele
 | `src/components/` | presentational React: `chat/` (header, input, message, tools), `workspace/` drawer, `sidebar/`, `ui/`, `landing/`, `auth/` |
 | `src/hooks/` | every data and side-effect owner: chat session, transport, compaction, throttling, conversations, workspace, auth, common |
 | `src/contexts/` | `RateLimitContext` (app-wide quota), `ChatUIContext` (sidebar and drawer shell), `ChatInputContext` (imperative prompt handle) |
-| `src/lib/` | `ai/` (model catalog, token metrics), `db/` (Dexie), `code/` (languages, two highlighters), `attachments/`, `auth/`, `server/rate-limit.ts`, `workspace/download.ts`, `limits.ts` |
+| `src/lib/` | `ai/` (model catalog, token metrics), `db/` (Dexie), `code/` (languages, two highlighters), `attachments/`, `auth/`, `server/rate-limit.ts`, `workspace/download.ts`, `urls.ts`, `limits.ts` |
 | `src/proxy.ts` | Next.js 16 proxy (middleware): cheap cookie pre-check plus security headers |
 
 ## 2. Request Lifecycle
@@ -56,7 +56,7 @@ Postgres through a `pg` Pool on the server. Langfuse is wired in via an OpenTele
    request's `files`, and calls `runAgentResponse`. That computes a token budget, then hands off to
    `createUIStreamResponder` — the single place in the repo where `streamText` is called. The responder resolves
    the model, prunes cross-provider metadata, converts messages once, strips image parts for text-only models,
-   applies `smoothStream` (15 ms, word chunking) and `coalesceToolInputDeltas`, re-injects the system prompt
+   applies `smoothStream` (25 ms, word chunking) and `coalesceToolInputDeltas`, re-injects the system prompt
    each step via `prepareStep`, and stops on `isStepCount(maxSteps)`.
 6. **Error path.** Any setup, execution, or stream error runs `classifyProviderError`, writes an `error` stream
    part, flushes Langfuse, and fires `onInferenceError` once behind an idempotent latch →
@@ -75,9 +75,7 @@ Postgres through a `pg` Pool on the server. Langfuse is wired in via an OpenTele
 `createWorkspaceTools` (`src/agent/tools/index.ts`) returns eight tools bound to one live workspace context, so
 every tool in a run sees the same mutable array. Six are workspace tools — `listFiles`, `readFile`, `writeFile`,
 `editFile`, `renameFile`, `deleteFile` — in `workspace-tools.ts`; the mutating four emit a `data-workspace` part
-(`file-updated` or `file-deleted`) that the client applies live. The other two are Tavily tools, `webSearch` and
-`extractUrl` in `tavily-tools.ts`: search snippets truncate at a word boundary, extract caps each page at
-`min(10k, floor(20k / pageCount))` chars.
+(`file-updated` or `file-deleted`) that the client applies live. The other two are Tavily tools, `webSearch` and `extractUrl` in `tavily-tools.ts`: both request native favicons (`include_favicon: true`), search snippets truncate at a word boundary, and extract caps each page at `min(10k, floor(20k / pageCount))` chars; cited web sources and favicons are deduplicated and surfaced in tool cards and the `MessageSourcesButton` popover.
 
 `editFile` delegates to `StringEditEngine` (`src/agent/tools/edit-engine.ts`), which tries exact substring
 match, then whitespace-normalised line matching, then anchor-matched first/last-line bounding; ambiguous matches
@@ -151,13 +149,17 @@ oversubscribe. `refundRateLimit` deletes the row on inference failure. `getRateL
 ## 8. Client Rendering
 
 `src/app/chat-id/[id]/page.tsx` is an ultra-lean route wrapper; `ChatPageClient` composes three pillars —
-`Sidebar`, a centre `StickToBottom` viewport, and `WorkspaceDrawer` — and coordinates them.
+`Sidebar`, a centre `StickToBottom` viewport, and `WorkspaceDrawer` — and coordinates them. The chat input bar
+docks cleanly into the layout flow below `StickToBottom`.
 
 Messages go through `flattenMessageSegments` (`src/agent/client/segments.ts`), which turns a raw UI message into
-render-ready segments. While streaming, parts stay ungrouped and arrive in real time; once the turn ends, all
-pre-answer output (narration, reasoning accordions, tool cards) folds into a single collapsible `work-group` and
-only the final answer stays in the body. `MessageRow` is memoized inside `MessageList.tsx` with a comparator on
-message identity and streaming state, which keeps historical turns from re-segmenting during an active stream.
+render-ready segments. User messages render in high-contrast `rounded-3xl` bubbles with right-aligned action menus;
+assistant responses render bare in the layout flow without a boxing card container. While streaming, parts arrive
+in real time with smooth opacity and blur bloom animations (`streamingBloomVariants`, `toolCardVariants`); once
+the turn ends, all pre-answer output (narration, reasoning accordions, tool cards) folds into a single collapsible
+`work-group` and only the final answer stays in the body. `MessageRow` is memoized inside `MessageList.tsx` with a
+comparator on message identity and streaming state, which keeps historical turns from re-segmenting during an active
+stream.
 
 `ChatInputContext` is an imperative handle so the empty-state suggestion chips can inject a prompt without a
 parent re-render. `ChatUIContext` holds the mobile sidebar drawer, the desktop collapse (both persisted in
@@ -170,7 +172,8 @@ input toolbar carries the model and thinking-level selector.
 Performance work is concentrated here: message updates are throttled to one React render per animation frame
 (structural changes apply immediately), workspace writes are coalesced on a 150 ms timer and short-circuit when
 content is unchanged, the workspace drawer body is GPU-composited with `translateZ(0)` and contains its own
-overscroll, and Shiki highlights are cached, debounced, and prewarmed on idle.
+overscroll, Shiki highlights are cached, debounced, and prewarmed on idle, and scrollbars render purely through
+CSS with fully transparent tracks across mobile and desktop.
 
 ## 9. Markdown & Code
 
@@ -208,7 +211,7 @@ which the system prompt and the UI share so both flip into "be concise" mode at 
 ## 12. Tests
 
 Suites live under `__tests__/` in domain folders — `agent/`, `lib/`, `routes/` — plus a root-level
-`proxy.test.ts`: 35 files, 97 describe blocks, 472 test cases, run with `bun test --isolate`. Shared fixtures
+`proxy.test.ts`: 36 files, 98 describe blocks, 483 test cases, run with `bun test --isolate`. Shared fixtures
 (`makeFile`, `runTool`, `setupWorkspaceTools`, `jsonResponse`, `withEnv`) come from `__tests__/helpers.ts`.
 Route tests `mock.module` the auth server, the rate-limit module, and the runner before dynamically importing
 the route.
