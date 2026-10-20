@@ -85,14 +85,67 @@
 }
 
 :root {
-  --scrollbar-thumb: rgba(44, 38, 33, 0.12);
-  --scrollbar-thumb-hover: rgba(44, 38, 33, 0.22);
+  --scrollbar-thumb: rgba(44, 38, 33, 0.28);
+  --scrollbar-thumb-hover: rgba(44, 38, 33, 0.48);
+  --scrollbar-thumb-active: rgba(44, 38, 33, 0.65);
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 8px; }
-::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+/* Custom scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: 9999px;
+  transition: background 0.15s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--scrollbar-thumb-active);
+}
+
+/* Chat message list scrollbar enhancements on desktop */
+@media (min-width: 768px) {
+  .chat-scroll-container::-webkit-scrollbar {
+    width: 9px;
+  }
+
+  .chat-scroll-container::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    border-radius: 9999px;
+  }
+
+  .chat-scroll-container:hover::-webkit-scrollbar-track {
+    background: rgba(44, 38, 33, 0.03);
+  }
+
+  .dark .chat-scroll-container:hover::-webkit-scrollbar-track,
+  html[data-theme="dark"] .chat-scroll-container:hover::-webkit-scrollbar-track {
+    background: rgba(242, 237, 230, 0.03);
+  }
+}
 
 body::before {
   content: '';
@@ -219,8 +272,9 @@ html[data-theme="dark"] {
   --shadow-glow-primary: 0 0 28px -4px rgba(255, 85, 0, 0.5), 0 0 10px -2px rgba(255, 119, 51, 0.35);
   --shadow-glow-secondary: 0 0 24px -4px rgba(255, 170, 29, 0.5);
 
-  --scrollbar-thumb: rgba(242, 237, 230, 0.14);
-  --scrollbar-thumb-hover: rgba(242, 237, 230, 0.25);
+  --scrollbar-thumb: rgba(242, 237, 230, 0.26);
+  --scrollbar-thumb-hover: rgba(242, 237, 230, 0.45);
+  --scrollbar-thumb-active: rgba(242, 237, 230, 0.60);
 }
 
 .dark body::before,

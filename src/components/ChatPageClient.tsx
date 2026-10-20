@@ -204,7 +204,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
           />
 
             <StickToBottom
-              className="flex-1 min-h-0 overscroll-y-contain [overflow-anchor:auto] [will-change:scroll-position] [transform:translateZ(0)]"
+              className="flex-1 min-h-0 overscroll-y-contain [overflow-anchor:auto] [will-change:scroll-position] [transform:translateZ(0)] chat-scroll-container"
               resize="auto"
               initial="instant"
             >
