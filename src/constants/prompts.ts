@@ -27,12 +27,12 @@ export const SUGGESTION_CHIPS: SuggestionChip[] = [
 
 /** Pool of short, engaging welcome greetings for new chats. */
 export const WELCOME_MESSAGES: readonly string[] = [
-  'What would you like to build or edit today?',
-  'How can I help with your workspace today?',
-  'What are we working on today?',
-  'Ready to create, edit, or analyze your files.',
-  'What would you like to research or draft?',
-  'How can Strata AI assist your workspace today?',
+  'Ready when you are',
+  "Let's make something great",
+  'Pick a place to start',
+  'How can I help you today',
+  "What's on your mind today",
+
 ];
 
 /** Available placeholder prompts for the chat input. */
