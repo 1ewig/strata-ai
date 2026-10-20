@@ -190,7 +190,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
                   <StickToBottom.Content
                     scrollClassName="chat-scroll-container"
                     className={`max-w-4xl w-full mx-auto px-4 ${
-                      isNewChat ? 'min-h-full flex flex-col justify-center py-6' : 'py-4'
+                      isNewChat ? 'min-h-full flex flex-col justify-center py-6' : 'pt-4 pb-0'
                     }`}
                   >
                     {isNewChat ? (
@@ -236,7 +236,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
 
             {/* Docked Chat Input Bar below the scroll area */}
             {!isNewChat && (
-              <div className="shrink-0 pt-2 pb-4 px-4 animate-slide-up">
+              <div className="shrink-0 pt-0 pb-4 px-4 animate-slide-up">
                 <div className="max-w-4xl mx-auto">
                   {chatInputNode}
                 </div>

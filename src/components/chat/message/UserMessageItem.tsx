@@ -12,10 +12,6 @@ export interface UserMessageItemProps {
   segments: Segment[];
 }
 
-/**
- * Renders a single user message turn with a **perfectly round** bubble.
- * Pure presentational block. No other behavior changed.
- */
 function UserMessageItem({ segments }: UserMessageItemProps) {
   const {
     activeBubbleKey,
@@ -56,9 +52,10 @@ function UserMessageItem({ segments }: UserMessageItemProps) {
               <div key={seg.key} className="flex flex-col items-end gap-1 w-fit max-w-full">
                 <div
                   onClick={(e) => handleBubbleClick(e, seg.key)}
-                  className={`group/bubble relative rounded-full px-5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border border-primary/40 shadow-card animate-slide-up w-fit max-w-full cursor-default select-none ${isActionActive
-                      ? 'border-primary-hover shadow-glow-primary/30'
-                      : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/30'
+                  // Changed rounded-full -> rounded-3xl here
+                  className={`group/bubble relative rounded-3xl px-5 py-3.5 text-body leading-relaxed transition-all duration-300 bg-primary text-surface border border-primary/40 shadow-card animate-slide-up w-fit max-w-full cursor-default select-none ${isActionActive
+                    ? 'border-primary-hover shadow-glow-primary/30'
+                    : 'border-primary hover:border-primary-hover hover:shadow-glow-primary/30'
                     }`}
                 >
                   <div className="text-body text-surface leading-relaxed relative select-text cursor-text w-fit max-w-full">

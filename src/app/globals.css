@@ -233,8 +233,16 @@ html[data-theme="dark"] body::before {
   background: transparent !important;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-track-piece,
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track-piece,
+*::-webkit-scrollbar-corner {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 ::-webkit-scrollbar-thumb {
@@ -248,6 +256,16 @@ html[data-theme="dark"] body::before {
   ::-webkit-scrollbar {
     width: 5px;
     height: 5px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-track-piece,
+  .chat-scroll-container::-webkit-scrollbar-track,
+  .chat-scroll-container::-webkit-scrollbar-track-piece {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
   }
 
   ::-webkit-scrollbar-thumb,
@@ -284,6 +302,10 @@ html[data-theme="dark"] body::before {
     background: var(--scrollbar-thumb-active);
   }
 
+  .chat-scroll-container {
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+
   .chat-scroll-container::-webkit-scrollbar {
     width: 9px;
   }
@@ -294,18 +316,28 @@ html[data-theme="dark"] body::before {
     height: 0 !important;
   }
 
+  .chat-scroll-container::-webkit-scrollbar-track,
+  .chat-scroll-container::-webkit-scrollbar-track-piece,
+  .chat-scroll-container::-webkit-scrollbar-corner,
+  .chat-scroll-container:hover::-webkit-scrollbar-track,
+  .chat-scroll-container:hover::-webkit-scrollbar-track-piece {
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
   .chat-scroll-container::-webkit-scrollbar-thumb {
     background: var(--scrollbar-thumb);
     border-radius: 9999px;
   }
 
-  .chat-scroll-container:hover::-webkit-scrollbar-track {
-    background: rgba(44, 38, 33, 0.03);
+  .chat-scroll-container::-webkit-scrollbar-thumb:hover {
+    background: var(--scrollbar-thumb-hover);
   }
 
-  .dark .chat-scroll-container:hover::-webkit-scrollbar-track,
-  html[data-theme="dark"] .chat-scroll-container:hover::-webkit-scrollbar-track {
-    background: rgba(242, 237, 230, 0.03);
+  .chat-scroll-container::-webkit-scrollbar-thumb:active {
+    background: var(--scrollbar-thumb-active);
   }
 }
 
