@@ -11,6 +11,8 @@ import InferenceTimer from './InferenceTimer';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import type { Segment } from '@/agent/client/segments';
 import { useBubbleActionMenu } from '@/hooks/chat/useBubbleActionMenu';
+import MessageSourcesButton from './MessageSourcesButton';
+import { extractWebSourcesFromMessage } from '@/lib/urls';
 
 export interface AssistantMessageItemProps {
   message: ChatMessage;
@@ -34,6 +36,10 @@ function AssistantMessageItem({
     containerRef,
     handleBubbleClick,
   } = useBubbleActionMenu();
+
+  const sources = React.useMemo(() => {
+    return extractWebSourcesFromMessage(message);
+  }, [message]);
 
   return (
     <div
@@ -113,7 +119,7 @@ function AssistantMessageItem({
                 </div>
 
                 {!isStreamingActiveSegment && textContent && (
-                  <div className="flex items-center justify-start px-1">
+                  <div className="flex items-center justify-start gap-1 px-1">
                     <MessageActionsMenu
                       textContent={textContent}
                       isOpen={isMenuOpen}
@@ -121,6 +127,9 @@ function AssistantMessageItem({
                       align="left"
                       direction="down"
                     />
+                    {sources.length > 0 && isLastSegment && (
+                      <MessageSourcesButton sources={sources} />
+                    )}
                   </div>
                 )}
               </div>

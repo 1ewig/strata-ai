@@ -1,4 +1,7 @@
 import React, { type ReactNode } from 'react';
+import { ExternalLink, XCircle } from 'lucide-react';
+import { FaviconImage } from '@/components/ui/FaviconImage';
+import { extractDomain } from '@/lib/urls';
 
 /**
  * Reusable summary header component for consistent title and badge formatting across tools.
@@ -96,7 +99,7 @@ export interface WebSearchArgs {
 
 export interface WebSearchResult {
   query?: string;
-  results?: Array<{ title?: string; url: string; publishedDate?: string }>;
+  results?: Array<{ title?: string; url: string; publishedDate?: string; favicon?: string }>;
   error?: string;
 }
 
@@ -106,7 +109,7 @@ export interface ExtractUrlArgs {
 }
 
 export interface ExtractUrlResult {
-  extracted?: Array<{ url: string; title?: string }>;
+  extracted?: Array<{ url: string; title?: string; favicon?: string }>;
   failed?: Array<{ url: string; error: string }>;
   error?: string;
 }
@@ -304,13 +307,36 @@ export function buildWebSearchSummary(
   const resultsList = r.results || [];
 
   return (
-    <div className="py-1 space-y-0.5 font-mono text-caption">
+    <div className="py-1 space-y-1 font-mono text-caption">
       <SummaryLine label="Query:" value={`"${query}"`} />
       <SummaryLine
         label="Results:"
         value={String(resultsList.length)}
         valueClass="text-info font-medium"
       />
+
+      {resultsList.length > 0 && (
+        <div className="pt-0.5 space-y-1">
+          {resultsList.map((res, i) => (
+            <a
+              key={i}
+              href={res.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-1 rounded-md hover:bg-surface-hover/80 text-text-primary transition-colors text-caption group"
+            >
+              <FaviconImage url={res.url} faviconUrl={res.favicon} className="w-3.5 h-3.5 shrink-0" />
+              <span className="font-sans font-medium group-hover:text-primary transition-colors truncate">
+                {res.title || extractDomain(res.url)}
+              </span>
+              <span className="text-micro font-mono text-text-muted shrink-0 ml-auto">
+                {extractDomain(res.url)}
+              </span>
+              <ExternalLink className="w-3 h-3 text-text-muted group-hover:text-primary shrink-0 opacity-60 group-hover:opacity-100" />
+            </a>
+          ))}
+        </div>
+      )}
 
       {r.error && (
         <p className="text-caption text-danger truncate">Error: {r.error}</p>
@@ -344,7 +370,7 @@ export function buildExtractUrlSummary(
   const failed = r.failed || [];
 
   return (
-    <div className="py-1 space-y-0.5 font-mono text-caption">
+    <div className="py-1 space-y-1 font-mono text-caption">
       <SummaryLine
         label="Fetched:"
         value={`${extracted.length} page${extracted.length === 1 ? '' : 's'}`}
@@ -352,6 +378,41 @@ export function buildExtractUrlSummary(
       />
       {failed.length > 0 && (
         <SummaryLine label="Failed:" value={String(failed.length)} valueClass="text-danger font-medium" />
+      )}
+
+      {extracted.length > 0 && (
+        <div className="pt-0.5 space-y-1">
+          {extracted.map((item, idx) => (
+            <a
+              key={idx}
+              href={item.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-1 rounded-md hover:bg-surface-hover/80 text-text-primary transition-colors text-caption group"
+            >
+              <FaviconImage url={item.url} faviconUrl={item.favicon} className="w-3.5 h-3.5 shrink-0" />
+              <span className="font-sans font-medium group-hover:text-primary transition-colors truncate">
+                {item.title || extractDomain(item.url)}
+              </span>
+              <span className="text-micro font-mono text-text-muted shrink-0 ml-auto">
+                {extractDomain(item.url)}
+              </span>
+              <ExternalLink className="w-3 h-3 text-text-muted group-hover:text-primary shrink-0 opacity-60 group-hover:opacity-100" />
+            </a>
+          ))}
+        </div>
+      )}
+
+      {failed.length > 0 && (
+        <div className="pt-0.5 space-y-1">
+          {failed.map((f, idx) => (
+            <div key={idx} className="flex items-center gap-1.5 p-1 rounded-md text-danger text-caption">
+              <XCircle className="w-3.5 h-3.5 shrink-0" />
+              <span className="truncate">{f.url}</span>
+              <span className="text-micro text-danger/80 ml-auto shrink-0">({f.error})</span>
+            </div>
+          ))}
+        </div>
       )}
 
       {r.error && (

@@ -63,6 +63,26 @@ describe("webSearch", () => {
     ]);
   });
 
+  it("preserves favicon URLs returned by Tavily search", async () => {
+    mockFetch(async () =>
+      jsonResponse({
+        results: [
+          {
+            title: "Next.js",
+            url: "https://nextjs.org",
+            content: "The React framework",
+            favicon: "https://nextjs.org/favicon.ico",
+          },
+        ],
+      }),
+    );
+    process.env.TAVILY_API_KEY = "test-key";
+
+    const result = await runTool(createWebSearchTool(), { query: "next" });
+    expect(result.success).toBe(true);
+    expect(result.results?.[0].favicon).toBe("https://nextjs.org/favicon.ico");
+  });
+
   it("returns a failure when the API key is missing", async () => {
     delete process.env.TAVILY_API_KEY;
     const result = await runTool(createWebSearchTool(), { query: "anything" });
@@ -340,6 +360,25 @@ describe("extractUrl", () => {
     for (const item of result.extracted) {
       expect(item.rawContent.length).toBeLessThanOrEqual(6666);
     }
+  });
+
+  it("preserves favicon URLs returned by Tavily extract", async () => {
+    mockFetch(async () =>
+      jsonResponse({
+        results: [
+          {
+            url: "https://github.com",
+            raw_content: "GitHub homepage",
+            favicon: "https://github.com/favicon.ico",
+          },
+        ],
+      }),
+    );
+    process.env.TAVILY_API_KEY = "test-key";
+
+    const result = await runTool(createExtractUrlTool(), { urls: ["https://github.com"] });
+    expect(result.success).toBe(true);
+    expect(result.extracted[0].favicon).toBe("https://github.com/favicon.ico");
   });
 
   it("truncates search snippets at word boundaries and rounds scores", async () => {

@@ -175,6 +175,7 @@ export function createWebSearchTool() {
             content: z.string(),
             score: z.number().optional(),
             publishedDate: z.string().optional(),
+            favicon: z.string().optional(),
           }),
         )
         .optional(),
@@ -198,6 +199,7 @@ export function createWebSearchTool() {
         search_depth: searchDepth,
         topic,
         max_results: Math.min(Math.max(maxResults, 1), 10),
+        include_favicon: true,
       };
 
       if (timeRange) payload.time_range = timeRange;
@@ -226,6 +228,7 @@ export function createWebSearchTool() {
             ),
             score: typeof r.score === "number" ? Math.round(r.score * 100) / 100 : undefined,
             publishedDate: r.published_date ? String(r.published_date).slice(0, 10) : undefined,
+            ...(r.favicon ? { favicon: String(r.favicon) } : {}),
           }))
         : [];
 
@@ -280,6 +283,7 @@ export function createExtractUrlTool() {
           url: z.string(),
           title: z.string().optional(),
           rawContent: z.string(),
+          favicon: z.string().optional(),
         }),
       ),
       failed: z
@@ -315,6 +319,7 @@ export function createExtractUrlTool() {
         urls: normalizedUrls,
         extract_depth: extractDepth,
         format,
+        include_favicon: true,
       };
 
       if (query) payload.query = query;
@@ -348,6 +353,7 @@ export function createExtractUrlTool() {
               url: String(r.url || ""),
               title: r.title ? String(r.title) : undefined,
               rawContent: content,
+              ...(r.favicon ? { favicon: String(r.favicon) } : {}),
             };
           })
         : [];
