@@ -25,7 +25,7 @@ mock.module("pg", () => ({
   default: { Pool: FakePool },
 }));
 
-const { checkAndIncrementRateLimit, getRateLimitStatus, refundRateLimit } = await import("@/lib/server/rate-limit");
+const { checkAndIncrementRateLimit, getRateLimitStatus, refundRateLimit, RATE_LIMIT_ADVISORY_LOCK_SALT } = await import("@/lib/server/rate-limit");
 
 function countRows(value: number) {
   return { rows: [{ cnt: String(value) }] };
@@ -211,5 +211,8 @@ describe("getRateLimitStatus", () => {
     const result = await getRateLimitStatus("user-1");
     expect(result.allowed).toBe(false);
     expect(result.retryAfter).toBeUndefined();
+  });
+  it("exports RATE_LIMIT_ADVISORY_LOCK_SALT as a positive 64-bit safe namespace integer", () => {
+    expect(RATE_LIMIT_ADVISORY_LOCK_SALT).toBe(88345);
   });
 });

@@ -6,6 +6,7 @@ import type { WorkspaceFile } from "@/lib/db/schemas";
 import { COMPACTION_MODEL_ID, COMPACTION_THINKING_LEVEL } from "@/lib/ai/models";
 import { computeTokenBudget } from "./token-budget";
 import { createUIStreamResponder } from "./stream-responder";
+import type { ClassifiedError } from "./error-classifier";
 
 // Re-export sanitization helpers for convenience
 export {
@@ -27,7 +28,7 @@ export interface RunAgentResponseParams {
   remainingWeek: number;
   userId?: string;
   sessionId?: string;
-  onInferenceError?: (error: unknown) => Promise<void> | void;
+  onInferenceError?: (classified: ClassifiedError) => Promise<void> | void;
 }
 
 /**
@@ -86,7 +87,7 @@ export interface RunCompactionResponseParams {
   remainingWeek?: number;
   userId?: string;
   sessionId?: string;
-  onInferenceError?: (error: unknown) => Promise<void> | void;
+  onInferenceError?: (classified: ClassifiedError) => Promise<void> | void;
 }
 
 /**
