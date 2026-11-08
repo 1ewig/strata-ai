@@ -14,8 +14,8 @@ interface SignInFormProps {
 }
 
 /**
- * Minimalist, tactile Google sign-in component.
- * Displays a single, accessible "Continue with Google" action with loading and error states.
+ * Minimalist, tactile Google sign-in trigger.
+ * Designed for the open canvas layout with subtle elevation and micro-feedback.
  */
 export function SignInForm({ onGoogleSignIn, error, isPending }: SignInFormProps) {
   return (
@@ -25,7 +25,7 @@ export function SignInForm({ onGoogleSignIn, error, isPending }: SignInFormProps
         <motion.div
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
-          className="p-3.5 rounded-xl bg-danger-soft border border-danger/30 text-danger text-caption flex items-start gap-2.5"
+          className="p-3.5 rounded-xl bg-danger-soft border border-danger/30 text-danger text-caption flex items-start gap-2.5 text-left"
         >
           <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
           <span className="leading-relaxed font-medium">{error}</span>
@@ -37,9 +37,9 @@ export function SignInForm({ onGoogleSignIn, error, isPending }: SignInFormProps
         type="button"
         disabled={isPending}
         onClick={onGoogleSignIn}
-        whileHover={{ scale: isPending ? 1 : 1.01 }}
-        whileTap={{ scale: isPending ? 1 : 0.98 }}
-        className="group w-full py-3.5 px-5 rounded-2xl bg-surface-base hover:bg-surface-raised border border-edge-raised hover:border-edge-hover text-text-bright text-label font-semibold flex items-center justify-center gap-3 transition-all duration-150 shadow-button hover:shadow-card cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
+        whileHover={{ scale: isPending ? 1 : 1.015 }}
+        whileTap={{ scale: isPending ? 1 : 0.985 }}
+        className="group w-full py-3.5 px-6 rounded-2xl bg-surface-raised dark:bg-surface-elevated hover:bg-surface-elevated dark:hover:bg-surface-raised border border-edge-raised hover:border-edge-hover text-text-bright text-label font-semibold flex items-center justify-center gap-3 transition-all duration-150 shadow-button hover:shadow-card cursor-pointer disabled:cursor-not-allowed disabled:opacity-60"
       >
         {isPending ? (
           <>

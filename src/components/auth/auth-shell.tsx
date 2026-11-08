@@ -11,7 +11,7 @@ import { useTheme } from "@/hooks/common/useTheme";
  * Props for the shared auth page shell.
  */
 interface AuthShellProps {
-  /** Content rendered inside the card, typically the Google sign-in button and status. */
+  /** Content rendered, typically the Google sign-in button and status. */
   children: ReactNode;
   /** Optional mode for backward compatibility with existing links. */
   mode?: "signin" | "signup";
@@ -20,9 +20,9 @@ interface AuthShellProps {
 }
 
 /**
- * Truly minimalist, calm, and human authentication shell.
- * Features a warm studio canvas, centered focused card with tactile elevation,
- * smooth theme switching, and quiet local-first reassurance.
+ * Open-canvas, unboxed authentication shell.
+ * Features a minimalist studio canvas where the brand, title, Google CTA,
+ * and local-first assurance sit directly on the page without an enclosing box card.
  */
 export function AuthShell({ children }: AuthShellProps) {
   const { isDark, toggle: toggleTheme } = useTheme();
@@ -70,34 +70,36 @@ export function AuthShell({ children }: AuthShellProps) {
         </div>
       </header>
 
-      {/* Main Centered Minimalist Auth Card */}
-      <main className="w-full max-w-md mx-auto my-auto py-8 z-10">
+      {/* Main Centered Open Canvas (No Enclosing Box Container) */}
+      <main className="w-full max-w-md mx-auto my-auto py-12 px-4 z-10">
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className="p-7 sm:p-9 rounded-3xl bg-surface-raised dark:bg-surface-elevated border border-edge-raised shadow-card space-y-6"
+          className="space-y-8 text-center"
         >
           {/* Header Icon & Title */}
-          <div className="text-center space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-primary-soft border border-primary/20 flex items-center justify-center mx-auto mb-3 shadow-button">
-              <StrataIcon className="w-6 h-6" />
+          <div className="space-y-3">
+            <div className="w-14 h-14 rounded-2xl bg-surface-raised dark:bg-surface-elevated border border-edge-raised flex items-center justify-center mx-auto mb-4 shadow-button">
+              <StrataIcon className="w-7 h-7" />
             </div>
 
-            <h1 className="font-display font-extrabold text-title sm:text-heading text-text-bright tracking-tight">
+            <h1 className="font-display font-extrabold text-heading sm:text-display text-text-bright tracking-tight">
               Welcome to Strata.
             </h1>
 
-            <p className="text-label text-text-secondary font-sans leading-relaxed">
-              Sign in with your Google account to enter your studio workspace.
+            <p className="text-body text-text-secondary font-sans leading-relaxed max-w-xs sm:max-w-sm mx-auto">
+              Sign in with your Google account to enter your private studio workspace.
             </p>
           </div>
 
-          {/* Form Content */}
-          {children}
+          {/* Main Action Content */}
+          <div className="max-w-xs sm:max-w-sm mx-auto">
+            {children}
+          </div>
 
           {/* Quiet Reassurance Note */}
-          <div className="pt-2 text-center border-t border-edge-default">
+          <div className="pt-2">
             <p className="text-caption text-text-muted font-sans flex items-center justify-center gap-1.5">
               <Shield className="w-3.5 h-3.5 text-accent-olive" />
               <span>Local-first · Your files stay private on your device</span>
