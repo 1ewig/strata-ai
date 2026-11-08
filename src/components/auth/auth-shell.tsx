@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { motion } from "motion/react";
-import { Sun, Moon, Shield } from "lucide-react";
+import { Sun, Moon, Shield, ArrowLeft } from "lucide-react";
 import { StrataIcon } from "@/components/ui/strata-icon";
 import { useTheme } from "@/hooks/common/useTheme";
 
@@ -11,10 +11,10 @@ import { useTheme } from "@/hooks/common/useTheme";
  * Props for the shared auth page shell.
  */
 interface AuthShellProps {
-  /** Content rendered inside the card, typically the sign-in or sign-up form. */
+  /** Content rendered inside the card, typically the Google sign-in button and status. */
   children: ReactNode;
-  /** Which auth mode the shell is presenting, drives the heading and supporting copy. */
-  mode: "signin" | "signup";
+  /** Optional mode for backward compatibility with existing links. */
+  mode?: "signin" | "signup";
   /** Destination to return to after successful authentication. */
   callbackUrl?: string;
 }
@@ -24,14 +24,8 @@ interface AuthShellProps {
  * Features a warm studio canvas, centered focused card with tactile elevation,
  * smooth theme switching, and quiet local-first reassurance.
  */
-export function AuthShell({ children, mode, callbackUrl = "/" }: AuthShellProps) {
+export function AuthShell({ children }: AuthShellProps) {
   const { isDark, toggle: toggleTheme } = useTheme();
-
-  // Query parameter preservation for mode switching
-  const searchParamSuffix =
-    callbackUrl && callbackUrl !== "/"
-      ? `?callbackUrl=${encodeURIComponent(callbackUrl)}`
-      : "";
 
   return (
     <div className="min-h-dvh bg-surface-base flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-primary-soft-strong">
@@ -48,31 +42,15 @@ export function AuthShell({ children, mode, callbackUrl = "/" }: AuthShellProps)
           </span>
         </Link>
 
-        {/* Right Nav: Mode switch and Theme toggle */}
-        <div className="flex items-center gap-2">
-          {/* Subtle segmented mode switcher */}
-          <div className="flex items-center p-1 rounded-full bg-surface-raised dark:bg-surface-elevated border border-edge-raised shadow-button">
-            <Link
-              href={`/auth/signin${searchParamSuffix}`}
-              className={`px-3 py-1 rounded-full text-caption font-semibold transition-all duration-150 ${
-                mode === "signin"
-                  ? "bg-text-bright text-surface-base shadow-button"
-                  : "text-text-secondary hover:text-text-bright"
-              }`}
-            >
-              Sign In
-            </Link>
-            <Link
-              href={`/auth/signup${searchParamSuffix}`}
-              className={`px-3 py-1 rounded-full text-caption font-semibold transition-all duration-150 ${
-                mode === "signup"
-                  ? "bg-text-bright text-surface-base shadow-button"
-                  : "text-text-secondary hover:text-text-bright"
-              }`}
-            >
-              Sign Up
-            </Link>
-          </div>
+        {/* Right Nav: Back to home link and Theme toggle */}
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            href="/"
+            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-caption font-medium text-text-secondary hover:text-text-bright transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Home</span>
+          </Link>
 
           {/* Theme Switcher Button */}
           <motion.button
@@ -107,13 +85,11 @@ export function AuthShell({ children, mode, callbackUrl = "/" }: AuthShellProps)
             </div>
 
             <h1 className="font-display font-extrabold text-title sm:text-heading text-text-bright tracking-tight">
-              {mode === "signin" ? "Welcome back." : "Create your studio account."}
+              Welcome to Strata.
             </h1>
 
             <p className="text-label text-text-secondary font-sans leading-relaxed">
-              {mode === "signin"
-                ? "Sign in to access your workspaces and living documents."
-                : "A quiet, private workspace for deep thinking and writing."}
+              Sign in with your Google account to enter your studio workspace.
             </p>
           </div>
 
@@ -144,5 +120,3 @@ export function AuthShell({ children, mode, callbackUrl = "/" }: AuthShellProps)
     </div>
   );
 }
-
-
