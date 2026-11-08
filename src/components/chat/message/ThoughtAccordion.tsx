@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { BrainCircuit, ChevronDown, Loader2 } from 'lucide-react';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import { accordionVariants, toolEntranceVariants } from '@/constants/animations';
 import { estimateThoughtDuration } from '@/lib/timing';
 import { useElapsedTimer } from '@/hooks/common/useElapsedTimer';
+import { useAccordionOpenState } from '@/hooks/common/useAccordionOpenState';
 
 /**
  * Props for the ThoughtAccordion component.
@@ -19,11 +20,14 @@ interface ThoughtAccordionProps {
 /**
  * Collapsible panel that reveals a model's internal reasoning text, rendered as Markdown.
  * Hidden entirely when text is empty; shows a spinner and "Thinking..." header while the model is mid-thought.
+ * Automatically expands while actively streaming reasoning, and auto-collapses when finished,
+ * while allowing user manual toggle overrides at any point.
+ *
  * @param text - The reasoning content shown inside the expanded body.
  * @param isThinking - When true, renders a loading spinner and "Thinking..." label in the header.
  */
 function ThoughtAccordion({ text, isThinking = false }: ThoughtAccordionProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, toggleOpen } = useAccordionOpenState(isThinking);
 
   const estimatedSeconds = React.useMemo(() => {
     return estimateThoughtDuration(text);
@@ -42,7 +46,8 @@ function ThoughtAccordion({ text, isThinking = false }: ThoughtAccordionProps) {
       className="w-full text-caption"
     >
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        type="button"
+        onClick={toggleOpen}
         className="w-fit flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left font-mono text-caption cursor-pointer group"
       >
         <BrainCircuit className="w-3.5 h-3.5 text-text-muted shrink-0" />
@@ -71,13 +76,13 @@ function ThoughtAccordion({ text, isThinking = false }: ThoughtAccordionProps) {
             exit="hidden"
             className="overflow-hidden"
           >
-            <div className="pl-5 py-1 text-label text-text-secondary leading-relaxed max-h-60 overflow-y-auto font-mono select-text cursor-text">
-              {/* While actively thinking, render plain pre-wrap whitespace to avoid per-token Markdown AST parsing freeze */}
-              {isThinking ? (
-                <p className="whitespace-pre-wrap font-mono leading-relaxed text-text-secondary select-text cursor-text">{text}</p>
-              ) : (
-                <MarkdownRenderer content={text} variant="thought" className="text-label text-text-secondary leading-relaxed select-text cursor-text" />
-              )}
+            <div className="pl-5 py-1 text-label text-text-secondary leading-relaxed max-h-60 overflow-y-auto select-text cursor-text">
+              <MarkdownRenderer
+                content={text}
+                variant="thought"
+                isStreaming={isThinking}
+                className="text-label text-text-secondary leading-relaxed select-text cursor-text"
+              />
             </div>
           </motion.div>
         )}

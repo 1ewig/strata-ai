@@ -1,50 +1,20 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { Suspense, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useSession } from "@/lib/auth/client";
-import { useSignUp } from "@/hooks/auth/useAuth";
-import { LoadingScreen } from "@/components/auth/loading-screen";
-import { AuthShell } from "@/components/auth/auth-shell";
-import { SignUpForm } from "@/components/auth/sign-up-form";
-
-/**
- * Sign-up screen. Shows a loading screen while the session resolves and
- * bounces already-authenticated users to their callback URL.
- */
-function SignUpPage() {
-  const searchParams = useSearchParams();
-  const rawCallbackUrl = searchParams.get("callbackUrl");
-  const callbackUrl = rawCallbackUrl && !rawCallbackUrl.startsWith("/chat-id/") ? rawCallbackUrl : "/";
-  const { data: session, isPending } = useSession();
-  const router = useRouter();
-  const { error, successMsg, isPending: isAuthPending, handleSubmit } = useSignUp(callbackUrl);
-
-  // Already signed in - forward to the callback URL immediately.
-  useEffect(() => {
-    if (session?.user) router.replace(callbackUrl);
-  }, [session, callbackUrl, router]);
-
-  // Keep the spinner until the session resolves, then render the form.
-  if (isPending || session?.user) return <LoadingScreen />;
-
-  return (
-    <AuthShell mode="signup" callbackUrl={callbackUrl}>
-      <SignUpForm
-        onSubmit={handleSubmit}
-        error={error}
-        successMsg={successMsg}
-        isPending={isAuthPending}
-      />
-    </AuthShell>
-  );
+interface SignUpPageProps {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
-/** Exports the sign-up page wrapped in Suspense so useSearchParams can be statically pre-rendered. */
-export default function Page() {
-  return (
-    <Suspense fallback={<LoadingScreen />}>
-      <SignUpPage />
-    </Suspense>
-  );
+/**
+ * Sign-up route. With Google OAuth, sign-up and sign-in are unified into
+ * a single one-click flow. Forwards to /auth/signin while preserving callbackUrl.
+ */
+export default async function SignUpPage({ searchParams }: SignUpPageProps) {
+  const resolvedParams = await searchParams;
+  const callbackUrl = resolvedParams?.callbackUrl;
+
+  if (typeof callbackUrl === "string" && callbackUrl) {
+    redirect(`/auth/signin?callbackUrl=${encodeURIComponent(callbackUrl)}`);
+  }
+
+  redirect("/auth/signin");
 }
