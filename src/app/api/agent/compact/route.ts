@@ -20,7 +20,10 @@ export async function POST(req: Request) {
       remainingWeek: rateLimit.remainingWeek,
       userId: session.user.id,
       sessionId: body.chatId || session.session?.id,
-      onInferenceError: async () => {
+      onInferenceError: (classified) => {
+        // Aborts (user stop / disconnect) consumed provider tokens but the user
+        // chose to cancel — do not hand the quota slot back.
+        if (classified.code === "ABORTED") return;
         safeAsyncRefundRateLimit(rateLimit.messageLogId);
       },
     });

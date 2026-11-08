@@ -1,5 +1,11 @@
 import { afterEach, describe, it, expect, mock } from "bun:test";
-import { MAX_MESSAGE_CHARS } from "@/lib/limits";
+import {
+  MAX_MESSAGE_CHARS,
+  MAX_HISTORY_CHARS,
+  MAX_FILES_PER_WORKSPACE,
+  MAX_FILE_CHARS,
+  MAX_WORKSPACE_TOTAL_CHARS,
+} from "@/lib/limits";
 
 /**
  * Direct tests for `withAgentRouteGuards`, focusing on the quota-reservation and
@@ -100,6 +106,118 @@ describe("withAgentRouteGuards quota contract", () => {
 
     expect(res.status).toBe(400);
     expect(rateLimitMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects an overlong parts-based latest user message before reserving quota", async () => {
+    const res = await withAgentRouteGuards(
+      request({
+        messages: [
+          {
+            role: "user",
+            parts: [{ type: "text", text: "x".repeat(MAX_MESSAGE_CHARS + 1) }],
+          },
+        ],
+      }),
+      async () => new Response("ok"),
+    );
+
+    expect(res.status).toBe(400);
+    expect(rateLimitMock).not.toHaveBeenCalled();
+  });
+
+  it("allows a parts-based latest user message within the character limit", async () => {
+    const res = await withAgentRouteGuards(
+      request({
+        messages: [
+          { role: "user", parts: [{ type: "text", text: "x".repeat(MAX_MESSAGE_CHARS) }] },
+        ],
+      }),
+      async () => new Response("ok"),
+    );
+
+    expect(res.status).toBe(200);
+    expect(rateLimitMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a replayed history that exceeds the total character budget", async () => {
+    const filler = "y".repeat(MAX_MESSAGE_CHARS);
+    const history = Array.from({ length: Math.ceil(MAX_HISTORY_CHARS / MAX_MESSAGE_CHARS) + 1 }, () => ({
+      role: "user",
+      content: filler,
+    }));
+
+    const res = await withAgentRouteGuards(request({ messages: history }), async () => new Response("ok"));
+
+    expect(res.status).toBe(400);
+    expect(rateLimitMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a workspace exceeding the per-workspace file count", async () => {
+    const files = Array.from({ length: MAX_FILES_PER_WORKSPACE + 1 }, (_, i) => ({
+      id: String(i),
+      name: `file-${i}.md`,
+      content: "ok",
+      createdAt: "2026-01-01",
+      updatedAt: "2026-01-01",
+    }));
+
+    const res = await withAgentRouteGuards(
+      request({ messages: [{ role: "user", content: "hi" }], files }),
+      async () => new Response("ok"),
+    );
+
+    expect(res.status).toBe(400);
+    expect(rateLimitMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a workspace file larger than the per-file character budget", async () => {
+    const res = await withAgentRouteGuards(
+      request({
+        messages: [{ role: "user", content: "hi" }],
+        files: [
+          {
+            id: "1",
+            name: "huge.md",
+            content: "z".repeat(MAX_FILE_CHARS + 1),
+            createdAt: "2026-01-01",
+            updatedAt: "2026-01-01",
+          },
+        ],
+      }),
+      async () => new Response("ok"),
+    );
+
+    expect(res.status).toBe(400);
+    expect(await res.json().then((j) => j.error)).toContain("huge.md");
+    expect(rateLimitMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a workspace exceeding the total character budget", async () => {
+    const files = Array.from({ length: MAX_FILES_PER_WORKSPACE }, (_, i) => ({
+      id: String(i),
+      name: `file-${i}.md`,
+      content: "w".repeat(MAX_WORKSPACE_TOTAL_CHARS / MAX_FILES_PER_WORKSPACE + 1),
+      createdAt: "2026-01-01",
+      updatedAt: "2026-01-01",
+    }));
+
+    const res = await withAgentRouteGuards(
+      request({ messages: [{ role: "user", content: "hi" }], files }),
+      async () => new Response("ok"),
+    );
+
+    expect(res.status).toBe(400);
+    expect(rateLimitMock).not.toHaveBeenCalled();
+  });
+
+  it("does not refund quota when the delegate throws an abort error", async () => {
+    await expect(
+      withAgentRouteGuards(request({ messages: [{ role: "user", content: "hi" }] }), async () => {
+        throw new Error("The operation was aborted");
+      }),
+    ).rejects.toThrow("aborted");
+
+    expect(refundRateLimitMock).not.toHaveBeenCalled();
   });
 
   it("rejects when the quota is exhausted and surfaces retry headers", async () => {

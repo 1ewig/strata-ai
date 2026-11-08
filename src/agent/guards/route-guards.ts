@@ -1,7 +1,11 @@
 import { agentRequestBodySchema, type AgentRequestBody } from "./schemas";
 import {
   MAX_MESSAGE_CHARS,
+  MAX_HISTORY_CHARS,
   MAX_ATTACHMENTS_PER_MESSAGE,
+  MAX_FILES_PER_WORKSPACE,
+  MAX_FILE_CHARS,
+  MAX_WORKSPACE_TOTAL_CHARS,
   buildRateLimitErrorMessage,
 } from "@/lib/limits";
 import { findImagePartViolations } from "@/lib/attachments/images";
@@ -9,6 +13,7 @@ import { countTotalAttachmentParts, findDocumentPartViolations } from "@/lib/att
 import { sliceMessagesAfterCompaction } from "../client/extractor";
 import { auth } from "@/lib/auth/server";
 import { checkAndIncrementRateLimit, refundRateLimit, type RateLimitResult } from "@/lib/server/rate-limit";
+import { classifyProviderError } from "../core/error-classifier";
 
 /**
  * Context passed to the route delegate after validation and rate-limiting have succeeded.
@@ -31,6 +36,25 @@ export function safeAsyncRefundRateLimit(messageLogId?: string): void {
   refundRateLimit(messageLogId).catch((err) => {
     console.error("[rate-limit] Asynchronous refund failed:", err);
   });
+}
+
+/**
+ * Counts the text characters carried by a single UI message, covering both
+ * legacy string content and parts-based messages (`text` parts only). Used to
+ * enforce message and history size bounds on client-supplied histories.
+ */
+function countMessageTextChars(message: unknown): number {
+  if (!message || typeof message !== "object") return 0;
+  const { content, parts } = message as { content?: unknown; parts?: unknown };
+  if (typeof content === "string") return content.length;
+  if (!Array.isArray(parts)) return 0;
+  return parts.reduce((sum: number, part) => {
+    if (part && typeof part === "object" && (part as { type?: unknown }).type === "text") {
+      const text = (part as { text?: unknown }).text;
+      if (typeof text === "string") return sum + text.length;
+    }
+    return sum;
+  }, 0);
 }
 
 /**
@@ -87,22 +111,66 @@ export async function withAgentRouteGuards(
   // 4. Prune history before the latest successful compaction summary
   const messages = sliceMessagesAfterCompaction(parsed.data.messages);
 
-  // 5. Message length and attachment part validation
+  // 5. Semantic bounds (text length, history size, attachments, workspace files)
   const lastUserMsg = Array.isArray(messages)
     ? [...messages].reverse().find((m: { role?: string; content?: unknown }) => m?.role === "user")
     : null;
 
-  if (
-    lastUserMsg &&
-    typeof lastUserMsg.content === "string" &&
-    lastUserMsg.content.length > MAX_MESSAGE_CHARS
-  ) {
+  // Per-message character limit — enforced on parts-based messages too, since
+  // the legacy string-content check alone never fires for the real client.
+  if (lastUserMsg && countMessageTextChars(lastUserMsg) > MAX_MESSAGE_CHARS) {
     return new Response(
       JSON.stringify({
         error: `Message exceeds maximum character limit of ${MAX_MESSAGE_CHARS.toLocaleString()} characters.`,
       }),
       { status: 400, headers: { "Content-Type": "application/json" } },
     );
+  }
+
+  // Total replayed-history cap so a hostile client cannot inflate token spend
+  // by forging arbitrarily large prior turns.
+  const totalHistoryChars = Array.isArray(messages)
+    ? messages.reduce((sum: number, m: unknown) => sum + countMessageTextChars(m), 0)
+    : 0;
+  if (totalHistoryChars > MAX_HISTORY_CHARS) {
+    return new Response(
+      JSON.stringify({
+        error: `Conversation history exceeds the maximum size of ${MAX_HISTORY_CHARS.toLocaleString()} characters.`,
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } },
+    );
+  }
+
+  // Client-supplied workspace state is untrusted; apply the same file bounds
+  // the local client enforces against its own Dexie workspace.
+  const workspaceFiles = parsed.data.files;
+  if (workspaceFiles) {
+    if (workspaceFiles.length > MAX_FILES_PER_WORKSPACE) {
+      return new Response(
+        JSON.stringify({
+          error: `Workspace exceeds the maximum of ${MAX_FILES_PER_WORKSPACE} files.`,
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    const oversizedFile = workspaceFiles.find((f) => f.content.length > MAX_FILE_CHARS);
+    if (oversizedFile) {
+      return new Response(
+        JSON.stringify({
+          error: `Workspace file "${oversizedFile.name}" exceeds the maximum size of ${MAX_FILE_CHARS.toLocaleString()} characters.`,
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
+    const totalFileChars = workspaceFiles.reduce((sum, f) => sum + f.content.length, 0);
+    if (totalFileChars > MAX_WORKSPACE_TOTAL_CHARS) {
+      return new Response(
+        JSON.stringify({
+          error: `Workspace exceeds the maximum total size of ${MAX_WORKSPACE_TOTAL_CHARS.toLocaleString()} characters.`,
+        }),
+        { status: 400, headers: { "Content-Type": "application/json" } },
+      );
+    }
   }
 
   const lastUserParts = (lastUserMsg as { parts?: unknown[] } | null)?.parts;
@@ -161,7 +229,13 @@ export async function withAgentRouteGuards(
       signal: req.signal,
     });
   } catch (error) {
-    safeAsyncRefundRateLimit(rateLimit.messageLogId);
+    // User-initiated aborts (stop button, tab close, disconnects) are not
+    // provider failures — the user chose to cancel, so the reserved quota
+    // slot is consumed rather than refunded.
+    const classified = classifyProviderError(error);
+    if (classified.code !== "ABORTED") {
+      safeAsyncRefundRateLimit(rateLimit.messageLogId);
+    }
     throw error;
   }
 }

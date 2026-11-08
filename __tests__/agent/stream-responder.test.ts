@@ -258,6 +258,22 @@ describe("createUIStreamResponder error handling", () => {
     expect(onInferenceError.mock.calls.length).toBe(1);
   });
 
+  it("passes a classified error to the inference-error callback", async () => {
+    const onInferenceError = mock((_classified: { code: string; message: string; isRetryable: boolean }) =>
+      Promise.resolve(),
+    );
+
+    await runResponder({ onInferenceError });
+
+    const cfg = lastStreamText();
+    await cfg.onError({ error: new Error("resource_exhausted: quota exceeded") });
+
+    const classified = onInferenceError.mock.calls[0][0];
+    expect(classified.code).toBe("PROVIDER_RATE_LIMIT");
+    expect(typeof classified.message).toBe("string");
+    expect(typeof classified.isRetryable).toBe("boolean");
+  });
+
   it("survives an inference-error callback that itself throws", async () => {
     const onInferenceError = mock(() => Promise.reject(new Error("refund failed")));
     await runResponder({ onInferenceError });

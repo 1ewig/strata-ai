@@ -16,6 +16,7 @@ import {
 } from "../sanitization";
 import { coalesceToolInputDeltas } from "./transforms";
 import { handleRunnerError } from "./runner-error";
+import { classifyProviderError, type ClassifiedError } from "./error-classifier";
 import { propagateAttributes } from "@langfuse/tracing";
 import { langfuseSpanProcessor } from "@/instrumentation";
 
@@ -42,7 +43,21 @@ export interface UIStreamResponderConfig {
   maxOutputTokens?: number;
   appendUserMessage?: string;
   extraMetadata?: Record<string, unknown>;
-  onInferenceError?: (error: unknown) => Promise<void> | void;
+  onInferenceError?: (classified: ClassifiedError) => Promise<void> | void;
+}
+
+/**
+ * Type guard for an already-classified runner error, so callbacks receive a
+ * structured `ClassifiedError` whether the error arrives raw or pre-classified.
+ */
+function isClassifiedError(value: unknown): value is ClassifiedError {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as ClassifiedError).code === "string" &&
+    typeof (value as ClassifiedError).message === "string" &&
+    typeof (value as ClassifiedError).isRetryable === "boolean"
+  );
 }
 
 /**
@@ -64,8 +79,9 @@ export async function createUIStreamResponder(config: UIStreamResponderConfig): 
     if (hasTriggeredInferenceError) return;
     hasTriggeredInferenceError = true;
     if (config.onInferenceError) {
+      const classified = isClassifiedError(err) ? err : classifyProviderError(err);
       try {
-        await config.onInferenceError(err);
+        await config.onInferenceError(classified);
       } catch (callbackError) {
         console.error(`${config.prefix} Failed to execute onInferenceError callback:`, callbackError);
       }

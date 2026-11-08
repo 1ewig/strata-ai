@@ -35,6 +35,13 @@ export async function checkAndIncrementRateLimit(userId: string): Promise<RateLi
   try {
     const res = await client.query(
       `WITH
+        lock AS (
+          -- Per-user advisory lock: concurrent checks for the same user would
+          -- otherwise all observe the same pre-insert window counts under READ
+          -- COMMITTED and each reserve a slot. Referenced by window_stats via
+          -- CROSS JOIN so Postgres is guaranteed to execute it.
+          SELECT pg_advisory_xact_lock(hashtextextended($1::text, 88345)) AS acquired
+        ),
         purged AS (
           DELETE FROM better_auth.message_log
           WHERE user_id = $1 AND created_at < NOW() - INTERVAL '7 days'
@@ -46,7 +53,7 @@ export async function checkAndIncrementRateLimit(userId: string): Promise<RateLi
             COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days')::int AS count_week,
             MIN(created_at) FILTER (WHERE created_at > NOW() - INTERVAL '5 hours') AS oldest_5h,
             MIN(created_at) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') AS oldest_week
-          FROM better_auth.message_log
+          FROM better_auth.message_log CROSS JOIN lock
           WHERE user_id = $1
         ),
         inserted AS (
