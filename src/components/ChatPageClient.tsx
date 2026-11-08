@@ -20,6 +20,7 @@ import ChatHeader from '@/components/chat/header/ChatHeader';
 import ChatInput from '@/components/chat/input/ChatInput';
 import ChatHero from '@/components/chat/ChatHero';
 import MessageList from '@/components/chat/message/MessageList';
+import { LoadingScreen } from '@/components/ui/LoadingScreen';
 import { pillFloatVariants } from '@/constants/animations';
 import { prewarmHighlighter } from '@/lib/code/shiki-highlighter';
 
@@ -113,15 +114,13 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Show a spinner while the session is still being verified or redirecting from an unauthorized chat.
+  // Show atmospheric studio loader while the session is being verified or redirecting.
   if (isSessionPending || !session?.user || isUnauthorized) {
     return (
-      <main className="h-dvh bg-surface-base flex items-center justify-center text-text-muted text-label">
-        <div className="flex items-center gap-2">
-          <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          {isUnauthorized ? 'Redirecting...' : 'Verifying session...'}
-        </div>
-      </main>
+      <LoadingScreen
+        badge={isUnauthorized ? 'ACCESS CONTROL' : 'INITIALIZING WORKSPACE'}
+        message={isUnauthorized ? 'Redirecting to your workspace...' : 'Resolving session and workspace cache...'}
+      />
     );
   }
 
