@@ -7,21 +7,26 @@ export interface SuggestionChip {
   prompt: string;
 }
 
+/**
+ * Open-ended prompt seeds injected into the chat input when a chip is clicked.
+ * Intentionally incomplete so the user finishes the thought themselves rather
+ * than sending a pre-written end-to-end message.
+ */
 export const SUGGESTION_CHIPS: SuggestionChip[] = [
   {
     icon: Globe,
     label: 'Web Research',
-    prompt: 'Search the web for the latest updates on AI agents and summarize key findings into a new workspace file.',
+    prompt: 'Search the web for ',
   },
   {
     icon: FileText,
     label: 'Draft Document',
-    prompt: 'Create a structured project proposal document in the workspace with milestones and technical architecture.',
+    prompt: 'Draft a document about ',
   },
   {
     icon: Compass,
     label: 'Analyze Workspace',
-    prompt: 'List and analyze all current workspace files, providing a comprehensive executive summary.',
+    prompt: 'Analyze my workspace and ',
   },
 ];
 
