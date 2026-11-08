@@ -43,7 +43,8 @@ Three design principles explain nearly every architectural decision across the c
    (`nosniff`, `DENY`, `strict-origin-when-cross-origin`).
    Private `/chat-id/*` paths drop the `callbackUrl` query parameter so chat IDs are not leaked across accounts.
 3. **Route Guards:** `withAgentRouteGuards` validates the session against Postgres via Better Auth,
-   parses request schemas, prunes compacted history, and reserves quota in Postgres before inference begins.
+   parses request schemas, prunes compacted history, enforces semantic size bounds (message length,
+   replayed-history budget, workspace file caps), and reserves quota in Postgres before inference begins.
 4. **Stream Assembly:** `createUIStreamResponder` resolves the model, converts message history,
    strips image attachments when targeting text-only models, applies word-level `smoothStream`
    (25ms) and tool-delta coalescing, and initiates the `streamText` loop with tool execution.
@@ -80,7 +81,7 @@ The UI consumes a structured Server-Sent Events (SSE) stream:
 | `reasoning` | Model thinking stream | `ThoughtAccordion` (`thought` variant) |
 | `tool-call` / `tool-result` | Tool execution pipeline | `ToolCallCard` (coalesced by callId) |
 | `data-workspace` | Mutating workspace tools | `useChatSession.onData` $\rightarrow$ `useWorkspaceFiles` |
-| `error` | Runner error handler | Client chat error banner (triggers quota refund) |
+| `error` | Runner error handler | Client chat error banner (refunds quota except on user aborts) |
 
 - **Streaming Thought Accordion:** `ThoughtAccordion` uses `useAccordionOpenState` to auto-expand
   while reasoning tokens stream, and auto-collapses on completion with user manual toggle override.
@@ -113,9 +114,17 @@ long-running workspace memory through compaction:
     orphaned chats by reusing existing empty states on "New Chat" clicks. Pinned chats partition into an upper tier.
 - **Atomic Quota Ledger (Postgres):**
   - Enforces a sliding-window rate limit: 10 messages per 5 hours and 50 messages per 7 days.
-  - Implemented in `src/lib/server/rate-limit.ts` using an atomic CTE query (purge, count, conditional insert).
-  - Failed inferences trigger `safeAsyncRefundRateLimit` to delete the reserved row immediately.
+  - Implemented in `src/lib/server/rate-limit.ts` using an atomic CTE query (purge, count,
+    conditional insert) serialized by a per-user `pg_advisory_xact_lock` so concurrent requests
+    cannot all reserve a slot from the same pre-insert window counts.
+  - Failed inferences trigger `safeAsyncRefundRateLimit` to delete the reserved row; user-initiated
+    aborts (stop button, disconnect) deliberately consume the slot, since provider tokens were spent.
   - Quota errors surface standard `Retry-After` and `X-RateLimit-Retry-After` response headers.
+- **Server-Side Payload Bounds:** Route guards validate client-supplied state before reserving quota:
+  `MAX_MESSAGE_CHARS` per message (enforced on parts-based messages), `MAX_HISTORY_CHARS` (200k)
+  across the replayed history, and workspace file caps (`MAX_FILES_PER_WORKSPACE`,
+  `MAX_FILE_CHARS`, `MAX_WORKSPACE_TOTAL_CHARS`). The compaction route is size-cap exempt — it is
+  the recovery path for oversized histories and must always stay reachable.
 - **Client-Side RLS:** Verifies `conversation.userId` matches the active session, instantly bouncing
   cross-account access attempts.
 
@@ -127,8 +136,11 @@ long-running workspace memory through compaction:
   compact `WorkGroupCard` upon completion, keeping the chat feed focused on the final answer.
 - **Single-Click Auth:** Streamlined Google OAuth login via Better Auth, automatically routing to
   preserved callback URLs.
-- **Unified Atmospheric Loader:** App Router `src/app/loading.tsx` and `LoadingScreen` provide a
-  consistent breathing-icon loading animation across auth, landing, and workspace transitions.
+- **Unified Page Loaders:** `LoadingScreen` is a minimal CSS-only spinner (no client JS) used by
+  App Router `src/app/loading.tsx` and all auth, landing, and workspace surfaces. On refresh,
+  `PageLoadGate` in `src/app/layout.tsx` overlays SSR'd children with the same loader until
+  hydration completes (via `useHydrated`), holding a 300ms anti-flicker floor and fading out over
+  300ms without delaying LCP.
 
 ## 9. Numeric Boundaries & Design System
 
@@ -145,5 +157,5 @@ long-running workspace memory through compaction:
   carrying model ID, thinking level, and provider for all agent runs and compactions.
 - **Error Classifier:** `classifyProviderError` maps vendor exceptions (safety, rate limit, context
   length, network) to actionable client alerts without leaking raw backend payloads.
-- **Test Suite:** 484 isolated tests across 36 files in `__tests__/` covering routes, tools, engines,
+- **Test Suite:** 496 isolated tests across 36 files in `__tests__/` covering routes, tools, engines,
   rate-limiting, and utilities, run via `bun test --isolate`.
