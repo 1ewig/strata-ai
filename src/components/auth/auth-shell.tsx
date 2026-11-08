@@ -31,28 +31,29 @@ export function AuthShell({ children }: AuthShellProps) {
     <div className="min-h-dvh bg-surface-base flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-primary-soft-strong">
       {/* Top Floating Minimalist Bar */}
       <header className="w-full max-w-5xl mx-auto flex items-center justify-between gap-4 z-20">
-        {/* Brand link to landing */}
-        <Link
-          href="/"
-          className="flex items-center gap-2 group text-text-bright hover:opacity-80 transition-opacity"
-        >
-          <StrataIcon className="w-5 h-5 transition-transform duration-200 group-hover:scale-105" />
-          <span className="font-display font-extrabold text-label tracking-tight text-text-bright">
-            strata<span className="text-micro align-super font-mono text-text-muted">®</span>
-          </span>
-        </Link>
-
-        {/* Right Nav: Back to home link and Theme toggle */}
+        {/* Left: Home link + Brand */}
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/"
-            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-caption font-medium text-text-secondary hover:text-text-bright transition-colors"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-caption font-medium text-text-secondary hover:text-text-bright transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Home</span>
           </Link>
 
-          {/* Theme Switcher Button */}
+          <Link
+            href="/"
+            className="flex items-center gap-2 group text-text-bright hover:opacity-80 transition-opacity"
+          >
+            <StrataIcon className="w-5 h-5 transition-transform duration-200 group-hover:scale-105" />
+            <span className="font-display font-extrabold text-label tracking-tight text-text-bright">
+              strata<span className="text-micro align-super font-mono text-text-muted">®</span>
+            </span>
+          </Link>
+        </div>
+
+        {/* Right Nav: Theme toggle */}
+        <div className="flex items-center">
           <motion.button
             type="button"
             whileTap={{ scale: 0.92 }}
