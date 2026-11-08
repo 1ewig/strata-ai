@@ -5,6 +5,7 @@ import 'katex/dist/katex.min.css';
 import 'streamdown/styles.css';
 import './globals.css';
 import { RateLimitProvider } from '@/contexts/RateLimitContext';
+import { PageLoadGate } from '@/components/ui/PageLoadGate';
 import { auth } from '@/lib/auth/server';
 import { getRateLimitStatus, RateLimitResult } from '@/lib/server/rate-limit';
 
@@ -164,7 +165,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         suppressHydrationWarning
         className={`${plusJakartaSans.variable} bg-surface-base text-text-primary antialiased selection:bg-primary/20 selection:text-text-bright relative font-sans`}
       >
-        <RateLimitProvider initialData={initialRateLimit}>{children}</RateLimitProvider>
+        <RateLimitProvider initialData={initialRateLimit}>
+          <PageLoadGate>{children}</PageLoadGate>
+        </RateLimitProvider>
       </body>
     </html>
   );

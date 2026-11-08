@@ -118,8 +118,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
   if (isSessionPending || !session?.user || isUnauthorized) {
     return (
       <LoadingScreen
-        badge={isUnauthorized ? 'ACCESS CONTROL' : 'INITIALIZING WORKSPACE'}
-        message={isUnauthorized ? 'Redirecting to your workspace...' : 'Resolving session and workspace cache...'}
+        message={isUnauthorized ? 'Redirecting to your workspace...' : 'Verifying session...'}
       />
     );
   }
