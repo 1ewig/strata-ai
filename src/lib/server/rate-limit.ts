@@ -17,6 +17,13 @@ export interface RateLimitResult {
   messageLogId?: string;
 }
 
+/**
+ * 64-bit namespace salt used for per-user rate limit advisory locks.
+ * Ensures rate-limit advisory locks occupy their own hash namespace to prevent
+ * potential collision with other database advisory lock domains (e.g. migrations or background jobs).
+ */
+export const RATE_LIMIT_ADVISORY_LOCK_SALT = 88345;
+
 // Rolling windows and per-window caps for the two rate limits
 const FIVE_HOURS_MS = 5 * 3600 * 1000;
 const SEVEN_DAYS_MS = 7 * 24 * 3600 * 1000;
@@ -40,7 +47,7 @@ export async function checkAndIncrementRateLimit(userId: string): Promise<RateLi
           -- otherwise all observe the same pre-insert window counts under READ
           -- COMMITTED and each reserve a slot. Referenced by window_stats via
           -- CROSS JOIN so Postgres is guaranteed to execute it.
-          SELECT pg_advisory_xact_lock(hashtextextended($1::text, 88345)) AS acquired
+          SELECT pg_advisory_xact_lock(hashtextextended($1::text, ${RATE_LIMIT_ADVISORY_LOCK_SALT})) AS acquired
         ),
         purged AS (
           DELETE FROM better_auth.message_log

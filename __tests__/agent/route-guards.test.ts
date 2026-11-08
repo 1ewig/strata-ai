@@ -152,6 +152,58 @@ describe("withAgentRouteGuards quota contract", () => {
     expect(rateLimitMock).not.toHaveBeenCalled();
   });
 
+  it("skips the size caps when sizeCapExempt is set (compaction recovery path)", async () => {
+    const res = await withAgentRouteGuards(
+      request({
+        messages: [
+          { role: "user", content: "x".repeat(MAX_MESSAGE_CHARS + 1) },
+          { role: "assistant", parts: [{ type: "text", text: "z".repeat(MAX_HISTORY_CHARS + 1) }] },
+        ],
+      }),
+      async () => new Response("ok"),
+      { sizeCapExempt: true },
+    );
+
+    expect(res.status).toBe(200);
+    expect(rateLimitMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a replayed history with oversized reasoning parts", async () => {
+    const res = await withAgentRouteGuards(
+      request({
+        messages: [
+          {
+            role: "assistant",
+            parts: [{ type: "reasoning", text: "r".repeat(MAX_HISTORY_CHARS + 1) }],
+          },
+          { role: "user", content: "follow up" },
+        ],
+      }),
+      async () => new Response("ok"),
+    );
+
+    expect(res.status).toBe(400);
+    expect(rateLimitMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a replayed history with oversized tool result payloads", async () => {
+    const res = await withAgentRouteGuards(
+      request({
+        messages: [
+          {
+            role: "tool",
+            parts: [{ type: "tool-result", result: "t".repeat(MAX_HISTORY_CHARS + 1) }],
+          },
+          { role: "user", content: "next" },
+        ],
+      }),
+      async () => new Response("ok"),
+    );
+
+    expect(res.status).toBe(400);
+    expect(rateLimitMock).not.toHaveBeenCalled();
+  });
+
   it("rejects a workspace exceeding the per-workspace file count", async () => {
     const files = Array.from({ length: MAX_FILES_PER_WORKSPACE + 1 }, (_, i) => ({
       id: String(i),

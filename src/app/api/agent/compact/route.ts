@@ -11,21 +11,27 @@ import { withAgentRouteGuards, safeAsyncRefundRateLimit } from "@/agent/guards/r
  * @returns A streaming text/plain response or a JSON error response
  */
 export async function POST(req: Request) {
-  return withAgentRouteGuards(req, async ({ session, body, messages, rateLimit, signal }) => {
-    return runCompactionResponse({
-      files: body.files || [],
-      messages,
-      signal,
-      remaining5h: rateLimit.remaining5h,
-      remainingWeek: rateLimit.remainingWeek,
-      userId: session.user.id,
-      sessionId: body.chatId || session.session?.id,
-      onInferenceError: (classified) => {
-        // Aborts (user stop / disconnect) consumed provider tokens but the user
-        // chose to cancel — do not hand the quota slot back.
-        if (classified.code === "ABORTED") return;
-        safeAsyncRefundRateLimit(rateLimit.messageLogId);
-      },
-    });
-  });
+  return withAgentRouteGuards(
+    req,
+    async ({ session, body, messages, rateLimit, signal }) => {
+      return runCompactionResponse({
+        files: body.files || [],
+        messages,
+        signal,
+        remaining5h: rateLimit.remaining5h,
+        remainingWeek: rateLimit.remainingWeek,
+        userId: session.user.id,
+        sessionId: body.chatId || session.session?.id,
+        onInferenceError: (classified) => {
+          // Aborts (user stop / disconnect) consumed provider tokens but the user
+          // chose to cancel — do not hand the quota slot back.
+          if (classified.code === "ABORTED") return;
+          safeAsyncRefundRateLimit(rateLimit.messageLogId);
+        },
+      });
+    },
+    // Compaction is the recovery path for oversized histories, so it must
+    // always be able to replay the full conversation to distill it.
+    { sizeCapExempt: true },
+  );
 }

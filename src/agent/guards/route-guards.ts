@@ -39,22 +39,56 @@ export function safeAsyncRefundRateLimit(messageLogId?: string): void {
 }
 
 /**
- * Counts the text characters carried by a single UI message, covering both
- * legacy string content and parts-based messages (`text` parts only). Used to
- * enforce message and history size bounds on client-supplied histories.
+ * Estimates the total character footprint of a single message across all part
+ * types (text, reasoning, tool arguments, and tool outputs). Used to enforce
+ * per-message character limits and the global replayed history budget so synthetic
+ * non-text payloads cannot bypass character boundaries.
  */
-function countMessageTextChars(message: unknown): number {
+export function estimateMessagePayloadChars(message: unknown): number {
   if (!message || typeof message !== "object") return 0;
   const { content, parts } = message as { content?: unknown; parts?: unknown };
-  if (typeof content === "string") return content.length;
-  if (!Array.isArray(parts)) return 0;
-  return parts.reduce((sum: number, part) => {
-    if (part && typeof part === "object" && (part as { type?: unknown }).type === "text") {
-      const text = (part as { text?: unknown }).text;
-      if (typeof text === "string") return sum + text.length;
+  let count = typeof content === "string" ? content.length : 0;
+  if (!Array.isArray(parts)) return count;
+
+  for (const part of parts) {
+    if (!part || typeof part !== "object") continue;
+    const p = part as Record<string, unknown>;
+
+    // 1. Text & reasoning strings
+    if (typeof p.text === "string") {
+      count += p.text.length;
+    } else if (typeof p.reasoning === "string") {
+      count += p.reasoning.length;
     }
-    return sum;
-  }, 0);
+
+    // 2. Tool invocation input / arguments
+    if (p.args !== undefined) {
+      count += typeof p.args === "string" ? p.args.length : JSON.stringify(p.args).length;
+    } else if (p.input !== undefined) {
+      count += typeof p.input === "string" ? p.input.length : JSON.stringify(p.input).length;
+    }
+
+    // 3. Tool results / outputs
+    if (p.result !== undefined) {
+      count += typeof p.result === "string" ? p.result.length : JSON.stringify(p.result).length;
+    } else if (p.output !== undefined) {
+      count += typeof p.output === "string" ? p.output.length : JSON.stringify(p.output).length;
+    }
+  }
+
+  return count;
+}
+
+/**
+ * Optional behavior switches for `withAgentRouteGuards`.
+ */
+export interface AgentRouteGuardOptions {
+  /**
+   * Skips the per-message and total-history size caps. Used by the compaction
+   * route: compaction is the recovery path for oversized histories, so it must
+   * always be able to replay the full conversation to distill it.
+   */
+  sizeCapExempt?: boolean;
 }
 
 /**
@@ -70,11 +104,13 @@ function countMessageTextChars(message: unknown): number {
  *
  * @param req - The incoming HTTP Request.
  * @param handler - The route handler to invoke once guards pass.
+ * @param options - Optional behavior switches (e.g. size-cap exemption for compaction).
  * @returns The streaming Response or JSON error Response.
  */
 export async function withAgentRouteGuards(
   req: Request,
   handler: (ctx: AgentRouteContext) => Promise<Response>,
+  options: AgentRouteGuardOptions = {},
 ): Promise<Response> {
   // 1. Authentication check
   const session = await auth.api.getSession({ headers: req.headers });
@@ -118,7 +154,7 @@ export async function withAgentRouteGuards(
 
   // Per-message character limit — enforced on parts-based messages too, since
   // the legacy string-content check alone never fires for the real client.
-  if (lastUserMsg && countMessageTextChars(lastUserMsg) > MAX_MESSAGE_CHARS) {
+  if (!options.sizeCapExempt && lastUserMsg && estimateMessagePayloadChars(lastUserMsg) > MAX_MESSAGE_CHARS) {
     return new Response(
       JSON.stringify({
         error: `Message exceeds maximum character limit of ${MAX_MESSAGE_CHARS.toLocaleString()} characters.`,
@@ -128,11 +164,12 @@ export async function withAgentRouteGuards(
   }
 
   // Total replayed-history cap so a hostile client cannot inflate token spend
-  // by forging arbitrarily large prior turns.
+  // by forging arbitrarily large prior turns. The compaction route bypasses
+  // this cap — it exists to recover oversized histories.
   const totalHistoryChars = Array.isArray(messages)
-    ? messages.reduce((sum: number, m: unknown) => sum + countMessageTextChars(m), 0)
+    ? messages.reduce((sum: number, m: unknown) => sum + estimateMessagePayloadChars(m), 0)
     : 0;
-  if (totalHistoryChars > MAX_HISTORY_CHARS) {
+  if (!options.sizeCapExempt && totalHistoryChars > MAX_HISTORY_CHARS) {
     return new Response(
       JSON.stringify({
         error: `Conversation history exceeds the maximum size of ${MAX_HISTORY_CHARS.toLocaleString()} characters.`,

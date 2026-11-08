@@ -1,7 +1,7 @@
 /** Maximum characters allowed in a single chat message. */
 export const MAX_MESSAGE_CHARS = 2000;
-/** Maximum combined text characters across all replayed messages in one request. */
-export const MAX_HISTORY_CHARS = 50_000;
+/** Maximum combined payload characters across all replayed messages in one request. */
+export const MAX_HISTORY_CHARS = 200_000;
 /** Maximum characters allowed in a single workspace file. */
 export const MAX_FILE_CHARS = 10000;
 /** Maximum combined characters allowed across all workspace files. */
