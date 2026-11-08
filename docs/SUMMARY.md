@@ -21,7 +21,7 @@ Three design principles explain nearly every architectural decision across the c
 - **Runtime & Toolchain:** Next.js 16.4.2 (App Router, Node runtime), React 19.2, TypeScript 7, Bun 1.4.4.
 - **AI Layer:** Vercel AI SDK 7 with Google Generative AI and Fireworks providers, plus Tavily for web research.
 - **Persistence & Auth:** Dexie 4 (browser IndexedDB), Supabase Postgres (`pg` Pool), Better Auth (Google OAuth).
-- **Observability & Styling:** OpenTelemetry NodeSDK with Langfuse, Tailwind CSS v4 (`@theme`), Motion (Framer Motion).
+- **Observability & Styling:** OpenTelemetry NodeSDK with Langfuse, Tailwind CSS v4 (`@theme`), Motion.
 
 | Directory | Core Responsibilities |
 |---|---|
