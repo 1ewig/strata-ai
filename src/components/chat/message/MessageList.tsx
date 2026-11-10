@@ -14,12 +14,14 @@ export interface MessageListProps {
   messages: ChatMessage[];
   isLoading: boolean;
   messagesEndRef: React.RefObject<HTMLDivElement | null>;
+  onOpenFile?: (fileId: string) => void;
 }
 
 interface MessageRowProps {
   message: ChatMessage;
   isStreaming: boolean;
   className?: string;
+  onOpenFile?: (fileId: string) => void;
 }
 
 /**
@@ -28,7 +30,7 @@ interface MessageRowProps {
  * never re-run segmentation or re-render during active streaming or scrolling.
  */
 const MessageRow = React.memo(
-  function MessageRow({ message, isStreaming, className = '' }: MessageRowProps) {
+  function MessageRow({ message, isStreaming, className = '', onOpenFile }: MessageRowProps) {
     const isUser = message.role === 'user';
     const segments = React.useMemo(
       () => flattenMessageSegments(message, isStreaming),
@@ -49,6 +51,7 @@ const MessageRow = React.memo(
           message={message}
           segments={segments}
           isStreaming={isStreaming}
+          onOpenFile={onOpenFile}
         />
       </div>
     );
@@ -56,7 +59,8 @@ const MessageRow = React.memo(
   (prev, next) =>
     prev.message === next.message &&
     prev.isStreaming === next.isStreaming &&
-    prev.className === next.className,
+    prev.className === next.className &&
+    prev.onOpenFile === next.onOpenFile,
 );
 
 /**
@@ -68,6 +72,7 @@ function MessageList({
   messages,
   isLoading,
   messagesEndRef,
+  onOpenFile,
 }: MessageListProps) {
   return (
     <div className="pt-4">
@@ -110,6 +115,7 @@ function MessageList({
               message={message}
               isStreaming={isLastAssistant}
               className={rowMargin}
+              onOpenFile={onOpenFile}
             />
 
             {isCompacted && !isLastAssistant && (
