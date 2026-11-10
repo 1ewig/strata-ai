@@ -43,14 +43,19 @@ export default React.memo(function ChatHeader({
   const handleOpenDrawer = onOpenDrawer ?? openWorkspaceDrawer;
 
   return (
-    <header className="h-14 border-b border-edge-default bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40 relative">
+    <header className={`h-14 border-b ${isNewChat ? 'border-transparent' : 'border-edge-default'} bg-surface-base/80 backdrop-blur-md px-3 sm:px-6 flex items-center justify-between shrink-0 z-40 relative`}>
       <div className="flex items-center gap-2 min-w-0">
         <HeaderSidebarToggles
           onOpenSidebar={openSidebar}
           isSidebarCollapsed={isSidebarCollapsed}
           onExpandSidebar={expandSidebar}
         />
-        <ContextWindowIndicator title={title} model={model} tokenUsage={tokenUsage} />
+        <ContextWindowIndicator
+          title={title}
+          model={model}
+          tokenUsage={tokenUsage}
+          showContextWindow={!isNewChat}
+        />
       </div>
 
       {/* Right Side Buttons */}

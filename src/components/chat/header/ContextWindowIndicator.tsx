@@ -14,6 +14,8 @@ export interface ContextWindowIndicatorProps {
   title?: string;
   model?: string;
   tokenUsage?: ConversationTokenMetrics | null;
+  /** Whether to render the context-window trigger (hidden on unstarted chats). */
+  showContextWindow?: boolean;
 }
 
 /**
@@ -24,6 +26,7 @@ export default function ContextWindowIndicator({
   title,
   model,
   tokenUsage,
+  showContextWindow = true,
 }: ContextWindowIndicatorProps) {
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -44,44 +47,48 @@ export default function ContextWindowIndicator({
         </span>
 
         {/* Interactive Context Window Button (Click/hover on desktop, tap on mobile) */}
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={togglePopover}
-          className="flex items-center gap-1.5 px-1.5 py-0.5 -mx-1.5 rounded-lg active:scale-[0.98] text-left transition-all duration-150 cursor-pointer group max-w-[220px] sm:max-w-xs"
-          title="Click or tap to view token usage and context window details"
-          aria-label="View token usage details"
-          aria-expanded={isPopoverOpen}
-        >
-          <span
-            className={`text-micro font-mono truncate leading-none transition-colors ${
-              isNearLimit
-                ? 'text-warning font-medium'
-                : 'text-text-muted group-hover:text-text-primary'
-            }`}
+        {showContextWindow && (
+          <button
+            ref={triggerRef}
+            type="button"
+            onClick={togglePopover}
+            className="flex items-center gap-1.5 px-1.5 py-0.5 -mx-1.5 rounded-lg active:scale-[0.98] text-left transition-all duration-150 cursor-pointer group max-w-[220px] sm:max-w-xs"
+            title="Click or tap to view token usage and context window details"
+            aria-label="View token usage details"
+            aria-expanded={isPopoverOpen}
           >
-            Context window: {formatTokens(activeTokens)} / {formatContextWindow(contextWindow)}
-          </span>
-        </button>
+            <span
+              className={`text-micro font-mono truncate leading-none transition-colors ${
+                isNearLimit
+                  ? 'text-warning font-medium'
+                  : 'text-text-muted group-hover:text-text-primary'
+              }`}
+            >
+              Context window: {formatTokens(activeTokens)} / {formatContextWindow(contextWindow)}
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Separated Clean Token Usage Popover */}
-      <TokenUsagePopover
-        modelOption={modelOption}
-        tokenUsage={tokenUsage}
-        isOpen={isPopoverOpen}
-        onClose={() => setIsPopoverOpen(false)}
-        triggerRef={triggerRef}
-        pct={pct}
-        isNearLimit={isNearLimit}
-        contextWindow={contextWindow}
-        activeTokens={activeTokens}
-        inputTokens={metrics.inputTokens}
-        outputTokens={metrics.outputTokens}
-        totalApiUsage={metrics.totalApiUsage}
-        totalCost={metrics.totalCost}
-        modelBreakdowns={metrics.modelBreakdowns}
-      />
+      {showContextWindow && (
+        <TokenUsagePopover
+          modelOption={modelOption}
+          tokenUsage={tokenUsage}
+          isOpen={isPopoverOpen}
+          onClose={() => setIsPopoverOpen(false)}
+          triggerRef={triggerRef}
+          pct={pct}
+          isNearLimit={isNearLimit}
+          contextWindow={contextWindow}
+          activeTokens={activeTokens}
+          inputTokens={metrics.inputTokens}
+          outputTokens={metrics.outputTokens}
+          totalApiUsage={metrics.totalApiUsage}
+          totalCost={metrics.totalCost}
+          modelBreakdowns={metrics.modelBreakdowns}
+        />
+      )}
     </>
   );
 }
