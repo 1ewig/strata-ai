@@ -48,7 +48,7 @@ export default function ContextWindowIndicator({
           ref={triggerRef}
           type="button"
           onClick={togglePopover}
-          className="flex items-center gap-1.5 px-1.5 py-0.5 -mx-1.5 rounded-lg hover:bg-surface-hover/80 active:scale-[0.98] text-left transition-all duration-150 cursor-pointer group max-w-[220px] sm:max-w-xs"
+          className="flex items-center gap-1.5 px-1.5 py-0.5 -mx-1.5 rounded-lg active:scale-[0.98] text-left transition-all duration-150 cursor-pointer group max-w-[220px] sm:max-w-xs"
           title="Click or tap to view token usage and context window details"
           aria-label="View token usage details"
           aria-expanded={isPopoverOpen}
