@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Loader2, Workflow } from 'lucide-react';
 import ThoughtAccordion from './ThoughtAccordion';
 import ToolCallCard from './ToolCallCard';
+import NarrationText from './NarrationText';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import type { Segment } from '@/agent/client/segments';
 import { accordionVariants, toolEntranceVariants } from '@/constants/animations';
@@ -52,7 +53,7 @@ function WorkGroupCard({ items, isStreaming = false }: WorkGroupCardProps) {
     >
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-fit flex items-center gap-1.5 py-1 text-text-muted hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left font-mono text-caption cursor-pointer group"
+        className="w-fit flex items-center gap-1.5 py-1 text-text-secondary hover:text-text-primary active:scale-[0.99] transition-all duration-150 text-left text-caption cursor-pointer group"
       >
         <Workflow className="w-3.5 h-3.5 text-text-muted shrink-0" />
         <span className="font-semibold">
@@ -100,10 +101,13 @@ function WorkGroupCard({ items, isStreaming = false }: WorkGroupCardProps) {
                     />
                   );
                 }
+                if (item.type === 'narration') {
+                  return <NarrationText key={item.key} content={item.content || ''} />;
+                }
                 if (item.type === 'text' && item.content) {
                   return (
-                    <div key={item.key} className="text-body select-text cursor-text">
-                      <MarkdownRenderer content={item.content} variant="thought" className="text-body select-text cursor-text" />
+                    <div key={item.key} className="text-body select-text cursor-text italic">
+                      <MarkdownRenderer content={item.content} variant="thought" className="text-label text-text-secondary italic select-text cursor-text" />
                     </div>
                   );
                 }

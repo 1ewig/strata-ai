@@ -10,7 +10,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: '*',
         allow: '/',
-        disallow: ['/api/agent', '/api/agent/compact', '/api/user/'],
+        disallow: ['/api/agent', '/api/agent/compact', '/api/user/', '/chat-id'],
       },
     ],
     sitemap: 'https://strata-ai-five.vercel.app/sitemap.xml',

@@ -39,15 +39,17 @@ export function MessageSourcesButton({ sources, className = '' }: MessageSources
           e.stopPropagation();
           setIsOpen((prev) => !prev);
         }}
-        className={`px-2 py-1 rounded-lg text-caption font-mono transition-all duration-150 cursor-pointer active:scale-95 flex items-center gap-1.5 border ${
-          isOpen
-            ? 'bg-surface-elevated text-text-bright border-edge-hover shadow-button'
-            : 'border-edge-default/80 bg-surface-raised text-text-muted hover:text-text-primary hover:bg-surface-hover/80 hover:border-edge-hover shadow-xs'
-        }`}
+        className={`px-2 py-1 rounded-lg text-caption font-mono transition-all duration-150 cursor-pointer active:scale-95 flex items-center gap-1.5 group`}
         title="View cited web sources"
       >
         <Globe className="w-3.5 h-3.5 text-info shrink-0" />
-        <span className="font-medium text-text-primary text-micro">{label}</span>
+        <span
+          className={`font-medium text-micro transition-colors ${
+            isOpen ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'
+          }`}
+        >
+          {label}
+        </span>
       </button>
 
       {/* Floating Popover Anchored Right Above */}

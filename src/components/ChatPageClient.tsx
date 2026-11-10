@@ -195,6 +195,7 @@ export default function ChatPageClient({ chatId }: ChatPageClientProps) {
                         messages={displayMessages}
                         isLoading={isLoading}
                         messagesEndRef={messagesEndRef}
+                        onOpenFile={handleOpenFile}
                       />
                     )}
                   </StickToBottom.Content>

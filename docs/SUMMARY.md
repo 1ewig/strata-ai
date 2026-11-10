@@ -91,6 +91,12 @@ The UI consumes a structured Server-Sent Events (SSE) stream:
 - **Dual Highlighting:** Code blocks in chat use `Shiki` (zero-WASM JS engine, 120ms debounce during
   streams, 500-entry memory cache with oldest-entry eviction). The workspace file viewer uses
   synchronous `PrismJS`.
+- **CodeMirror Edit Mode:** Editing a file swaps the viewer for a dynamically imported CodeMirror 6
+  instance (`CodeMirrorEditor` → `CodeMirrorSurface`), so the editor bundle never ships with the
+  initial drawer payload. Chrome and syntax colors come from `@theme` tokens via `src/lib/code/cm-theme.ts`,
+  keeping read and edit modes on one palette across both themes. Grammar resolution is pure and
+  unit-tested (`src/lib/code/editor-language.ts`); renaming a file reconfigures a language
+  `Compartment` in place, and `useCodeMirror` enforces the character cap with a transaction filter.
 
 ## 6. Context Compaction Architecture
 
@@ -134,6 +140,10 @@ long-running workspace memory through compaction:
   message viewport, and slide-over `WorkspaceDrawer`.
 - **Pre-Answer Folding:** Intermediate narration, reasoning accordions, and tool cards fold into a
   compact `WorkGroupCard` upon completion, keeping the chat feed focused on the final answer.
+  Pre-tool/pre-reasoning text is classified as a first-class `narration` segment in
+  `flattenMessageSegments` (no `isIntermediate` flag or last-segment heuristics) and rendered by a
+  shared `NarrationText` component — non-italic, arrow-marked secondary prose — visually distinct
+  from italic reasoning bodies and the 16px final response.
 - **Single-Click Auth:** Streamlined Google OAuth login via Better Auth, automatically routing to
   preserved callback URLs.
 - **Unified Page Loaders:** `LoadingScreen` is a minimal CSS-only spinner (no client JS) used by
