@@ -49,7 +49,10 @@ function FileActivityCard({ activity, onOpenFile }: FileActivityCardProps) {
             <FileText className="w-4 h-4 text-text-secondary" />
           </div>
           <div className="flex flex-col min-w-0 flex-1 gap-0.5">
-            <span className="text-label truncate text-text-primary font-medium group-hover:text-text-bright transition-colors">
+            <span
+              className="text-label min-w-0 line-clamp-2 wrap-anywhere text-text-primary font-medium group-hover:text-text-bright transition-colors"
+              title={item.name}
+            >
               {item.name}
             </span>
             <span className="text-micro font-mono text-text-muted truncate">
