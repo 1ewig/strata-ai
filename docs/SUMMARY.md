@@ -134,6 +134,10 @@ long-running workspace memory through compaction:
   message viewport, and slide-over `WorkspaceDrawer`.
 - **Pre-Answer Folding:** Intermediate narration, reasoning accordions, and tool cards fold into a
   compact `WorkGroupCard` upon completion, keeping the chat feed focused on the final answer.
+  Pre-tool/pre-reasoning text is classified as a first-class `narration` segment in
+  `flattenMessageSegments` (no `isIntermediate` flag or last-segment heuristics) and rendered by a
+  shared `NarrationText` component — non-italic, arrow-marked secondary prose — visually distinct
+  from italic reasoning bodies and the 16px final response.
 - **Single-Click Auth:** Streamlined Google OAuth login via Better Auth, automatically routing to
   preserved callback URLs.
 - **Unified Page Loaders:** `LoadingScreen` is a minimal CSS-only spinner (no client JS) used by
