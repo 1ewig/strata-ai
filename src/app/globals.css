@@ -118,10 +118,10 @@ html[data-theme="dark"] {
   --color-text-muted: #8e8577;        /* Text muted: subtitles, timestamps */
   --color-text-faint: #635b4f;        /* Text faint: subtle placeholders */
 
-  /* Edges & Borders */
-  --color-edge-default: rgba(242, 237, 230, 0.1);   /* Border subtle */
-  --color-edge-raised: rgba(242, 237, 230, 0.16);   /* Border light */
-  --color-edge-hover: rgba(242, 237, 230, 0.28);    /* Interactive border */
+  /* Edges & Borders (Softened for reduced eye strain) */
+  --color-edge-default: rgba(242, 237, 230, 0.06);   /* Border subtle */
+  --color-edge-raised: rgba(242, 237, 230, 0.10);    /* Border light */
+  --color-edge-hover: rgba(242, 237, 230, 0.18);     /* Interactive border */
 
   /* Brand Accents (Electric Orange) */
   --color-primary: #ff5c28;
@@ -151,9 +151,9 @@ html[data-theme="dark"] {
   --color-scrim: rgba(14, 11, 8, 0.82);
 
   /* Warm Elevation & Shadows */
-  --shadow-card: 0 18px 45px -10px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  --shadow-card-lg: 0 30px 80px -15px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
-  --shadow-button: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-card: 0 18px 45px -10px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  --shadow-card-lg: 0 30px 80px -15px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  --shadow-button: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.025);
   --shadow-glow-primary: 0 0 28px -4px rgba(255, 85, 0, 0.5), 0 0 10px -2px rgba(255, 119, 51, 0.35);
   --shadow-glow-secondary: 0 0 24px -4px rgba(255, 170, 29, 0.5);
 
