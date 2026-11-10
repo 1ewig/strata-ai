@@ -25,6 +25,35 @@ function subscribe(onStoreChange: () => void) {
   };
 }
 
+/** How long the theme-transition class stays on <html> after a toggle (ms). */
+const TRANSITION_MS = 250;
+let transitionTimer: ReturnType<typeof setTimeout> | null = null;
+
+/**
+ * Applies the dark/light state to <html> inside a short-lived transition
+ * window: the `theme-transitioning` class is attached first so every
+ * component's colors cross-fade, then the theme flips on the next frame,
+ * then the class is removed so component-level transitions resume.
+ */
+function applyTheme(next: boolean) {
+  const root = document.documentElement;
+  // Restart the window cleanly if the user toggles rapidly.
+  if (transitionTimer) clearTimeout(transitionTimer);
+  root.classList.add('theme-transitioning');
+  requestAnimationFrame(() => {
+    root.classList.toggle('dark', next);
+    if (next) {
+      root.setAttribute('data-theme', 'dark');
+    } else {
+      root.removeAttribute('data-theme');
+    }
+    transitionTimer = setTimeout(() => {
+      root.classList.remove('theme-transitioning');
+      transitionTimer = null;
+    }, TRANSITION_MS);
+  });
+}
+
 /**
  * Light/dark theme state: toggles the `.dark` class on <html>, persists the
  * choice to localStorage and broadcasts it so open tabs stay in sync.
@@ -38,12 +67,7 @@ export function useTheme() {
 
   const toggle = useCallback(() => {
     const next = !getSnapshot();
-    document.documentElement.classList.toggle('dark', next);
-    if (next) {
-      document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-    }
+    applyTheme(next);
     try {
       localStorage.setItem(STORAGE_KEY, next ? 'dark' : 'light');
     } catch {

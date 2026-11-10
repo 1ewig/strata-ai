@@ -489,3 +489,34 @@ html[data-theme="dark"] {
     opacity: 1 !important;
   }
 }
+
+/* ==========================================================================
+   Theme Toggle Transition
+   Applied to <html> only while the theme is switching (see useTheme.ts) so
+   every component's colors cross-fade smoothly. Removed ~250ms after the
+   toggle so it never fights component-level hover transitions or adds
+   permanent transition bookkeeping to the DOM.
+   ========================================================================== */
+html.theme-transitioning,
+html.theme-transitioning *,
+html.theme-transitioning *::before,
+html.theme-transitioning *::after {
+  transition:
+    background-color 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease,
+    fill 200ms ease,
+    stroke 200ms ease,
+    box-shadow 200ms ease,
+    outline-color 200ms ease !important;
+  transition-delay: 0s !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.theme-transitioning,
+  html.theme-transitioning *,
+  html.theme-transitioning *::before,
+  html.theme-transitioning *::after {
+    transition: none !important;
+  }
+}
