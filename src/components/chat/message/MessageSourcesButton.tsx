@@ -42,14 +42,10 @@ export function MessageSourcesButton({ sources, className = '' }: MessageSources
         className={`px-2 py-1 rounded-lg text-caption font-mono transition-all duration-150 cursor-pointer active:scale-95 flex items-center gap-1.5 group`}
         title="View cited web sources"
       >
-        <Globe
-          className={`w-3.5 h-3.5 shrink-0 transition-colors ${
-            isOpen ? 'text-primary' : 'text-info group-hover:text-primary'
-          }`}
-        />
+        <Globe className="w-3.5 h-3.5 text-info shrink-0" />
         <span
           className={`font-medium text-micro transition-colors ${
-            isOpen ? 'text-text-bright' : 'text-text-primary group-hover:text-primary'
+            isOpen ? 'text-text-primary' : 'text-text-secondary group-hover:text-text-primary'
           }`}
         >
           {label}
