@@ -323,7 +323,7 @@ export function buildWebSearchSummary(
               href={res.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 p-1 rounded-md hover:bg-surface-hover/80 text-text-primary transition-colors text-label group"
+              className="flex items-center gap-2 p-1 text-text-primary transition-colors text-label group"
             >
               <FaviconImage url={res.url} faviconUrl={res.favicon} className="w-3.5 h-3.5 shrink-0" />
               <span className="font-sans font-medium group-hover:text-primary transition-colors truncate">
@@ -388,7 +388,7 @@ export function buildExtractUrlSummary(
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 p-1 rounded-md hover:bg-surface-hover/80 text-text-primary transition-colors text-label group"
+              className="flex items-center gap-2 p-1 text-text-primary transition-colors text-label group"
             >
               <FaviconImage url={item.url} faviconUrl={item.favicon} className="w-3.5 h-3.5 shrink-0" />
               <span className="font-sans font-medium group-hover:text-primary transition-colors truncate">
