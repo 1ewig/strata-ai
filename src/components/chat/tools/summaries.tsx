@@ -14,7 +14,7 @@ interface SummaryHeaderProps {
 
 function SummaryHeader({ title, badge, badgeColorClass = 'text-info' }: SummaryHeaderProps) {
   return (
-    <div className="flex items-center justify-between text-caption gap-2">
+    <div className="flex items-center justify-between text-label gap-2">
       <span className="font-medium font-mono text-text-primary truncate">{title}</span>
       {badge && (
         <span className={`text-micro font-mono shrink-0 font-medium ${badgeColorClass}`}>
@@ -46,7 +46,7 @@ function InFlightSummary({ title, badgeText, loadingText }: InFlightSummaryProps
           </span>
         }
       />
-      <p className="text-caption text-text-muted animate-pulse">{loadingText}</p>
+      <p className="text-label text-text-muted animate-pulse">{loadingText}</p>
     </div>
   );
 }
@@ -62,8 +62,8 @@ interface SummaryLineProps {
 
 function SummaryLine({ label, value, valueClass = 'text-text-primary font-medium' }: SummaryLineProps) {
   return (
-    <div className="py-1 font-mono text-caption flex items-center gap-1.5">
-      <span className="text-text-muted text-caption">{label}</span>
+    <div className="py-1 font-mono text-label flex items-center gap-1.5">
+      <span className="text-text-muted text-label">{label}</span>
       <span className={`truncate ${valueClass}`}>{value}</span>
     </div>
   );
@@ -135,8 +135,8 @@ export function buildListFilesSummary(
   const res = (result && typeof result === 'object' ? result : {}) as ListFilesResult;
   const filesList = res.files || [];
   return (
-    <div className="py-1 space-y-1 font-mono text-caption">
-      <div className="text-text-muted font-medium text-caption">Files Found:</div>
+    <div className="py-1 space-y-1 font-mono text-label">
+      <div className="text-text-muted font-medium text-label">Files Found:</div>
       {filesList.length > 0 ? (
         <ul className="space-y-0.5 text-text-secondary pl-2">
           {filesList.map((f, i) => (
@@ -144,7 +144,7 @@ export function buildListFilesSummary(
           ))}
         </ul>
       ) : (
-        <p className="text-text-muted italic text-caption">No files in workspace</p>
+        <p className="text-text-muted italic text-label">No files in workspace</p>
       )}
     </div>
   );
@@ -307,7 +307,7 @@ export function buildWebSearchSummary(
   const resultsList = r.results || [];
 
   return (
-    <div className="py-1 space-y-1 font-mono text-caption">
+    <div className="py-1 space-y-1 font-mono text-label">
       <SummaryLine label="Query:" value={`"${query}"`} />
       <SummaryLine
         label="Results:"
@@ -323,7 +323,7 @@ export function buildWebSearchSummary(
               href={res.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 p-1 rounded-md hover:bg-surface-hover/80 text-text-primary transition-colors text-caption group"
+              className="flex items-center gap-2 p-1 rounded-md hover:bg-surface-hover/80 text-text-primary transition-colors text-label group"
             >
               <FaviconImage url={res.url} faviconUrl={res.favicon} className="w-3.5 h-3.5 shrink-0" />
               <span className="font-sans font-medium group-hover:text-primary transition-colors truncate">
@@ -339,7 +339,7 @@ export function buildWebSearchSummary(
       )}
 
       {r.error && (
-        <p className="text-caption text-danger truncate">Error: {r.error}</p>
+        <p className="text-label text-danger truncate">Error: {r.error}</p>
       )}
     </div>
   );
@@ -370,7 +370,7 @@ export function buildExtractUrlSummary(
   const failed = r.failed || [];
 
   return (
-    <div className="py-1 space-y-1 font-mono text-caption">
+    <div className="py-1 space-y-1 font-mono text-label">
       <SummaryLine
         label="Fetched:"
         value={`${extracted.length} page${extracted.length === 1 ? '' : 's'}`}
@@ -388,7 +388,7 @@ export function buildExtractUrlSummary(
               href={item.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-2 p-1 rounded-md hover:bg-surface-hover/80 text-text-primary transition-colors text-caption group"
+              className="flex items-center gap-2 p-1 rounded-md hover:bg-surface-hover/80 text-text-primary transition-colors text-label group"
             >
               <FaviconImage url={item.url} faviconUrl={item.favicon} className="w-3.5 h-3.5 shrink-0" />
               <span className="font-sans font-medium group-hover:text-primary transition-colors truncate">
@@ -406,7 +406,7 @@ export function buildExtractUrlSummary(
       {failed.length > 0 && (
         <div className="pt-0.5 space-y-1">
           {failed.map((f, idx) => (
-            <div key={idx} className="flex items-center gap-1.5 p-1 rounded-md text-danger text-caption">
+            <div key={idx} className="flex items-center gap-1.5 p-1 rounded-md text-danger text-label">
               <XCircle className="w-3.5 h-3.5 shrink-0" />
               <span className="truncate">{f.url}</span>
               <span className="text-micro text-danger/80 ml-auto shrink-0">({f.error})</span>
@@ -416,7 +416,7 @@ export function buildExtractUrlSummary(
       )}
 
       {r.error && (
-        <p className="text-caption text-danger truncate">Error: {r.error}</p>
+        <p className="text-label text-danger truncate">Error: {r.error}</p>
       )}
     </div>
   );
@@ -430,7 +430,7 @@ export function buildGenericSummary(
   rawName: string,
 ): ReactNode {
   return (
-    <div className="py-1 text-caption">
+    <div className="py-1 text-label">
       <p className="font-medium text-text-primary truncate">{rawName || 'Tool Execution'}</p>
     </div>
   );

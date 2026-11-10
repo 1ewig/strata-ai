@@ -76,12 +76,12 @@ function ThoughtAccordion({ text, isThinking = false }: ThoughtAccordionProps) {
             exit="hidden"
             className="overflow-hidden"
           >
-            <div className="pl-5 py-1 text-label text-text-secondary leading-relaxed max-h-60 overflow-y-auto select-text cursor-text">
+            <div className="pl-5 py-1 text-label text-text-secondary leading-relaxed max-h-60 overflow-y-auto select-text cursor-text italic">
               <MarkdownRenderer
                 content={text}
                 variant="thought"
                 isStreaming={isThinking}
-                className="text-label text-text-secondary leading-relaxed select-text cursor-text"
+                className="text-label text-text-secondary leading-relaxed select-text cursor-text italic"
               />
             </div>
           </motion.div>

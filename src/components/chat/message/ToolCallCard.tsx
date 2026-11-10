@@ -97,7 +97,7 @@ function ToolCallCard({
             exit="hidden"
             className="overflow-hidden"
           >
-            <div className="pl-5 pt-0.5 pb-1 text-caption text-text-secondary select-text cursor-text">
+            <div className="pl-5 pt-0.5 pb-1 text-label text-text-secondary select-text cursor-text">
               {summary}
             </div>
           </motion.div>
