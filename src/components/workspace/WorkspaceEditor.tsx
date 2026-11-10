@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { MAX_FILE_CHARS } from '@/lib/limits';
+import CodeMirrorEditor from './CodeMirrorEditor';
 
 interface WorkspaceEditorProps {
   fileName: string;
@@ -11,8 +11,8 @@ interface WorkspaceEditorProps {
 }
 
 /**
- * Inline text editor for workspace files, containing the file name input
- * and full-length content textarea.
+ * Inline editor for workspace files: the file name input plus a
+ * syntax-highlighted CodeMirror surface that mirrors the read-only viewer.
  */
 export default React.memo(function WorkspaceEditor({
   fileName,
@@ -29,14 +29,9 @@ export default React.memo(function WorkspaceEditor({
         placeholder="File name (e.g. app.ts, index.html, document.md)"
         className="bg-surface-base border border-edge-raised rounded-lg px-3 py-2 text-label font-semibold text-text-bright focus:outline-none focus:border-primary"
       />
-      <textarea
-        value={contentValue}
-        onChange={(e) => onContentChange(e.target.value)}
-        maxLength={MAX_FILE_CHARS}
-        rows={26}
-        placeholder="Type your code, markdown, or text content here..."
-        className="w-full flex-1 min-h-[450px] bg-surface-base border border-edge-raised rounded-xl p-4 text-label text-text-primary font-mono focus:outline-none focus:border-primary/60 leading-relaxed resize-y"
-      />
+      <div className="w-full flex-1 min-h-[450px] bg-surface-base border border-edge-raised rounded-xl overflow-hidden transition-colors focus-within:border-primary/60">
+        <CodeMirrorEditor value={contentValue} fileName={fileName} onChange={onContentChange} />
+      </div>
     </div>
   );
 });

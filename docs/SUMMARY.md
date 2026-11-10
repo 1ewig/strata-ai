@@ -91,6 +91,12 @@ The UI consumes a structured Server-Sent Events (SSE) stream:
 - **Dual Highlighting:** Code blocks in chat use `Shiki` (zero-WASM JS engine, 120ms debounce during
   streams, 500-entry memory cache with oldest-entry eviction). The workspace file viewer uses
   synchronous `PrismJS`.
+- **CodeMirror Edit Mode:** Editing a file swaps the viewer for a dynamically imported CodeMirror 6
+  instance (`CodeMirrorEditor` → `CodeMirrorSurface`), so the editor bundle never ships with the
+  initial drawer payload. Chrome and syntax colors come from `@theme` tokens via `src/lib/code/cm-theme.ts`,
+  keeping read and edit modes on one palette across both themes. Grammar resolution is pure and
+  unit-tested (`src/lib/code/editor-language.ts`); renaming a file reconfigures a language
+  `Compartment` in place, and `useCodeMirror` enforces the character cap with a transaction filter.
 
 ## 6. Context Compaction Architecture
 
