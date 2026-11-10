@@ -40,18 +40,21 @@ function applyTheme(next: boolean) {
   // Restart the window cleanly if the user toggles rapidly.
   if (transitionTimer) clearTimeout(transitionTimer);
   root.classList.add('theme-transitioning');
-  requestAnimationFrame(() => {
-    root.classList.toggle('dark', next);
-    if (next) {
-      root.setAttribute('data-theme', 'dark');
-    } else {
-      root.removeAttribute('data-theme');
-    }
-    transitionTimer = setTimeout(() => {
-      root.classList.remove('theme-transitioning');
-      transitionTimer = null;
-    }, TRANSITION_MS);
-  });
+  // Force a synchronous style flush so the transition rules are committed
+  // BEFORE the color values change — then the flip cross-fades instead of
+  // snapping. Doing this synchronously (no rAF) keeps getSnapshot() correct
+  // the moment the change event below dispatches.
+  void root.offsetHeight;
+  root.classList.toggle('dark', next);
+  if (next) {
+    root.setAttribute('data-theme', 'dark');
+  } else {
+    root.removeAttribute('data-theme');
+  }
+  transitionTimer = setTimeout(() => {
+    root.classList.remove('theme-transitioning');
+    transitionTimer = null;
+  }, TRANSITION_MS);
 }
 
 /**
