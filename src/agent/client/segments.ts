@@ -43,14 +43,13 @@ export interface ToolInvocationLike {
  * part, or a work group of reasoning + tools.
  */
 export interface Segment {
-  type: 'user-text' | 'user-images' | 'user-documents' | 'text' | 'reasoning' | 'tool' | 'work-group' | string;
+  type: 'user-text' | 'user-images' | 'user-documents' | 'text' | 'narration' | 'reasoning' | 'tool' | 'work-group' | string;
   content?: string;
   part?: ToolInvocationLike;
   items?: Segment[];
   images?: ImageAttachmentInfo[];
   documents?: DocumentAttachmentInfo[];
   key: string;
-  isIntermediate?: boolean;
 }
 
 /**
@@ -145,7 +144,7 @@ export function flattenMessageSegments(
 
     if (isReasoning) {
       if (currentText) {
-        rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}`, isIntermediate: true });
+        rawSegments.push({ type: 'narration', content: currentText, key: `narration-${idx}` });
         currentText = '';
       }
       const reasoningText =
@@ -159,7 +158,7 @@ export function flattenMessageSegments(
       }
     } else if (isTool) {
       if (currentText) {
-        rawSegments.push({ type: 'text', content: currentText, key: `text-${idx}`, isIntermediate: true });
+        rawSegments.push({ type: 'narration', content: currentText, key: `narration-${idx}` });
         currentText = '';
       }
       const norm = normalizeToolPart(p, idx);
@@ -222,7 +221,7 @@ export function flattenMessageSegments(
   // Only the final text segment renders as the assistant message bubble.
   const result: Segment[] = [];
   const lastSegment = rawSegments[rawSegments.length - 1];
-  const hasFinalText = lastSegment?.type === 'text' && !lastSegment.isIntermediate;
+  const hasFinalText = lastSegment?.type === 'text';
   const workItems = hasFinalText ? rawSegments.slice(0, -1) : rawSegments;
 
   if (workItems.length > 0) {

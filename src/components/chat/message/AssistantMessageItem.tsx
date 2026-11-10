@@ -12,6 +12,7 @@ import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import type { Segment } from '@/agent/client/segments';
 import { useBubbleActionMenu } from '@/hooks/chat/useBubbleActionMenu';
 import MessageSourcesButton from './MessageSourcesButton';
+import NarrationText from './NarrationText';
 import { extractWebSourcesFromMessage } from '@/lib/urls';
 
 export interface AssistantMessageItemProps {
@@ -82,8 +83,11 @@ function AssistantMessageItem({
             return <ToolCallCard key={seg.key} part={seg.part} />;
           }
 
+          if (seg.type === 'narration') {
+            return <NarrationText key={seg.key} content={seg.content || ''} />;
+          }
+
           if (seg.type === 'text') {
-            const isIntermediate = seg.isIntermediate === true || (!isLastSegment && isStreaming);
             const isStreamingActiveSegment = isStreaming && isLastSegment;
             const textContent = seg.content || '';
             const isCompacted = (message.metadata as ChatMetadata | undefined)?.isCompactedSummary === true;
@@ -92,24 +96,16 @@ function AssistantMessageItem({
             }
             return (
               <div key={seg.key} className="flex flex-col items-start w-full min-w-0">
-                <div
-                  className={`leading-relaxed relative select-text cursor-text w-full ${
-                    isIntermediate
-                      ? 'text-label text-text-secondary/90 italic'
-                      : 'text-body text-text-primary'
-                  }`}
-                >
+                <div className="leading-relaxed relative select-text cursor-text w-full text-body text-text-primary">
                   <MarkdownRenderer
                     content={textContent}
-                    variant={isIntermediate ? 'thought' : 'assistant'}
+                    variant="assistant"
                     isStreaming={isStreamingActiveSegment}
-                    className={`leading-relaxed relative select-text cursor-text ${
-                      isIntermediate ? 'text-label text-text-secondary/90' : 'text-body text-text-primary'
-                    }`}
+                    className="leading-relaxed relative select-text cursor-text text-body text-text-primary"
                   />
                 </div>
 
-                {!isIntermediate && isLastSegment && !isStreaming && textContent && (
+                {isLastSegment && !isStreaming && textContent && (
                   <div className="flex items-center justify-start gap-1 pt-1.5 pb-0.5">
                     <MessageActionsMenu
                       textContent={textContent}

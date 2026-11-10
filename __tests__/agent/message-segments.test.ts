@@ -134,7 +134,7 @@ describe("flattenMessageSegments", () => {
       ],
     };
     const segments = flattenMessageSegments(message, true);
-    expect(segments.map((s) => s.type)).toEqual(["text", "tool", "text"]);
+    expect(segments.map((s) => s.type)).toEqual(["narration", "tool", "text"]);
     expect(segments[0].content).toBe("First ");
     expect(segments[2].content).toBe("Second");
     expect(segments[2].key).toBe("text-final");
@@ -259,16 +259,15 @@ describe("flattenMessageSegments", () => {
 
     const streamingSegments = flattenMessageSegments(message, true);
     expect(streamingSegments).toHaveLength(3);
-    expect(streamingSegments[0].type).toBe("text");
-    expect(streamingSegments[0].isIntermediate).toBe(true);
+    expect(streamingSegments[0].type).toBe("narration");
+    expect(streamingSegments[0].content).toBe("Let me check the files first.");
     expect(streamingSegments[1].type).toBe("tool");
     expect(streamingSegments[2].type).toBe("text");
-    expect(streamingSegments[2].isIntermediate).toBeUndefined();
 
     const finishedSegments = flattenMessageSegments(message, false);
     expect(finishedSegments).toHaveLength(2);
     expect(finishedSegments[0].type).toBe("work-group");
-    expect(finishedSegments[0].items?.map((s) => s.type)).toEqual(["text", "tool"]);
+    expect(finishedSegments[0].items?.map((s) => s.type)).toEqual(["narration", "tool"]);
     expect(finishedSegments[1]).toEqual({
       type: "text",
       content: "Here is the final result.",

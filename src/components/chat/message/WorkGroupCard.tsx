@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, Loader2, Workflow } from 'lucide-react';
 import ThoughtAccordion from './ThoughtAccordion';
 import ToolCallCard from './ToolCallCard';
+import NarrationText from './NarrationText';
 import MarkdownRenderer from '@/components/ui/MarkdownRenderer';
 import type { Segment } from '@/agent/client/segments';
 import { accordionVariants, toolEntranceVariants } from '@/constants/animations';
@@ -99,6 +100,9 @@ function WorkGroupCard({ items, isStreaming = false }: WorkGroupCardProps) {
                       part={item.part}
                     />
                   );
+                }
+                if (item.type === 'narration') {
+                  return <NarrationText key={item.key} content={item.content || ''} />;
                 }
                 if (item.type === 'text' && item.content) {
                   return (
