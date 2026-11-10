@@ -8,36 +8,36 @@
    Design Tokens (Light Mode Base)
    ========================================================================== */
 @theme {
-  /* Surfaces (Warm Studio Linen & Tactile Canvas) */
-  --color-surface-base: #f9f6f0;      /* Tactile warm linen paper (glare-free canvas) */
-  --color-surface-raised: #ffffff;    /* Crisp elevated white for sidebar & main cards */
-  --color-surface-overlay: #ffffff;   /* Pure crisp surface for inputs & popovers */
-  --color-surface-elevated: #efe9df;  /* Warm oat stone for menus, badges & chips */
-  --color-surface-hover: #e5ddcf;     /* Distinct warm hover feedback */
+  /* Surfaces (Travertine Canvas & Warm White) */
+  --color-surface-base: #f2ece4;      /* Travertine canvas (Aesop Terracotta 60%) */
+  --color-surface-raised: #faf7f2;    /* Warm white for sidebar & main cards */
+  --color-surface-overlay: #fdfcf9;   /* Warm crisp surface for inputs & popovers */
+  --color-surface-elevated: #eae2d6;  /* Warm stone for menus, badges & chips */
+  --color-surface-hover: #e0d6c8;     /* Distinct warm hover feedback */
   --color-surface: #ffffff;
 
-  /* Typography (Deep Warm Espresso Ink with WCAG AAA Contrast) */
-  --color-text-bright: #171310;       /* Deepest espresso ink (high-contrast headings) */
-  --color-text-primary: #2c2621;      /* Rich warm charcoal for body reading */
-  --color-text-secondary: #5e554c;    /* Warm slate-mocha for secondary info & meta */
-  --color-text-muted: #887e72;        /* Warm stone for timestamps & subtitles */
-  --color-text-faint: #b5aba0;        /* Light stone for placeholders & borders */
+  /* Typography (Roasted Umber Ink with WCAG AAA Contrast) */
+  --color-text-bright: #221b16;       /* Deepest roasted umber (high-contrast headings) */
+  --color-text-primary: #2c241e;      /* Roasted umber for body reading */
+  --color-text-secondary: #5f554b;    /* Warm taupe for secondary info & meta */
+  --color-text-muted: #8a7d70;        /* Warm stone for timestamps & subtitles */
+  --color-text-faint: #b6a99c;        /* Light stone for placeholders & borders */
 
-  /* Edges & Borders (Warm-tinted crisp definition) */
-  --color-edge-default: rgba(44, 38, 33, 0.08);  /* Subtle dividers */
-  --color-edge-raised: rgba(44, 38, 33, 0.13);   /* Card & input borders */
-  --color-edge-hover: rgba(44, 38, 33, 0.24);    /* Interactive focus/hover */
+  /* Edges & Borders (Umber-tinted crisp definition) */
+  --color-edge-default: rgba(44, 36, 30, 0.08);  /* Subtle dividers */
+  --color-edge-raised: rgba(44, 36, 30, 0.13);   /* Card & input borders */
+  --color-edge-hover: rgba(44, 36, 30, 0.24);    /* Interactive focus/hover */
 
-  /* Brand Accents (Vibrant Electric Orange & Warm Amber) */
-  --color-primary: #ff5520;           /* Signature fiery electric orange */
-  --color-primary-hover: #e04312;
-  --color-primary-soft: rgba(255, 85, 32, 0.10);
-  --color-primary-soft-strong: rgba(255, 85, 32, 0.18);
+  /* Brand Accents (Terracotta Clay & Warm Amber) */
+  --color-primary: #c85a32;           /* Terracotta clay (Aesop Terracotta 10%) */
+  --color-primary-hover: #b04c28;
+  --color-primary-soft: rgba(200, 90, 50, 0.10);
+  --color-primary-soft-strong: rgba(200, 90, 50, 0.18);
   --color-secondary: #d98200;         /* High-contrast amber for light surfaces */
   --color-secondary-light: #ffe5a3;
   --color-secondary-soft: rgba(217, 130, 0, 0.16);
-  --color-dark: #171310;
-  --color-dark-muted: #5e554c;
+  --color-dark: #221b16;
+  --color-dark-muted: #5f554b;
 
   /* Functional & Pastel Accents */
   --color-accent-blue: #84bde7;
@@ -53,13 +53,13 @@
   --color-warning-soft: rgba(245, 158, 11, 0.18);
   --color-info: #2563eb;
   --color-accent-pink-deep: #b2499a;
-  --color-scrim: rgba(23, 19, 16, 0.6);
+  --color-scrim: rgba(34, 27, 22, 0.6);
 
   /* Warm Elevation & Shadows */
-  --shadow-card: 0 4px 20px -2px rgba(44, 38, 33, 0.06), 0 1px 3px rgba(44, 38, 33, 0.04);
-  --shadow-card-lg: 0 12px 36px -4px rgba(44, 38, 33, 0.10), 0 2px 6px rgba(44, 38, 33, 0.04);
-  --shadow-button: 0 1px 3px rgba(44, 38, 33, 0.10), 0 1px 2px rgba(44, 38, 33, 0.06);
-  --shadow-glow-primary: 0 0 24px -4px rgba(255, 85, 32, 0.38);
+  --shadow-card: 0 4px 20px -2px rgba(44, 36, 30, 0.06), 0 1px 3px rgba(44, 36, 30, 0.04);
+  --shadow-card-lg: 0 12px 36px -4px rgba(44, 36, 30, 0.10), 0 2px 6px rgba(44, 36, 30, 0.04);
+  --shadow-button: 0 1px 3px rgba(44, 36, 30, 0.10), 0 1px 2px rgba(44, 36, 30, 0.06);
+  --shadow-glow-primary: 0 0 24px -4px rgba(200, 90, 50, 0.38);
   --shadow-glow-secondary: 0 0 20px -5px rgba(217, 130, 0, 0.4);
 
   /* Shape Language: badges/chips 12px, buttons/inputs 20px, cards 32px */
@@ -103,12 +103,12 @@
 html[data-theme="dark"] {
   color-scheme: dark;
 
-  /* Surfaces (Warm charcoal & espresso sand) */
-  --color-surface-base: #14100c;      /* Canvas page: deep warm charcoal */
-  --color-surface-raised: #1c1713;    /* Canvas warm: sidebar, drawer, header */
-  --color-surface-overlay: #241e19;   /* Canvas sand: inputs, chat input, cards */
-  --color-surface-elevated: #2b2520;  /* Surface subtle: menus, popovers, badges */
-  --color-surface-hover: #352e28;     /* Surface hover: active item highlight */
+  /* Surfaces (Smoked Espresso & Toasted Walnut) */
+  --color-surface-base: #171311;      /* Canvas page: Dark Espresso (60%) */
+  --color-surface-raised: #221c18;    /* Sidebar, drawer, header */
+  --color-surface-overlay: #29221e;   /* Toasted Walnut: inputs, chat input, cards (30%) */
+  --color-surface-elevated: #322a24;  /* Menus, popovers, badges */
+  --color-surface-hover: #3b322b;     /* Active item highlight */
   --color-surface: #ffffff;
 
   /* Text (Warm charcoal cream & slate) */
@@ -123,15 +123,15 @@ html[data-theme="dark"] {
   --color-edge-raised: rgba(242, 237, 230, 0.16);   /* Border light */
   --color-edge-hover: rgba(242, 237, 230, 0.28);    /* Interactive border */
 
-  /* Brand Accents */
-  --color-primary: #ff5c28;
-  --color-primary-hover: #ff7733;
-  --color-primary-soft: rgba(255, 85, 0, 0.14);
-  --color-primary-soft-strong: rgba(255, 119, 51, 0.26);
+  /* Brand Accents (Blood Orange) */
+  --color-primary: #ea6a2a;           /* Blood Orange (Smoked Espresso 10%) */
+  --color-primary-hover: #f58244;
+  --color-primary-soft: rgba(234, 106, 42, 0.14);
+  --color-primary-soft-strong: rgba(245, 130, 68, 0.26);
   --color-secondary: #ffaa1d;
   --color-secondary-light: #ffe5a3;
   --color-secondary-soft: rgba(255, 170, 29, 0.22);
-  --color-dark: #14100c;
+  --color-dark: #171311;
   --color-dark-muted: #b7ae9f;
 
   /* Functional & Pastel Accents */
@@ -154,7 +154,7 @@ html[data-theme="dark"] {
   --shadow-card: 0 18px 45px -10px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.05);
   --shadow-card-lg: 0 30px 80px -15px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.06);
   --shadow-button: 0 1px 3px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.04);
-  --shadow-glow-primary: 0 0 28px -4px rgba(255, 85, 0, 0.5), 0 0 10px -2px rgba(255, 119, 51, 0.35);
+  --shadow-glow-primary: 0 0 28px -4px rgba(234, 106, 42, 0.5), 0 0 10px -2px rgba(245, 130, 68, 0.35);
   --shadow-glow-secondary: 0 0 24px -4px rgba(255, 170, 29, 0.5);
 
   /* Scrollbars in Dark Mode */
@@ -164,33 +164,14 @@ html[data-theme="dark"] {
 }
 
 /* ==========================================================================
-   Base Layout, Ambient Mesh & Custom Scrollbars
+   Base Layout & Custom Scrollbars
    ========================================================================== */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 90% 55% at 50% -15%, rgba(255, 85, 32, 0.08), transparent),
-    radial-gradient(ellipse 70% 50% at 85% 85%, rgba(255, 170, 29, 0.06), transparent),
-    radial-gradient(ellipse 60% 40% at 10% 90%, rgba(255, 85, 32, 0.04), transparent);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.dark body::before,
-html[data-theme="dark"] body::before {
-  background:
-    radial-gradient(ellipse 80% 50% at 50% -12%, rgba(255, 85, 0, 0.14), transparent 70%),
-    radial-gradient(ellipse 60% 45% at 85% 90%, rgba(255, 170, 29, 0.08), transparent 60%),
-    radial-gradient(ellipse 50% 35% at 10% 85%, rgba(255, 85, 0, 0.05), transparent 60%);
-}
 
 /* Global Custom Scrollbars */
 :root {
-  --scrollbar-thumb: rgba(44, 38, 33, 0.28);
-  --scrollbar-thumb-hover: rgba(44, 38, 33, 0.48);
-  --scrollbar-thumb-active: rgba(44, 38, 33, 0.65);
+  --scrollbar-thumb: rgba(44, 36, 30, 0.28);
+  --scrollbar-thumb-hover: rgba(44, 36, 30, 0.48);
+  --scrollbar-thumb-active: rgba(44, 36, 30, 0.65);
 }
 
 @supports not selector(::-webkit-scrollbar) {

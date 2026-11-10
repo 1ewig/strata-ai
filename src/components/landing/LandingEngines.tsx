@@ -101,7 +101,7 @@ export function LandingEngines() {
                 className={`relative aspect-[4/5] rounded-2xl sm:rounded-3xl p-6 sm:p-7 flex flex-col justify-between overflow-hidden shadow-card transition-shadow duration-300 ${
                   engine.isAccent
                     ? 'bg-primary text-surface'
-                    : 'bg-[#171310] dark:bg-[#1f1a16] text-[#f2ede6] border border-white/10'
+                    : 'bg-[#2c241e] dark:bg-[#221c18] text-[#f2ede6] border border-white/10'
                 }`}
               >
                 {/* Top Badges */}
